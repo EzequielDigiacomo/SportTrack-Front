@@ -1,14 +1,20 @@
-import { Users, Edit2, Plus, X, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
-import React, { useState, useEffect } from 'react';
+import ClubGrid from './ClubGrid';
+import ClubForm from './ClubForm';
+import { useAlert } from '../../../hooks/useAlert';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionClubesSection = () => {
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
+    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
+    const [selectedClub, setSelectedClub] = useState(null);
     const [form, setForm] = useState({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
+    const [saving, setSaving] = useState(false);
+    const { alert: msg, showAlert } = useAlert();
 
     useEffect(() => { loadClubes(); }, []);
 
@@ -16,76 +22,80 @@ const GestionClubesSection = () => {
         try {
             const res = await api.get(ENDPOINTS.CLUBES);
             setClubes(res.data);
-        } catch (e) { console.error(e); }
+        } catch (e) { showAlert('error', 'Error al cargar clubes'); }
         finally { setLoading(false); }
     };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
+    const handleOpenCrear = () => {
+        setForm({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
+        setView('crear');
+    };
+
+    const handleOpenEditar = (club) => {
+        setSelectedClub(club);
+        setForm({ ...club });
+        setView('editar');
+    };
+
+    const handleFieldChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSaving(true);
         try {
-            await api.post(ENDPOINTS.CLUBES, form);
-            setShowForm(false);
-            setForm({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
+            if (view === 'editar') {
+                await api.put(`${ENDPOINTS.CLUBES}/${selectedClub.id}`, form);
+                showAlert('success', 'Club actualizado');
+            } else {
+                await api.post(ENDPOINTS.CLUBES, form);
+                showAlert('success', 'Club registrado');
+            }
+            setView('lista');
             loadClubes();
-        } catch (err) { alert('Error: ' + err.message); }
+        } catch (err) { showAlert('error', 'Error: ' + (err.response?.data?.message || err.message)); }
+        finally { setSaving(false); }
     };
 
     return (
-        <div className="admin-section fade-in">
-            <div className="admin-section-header">
+        <div className="admin-section-container fade-in">
+            {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
+
+            <div className="section-header-row mb-lg">
                 <div>
-                    <h2>Clubes Registrados</h2>
-                    <p className="section-desc">Administrá los clubes habilitados en el sistema</p>
+                    <h1>Clubes Federados</h1>
+                    <p className="section-subtitle">Gestión de instituciones habilitadas para competir.</p>
                 </div>
-                <button className={`btn-admin-${showForm ? 'secondary' : 'primary'}`} onClick={() => setShowForm(!showForm)}>
-                    {showForm ? <><X size={18} /> Cancelar</> : <><Plus size={18} /> Agregar Club</>}
-                </button>
-            </div>
-
-            {showForm && (
-                <div className="create-event-form glass-effect fade-in">
-                    <h3>Nuevo Club</h3>
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-grid">
-                            <div className="form-field"><label>Nombre *</label><input type="text" name="nombre" value={form.nombre} onChange={handleChange} required /></div>
-                            <div className="form-field"><label>Sigla</label><input type="text" name="sigla" value={form.sigla} onChange={handleChange} maxLength="10" /></div>
-                            <div className="form-field"><label>Email</label><input type="email" name="email" value={form.email} onChange={handleChange} /></div>
-                            <div className="form-field"><label>Teléfono</label><input type="text" name="telefono" value={form.telefono} onChange={handleChange} /></div>
-                            <div className="form-field full-width"><label>Ubicación</label><input type="text" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ciudad, Provincia" /></div>
-                        </div>
-                        <button type="submit" className="btn-submit-admin">Guardar Club</button>
-                    </form>
-                </div>
-            )}
-
-            <div className="admin-table-wrapper glass-effect">
-                {loading ? <div className="loader-row"><div className="loader"></div></div> : (
-                    <table className="admin-table">
-                        <thead>
-                            <tr><th>Club</th><th>Sigla</th><th>Email</th><th>Ubicación</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody>
-                            {clubes.length ? clubes.map(c => (
-                                <tr key={c.id}>
-                                    <td><strong>{c.nombre}</strong></td>
-                                    <td><span className="sigla-tag">{c.sigla || '—'}</span></td>
-                                    <td>{c.email || '—'}</td>
-                                    <td>{c.ubicacion || '—'}</td>
-                                    <td className="actions-cell">
-                                        <button className="btn-icon-admin primary" title="Editar"><Edit2 size={16} /></button>
-                                        <button className="btn-icon-admin" title="Ver Atletas"><Users size={16} /></button>
-                                    </td>
-                                </tr>
-                            )) : <tr><td colSpan="5" className="empty-row">No hay clubes registrados</td></tr>}
-                        </tbody>
-                    </table>
+                {view === 'lista' ? (
+                    <button className="btn-admin-primary" onClick={handleOpenCrear}>
+                        <Plus size={20} /> Nuevo Club
+                    </button>
+                ) : (
+                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
+                        <ArrowLeft size={20} /> Volver
+                    </button>
                 )}
             </div>
+
+            {view === 'lista' ? (
+                loading ? <div className="loader-container"><div className="loader"></div></div> : (
+                    <ClubGrid 
+                        clubes={clubes} 
+                        onEdit={handleOpenEditar} 
+                        onViewAtletas={(c) => console.log('Ver atletas de', c.nombre)} 
+                    />
+                )
+            ) : (
+                <ClubForm 
+                    initialData={form}
+                    saving={saving}
+                    isEditing={view === 'editar'}
+                    onCancel={() => setView('lista')}
+                    onSubmit={handleSubmit}
+                    onChange={handleFieldChange}
+                />
+            )}
         </div>
     );
 };

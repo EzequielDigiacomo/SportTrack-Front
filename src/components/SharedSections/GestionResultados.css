@@ -225,27 +225,18 @@
     font-weight: 600;
     padding: var(--spacing-sm) var(--spacing-lg);
     cursor: pointer;
-    position: relative;
+    border-radius: var(--radius-md);
     transition: all 0.2s ease;
 }
 
 .tab-btn:hover {
     color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.05); /* Highlight on hover */
 }
 
 .tab-btn.active {
     color: var(--color-primary);
-}
-
-.tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: -var(--spacing-xs);
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--color-primary);
-    border-radius: var(--radius-full);
+    background: rgba(var(--color-primary-rgb), 0.15); /* Fondo para tab activa */
 }
 
 .flex-between {
@@ -286,4 +277,23 @@
     font-weight: 500;
     text-align: center;
     animation: fadeIn 0.3s ease;
+}
+
+/* Unificación de tripulantes en tablas de Federación */
+.crew-list-unified {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.crew-member-main {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.crew-member-others {
+    font-size: 0.9rem;
+    color: var(--color-text-dim);
+    opacity: 0.9;
 }

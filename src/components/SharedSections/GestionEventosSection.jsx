@@ -1,33 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Globe, 
-    Settings, 
-    Edit2, 
-    Trash2, 
     Plus, 
-    ArrowLeft, 
     Calendar, 
     MapPin, 
+    Settings, 
+    ArrowLeft, 
     ClipboardList, 
     Trophy,
-    UserCircle,
-    Copy,
-    ChevronRight,
-    Lock,
-    Unlock
 } from 'lucide-react';
 import EventoService from '../../services/EventoService';
 import ConfigurarPruebasModal from './ConfigurarPruebasModal';
 import GestionResultadosSection from './GestionResultadosSection';
+import ConfirmDialog from '../Common/ConfirmDialog';
+import EventGrid from './EventGrid';
+import EventForm from './EventForm';
+import { useAlert } from '../../hooks/useAlert';
 import './AdminSections.css';
 
 const GestionEventosSection = () => {
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('lista'); // 'lista' | 'crear' | 'dashboard'
+    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'dashboard'
     const [selectedEvento, setSelectedEvento] = useState(null);
-    const [activeSubView, setActiveSubView] = useState(null); // 'startlist' | 'resultados'
+    const [activeSubView, setActiveSubView] = useState(null); // 'startlist', 'resultados'
     const [showConfigModal, setShowConfigModal] = useState(false);
+    
     const [form, setForm] = useState({
         nombre: '',
         fecha: '',
@@ -43,86 +40,67 @@ const GestionEventosSection = () => {
         permitirCompletarK4: false,
         limitacionBotesAB: false
     });
+
+    const { alert: msg, showAlert } = useAlert();
     const [saving, setSaving] = useState(false);
-    const [msg, setMsg] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, evento: null });
 
     useEffect(() => {
-        if (msg) {
-            const timer = setTimeout(() => setMsg(null), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [msg]);
-
-    useEffect(() => { loadEventos(); }, []);
+        loadEventos();
+        
+        const handlePopState = (e) => {
+            if (!e.state) { setView('lista'); setSelectedEvento(null); setActiveSubView(null); setShowConfigModal(false); }
+            else if (e.state.panel === 'dashboard') { setView('dashboard'); setActiveSubView(null); setShowConfigModal(false); }
+            else if (e.state.panel === 'config') { setShowConfigModal(true); }
+            else if (e.state.panel === 'startlist') { setActiveSubView('startlist'); }
+            else if (e.state.panel === 'resultados') { setActiveSubView('resultados'); }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     const loadEventos = async () => {
+        setLoading(true);
         try {
             const data = await EventoService.getAll();
             setEventos(data);
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
+        } catch (e) {
+            showAlert('error', 'Error al cargar eventos');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleOpenDashboard = (evento) => {
         setSelectedEvento(evento);
-        setActiveSubView(null);
+        window.history.pushState({ panel: 'dashboard' }, '');
         setView('dashboard');
     };
 
     const handleOpenConfig = () => {
+        window.history.pushState({ panel: 'config' }, '');
         setShowConfigModal(true);
     };
 
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    const handleFieldChange = (name, value) => {
+        setForm(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
-        const payload = {
-            nombre: form.nombre,
-            fecha: form.fecha,
-            fechaFin: form.fechaFin || null,
-            ubicacion: form.ubicacion,
-            fechaFinInscripciones: form.fechaFinInscripciones || null,
-            estado: form.estado,
-            inscripcionesHabilitadas: form.inscripcionesHabilitadas,
-            restringirSoloCategoriaPropia: form.restringirSoloCategoriaPropia,
-            permitirSub23EnSenior: form.permitirSub23EnSenior,
-            permitirMasterBajarASenior: form.permitirMasterBajarASenior,
-            permitirCompletarK4: form.permitirCompletarK4,
-            limitacionBotesAB: form.limitacionBotesAB
-        };
         try {
             if (view === 'editar' && selectedEvento) {
-                await EventoService.update(selectedEvento.id, payload);
-                setMsg({ type: 'success', text: '¡Evento actualizado exitosamente!' });
+                await EventoService.update(selectedEvento.id, form);
+                showAlert('success', '¡Evento actualizado exitosamente!');
             } else {
-                await EventoService.create(payload);
-                setMsg({ type: 'success', text: '¡Evento creado exitosamente!' });
+                await EventoService.create(form);
+                showAlert('success', '¡Evento creado exitosamente!');
             }
-            setForm({
-                nombre: '',
-                fecha: '',
-                fechaFin: '',
-                fechaFinInscripciones: '',
-                ubicacion: '',
-                descripcion: '',
-                estado: 'Programado',
-                inscripcionesHabilitadas: true,
-                restringirSoloCategoriaPropia: false,
-                permitirSub23EnSenior: false,
-                permitirMasterBajarASenior: false,
-                permitirCompletarK4: false,
-                limitacionBotesAB: false
-            });
             setView('lista');
             loadEventos();
         } catch (err) {
-            setMsg({ type: 'error', text: 'Error al guardar el evento: ' + err.message });
-            console.error("Error saving event:", err);
+            showAlert('error', 'Error al guardar: ' + err.message);
         } finally { setSaving(false); }
     };
 
@@ -149,254 +127,118 @@ const GestionEventosSection = () => {
     const handleCopyLiveLink = (id, nombre) => {
         const url = `${window.location.origin}/resultados/${id}`;
         navigator.clipboard.writeText(url);
-        setMsg({ type: 'info', text: `¡Link de "${nombre}" copiado al portapapeles!` });
+        showAlert('info', `¡Link de "${nombre}" copiado!`);
     };
 
-    const handleDelete = async (evento) => {
-        if (window.confirm(`¿Estás seguro de que deseas eliminar el evento "${evento.nombre}"? Esta acción no se puede deshacer.`)) {
-            try {
-                await EventoService.delete(evento.id);
-                setMsg({ type: 'success', text: '¡Evento eliminado correctamente!' });
-                loadEventos();
-            } catch (err) {
-                setMsg({ type: 'error', text: 'Error al eliminar el evento: ' + err.message });
-            }
-        }
+    const handleDelete = (evento) => {
+        setDeleteConfirm({ show: true, evento });
     };
 
-    const estadoBadge = (estado) => {
-        const map = {
-            'Programado': { color: '#60a5fa', label: 'Programado' },
-            'EnCurso': { color: '#34d399', label: 'En Curso' },
-            'Finalizado': { color: '#9ca3af', label: 'Finalizado' },
-            'Cancelado': { color: '#f87171', label: 'Cancelado' },
-        };
-        const s = map[estado] || { color: '#9ca3af', label: estado };
-        return <span className="estado-badge" style={{ background: s.color + '22', color: s.color, border: `1px solid ${s.color}55` }}>{s.label}</span>;
+    const confirmDelete = async () => {
+        if (!deleteConfirm.evento) return;
+        setSaving(true);
+        try {
+            await EventoService.delete(deleteConfirm.evento.id);
+            showAlert('success', '¡Evento eliminado correctamente!');
+            setDeleteConfirm({ show: false, evento: null });
+            loadEventos();
+        } catch (err) {
+            showAlert('error', 'Error al eliminar: ' + err.message);
+        } finally { setSaving(false); }
     };
 
     return (
-        <div className="admin-section fade-in">
-            <div className="admin-section-header">
-                <div>
-                    <h2>Gestión de Eventos</h2>
-                    <p className="section-desc">Administrá todas las competencias del sistema</p>
-                </div>
-                {view === 'lista' && (
-                    <button className="btn-admin-primary" onClick={() => setView('crear')}>
-                        <Plus size={18} style={{ marginRight: '6px' }} /> Nuevo Evento
-                    </button>
-                )}
-                {view !== 'lista' && (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
-                        <ArrowLeft size={18} style={{ marginRight: '6px' }} /> Atrás
-                    </button>
-                )}
-            </div>
-
-            {msg && <div className={`alert-msg ${msg.type}`}>{msg.text}</div>}
-
+        <div className="admin-section-container">
+            {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
+            
             {view === 'lista' && (
-                loading ? <div className="loader-row"><div className="loader"></div></div> : (
-                    <div className="admin-table-wrapper glass-effect">
-                        <table className="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Evento</th>
-                                    <th>Fecha</th>
-                                    <th>Ubicación</th>
-                                    <th>Inscripciones</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {eventos.length ? eventos.map(ev => (
-                                    <tr key={ev.id}>
-                                        <td><strong>{ev.nombre}</strong></td>
-                                        <td>{new Date(ev.fecha).toLocaleDateString('es-AR')}</td>
-                                        <td>{ev.ubicacion || '—'}</td>
-                                        <td>
-                                            <span className={`inscripciones-tag ${ev.inscripcionesAbiertas ? 'open' : 'closed'}`}>
-                                                {ev.inscripcionesAbiertas ? <><Unlock size={14} /> Abiertas</> : <><Lock size={14} /> Cerradas</>}
-                                            </span>
-                                        </td>
-                                        <td>{estadoBadge(ev.estado)}</td>
-                                        <td className="actions-cell">
-                                            <button 
-                                                className="btn-icon-admin primary"
-                                                onClick={() => handleCopyLiveLink(ev.id, ev.nombre)}
-                                                title="Copiar Link de Live Results"
-                                            >
-                                                <Copy size={18} />
-                                            </button>
-                                            <button 
-                                                className="btn-admin-primary" 
-                                                onClick={() => handleOpenDashboard(ev)}
-                                                title="Dirigir Carrera"
-                                            >
-                                                <Settings size={16} /> Dirigir
-                                            </button>
-                                            <button 
-                                                className="btn-admin-secondary" 
-                                                onClick={() => handleEdit(ev)}
-                                                title="Editar"
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button 
-                                                className="btn-admin-danger" 
-                                                onClick={() => handleDelete(ev)}
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="6" className="empty-row">No hay eventos creados aún</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                <div className="fade-in">
+                    <div className="section-header-row">
+                        <h1>Gestión de Eventos</h1>
+                        <button className="btn-admin-primary" onClick={() => setView('crear')}>
+                            <Plus size={20} /> Nuevo Evento
+                        </button>
                     </div>
-                )
+
+                    {loading ? (
+                        <div className="loader-container"><div className="loader"></div></div>
+                    ) : (
+                        <EventGrid 
+                            eventos={eventos}
+                            onOpenDashboard={handleOpenDashboard}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onCopyLink={handleCopyLiveLink}
+                        />
+                    )}
+                </div>
             )}
 
             {(view === 'crear' || view === 'editar') && (
-                <div className="create-event-form glass-effect">
-                    <h3>{view === 'editar' ? 'Editar Evento' : 'Nuevo Evento Deportivo'}</h3>
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-grid">
-                            <div className="form-field full-width">
-                                <label>Nombre del Evento *</label>
-                                <input type="text" name="nombre" value={form.nombre} onChange={handleChange}
-                                    placeholder="Ej: Campeonato Nacional de Canotaje 2026" required />
-                            </div>
-                            <div className="form-field">
-                                <label>Fecha de Inicio *</label>
-                                <input type="date" name="fecha" value={form.fecha} onChange={handleChange} required />
-                            </div>
-                            <div className="form-field">
-                                <label>Fecha de Fin (Opcional)</label>
-                                <input type="date" name="fechaFin" value={form.fechaFin} onChange={handleChange} />
-                            </div>
-                            <div className="form-field full-width">
-                                <label>Cierre de Inscripciones</label>
-                                <input type="date" name="fechaFinInscripciones" value={form.fechaFinInscripciones} onChange={handleChange} />
-                            </div>
-                            <div className="form-field">
-                                <label>Ubicación</label>
-                                <input type="text" name="ubicacion" value={form.ubicacion} onChange={handleChange}
-                                    placeholder="Ciudad, Provincia" />
-                            </div>
-                            <div className="form-field">
-                                <label>Estado Inicial</label>
-                                <select name="estado" value={form.estado} onChange={handleChange}>
-                                    <option value="Programado">Programado</option>
-                                    <option value="EnCurso">En Curso</option>
-                                    <option value="Finalizado">Finalizado</option>
-                                    <option value="Cancelado">Cancelado</option>
-                                </select>
-                            </div>
-                            <div className="form-field full-width">
-                                <label>Descripción / Observaciones</label>
-                                <textarea name="descripcion" value={form.descripcion} onChange={handleChange} rows="3"
-                                    placeholder="Detalles del evento, reglas especiales, categorías limitadas..." />
-                            </div>
-                            <div className="form-field full-width">
-                                <label className="checkbox-label">
-                                    <input type="checkbox" name="inscripcionesHabilitadas" checked={form.inscripcionesHabilitadas} onChange={handleChange} />
-                                    <span>Habilitar inscripciones al crear el evento</span>
-                                </label>
-                            </div>
-
-                            <div className="form-rules-container full-width">
-                                <h4>Reglas de Competencia</h4>
-                                <div className="rules-grid">
-                                    <label className="checkbox-label rule-card">
-                                        <input type="checkbox" name="restringirSoloCategoriaPropia" checked={form.restringirSoloCategoriaPropia} onChange={handleChange} />
-                                        <div className="rule-info">
-                                            <strong>Categoría Única</strong>
-                                            <span>El atleta solo puede competir en su categoría oficial por edad.</span>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input type="checkbox" name="permitirSub23EnSenior" checked={form.permitirSub23EnSenior} onChange={handleChange} />
-                                        <div className="rule-info">
-                                            <strong>Sub23 en Senior</strong>
-                                            <span>Permitir que atletas Sub23 se inscriban tanto en su categoría como en Senior.</span>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input type="checkbox" name="permitirMasterBajarASenior" checked={form.permitirMasterBajarASenior} onChange={handleChange} />
-                                        <div className="rule-info">
-                                            <strong>Master A en Senior</strong>
-                                            <span>Permitir que atletas Master A bajen a competir en la categoría Senior.</span>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input type="checkbox" name="permitirCompletarK4" checked={form.permitirCompletarK4} onChange={handleChange} />
-                                        <div className="rule-info">
-                                            <strong>Refuerzo en K4</strong>
-                                            <span>Permitir completar un bote K4 con 1 atleta de la categoría inmediata inferior (ej: 3 Seniors + 1 Junior).</span>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input type="checkbox" name="limitacionBotesAB" checked={form.limitacionBotesAB} onChange={handleChange} />
-                                        <div className="rule-info">
-                                            <strong>Límite de Botes A y B</strong>
-                                            <span>Solo se permite inscribir un máximo de 2 botes por club en esta prueba. <em>(Si se desactiva, las inscripciones son ilimitadas).</em></span>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" className="btn-submit-admin" disabled={saving}>
-                            {saving ? <><div className="loader-sm"></div> Guardando...</> : (view === 'editar' ? 'Actualizar Evento' : '🏅 Crear Evento')}
-                        </button>
-                    </form>
-                </div>
+                <EventForm 
+                    initialData={form}
+                    saving={saving}
+                    isEditing={view === 'editar'}
+                    onCancel={() => setView('lista')}
+                    onSubmit={handleSubmit}
+                    onChange={handleFieldChange}
+                />
             )}
             
             {view === 'dashboard' && (
                 <div className="event-dashboard fade-in">
-                    
                     {!activeSubView ? (
                         <>
-                            <div className="event-dashboard-header glass-effect" style={{ padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
+                            <div className="event-dashboard-header glass-effect">
                                 <h2 style={{ margin: 0, color: 'var(--color-primary)' }}>{selectedEvento.nombre}</h2>
-                                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <p className="dashboard-meta">
                                     <Calendar size={16} /> {new Date(selectedEvento.fecha).toLocaleDateString('es-AR')} | <MapPin size={16} /> {selectedEvento.ubicacion || 'Sin ubicación'}
                                 </p>
+                                <div className="dashboard-chips">
+                                    {selectedEvento.restringirSoloCategoriaPropia && <span className="chip chip-ecu-yellow">Categoría Única</span>}
+                                    {selectedEvento.permitirSub23EnSenior && <span className="chip chip-ecu-blue">S23 en Senior</span>}
+                                    {selectedEvento.permitirMasterBajarASenior && <span className="chip chip-ecu-red">Master en Senior</span>}
+                                    {selectedEvento.permitirCompletarK4 && <span className="chip chip-ecu-yellow">Refuerzo K4</span>}
+                                    {selectedEvento.limitacionBotesAB && <span className="chip chip-ecu-red">Máx Botes A/B</span>}
+                                </div>
                             </div>
 
-                            <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+                            <div className="dashboard-grid dashboard-grid-3col">
                                 <div className="dashboard-card glass-effect clickable" onClick={handleOpenConfig}>
                                     <div className="card-icon"><Calendar size={32} /></div>
                                     <h3>1. Armar Schedule</h3>
-                                    <p className="card-label">Crear pruebas y horarios para que los clubes inscriban a sus atletas.</p>
+                                    <p>Crear pruebas y horarios para que los clubes inscriban a sus atletas.</p>
                                 </div>
-                                <div className="dashboard-card glass-effect clickable" onClick={() => setActiveSubView('startlist')}>
+                                <div className="dashboard-card glass-effect clickable" onClick={() => { 
+                                    window.history.pushState({ panel: 'startlist' }, ''); 
+                                    setActiveSubView('startlist'); 
+                                }}>
                                     <div className="card-icon"><ClipboardList size={32} /></div>
                                     <h3>2. Start List</h3>
-                                    <p className="card-label">Cerrar inscripciones, armar series y sortear carriles aleatoriamente.</p>
+                                    <p>Cerrar inscripciones, armar series y sortear carriles aleatoriamente.</p>
                                 </div>
-                                <div className="dashboard-card glass-effect clickable" onClick={() => setActiveSubView('resultados')}>
+                                <div className="dashboard-card glass-effect clickable" onClick={() => { 
+                                    window.history.pushState({ panel: 'resultados' }, ''); 
+                                    setActiveSubView('resultados'); 
+                                }}>
                                     <div className="card-icon"><Trophy size={32} /></div>
                                     <h3>3. Result List</h3>
-                                    <p className="card-label">Cargar tiempos oficiales al cruzar la meta y publicarlos en vivo.</p>
+                                    <p>Cargar tiempos oficiales al cruzar la meta y publicarlos en vivo.</p>
                                 </div>
                             </div>
                         </>
                     ) : (
                         <div>
-                            <button className="btn-admin-secondary mb-md" onClick={() => setActiveSubView(null)}>
-                                <ArrowLeft size={16} /> Atrás
-                            </button>
+                            <div className="subview-header">
+                                <button className="btn-admin-secondary" onClick={() => window.history.back()}>
+                                    <ArrowLeft size={16} /> Volver al Dashboard
+                                </button>
+                                <h3>{activeSubView === 'startlist' ? 'Gestión de Start List y Sorteos' : 'Carga de Tiempos Oficiales'}</h3>
+                            </div>
                             <GestionResultadosSection 
                                 preselectedEventoId={selectedEvento.id} 
                                 defaultTab={activeSubView === 'startlist' ? 'startList' : 'resultados'} 
+                                isEmbedded={true}
                             />
                         </div>
                     )}
@@ -406,10 +248,21 @@ const GestionEventosSection = () => {
             {showConfigModal && (
                 <ConfigurarPruebasModal 
                     evento={selectedEvento} 
-                    onClose={() => setShowConfigModal(false)} 
+                    onClose={() => window.history.back()} 
                     onRefresh={loadEventos}
                 />
             )}
+
+            <ConfirmDialog 
+                isOpen={deleteConfirm.show}
+                onClose={() => setDeleteConfirm({ show: false, evento: null })}
+                onConfirm={confirmDelete}
+                title="Eliminar Evento"
+                message={`¿Estás seguro de que deseas eliminar el evento "${deleteConfirm.evento?.nombre}"? Esta acción no se puede deshacer.`}
+                type="danger"
+                confirmText="Sí, Eliminar"
+                loading={saving}
+            />
         </div>
     );
 };

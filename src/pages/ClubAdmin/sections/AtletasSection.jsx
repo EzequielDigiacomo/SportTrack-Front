@@ -1,51 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Search, 
-    ChevronUp, 
-    ChevronDown, 
-    ArrowUpDown, 
-    Edit2, 
-    Trash2, 
-    UserPlus, 
-    X, 
-    Download 
-} from 'lucide-react';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 import AtletaService from '../../../services/AtletaService';
 import { useAuth } from '../../../context/AuthContext';
+import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import SearchBox from '../../../components/Common/SearchBox';
+import AtletaGrid from '../../Super/sections/AtletaGrid';
+import AtletaForm from '../../Super/sections/AtletaForm';
+import { useAlert } from '../../../hooks/useAlert';
+import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
 const AtletasSection = () => {
     const [atletas, setAtletas] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [newAtleta, setNewAtleta] = useState({
+    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
+    const [selectedAtleta, setSelectedAtleta] = useState(null);
+    const [form, setForm] = useState({
         nombre: '',
         apellido: '',
         dni: '',
         email: '',
         fechaNacimiento: '',
         sexoId: 1,
-        pais: 'Argentina'
+        pais: 'Ecuador'
     });
+
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'apellido', direction: 'asc' });
     const { user } = useAuth();
+    const { alert: msg, showAlert } = useAlert();
+    const [saving, setSaving] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
 
     useEffect(() => {
         loadAtletas();
     }, []);
 
     const loadAtletas = async () => {
-        if (!user?.clubId) {
-            console.warn('Usuario sin clubId asignado');
-            setLoading(false);
-            return;
-        }
+        if (!user?.clubId) return setLoading(false);
         try {
             const data = await AtletaService.getByClub(user.clubId);
             setAtletas(data);
         } catch (error) {
-            console.error('Error cargando atletas:', error);
+            showAlert('error', 'Error al cargar atletas');
         } finally {
             setLoading(false);
         }
@@ -53,35 +50,74 @@ const AtletasSection = () => {
  
     const requestSort = (key) => {
         let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
- 
-    const getSortIcon = (key) => {
-        if (sortConfig.key !== key) return <ArrowUpDown size={14} />;
-        return sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+
+    const handleOpenCrear = () => {
+        setForm({ nombre: '', apellido: '', dni: '', email: '', fechaNacimiento: '', sexoId: 1, pais: 'Ecuador' });
+        setView('crear');
     };
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setNewAtleta(prev => ({ ...prev, [name]: value }));
+    const handleOpenEditar = (atleta) => {
+        setSelectedAtleta(atleta);
+        setForm({
+            nombre: atleta.nombre || '',
+            apellido: atleta.apellido || '',
+            dni: atleta.dni || '',
+            email: atleta.email || '',
+            fechaNacimiento: atleta.fechaNacimiento ? atleta.fechaNacimiento.substring(0, 10) : '',
+            sexoId: atleta.sexoId || 1,
+            pais: atleta.pais || 'Ecuador'
+        });
+        setView('editar');
+    };
+
+    const handleFieldChange = (name, value) => {
+        setForm(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!user?.clubId) {
-            alert('Error: tu usuario no tiene un club asignado. Contactá al administrador.');
+            showAlert('error', 'Tu usuario no tiene un club asignado.');
             return;
         }
+
+        setSaving(true);
         try {
-            await AtletaService.create({ ...newAtleta, clubId: user.clubId });
-            setShowForm(false);
-            setNewAtleta({ nombre: '', apellido: '', dni: '', email: '', fechaNacimiento: '', sexoId: 1, pais: 'Argentina' });
+            if (view === 'editar') {
+                await AtletaService.update(selectedAtleta.id, { ...form, clubId: user.clubId });
+                showAlert('success', 'Atleta actualizado correctamente');
+            } else {
+                await AtletaService.create({ ...form, clubId: user.clubId });
+                showAlert('success', 'Atleta registrado exitosamente');
+            }
+            setView('lista');
             loadAtletas();
         } catch (error) {
-            alert('Error al crear atleta: ' + (error.response?.data?.message || error.message));
+            showAlert('error', 'Error: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = (id) => {
+        setDeleteConfirm({ show: true, id });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirm.id) return;
+        setSaving(true);
+        try {
+            await AtletaService.delete(deleteConfirm.id);
+            showAlert('success', 'Atleta eliminado');
+            setDeleteConfirm({ show: false, id: null });
+            loadAtletas();
+        } catch (error) {
+            showAlert('error', 'Error al eliminar');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -100,123 +136,67 @@ const AtletasSection = () => {
         });
 
     return (
-        <div className="section-container fade-in">
-            <div className="section-header">
-                <h2>Mis Atletas</h2>
-                <button className={`btn-${showForm ? 'secondary' : 'primary'}`} onClick={() => setShowForm(!showForm)}>
-                    {showForm ? <><X size={18} /> Cancelar</> : <><UserPlus size={18} /> Agregar Atleta</>}
-                </button>
+        <div className="admin-section-container fade-in">
+            {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
+
+            <div className="section-header-row">
+                <h1>Mis Atletas</h1>
+                {view === 'lista' ? (
+                    <button className="btn-admin-primary" onClick={handleOpenCrear}>
+                        <UserPlus size={20} /> Nuevo Atleta
+                    </button>
+                ) : (
+                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
+                        <ArrowLeft size={20} /> Volver
+                    </button>
+                )}
             </div>
 
-            <div className="admin-search-bar glass-effect">
-                <div className="search-input-wrapper">
-                    <i><Search size={18} /></i>
-                    <input 
-                        type="text" 
+            {view === 'lista' && (
+                <div className="admin-filters-bar glass-effect mb-md">
+                    <SearchBox 
                         placeholder="Buscar por nombre, DNI o categoría..." 
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={setSearchTerm}
                     />
-                </div>
-            </div>
-
-            {showForm && (
-                <div className="form-card glass-effect fade-in">
-                    <form onSubmit={handleSubmit} className="atleta-form">
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Nombre</label>
-                                <input type="text" name="nombre" value={newAtleta.nombre} onChange={handleInputChange} required />
-                            </div>
-                            <div className="form-group">
-                                <label>Apellido</label>
-                                <input type="text" name="apellido" value={newAtleta.apellido} onChange={handleInputChange} required />
-                            </div>
-                        </div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>DNI / Documento</label>
-                                <input type="text" name="dni" value={newAtleta.dni} onChange={handleInputChange} placeholder="Sin puntos" required />
-                            </div>
-                            <div className="form-group">
-                                <label>Email de Contacto</label>
-                                <input type="email" name="email" value={newAtleta.email} onChange={handleInputChange} placeholder="atleta@ejemplo.com" />
-                            </div>
-                        </div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Fecha de Nacimiento</label>
-                                <input type="date" name="fechaNacimiento" value={newAtleta.fechaNacimiento} onChange={handleInputChange} required />
-                            </div>
-                            <div className="form-group">
-                                <label>Sexo</label>
-                                <select name="sexoId" value={newAtleta.sexoId} onChange={handleInputChange}>
-                                    <option value={1}>Masculino</option>
-                                    <option value={2}>Femenino</option>
-                                    <option value={3}>Mixto</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" className="btn-submit">Guardar Atleta</button>
-                    </form>
                 </div>
             )}
 
-            <div className="atletas-table-container glass-effect">
-                {loading ? (
-                    <div className="loader-container"><div className="loader"></div></div>
-                ) : (
-                    <table className="custom-table">
-                        <thead>
-                            <tr>
-                                <th className="sortable" onClick={() => requestSort('apellido')}>
-                                    Nombre Completo <span className="sort-icon">{getSortIcon('apellido')}</span>
-                                </th>
-                                <th className="sortable" onClick={() => requestSort('dni')}>
-                                    DNI <span className="sort-icon">{getSortIcon('dni')}</span>
-                                </th>
-                                <th className="sortable" onClick={() => requestSort('edad')}>
-                                    Edad <span className="sort-icon">{getSortIcon('edad')}</span>
-                                </th>
-                                <th>Sexo</th>
-                                <th className="sortable" onClick={() => requestSort('categoriaNombre')}>
-                                    Categoría <span className="sort-icon">{getSortIcon('categoriaNombre')}</span>
-                                </th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredAtletas.length > 0 ? filteredAtletas.map(atleta => (
-                                <tr key={atleta.id}>
-                                    <td>
-                                        <div style={{fontWeight: 'bold'}}>{atleta.nombre} {atleta.apellido}</div>
-                                        <div style={{fontSize: '0.8rem', color: 'var(--color-text-dim)'}}>{atleta.email || 'Sin email'}</div>
-                                    </td>
-                                    <td>{atleta.dni || '—'}</td>
-                                    <td>{atleta.edad} años</td>
-                                    <td>{atleta.sexoNombre}</td>
-                                    <td>{atleta.categoriaNombre || 'N/A'}</td>
-                                    <td>
-                                        <button className="btn-icon" title="Editar"><Edit2 size={16} /></button>
-                                        <button className="btn-icon btn-delete" title="Eliminar" onClick={async () => {
-                                            if(window.confirm("¿Borrar atleta?")) {
-                                                await AtletaService.delete(atleta.id);
-                                                loadAtletas();
-                                            }
-                                        }}><Trash2 size={16} /></button>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="6" className="empty-state">No hay atletas registrados</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+            {view === 'lista' ? (
+                loading ? <div className="loader-container"><div className="loader"></div></div> : (
+                    <AtletaGrid 
+                        atletas={filteredAtletas}
+                        onEdit={handleOpenEditar}
+                        onDelete={handleDelete}
+                        sortConfig={sortConfig}
+                        requestSort={requestSort}
+                    />
+                )
+            ) : (
+                <AtletaForm 
+                    initialData={form}
+                    saving={saving}
+                    isEditing={view === 'editar'}
+                    onCancel={() => setView('lista')}
+                    onSubmit={handleSubmit}
+                    onChange={handleFieldChange}
+                    hideClubSelect={true}
+                />
+            )}
+
+            <ConfirmDialog 
+                isOpen={deleteConfirm.show}
+                onClose={() => setDeleteConfirm({ show: false, id: null })}
+                onConfirm={confirmDelete}
+                title="Eliminar Atleta"
+                message="¿Estás seguro de eliminar este atleta?"
+                type="danger"
+                confirmText="Sí, Eliminar"
+                loading={saving}
+            />
         </div>
     );
 };
+
 
 export default AtletasSection;

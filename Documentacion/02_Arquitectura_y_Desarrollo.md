@@ -11,7 +11,7 @@ SportTrack está dividido en un ecosistema clásico cliente-servidor:
     *   **Estilos:** CSS puro, altamente modular, basado en variables nativas en `:root` (glassmorphism/paletas oscuras).
     *   **Conectividad:** `axios` administrado vía instancias centralizadas en `src/services/api.js`.
 2.  **Backend (API Restful):** .NET 8 Web API.
-    *   **ORM:** Entity Framework Core (SQL Server local/remoto).
+    *   **ORM:** Entity Framework Core (PostgreSQL).
     *   **Mapeo:** AutoMapper (con fuertes salvedades de diseño detalladas debajo).
     *   **Autenticación:** Microsoft.AspNetCore.Authentication.JwtBearer.
 
@@ -20,13 +20,13 @@ SportTrack está dividido en un ecosistema clásico cliente-servidor:
 ## 2. Puesta en Marcha y Configuración Inicial (Setup)
 
 ### 2.1 Archivos de Preferencias Críticos
-Las variables maestras del Backend residen en `SportTrack-v1.Api/appsettings.json`.
+Las variables maestras del Backend residen en `SportTrack-v1.Api/appsettings.json` o `appsettings.Production.json`.
 
 *   **ConnectionStrings -> DefaultConnection:**
-    `"Server=(localdb)\\mssqllocaldb;Database=SportTrackDb;Trusted_Connection=True;MultipleActiveResultSets=true"`
-    *Nota: Asegurarse de ejecutar `Update-Database` desde la consola del administrador de paquetes situándose sobre el proyecto de Datos para migrar.*
+    `"Host=localhost;Port=5432;Database=SportTrackDB;Username=...;Password=..."`
+    *Nota: Asegurarse de ejecutar `Update-Database` desde la consola del administrador de paquetes para aplicar las migraciones de PostgreSQL.*
 *   **TokenKey:**
-    Esta es la firma simétrica secreta del JWT. *Obligatorio:* Debe ser sobreescrita y almacenada en Variables de Entorno Seguras antes de un pase a Producción.
+    Esta es la firma simétrica secreta del JWT. *Obligatorio:* Debe ser sobreescrita y almacenada en Variables de Entorno Seguras antes de un pase a Producción para garantizar la integridad de los tokens emitidos.
 
 ### 2.2 Dependencias Nativas de Frontend / CORS
 El servidor de .NET está provisto para aceptar CORS.

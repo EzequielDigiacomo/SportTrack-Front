@@ -17,7 +17,7 @@ function Home() {
             if (finalizados.length > 0) {
                 setUltimoEvento(finalizados[finalizados.length - 1])
             }
-        }).catch(() => {})
+        }).catch(() => { })
     }, [])
 
     const handleClubAccess = () => {
@@ -112,10 +112,10 @@ function Home() {
                             Llevando el canotaje al siguiente nivel con tecnología de vanguardia y resultados en tiempo real.
                         </p>
                         <div className="footer-developer">
-                            Desarrollado por <span className="digitech-brand">DIGITech</span>
+                            Desarrollado por <span className="digitech-brand">EzTechsolution</span>
                         </div>
                     </div>
-                    
+
                     <div className="footer-contact">
                         <h4>Contacto</h4>
                         <a href="mailto:contacto@digitech.com" className="footer-link-premium">📧 contacto@digitech.com</a>

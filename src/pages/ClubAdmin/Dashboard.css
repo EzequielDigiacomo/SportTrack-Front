@@ -1,5 +1,5 @@
 .dashboard-page {
-    padding-top: var(--spacing-xl);
+    padding-top: calc(var(--spacing-2xl) + 1.5rem);
     min-height: calc(100vh - 80px);
 }
 

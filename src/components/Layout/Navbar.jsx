@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo-sporttrack.png'
 import './Navbar.css'
@@ -8,7 +8,6 @@ function Navbar() {
     const location = useLocation()
     const navigate = useNavigate()
     const { isAuthenticated, logout, user } = useAuth()
-    const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     const handleLogout = () => {
         logout()
@@ -28,32 +27,32 @@ function Navbar() {
                     <span className="navbar-title gradient-text">SportTrack</span>
                 </Link>
 
-                <button
-                    className="navbar-toggle"
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                >
-                    <span className="toggle-line"></span>
-                </button>
-
-                <div className={`navbar-menu ${isMenuOpen ? 'active' : ''}`}>
-                    <Link to="/" className={`navbar-link ${isActive('/') ? 'active' : ''}`}>Inicio</Link>
-                    
-                    {isAuthenticated ? (
-                        <>
-                            {user?.rol === 'Club' && (
-                                <Link to="/club" className={`navbar-link ${isActive('/club') ? 'active' : ''}`}>Mi Club</Link>
-                            )}
-                            {user?.rol === 'Admin' && (
-                                <Link to="/super" className={`navbar-link ${isActive('/super') ? 'active' : ''}`}>Administrar</Link>
-                            )}
-                            <button onClick={handleLogout} className="btn-logout">Cerrar Sesión</button>
-                        </>
-                    ) : (
-                        location.pathname !== '/login' && (
-                            <Link to="/login" className="btn-login-nav">Ingreso Clubes</Link>
-                        )
-                    )}
-                </div>
+                {isAuthenticated ? (
+                    /* Usuario logueado: menú con links de rol + logout */
+                    <>
+                        <div className="navbar-actions">
+                            <button 
+                                className="btn-icon-nav" 
+                                onClick={() => navigate(user?.rol === 'Admin' ? '/super' : '/club')}
+                                title="Mi Dashboard"
+                            >
+                                <User size={22} color="var(--color-primary)" />
+                            </button>
+                            <button 
+                                className="btn-icon-nav danger" 
+                                onClick={handleLogout}
+                                title="Cerrar Sesión"
+                            >
+                                <LogOut size={22} color="var(--color-error)" />
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    /* Usuario NO logueado: botón Acceder directo, sin hamburguesa */
+                    location.pathname !== '/login' && (
+                        <Link to="/login" className="btn-login-nav">Acceder</Link>
+                    )
+                )}
             </div>
         </nav>
     )

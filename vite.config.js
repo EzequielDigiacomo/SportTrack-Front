@@ -12,6 +12,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true, // Expone la IP de red local para acceso desde móvil/otros dispositivos
     proxy: {
       '/api': {
         target: 'https://localhost:7156',

@@ -381,6 +381,17 @@
 
 @media (max-width: 1000px) {
     .inscripcion-stepper { flex-direction: column; height: auto; }
+    .inscripcion-body { 
+        flex-direction: column; 
+        overflow-y: auto; 
+    }
+    .pruebas-selector {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-right: 0;
+        padding-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-sm);
+    }
 }
 
 /* Secciones de inscripciones existentes */

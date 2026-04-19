@@ -266,6 +266,9 @@
     margin-top: 5rem;
     padding: 4rem 0 2rem;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden; /* Evita desbordamiento horizontal */
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .footer-content {
@@ -349,10 +352,10 @@
     color: var(--color-primary-light);
 }
 
-/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
     .hero-content {
-        padding-top: 4rem;
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
     }
 
     .hero-actions {
@@ -366,5 +369,30 @@
     .btn-ver-resultados {
         width: 100%;
         text-align: center;
+    }
+
+    /* Footer responsive */
+    .home-footer-premium {
+        padding: 2rem var(--spacing-md) 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr; /* Una sola columna */
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .footer-company-desc {
+        max-width: 100%;
+    }
+
+    .footer-bottom {
+        padding-top: 1.5rem;
+        font-size: 0.8rem;
+    }
+
+    .footer-contact h4, .footer-nav h4 {
+        margin-bottom: 0.5rem;
     }
 }

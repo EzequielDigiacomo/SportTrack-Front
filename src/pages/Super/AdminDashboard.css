@@ -30,6 +30,27 @@
     margin-bottom: var(--spacing-xl);
 }
 
+/* Botón X — oculto en desktop, visible sólo en mobile */
+.sidebar-close-btn {
+    display: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--color-text-secondary);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+.sidebar-close-btn:hover {
+    background: rgba(255,87,87,0.15);
+    color: var(--color-error);
+    border-color: rgba(255,87,87,0.3);
+}
+
 .btn-sidebar-toggle {
     background: rgba(255, 255, 255, 0.05);
     border: none;
@@ -156,6 +177,42 @@
 
 .sidebar-trigger-favicon .brand-icon {
     font-size: 1.6rem;
+}
+
+/* FLOATING ACTIONS TOP RIGHT */
+.top-right-actions {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 101;
+    display: flex;
+    gap: var(--spacing-sm);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Esconder si el sidebar está completamente abierto (opcional, aunque puede quedar visible) */
+.top-right-actions.active {
+    opacity: 0.5;
+}
+
+.super-quick-logout {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: rgba(10, 12, 20, 0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.2s;
+}
+
+.super-quick-logout:hover {
+    background: rgba(255,87,87,0.15);
+    border-color: rgba(255,87,87,0.3);
+    transform: scale(1.05);
 }
 
 /* SENSOR UNITARIO */
@@ -333,13 +390,57 @@
     font-weight: 600;
 }
 
+/* OVERLAY OSCURO PARA MÓVIL */
+.sidebar-overlay {
+    display: none;
+}
+
 @media (max-width: 1024px) {
     .admin-sidebar { width: 220px; }
     .admin-main { margin-left: 220px; padding: var(--spacing-lg); }
 }
 
 @media (max-width: 768px) {
-    .admin-layout { flex-direction: column; }
-    .admin-sidebar { position: relative; width: 100%; min-height: auto; }
-    .admin-main { margin-left: 0; }
+    /* Overlay que cubre el resto de la pantalla */
+    .sidebar-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(2px);
+        z-index: 1999; /* justo debajo del sidebar (2000) */
+        animation: fadeIn 0.2s ease;
+    }
+
+    .admin-layout { 
+        display: block; 
+    }
+    .admin-sidebar { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        height: 100vh; 
+        width: 80%; 
+        max-width: 320px; 
+        z-index: 2000; 
+    }
+    .admin-main { 
+        margin-left: 0; 
+        padding-top: 100px;
+        padding-left: var(--spacing-md);
+        padding-right: var(--spacing-md);
+    }
+    .sidebar-trigger-favicon {
+        pointer-events: auto;
+    }
+    /* Mostrar botón X en mobile */
+    .sidebar-close-btn {
+        display: flex;
+    }
+
+    /* Solucionar solapamiento: que no sean fixed, sino que se queden arriba */
+    .sidebar-trigger-favicon, .top-right-actions {
+        position: absolute !important;
+        top: 15px;
+    }
 }

@@ -1,3 +1,6 @@
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 /* CSS Reset and Base Styles */
 *,
 *::before,
@@ -9,37 +12,37 @@
 
 /* CSS Variables - Design System */
 :root {
-  /* Primary Colors - Vibrant Blues */
-  --color-primary: hsl(210, 100%, 50%);
-  --color-primary-dark: hsl(210, 100%, 40%);
-  --color-primary-light: hsl(210, 100%, 60%);
+  /* Primary Colors - Ecuador Blue */
+  --color-primary: hsl(204, 100%, 36%);
+  --color-primary-dark: hsl(204, 100%, 26%);
+  --color-primary-light: hsl(204, 100%, 46%);
   
-  /* Secondary Colors - Vibrant Purple */
-  --color-secondary: hsl(270, 70%, 60%);
-  --color-secondary-dark: hsl(270, 70%, 50%);
-  --color-secondary-light: hsl(270, 70%, 70%);
+  /* Secondary Colors - Ecuador Red */
+  --color-secondary: hsl(356, 84%, 57%);
+  --color-secondary-dark: hsl(356, 84%, 47%);
+  --color-secondary-light: hsl(356, 84%, 67%);
   
-  /* Accent Colors */
-  --color-accent: hsl(160, 60%, 50%);
+  /* Accent Colors - Ecuador Yellow */
+  --color-accent: hsl(51, 100%, 50%);
   --color-accent-orange: hsl(30, 100%, 60%);
   
   /* Neutral Colors - Dark Mode Friendly */
-  --color-bg-primary: hsl(220, 20%, 10%);
-  --color-bg-secondary: hsl(220, 20%, 15%);
-  --color-bg-tertiary: hsl(220, 20%, 20%);
-  --color-surface: hsl(220, 15%, 18%);
-  --color-surface-hover: hsl(220, 15%, 22%);
+  --color-bg-primary: hsl(220, 20%, 8%);
+  --color-bg-secondary: hsl(220, 20%, 12%);
+  --color-bg-tertiary: hsl(220, 20%, 16%);
+  --color-surface: hsl(220, 15%, 14%);
+  --color-surface-hover: hsl(220, 15%, 20%);
   
   /* Text Colors */
   --color-text-primary: hsl(0, 0%, 95%);
-  --color-text-secondary: hsl(0, 0%, 70%);
-  --color-text-muted: hsl(0, 0%, 50%);
+  --color-text-secondary: hsl(0, 0%, 75%);
+  --color-text-muted: hsl(0, 0%, 55%);
   
   /* Semantic Colors */
   --color-success: hsl(140, 60%, 50%);
-  --color-warning: hsl(45, 100%, 55%);
-  --color-error: hsl(0, 70%, 60%);
-  --color-info: hsl(200, 70%, 55%);
+  --color-warning: var(--color-accent);
+  --color-error: var(--color-secondary);
+  --color-info: var(--color-primary-light);
   
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
@@ -85,9 +88,6 @@
   --z-popover: 1060;
   --z-tooltip: 1070;
 }
-
-/* Google Fonts Import */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* Base Styles */
 html {
@@ -168,7 +168,8 @@ a:hover {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 var(--spacing-lg);
+  padding-left: var(--spacing-lg);
+  padding-right: var(--spacing-lg);
 }
 
 .gradient-text {

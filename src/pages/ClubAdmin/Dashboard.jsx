@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft } from 'lucide-react';
 import AtletasSection from './sections/AtletasSection';
 import EventosSection from './sections/EventosSection';
+import PerfilClubSection from './sections/PerfilClubSection';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
 import './Dashboard.css';
@@ -31,6 +32,7 @@ const ClubDashboard = () => {
                     <Route index element={<DashboardMenu navigate={navigate} />} />
                     <Route path="atletas" element={<AtletasSection />} />
                     <Route path="eventos" element={<EventosSection />} />
+                    <Route path="perfil" element={<PerfilClubSection />} />
                     <Route path="organizar/*" element={<GestionEventosSection />} />
                     <Route path="resultados" element={<GestionResultadosSection />} />
                 </Routes>
@@ -42,25 +44,25 @@ const ClubDashboard = () => {
 const DashboardMenu = ({ navigate }) => (
     <div className="dashboard-grid fade-in">
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('atletas')}>
-            <div className="card-icon"><Users size={40} /></div>
+            <div className="card-icon" style={{ color: 'var(--color-primary)' }}><Users size={40} /></div>
             <h3>Atletas</h3>
             <p className="card-label">Gestiona tu nómina</p>
         </div>
 
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('eventos')}>
-            <div className="card-icon"><Calendar size={40} /></div>
+            <div className="card-icon" style={{ color: 'var(--color-secondary)' }}><Calendar size={40} /></div>
             <h3>Eventos</h3>
             <p className="card-label">Inscripciones abiertas</p>
         </div>
 
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('organizar')}>
-            <div className="card-icon"><LayoutTemplate size={40} /></div>
+            <div className="card-icon" style={{ color: '#10B981' }}><LayoutTemplate size={40} /></div>
             <h3>Organizar Evento</h3>
             <p className="card-label">Creo y gestiono regatas</p>
         </div>
 
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('resultados')}>
-            <div className="card-icon"><Trophy size={40} /></div>
+            <div className="card-icon" style={{ color: 'var(--color-accent-orange)' }}><Trophy size={40} /></div>
             <h3>Resultados</h3>
             <p className="card-label">Carga de resultados y Start List</p>
         </div>

@@ -3,6 +3,7 @@ import { PruebaService } from '../../../services/ConfigService';
 import AtletaService from '../../../services/AtletaService';
 import InscripcionService from '../../../services/InscripcionService';
 import { useAuth } from '../../../context/AuthContext';
+import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import './InscripcionModal.css';
 
 const InscripcionAtletaModal = ({ evento, onClose }) => {
@@ -16,6 +17,7 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
     const [inscripcionesActuales, setInscripcionesActuales] = useState([]);
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
 
     // Verificar si las inscripciones están abiertas
     const ahora = new Date();
@@ -119,14 +121,20 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
         }
     };
 
-    const handleDeleteInscripcion = async (id) => {
+    const handleDeleteInscripcion = (id) => {
         if (inscripcionesCerradas) return;
-        if (!window.confirm("¿Estás seguro de que deseas eliminar esta inscripción?")) return;
+        setDeleteConfirm({ show: true, id });
+    };
+
+    const confirmDeleteInscripcion = async () => {
+        const { id } = deleteConfirm;
+        if (!id) return;
 
         setSaving(true);
         try {
             await InscripcionService.delete(id);
             setMsg({ type: 'success', text: 'Inscripción eliminada correctamente.' });
+            setDeleteConfirm({ show: false, id: null });
             await loadInscripcionesClub();
             setTimeout(() => setMsg(null), 3000);
         } catch (err) {
@@ -135,6 +143,7 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
             setSaving(false);
         }
     };
+
 
     const getInscripcionesPruebaActual = () => {
         if (!selectedPrueba) return [];
@@ -172,7 +181,10 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                                     >
                                         <div className="p-cat">{ep.prueba.categoria?.nombre}</div>
                                         <div className="p-bote">{ep.prueba.bote?.tipo}</div>
-                                        <div className="p-dist">{ep.prueba.distancia?.descripcion}</div>
+                                        <div className="p-dist">
+                                            {ep.prueba.distancia?.descripcion}
+                                            <div className="p-dist-sex">{ep.prueba.sexoNombre || ep.prueba.sexo?.nombre || 'Mixto'}</div>
+                                        </div>
                                     </div>
                                 )) : <p>No hay pruebas habilitadas para inscribirse.</p>
                             )}
@@ -215,7 +227,6 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                                                     <div className="existing-info flex-column">
                                                         <div className="boat-header">
                                                             <span className="badge-refuerzo">Bote {boatLabel}</span>
-                                                            <span className="entry-num">{insc.numeroCompetidor || insc.NumeroCompetidor}</span>
                                                         </div>
                                                         <div className="crew-list">
                                                             {allCrew.map((n, tid) => (
@@ -307,8 +318,10 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                                         }
                                     }
 
-                                    // 5. Validación de Sexo (Básico)
-                                    if (catPrueba.sexoId && atleta.sexoId !== catPrueba.sexoId && catPrueba.sexoId !== 3) {
+                                    // 5. Validación de Sexo estricta según la Prueba (No por categoría)
+                                    const sexoPruebaId = selectedPrueba.prueba.sexoId || selectedPrueba.prueba.sexo?.id;
+                                    // 3 es "Mixto" asumiendo que 1 es Masc, 2 es Fem. Si es distinto de 3, debe coincidir exacto.
+                                    if (sexoPruebaId && sexoPruebaId !== 3 && atleta.sexoId !== sexoPruebaId) {
                                         esElegible = false;
                                         razonNoElegible = "Sexo no admitido";
                                     }
@@ -316,6 +329,12 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                                     
                                     // Límite alcanzado dinámicamente si los seleccionados ya llenan el cupo disponible
                                     const limiteAlcanzado = botesDisponibles === 0 || (!yaSeleccionado && selectedAtletas.length >= maxAtletasPermitidos);
+
+                                    // Para mantener la lista limpia según lo solicitado, ocultamos a los no elegibles por completo 
+                                    // (excepto si ya estaban inscriptos por alguna razón y necesitamos visualizarlos).
+                                    if (!esElegible && !isAlreadyRegistered) {
+                                        return null;
+                                    }
 
                                     return (
                                         <div
@@ -376,8 +395,20 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                     </button>
                 </div>
             </div>
+
+            <ConfirmDialog 
+                isOpen={deleteConfirm.show}
+                onClose={() => setDeleteConfirm({ show: false, id: null })}
+                onConfirm={confirmDeleteInscripcion}
+                title="Eliminar Inscripción"
+                message="¿Estás seguro de que deseas eliminar esta inscripción?"
+                type="danger"
+                confirmText="Sí, Eliminar"
+                loading={saving}
+            />
         </div>
     );
 };
+
 
 export default InscripcionAtletaModal;

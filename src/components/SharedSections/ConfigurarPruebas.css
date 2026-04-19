@@ -8,18 +8,21 @@
     justify-content: center;
     z-index: 1000;
     padding: var(--spacing-md);
+    overflow-x: hidden;
 }
 
 .admin-modal {
     width: 95%;
     max-width: 1200px;
     height: 85vh;
+    max-height: 85vh;
     background: #11141d;
     border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden; /* Evita que los hijos estiren el modal más allá de su width */
 }
 
 .modal-header {
@@ -54,11 +57,14 @@
     display: grid;
     grid-template-columns: 1fr 1.5fr;
     gap: var(--spacing-lg);
+    width: 100%;
 }
 
 .config-form {
     padding: var(--spacing-lg);
     height: fit-content;
+    width: 100%;
+    min-width: 0;
 }
 
 .config-form h4 {
@@ -122,6 +128,8 @@
     padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
 }
 
 .current-pruebas h4 {
@@ -132,6 +140,8 @@
     flex: 1;
     max-height: 400px;
     overflow-y: auto;
+    overflow-x: auto; /* Permite scroll horizontal a la tabla en mobile */
+    -webkit-overflow-scrolling: touch;
 }
 
 .btn-icon-danger {
@@ -153,6 +163,7 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-md);
+    flex-wrap: wrap; /* Permitir que los botones se apilen si es angosto */
 }
 
 .empty-text {
@@ -160,6 +171,22 @@
     text-align: center;
     padding: var(--spacing-xl);
     font-style: italic;
+}
+
+.pruebas-header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.pruebas-header-controls .left-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
 .mt-md { margin-top: var(--spacing-md); }
@@ -184,6 +211,75 @@
 @media (max-width: 768px) {
     .config-scheduler {
         grid-template-columns: 1fr;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.1rem;
+        line-height: 1.3;
+        padding-right: 15px;
+    }
+    
+    .pruebas-header-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .pruebas-header-controls .left-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .modal-body {
+        padding: 10px;
+    }
+    
+    .config-form {
+        padding: 15px;
+    }
+    
+    .current-pruebas {
+        padding: 10px;
+    }
+    
+    /* Achicamos toda la tabla para eliminar el scroll lateral */
+    .mini-table th {
+        font-size: 0.6rem;
+        padding: 4px 2px;
+        letter-spacing: -0.5px;
+    }
+    
+    .mini-table td {
+        font-size: 0.7rem;
+        padding: 4px 2px;
+    }
+
+    .time-cell {
+        font-size: 0.65rem;
+    }
+    
+    .count-badge {
+        padding: 0.1rem 0.3rem;
+        font-size: 0.7rem;
+    }
+
+    .btn-icon-admin, .btn-icon-danger {
+        padding: 0.2rem 0.3rem;
+        font-size: 0.8rem;
+    }
+    
+    .actions-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer button {
+        width: 100%;
     }
 }
 
