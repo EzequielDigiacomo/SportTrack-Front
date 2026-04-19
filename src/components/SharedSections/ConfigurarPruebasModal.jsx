@@ -214,7 +214,104 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
 
     return (
         <div className="admin-modal-overlay">
-                                                            </span>
+            <div className="admin-modal-content large glass-effect fade-in">
+                <div className="modal-header">
+                    <h3>Configurar Pruebas - {evento.nombre}</h3>
+                    <div className="flex-row gap-sm">
+                        <button className="btn-admin-secondary" onClick={handleExportPDF}>📄 Exportar PDF</button>
+                        <button className="close-btn" onClick={onClose}>&times;</button>
+                    </div>
+                </div>
+
+                <div className="modal-body overflow-y">
+                    <div className="admin-grid-layout">
+                        {/* FORMULARIO DE ASIGNACIÓN */}
+                        <div className="form-column">
+                            <h4 className="section-title">{editingId ? 'Editar Prueba' : 'Agregar Nueva Prueba'}</h4>
+                            <div className="admin-grid-form">
+                                <div className="form-group">
+                                    <label>Categoría</label>
+                                    <select className="admin-select" value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
+                                        <option value="">Seleccionar...</option>
+                                        {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Bote</label>
+                                    <select className="admin-select" value={selectedBote} onChange={e => setSelectedBote(e.target.value)}>
+                                        <option value="">Seleccionar...</option>
+                                        {botes.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Distancia</label>
+                                    <select className="admin-select" value={selectedDist} onChange={e => setSelectedDist(e.target.value)}>
+                                        <option value="">Seleccionar...</option>
+                                        {distancias.map(d => <option key={d.id} value={d.id}>{d.metros}m</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Rama / Sexo</label>
+                                    <select className="admin-select" value={selectedSex} onChange={e => setSelectedSex(e.target.value)}>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="Femenino">Femenino</option>
+                                        <option value="Mixto">Mixto</option>
+                                    </select>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Día</label>
+                                        <input type="date" className="admin-input" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Hora</label>
+                                        <input type="time" className="admin-input" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="form-actions mt-md">
+                                    {editingId && <button className="btn-admin-secondary flex-1" onClick={resetForm}>Cancelar</button>}
+                                    <button 
+                                        className="btn-admin-primary flex-2" 
+                                        onClick={handleAddPrueba}
+                                        disabled={saving}
+                                    >
+                                        {saving ? 'Procesando...' : (editingId ? 'Actualizar Prueba' : 'Habilitar Prueba')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* LISTADO DE PRUEBAS */}
+                        <div className="list-column">
+                            <div className="flex-between mb-md">
+                                <h4 className="section-title">Pruebas Habilitadas</h4>
+                                <select className="admin-select-sm" value={filtroDia} onChange={e => setFiltroDia(e.target.value)}>
+                                    {diasUnicos.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="table-container-mini">
+                                {loading ? (
+                                    <div className="loader-container"><div className="loader"></div></div>
+                                ) : (
+                                    pruebasFiltradas.length > 0 ? (
+                                        <table className="admin-table mini">
+                                            <thead>
+                                                <tr>
+                                                    <th>Hora</th>
+                                                    <th>Prueba</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pruebasFiltradas.sort((a,b) => new Date(a.fechaHora) - new Date(b.fechaHora)).map(ep => (
+                                                    <tr key={ep.id} className={editingId === ep.id ? 'row-editing' : ''}>
+                                                        <td><strong>{new Date(ep.fechaHora).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</strong></td>
+                                                        <td>
+                                                            <div className="prueba-desc-mini">
+                                                                {ep.prueba?.categoria?.nombre} {ep.prueba?.bote?.nombre} {ep.prueba?.distancia?.metros}m {ep.prueba?.sexo?.nombre}
+                                                            </div>
                                                         </td>
                                                         <td className="actions-cell">
                                                             <button 
@@ -225,7 +322,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                                                 ✏️
                                                             </button>
                                                             <button 
-                                                                className="btn-icon-danger" 
+                                                                className="btn-icon-delete" 
                                                                 title="Eliminar"
                                                                 onClick={() => handleDeletePrueba(ep.id)}
                                                             >
