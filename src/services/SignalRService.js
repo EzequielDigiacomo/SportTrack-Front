@@ -77,6 +77,20 @@ class SignalRService {
         }
     }
 
+    async leaveEventGroup(eventId) {
+        if (!eventId || !this.connection) return;
+        try {
+            if (this.connection.state === signalR.HubConnectionState.Connected) {
+                await this.connection.invoke("LeaveEventGroup", eventId.toString());
+            }
+            if (this.currentGroupId === eventId.toString()) {
+                this.currentGroupId = null;
+            }
+        } catch (e) {
+            console.error("Error in leaveEventGroup:", e);
+        }
+    }
+
     onResultUpdated(callback) {
         if (!this.connection) return;
         

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft } from 'lucide-react';
 import AtletasSection from './sections/AtletasSection';
 import EventosSection from './sections/EventosSection';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
@@ -20,7 +21,7 @@ const ClubDashboard = () => {
                 </div>
                 {!isRoot && (
                     <button className="btn-back" onClick={() => navigate('/club')}>
-                        ← Volver al Inicio
+                        <ArrowLeft size={18} /> Atrás
                     </button>
                 )}
             </div>
@@ -41,25 +42,25 @@ const ClubDashboard = () => {
 const DashboardMenu = ({ navigate }) => (
     <div className="dashboard-grid fade-in">
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('atletas')}>
-            <div className="card-icon">👥</div>
+            <div className="card-icon"><Users size={40} /></div>
             <h3>Atletas</h3>
             <p className="card-label">Gestiona tu nómina</p>
         </div>
 
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('eventos')}>
-            <div className="card-icon">🚣</div>
+            <div className="card-icon"><Calendar size={40} /></div>
             <h3>Eventos</h3>
             <p className="card-label">Inscripciones abiertas</p>
         </div>
 
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('organizar')}>
-            <div className="card-icon">🏗️</div>
+            <div className="card-icon"><LayoutTemplate size={40} /></div>
             <h3>Organizar Evento</h3>
             <p className="card-label">Creo y gestiono regatas</p>
         </div>
 
         <div className="dashboard-card glass-effect clickable" onClick={() => navigate('resultados')}>
-            <div className="card-icon">🏅</div>
+            <div className="card-icon"><Trophy size={40} /></div>
             <h3>Resultados</h3>
             <p className="card-label">Carga de resultados y Start List</p>
         </div>

@@ -2,12 +2,12 @@ import api from './api';
 import { ENDPOINTS } from '../utils/constants';
 
 const ResultadoService = {
-    upsert: async (resultadoData) => {
-        const response = await api.post(ENDPOINTS.RESULTADOS.UPSERT, resultadoData);
+    batchUpdate: async (resultadosData) => {
+        const response = await api.put(ENDPOINTS.RESULTADOS.BATCH_UPDATE, resultadosData);
         return response.data;
     },
-    getByPrueba: async (pruebaId) => {
-        const response = await api.get(ENDPOINTS.RESULTADOS.BY_PRUEBA(pruebaId));
+    getByFase: async (faseId) => {
+        const response = await api.get(ENDPOINTS.RESULTADOS.BY_FASE(faseId));
         return response.data;
     }
 };

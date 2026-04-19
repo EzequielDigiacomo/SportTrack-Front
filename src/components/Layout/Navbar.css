@@ -30,9 +30,16 @@
     transform: scale(1.05);
 }
 
-.navbar-logo {
-    font-size: 2rem;
-    filter: drop-shadow(0 0 10px rgba(0, 150, 255, 0.5));
+.navbar-logo-img {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 8px rgba(0, 150, 255, 0.3));
+    transition: transform 0.3s;
+}
+
+.navbar-brand:hover .navbar-logo-img {
+    transform: scale(1.1) rotate(-5deg);
 }
 
 .navbar-title {

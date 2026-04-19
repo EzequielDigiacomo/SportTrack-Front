@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Calendar, MapPin, Search, ListFilter, ClipboardList } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import InscripcionAtletaModal from './InscripcionAtletaModal';
 import './Sections.css';
@@ -44,8 +45,8 @@ const EventosSection = () => {
                         <div key={evento.id} className="evento-card glass-effect animate-card">
                             <div className="evento-badge">Abierto</div>
                             <h3>{evento.nombre}</h3>
-                            <p className="evento-date">📅 {new Date(evento.fecha).toLocaleDateString()}</p>
-                            <p className="evento-location">📍 {evento.ubicacion}</p>
+                            <p className="evento-date"><Calendar size={14} style={{marginRight: '6px'}} /> {new Date(evento.fecha).toLocaleDateString()}</p>
+                            <p className="evento-location"><MapPin size={14} style={{marginRight: '6px'}} /> {evento.ubicacion}</p>
                             <div className="evento-actions">
                                 <button className="btn-secondary">Ver Pruebas</button>
                                 <button

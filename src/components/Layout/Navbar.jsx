@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import logo from '../../assets/logo-sporttrack.png'
 import './Navbar.css'
 
 function Navbar() {
@@ -23,7 +24,7 @@ function Navbar() {
         <nav className="navbar glass-effect">
             <div className="navbar-container container">
                 <Link to="/" className="navbar-brand">
-                    <span className="navbar-logo">🚣</span>
+                    <img src={logo} alt="SportTrack Logo" className="navbar-logo-img" />
                     <span className="navbar-title gradient-text">SportTrack</span>
                 </Link>
 
@@ -48,7 +49,9 @@ function Navbar() {
                             <button onClick={handleLogout} className="btn-logout">Cerrar Sesión</button>
                         </>
                     ) : (
-                        <Link to="/login" className="btn-login-nav">Ingreso Clubes</Link>
+                        location.pathname !== '/login' && (
+                            <Link to="/login" className="btn-login-nav">Ingreso Clubes</Link>
+                        )
                     )}
                 </div>
             </div>

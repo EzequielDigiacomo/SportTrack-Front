@@ -258,3 +258,32 @@
     font-size: 0.9rem;
     color: var(--color-text-muted);
 }
+
+/* Official Results styles */
+.row-official {
+    background: rgba(46, 213, 115, 0.05) !important;
+}
+
+.input-official {
+    border-color: rgba(46, 213, 115, 0.3) !important;
+    background: rgba(46, 213, 115, 0.1) !important;
+    color: #2ed573 !important;
+    font-weight: 800;
+}
+
+.row-highlight {
+    background: rgba(var(--color-primary-rgb), 0.1) !important;
+    border-left: 3px solid var(--color-primary) !important;
+}
+
+.alert-message {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    font-weight: 500;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}

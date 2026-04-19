@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../services/ConfigService';
 import './ConfigurarPruebas.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     const [categorias, setCategorias] = useState([]);
@@ -14,9 +16,13 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     const [selectedBote, setSelectedBote] = useState('');
     const [selectedDist, setSelectedDist] = useState('');
     const [selectedSex, setSelectedSex] = useState('');
+    const [selectedDate, setSelectedDate] = useState(evento.fecha ? evento.fecha.substring(0, 10) : '');
     const [selectedTime, setSelectedTime] = useState('');
     const [saving, setSaving] = useState(false);
     
+    // Filtro visual por día
+    const [filtroDia, setFiltroDia] = useState('Todos');
+
     // Estado para edición
     const [editingId, setEditingId] = useState(null);
 
@@ -47,13 +53,14 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
         setSelectedBote('');
         setSelectedDist('');
         setSelectedSex('');
+        setSelectedDate(evento.fecha ? evento.fecha.substring(0, 10) : '');
         setSelectedTime('');
         setEditingId(null);
     };
 
     const handleAddPrueba = async () => {
-        if (!selectedCat || !selectedBote || !selectedDist || !selectedSex || !selectedTime) {
-            alert("Por favor completá todos los campos antes de habilitar la prueba.");
+        if (!selectedCat || !selectedBote || !selectedDist || !selectedSex || !selectedDate || !selectedTime) {
+            alert("Por favor completá todos los campos (incluyendo Fecha y Hora) antes de habilitar la prueba.");
             return false;
         }
 
@@ -65,9 +72,9 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                 'Mixto': 3
             };
 
-            const eventDate = new Date(evento.fecha);
+            const [year, month, day] = selectedDate.split('-');
             const [hours, minutes] = selectedTime.split(':');
-            const fechaHora = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), parseInt(hours), parseInt(minutes));
+            const fechaHora = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
 
             const payload = {
                 categoriaId: parseInt(selectedCat),
@@ -102,6 +109,9 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
         try {
             await PruebaService.deleteAssign(id);
             setPruebasActuales(prev => prev.filter(p => p.id !== id));
+            if (editingId === id) {
+                resetForm();
+            }
         } catch (err) {
             alert("Error al eliminar: " + err.message);
         }
@@ -112,20 +122,20 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
         setSelectedCat(ep.prueba.categoriaId.toString());
         setSelectedBote(ep.prueba.boteId.toString());
         setSelectedDist(ep.prueba.distanciaId.toString());
-        // El DTO de retorno debe tener estos IDs o el frontend debe mapearlos.
-        // Si no vienen los IDs directos en ep.prueba, usamos los objetos.
         setSelectedCat(ep.prueba.categoria.id.toString());
         setSelectedBote(ep.prueba.bote.id.toString());
         setSelectedDist(ep.prueba.distancia.id.toString());
         
-        // Mapear sexo (si no viene nombre exacto, ajustar)
-        // ep.prueba.sexo.nombre -> "Masculino", "Femenino", "Mixto"
         if (ep.prueba.sexo) {
             setSelectedSex(ep.prueba.sexo.nombre); 
         }
 
-        // Formatear hora
         const date = new Date(ep.fechaHora);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        setSelectedDate(`${yyyy}-${mm}-${dd}`);
+
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
         setSelectedTime(`${hours}:${minutes}`);
@@ -134,6 +144,97 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     const formatTime = (isoString) => {
         const date = new Date(isoString);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatDate = (isoString) => {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('es-AR');
+    };
+
+    // Obtener lista de días únicos con pruebas
+    const diasUnicos = ['Todos', ...new Set(pruebasActuales.map(ep => {
+        const d = new Date(ep.fechaHora);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }))].sort();
+
+    const pruebasFiltradas = pruebasActuales.filter(ep => {
+        if (filtroDia === 'Todos') return true;
+        const d = new Date(ep.fechaHora);
+        const dayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return dayStr === filtroDia;
+    });
+
+    const handleExportPDF = () => {
+        try {
+            const doc = new jsPDF();
+
+            // Header / Membrete
+            doc.setFontSize(18);
+            doc.setTextColor(20, 110, 180);
+            doc.text("CRONOGRAMA OFICIAL DE COMPETENCIA", 14, 22);
+            
+            const safeEventoNombre = evento?.nombre || evento?.Nombre || 'Evento Deportivo';
+            const safeEventoFecha = evento?.fecha ? new Date(evento.fecha).toLocaleDateString('es-AR') : 'A Confirmar';
+            const safeEventoUbicacion = evento?.ubicacion || 'A Confirmar';
+
+            doc.setFontSize(12);
+            doc.setTextColor(60, 60, 60);
+            doc.text(`Próximo Evento Deportivo: ${safeEventoNombre}`, 14, 30);
+            doc.text(`Fecha: ${safeEventoFecha}`, 14, 36);
+            doc.text(`Lugar / Pista: ${safeEventoUbicacion}`, 14, 42);
+
+            // Add a line divider
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, 45, 196, 45);
+
+            // Subtitle
+            doc.setFontSize(11);
+            doc.setTextColor(100, 100, 100);
+            doc.text("Este documento detalla el orden de las pruebas planificadas. Sujeto a modificaciones.", 14, 52);
+
+            // Table
+            const tableColumn = ["Orden", "Fecha/Hora", "Categoría", "Bote", "Distancia", "Sexo"];
+            const tableRows = [];
+
+            [...pruebasFiltradas]
+                .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+                .forEach((ep, index) => {
+                    const rowData = [
+                        (index + 1).toString(),
+                        `${formatDate(ep.fechaHora || ep.FechaHora)} ${formatTime(ep.fechaHora || ep.FechaHora)}`,
+                        ep.prueba?.categoria?.nombre || '-',
+                        ep.prueba?.bote?.tipo || '-',
+                        ep.prueba?.distancia?.descripcion || '-',
+                        ep.prueba?.sexoNombre || ep.prueba?.sexo?.nombre || 'Mixto'
+                    ];
+                    tableRows.push(rowData);
+                });
+
+            autoTable(doc, {
+                startY: 56,
+                head: [tableColumn],
+                body: tableRows,
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold' },
+                styles: { fontSize: 10, cellPadding: 3, halign: 'center' },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    2: { halign: 'left' }
+                },
+                alternateRowStyles: { fillColor: [248, 249, 250] }
+            });
+
+            // Footer
+            const finalY = doc.lastAutoTable.finalY || 60;
+            doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Documento generado automáticamente por el Sistema SportTrack.`, 14, finalY + 10);
+
+            doc.save(`Programa_${safeEventoNombre.replace(/\s+/g, '_')}.pdf`);
+        } catch (error) {
+            console.error("Error al generar PDF del cronograma:", error);
+            alert("Hubo un error al generar el PDF. Verifica los datos del evento.");
+        }
     };
 
     return (
@@ -180,6 +281,15 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                     </select>
                                 </div>
                                 <div className="form-field">
+                                    <label>Fecha de Prueba</label>
+                                    <input 
+                                        type="date" 
+                                        value={selectedDate} 
+                                        onChange={e => setSelectedDate(e.target.value)}
+                                        className="admin-input-dark"
+                                    />
+                                </div>
+                                <div className="form-field">
                                     <label>Hora de la Prueba</label>
                                     <input 
                                         type="time" 
@@ -202,10 +312,28 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                         </div>
 
                         <div className="current-pruebas glass-effect">
-                            <h4>Pruebas Habilitadas ({pruebasActuales.length})</h4>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <h4 style={{ margin: 0 }}>Pruebas Habilitadas ({pruebasFiltradas.length})</h4>
+                                    <select 
+                                        value={filtroDia} 
+                                        onChange={e => setFiltroDia(e.target.value)}
+                                        style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--color-bg)', color: '#fff', border: '1px solid var(--color-border)' }}
+                                    >
+                                        {diasUnicos.map(d => (
+                                            <option key={d} value={d}>
+                                                {d === 'Todos' ? 'Todos los días' : new Date(d + 'T00:00:00').toLocaleDateString('es-AR')}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button className="btn-admin-secondary flex-row gap-sm" onClick={handleExportPDF} style={{ padding: '5px 15px', color: '#fff', borderColor: 'var(--color-info)', background: 'rgba(52, 152, 219, 0.2)' }}>
+                                    📄 Exportar Programa PDF
+                                </button>
+                            </div>
                             <div className="pruebas-list">
                                 {loading ? <div className="loader"></div> : (
-                                    pruebasActuales.length > 0 ? (
+                                    pruebasFiltradas.length > 0 ? (
                                         <table className="mini-table">
                                             <thead>
                                                 <tr>
@@ -214,22 +342,25 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                                     <th>Bote</th>
                                                     <th>Distancia</th>
                                                     <th>Sexo</th>
-                                                    <th>Hora</th>
+                                                    <th>Fecha/Hora</th>
                                                     <th>Inscritos</th>
                                                     <th>Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {[...pruebasActuales]
+                                                {[...pruebasFiltradas]
                                                     .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
                                                     .map((ep, idx) => (
                                                     <tr key={ep.id} className={editingId === ep.id ? "row-editing" : ""}>
                                                         <td>{idx + 1}</td>
-                                                        <td>{ep.prueba.categoria.nombre}</td>
-                                                        <td>{ep.prueba.bote.tipo}</td>
-                                                        <td>{ep.prueba.distancia.descripcion}</td>
-                                                        <td>{ep.prueba.sexoNombre || ep.prueba.sexo?.nombre || 'Mixto'}</td>
-                                                        <td className="time-cell">{formatTime(ep.fechaHora)}</td>
+                                                        <td>{ep.prueba?.categoria?.nombre}</td>
+                                                        <td>{ep.prueba?.bote?.tipo}</td>
+                                                        <td>{ep.prueba?.distancia?.descripcion}</td>
+                                                        <td>{ep.prueba?.sexoNombre || ep.prueba?.sexo?.nombre || 'Mixto'}</td>
+                                                        <td className="time-cell">
+                                                            <div>{formatDate(ep.fechaHora)}</div>
+                                                            <div style={{ color: 'var(--color-info)' }}>{formatTime(ep.fechaHora)}</div>
+                                                        </td>
                                                         <td className="count-cell">
                                                             <span className={`count-badge ${ep.cantidadInscritos > 0 ? 'has-data' : ''}`}>
                                                                 {ep.cantidadInscritos}

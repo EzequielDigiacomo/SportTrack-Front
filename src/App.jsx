@@ -11,7 +11,7 @@ function App() {
     return (
         <Routes>
             {/* Rutas públicas */}
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<MainLayout><Login /></MainLayout>} />
             <Route path="/" element={<MainLayout><Home /></MainLayout>} />
             <Route path="/resultados/:id" element={<MainLayout><LiveResults /></MainLayout>} />
 

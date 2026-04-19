@@ -21,6 +21,10 @@ const InscripcionService = {
     update: async (id, data) => {
         const response = await api.put(`${ENDPOINTS.INSCRIPCIONES.BASE}/${id}`, data);
         return response.data;
+    },
+    toggleSeeding: async (id) => {
+        const response = await api.patch(`${ENDPOINTS.INSCRIPCIONES.BASE}/${id}/toggle-seeding`);
+        return response.data;
     }
 };
 

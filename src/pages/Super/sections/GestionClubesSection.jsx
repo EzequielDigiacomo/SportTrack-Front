@@ -1,3 +1,4 @@
+import { Users, Edit2, Plus, X, ArrowLeft } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
 import React, { useState, useEffect } from 'react';
@@ -41,8 +42,8 @@ const GestionClubesSection = () => {
                     <h2>Clubes Registrados</h2>
                     <p className="section-desc">Administrá los clubes habilitados en el sistema</p>
                 </div>
-                <button className="btn-admin-primary" onClick={() => setShowForm(!showForm)}>
-                    {showForm ? 'Cancelar' : '+ Agregar Club'}
+                <button className={`btn-admin-${showForm ? 'secondary' : 'primary'}`} onClick={() => setShowForm(!showForm)}>
+                    {showForm ? <><X size={18} /> Cancelar</> : <><Plus size={18} /> Agregar Club</>}
                 </button>
             </div>
 
@@ -76,8 +77,8 @@ const GestionClubesSection = () => {
                                     <td>{c.email || '—'}</td>
                                     <td>{c.ubicacion || '—'}</td>
                                     <td className="actions-cell">
-                                        <button className="btn-icon-admin" title="Editar">✏️</button>
-                                        <button className="btn-icon-admin" title="Ver Atletas">👥</button>
+                                        <button className="btn-icon-admin primary" title="Editar"><Edit2 size={16} /></button>
+                                        <button className="btn-icon-admin" title="Ver Atletas"><Users size={16} /></button>
                                     </td>
                                 </tr>
                             )) : <tr><td colSpan="5" className="empty-row">No hay clubes registrados</td></tr>}

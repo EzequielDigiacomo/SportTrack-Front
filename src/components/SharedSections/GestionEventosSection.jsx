@@ -1,4 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { 
+    Globe, 
+    Settings, 
+    Edit2, 
+    Trash2, 
+    Plus, 
+    ArrowLeft, 
+    Calendar, 
+    MapPin, 
+    ClipboardList, 
+    Trophy,
+    UserCircle,
+    Copy,
+    ChevronRight,
+    Lock,
+    Unlock
+} from 'lucide-react';
 import EventoService from '../../services/EventoService';
 import ConfigurarPruebasModal from './ConfigurarPruebasModal';
 import GestionResultadosSection from './GestionResultadosSection';
@@ -14,11 +31,17 @@ const GestionEventosSection = () => {
     const [form, setForm] = useState({
         nombre: '',
         fecha: '',
+        fechaFin: '',
         fechaFinInscripciones: '',
         ubicacion: '',
         descripcion: '',
         estado: 'Programado',
-        inscripcionesHabilitadas: true
+        inscripcionesHabilitadas: true,
+        restringirSoloCategoriaPropia: false,
+        permitirSub23EnSenior: false,
+        permitirMasterBajarASenior: false,
+        permitirCompletarK4: false,
+        limitacionBotesAB: false
     });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState(null);
@@ -61,9 +84,16 @@ const GestionEventosSection = () => {
         const payload = {
             nombre: form.nombre,
             fecha: form.fecha,
+            fechaFin: form.fechaFin || null,
             ubicacion: form.ubicacion,
             fechaFinInscripciones: form.fechaFinInscripciones || null,
-            estado: form.estado
+            estado: form.estado,
+            inscripcionesHabilitadas: form.inscripcionesHabilitadas,
+            restringirSoloCategoriaPropia: form.restringirSoloCategoriaPropia,
+            permitirSub23EnSenior: form.permitirSub23EnSenior,
+            permitirMasterBajarASenior: form.permitirMasterBajarASenior,
+            permitirCompletarK4: form.permitirCompletarK4,
+            limitacionBotesAB: form.limitacionBotesAB
         };
         try {
             if (view === 'editar' && selectedEvento) {
@@ -76,11 +106,17 @@ const GestionEventosSection = () => {
             setForm({
                 nombre: '',
                 fecha: '',
+                fechaFin: '',
                 fechaFinInscripciones: '',
                 ubicacion: '',
                 descripcion: '',
                 estado: 'Programado',
-                inscripcionesHabilitadas: true
+                inscripcionesHabilitadas: true,
+                restringirSoloCategoriaPropia: false,
+                permitirSub23EnSenior: false,
+                permitirMasterBajarASenior: false,
+                permitirCompletarK4: false,
+                limitacionBotesAB: false
             });
             setView('lista');
             loadEventos();
@@ -95,13 +131,37 @@ const GestionEventosSection = () => {
         setForm({
             nombre: evento.nombre || '',
             fecha: evento.fecha ? evento.fecha.substring(0, 10) : '',
+            fechaFin: evento.fechaFin ? evento.fechaFin.substring(0, 10) : '',
             fechaFinInscripciones: evento.fechaFinInscripciones ? evento.fechaFinInscripciones.substring(0, 10) : '',
             ubicacion: evento.ubicacion || '',
             descripcion: evento.descripcion || '',
             estado: evento.estado || 'Programado',
-            inscripcionesHabilitadas: evento.inscripcionesAbiertas || true
+            inscripcionesHabilitadas: evento.inscripcionesHabilitadas ?? true,
+            restringirSoloCategoriaPropia: evento.restringirSoloCategoriaPropia || false,
+            permitirSub23EnSenior: evento.permitirSub23EnSenior || false,
+            permitirMasterBajarASenior: evento.permitirMasterBajarASenior || false,
+            permitirCompletarK4: evento.permitirCompletarK4 || false,
+            limitacionBotesAB: evento.limitacionBotesAB || false
         });
         setView('editar');
+    };
+
+    const handleCopyLiveLink = (id, nombre) => {
+        const url = `${window.location.origin}/resultados/${id}`;
+        navigator.clipboard.writeText(url);
+        setMsg({ type: 'info', text: `¡Link de "${nombre}" copiado al portapapeles!` });
+    };
+
+    const handleDelete = async (evento) => {
+        if (window.confirm(`¿Estás seguro de que deseas eliminar el evento "${evento.nombre}"? Esta acción no se puede deshacer.`)) {
+            try {
+                await EventoService.delete(evento.id);
+                setMsg({ type: 'success', text: '¡Evento eliminado correctamente!' });
+                loadEventos();
+            } catch (err) {
+                setMsg({ type: 'error', text: 'Error al eliminar el evento: ' + err.message });
+            }
+        }
     };
 
     const estadoBadge = (estado) => {
@@ -123,10 +183,14 @@ const GestionEventosSection = () => {
                     <p className="section-desc">Administrá todas las competencias del sistema</p>
                 </div>
                 {view === 'lista' && (
-                    <button className="btn-admin-primary" onClick={() => setView('crear')}>+ Nuevo Evento</button>
+                    <button className="btn-admin-primary" onClick={() => setView('crear')}>
+                        <Plus size={18} style={{ marginRight: '6px' }} /> Nuevo Evento
+                    </button>
                 )}
                 {view !== 'lista' && (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>← Volver a la lista</button>
+                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
+                        <ArrowLeft size={18} style={{ marginRight: '6px' }} /> Atrás
+                    </button>
                 )}
             </div>
 
@@ -154,24 +218,38 @@ const GestionEventosSection = () => {
                                         <td>{ev.ubicacion || '—'}</td>
                                         <td>
                                             <span className={`inscripciones-tag ${ev.inscripcionesAbiertas ? 'open' : 'closed'}`}>
-                                                {ev.inscripcionesAbiertas ? '✅ Abiertas' : '🔒 Cerradas'}
+                                                {ev.inscripcionesAbiertas ? <><Unlock size={14} /> Abiertas</> : <><Lock size={14} /> Cerradas</>}
                                             </span>
                                         </td>
                                         <td>{estadoBadge(ev.estado)}</td>
                                         <td className="actions-cell">
                                             <button 
+                                                className="btn-icon-admin primary"
+                                                onClick={() => handleCopyLiveLink(ev.id, ev.nombre)}
+                                                title="Copiar Link de Live Results"
+                                            >
+                                                <Copy size={18} />
+                                            </button>
+                                            <button 
                                                 className="btn-admin-primary" 
                                                 onClick={() => handleOpenDashboard(ev)}
-                                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', marginRight: '0.5rem' }}
+                                                title="Dirigir Carrera"
                                             >
-                                                ⚙️ Dirigir Carrera
+                                                <Settings size={16} /> Dirigir
                                             </button>
                                             <button 
                                                 className="btn-admin-secondary" 
                                                 onClick={() => handleEdit(ev)}
-                                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                                                title="Editar"
                                             >
-                                                ✏️ Editar
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button 
+                                                className="btn-admin-danger" 
+                                                onClick={() => handleDelete(ev)}
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 size={16} />
                                             </button>
                                         </td>
                                     </tr>
@@ -195,10 +273,14 @@ const GestionEventosSection = () => {
                                     placeholder="Ej: Campeonato Nacional de Canotaje 2026" required />
                             </div>
                             <div className="form-field">
-                                <label>Fecha del Evento *</label>
+                                <label>Fecha de Inicio *</label>
                                 <input type="date" name="fecha" value={form.fecha} onChange={handleChange} required />
                             </div>
                             <div className="form-field">
+                                <label>Fecha de Fin (Opcional)</label>
+                                <input type="date" name="fechaFin" value={form.fechaFin} onChange={handleChange} />
+                            </div>
+                            <div className="form-field full-width">
                                 <label>Cierre de Inscripciones</label>
                                 <input type="date" name="fechaFinInscripciones" value={form.fechaFinInscripciones} onChange={handleChange} />
                             </div>
@@ -227,16 +309,46 @@ const GestionEventosSection = () => {
                                     <span>Habilitar inscripciones al crear el evento</span>
                                 </label>
                             </div>
-                        </div>
 
-                        <div className="pruebas-preview glass-effect">
-                            <h4>⚙️ Configuración de Pruebas</h4>
-                            <p className="hint-text">Después de crear el evento, podrás agregar las pruebas específicas (K1 500m Sub-16, C2 1000m Mayores, etc.) desde el panel de gestión.</p>
-                            <div className="prueba-chips">
-                                <span className="chip">K1 · K2 · K4</span>
-                                <span className="chip">C1 · C2</span>
-                                <span className="chip">200m · 500m · 1000m</span>
-                                <span className="chip inactive">+ Configurar después</span>
+                            <div className="form-rules-container full-width">
+                                <h4>Reglas de Competencia</h4>
+                                <div className="rules-grid">
+                                    <label className="checkbox-label rule-card">
+                                        <input type="checkbox" name="restringirSoloCategoriaPropia" checked={form.restringirSoloCategoriaPropia} onChange={handleChange} />
+                                        <div className="rule-info">
+                                            <strong>Categoría Única</strong>
+                                            <span>El atleta solo puede competir en su categoría oficial por edad.</span>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input type="checkbox" name="permitirSub23EnSenior" checked={form.permitirSub23EnSenior} onChange={handleChange} />
+                                        <div className="rule-info">
+                                            <strong>Sub23 en Senior</strong>
+                                            <span>Permitir que atletas Sub23 se inscriban tanto en su categoría como en Senior.</span>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input type="checkbox" name="permitirMasterBajarASenior" checked={form.permitirMasterBajarASenior} onChange={handleChange} />
+                                        <div className="rule-info">
+                                            <strong>Master A en Senior</strong>
+                                            <span>Permitir que atletas Master A bajen a competir en la categoría Senior.</span>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input type="checkbox" name="permitirCompletarK4" checked={form.permitirCompletarK4} onChange={handleChange} />
+                                        <div className="rule-info">
+                                            <strong>Refuerzo en K4</strong>
+                                            <span>Permitir completar un bote K4 con 1 atleta de la categoría inmediata inferior (ej: 3 Seniors + 1 Junior).</span>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input type="checkbox" name="limitacionBotesAB" checked={form.limitacionBotesAB} onChange={handleChange} />
+                                        <div className="rule-info">
+                                            <strong>Límite de Botes A y B</strong>
+                                            <span>Solo se permite inscribir un máximo de 2 botes por club en esta prueba. <em>(Si se desactiva, las inscripciones son ilimitadas).</em></span>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -254,24 +366,24 @@ const GestionEventosSection = () => {
                         <>
                             <div className="event-dashboard-header glass-effect" style={{ padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
                                 <h2 style={{ margin: 0, color: 'var(--color-primary)' }}>{selectedEvento.nombre}</h2>
-                                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-text-dim)' }}>
-                                    📅 {new Date(selectedEvento.fecha).toLocaleDateString('es-AR')} | 📍 {selectedEvento.ubicacion || 'Sin ubicación'}
+                                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Calendar size={16} /> {new Date(selectedEvento.fecha).toLocaleDateString('es-AR')} | <MapPin size={16} /> {selectedEvento.ubicacion || 'Sin ubicación'}
                                 </p>
                             </div>
 
                             <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
                                 <div className="dashboard-card glass-effect clickable" onClick={handleOpenConfig}>
-                                    <div className="card-icon">📅</div>
+                                    <div className="card-icon"><Calendar size={32} /></div>
                                     <h3>1. Armar Schedule</h3>
                                     <p className="card-label">Crear pruebas y horarios para que los clubes inscriban a sus atletas.</p>
                                 </div>
                                 <div className="dashboard-card glass-effect clickable" onClick={() => setActiveSubView('startlist')}>
-                                    <div className="card-icon">📋</div>
+                                    <div className="card-icon"><ClipboardList size={32} /></div>
                                     <h3>2. Start List</h3>
                                     <p className="card-label">Cerrar inscripciones, armar series y sortear carriles aleatoriamente.</p>
                                 </div>
                                 <div className="dashboard-card glass-effect clickable" onClick={() => setActiveSubView('resultados')}>
-                                    <div className="card-icon">🏅</div>
+                                    <div className="card-icon"><Trophy size={32} /></div>
                                     <h3>3. Result List</h3>
                                     <p className="card-label">Cargar tiempos oficiales al cruzar la meta y publicarlos en vivo.</p>
                                 </div>
@@ -280,7 +392,7 @@ const GestionEventosSection = () => {
                     ) : (
                         <div>
                             <button className="btn-admin-secondary mb-md" onClick={() => setActiveSubView(null)}>
-                                ← Volver al Menú de {selectedEvento.nombre}
+                                <ArrowLeft size={16} /> Atrás
                             </button>
                             <GestionResultadosSection 
                                 preselectedEventoId={selectedEvento.id} 

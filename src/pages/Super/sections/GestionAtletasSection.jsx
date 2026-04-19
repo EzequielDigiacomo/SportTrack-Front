@@ -1,3 +1,17 @@
+import { 
+    Users, 
+    UserPlus, 
+    Search, 
+    Edit2, 
+    Trash2, 
+    ChevronUp, 
+    ChevronDown, 
+    ArrowUpDown,
+    ArrowLeft,
+    Filter,
+    Mail,
+    Plus
+} from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
@@ -21,10 +35,21 @@ const GestionAtletasSection = () => {
     });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedClub, setSelectedClub] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'apellido', direction: 'asc' });
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 5;
 
     useEffect(() => {
         loadData();
     }, []);
+
+    // Resetear a la página 1 cuando cambia la búsqueda
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedClub]);
 
     const loadData = async () => {
         try {
@@ -40,6 +65,19 @@ const GestionAtletasSection = () => {
         } finally {
             setLoading(false);
         }
+    };
+ 
+    const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+ 
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <ArrowUpDown size={14} />;
+        return sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
     };
 
     const handleOpenCrear = () => {
@@ -107,6 +145,29 @@ const GestionAtletasSection = () => {
         }
     };
 
+    const filteredAtletas = atletas
+        .filter(atleta => {
+            const searchLower = searchTerm.toLowerCase();
+            const searchableText = `${atleta.nombre} ${atleta.apellido} ${atleta.dni} ${atleta.email || ''} ${atleta.categoriaNombre || ''}`.toLowerCase();
+            const nameMatch = searchableText.includes(searchLower);
+            const clubMatch = !selectedClub || atleta.clubNombre === selectedClub;
+            return nameMatch && clubMatch;
+        })
+        .sort((a, b) => {
+            let aVal = a[sortConfig.key];
+            let bVal = b[sortConfig.key];
+            if (aVal === null || aVal === undefined) aVal = '';
+            if (bVal === null || bVal === undefined) bVal = '';
+            if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    const totalPages = Math.ceil(filteredAtletas.length / rowsPerPage);
+    const displayedAtletas = filteredAtletas.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
     return (
         <div className="admin-section fade-in">
             <div className="admin-section-header">
@@ -115,13 +176,51 @@ const GestionAtletasSection = () => {
                     <p className="section-desc">Gestión global de atletas y sus representatividades de club.</p>
                 </div>
                 {view === 'lista' ? (
-                    <button className="btn-admin-primary" onClick={handleOpenCrear}>+ Nuevo Atleta</button>
+                    <button className="btn-admin-primary" onClick={handleOpenCrear}>
+                        <UserPlus size={18} style={{marginRight: '6px'}} /> Nuevo Atleta
+                    </button>
                 ) : (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>← Volver a la lista</button>
+                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
+                        <ArrowLeft size={18} style={{marginRight: '6px'}} /> Volver a la lista
+                    </button>
                 )}
             </div>
 
             {msg && <div className={`alert-msg ${msg.type}`} style={{marginBottom: '1rem'}}>{msg.text}</div>}
+ 
+            {view === 'lista' && (
+                <div className="admin-filters-container glass-effect">
+                    <div className="admin-filter-row">
+                        <div className="filter-group">
+                            <label>Filtrar por Club:</label>
+                            <select 
+                                className="filter-select"
+                                value={selectedClub}
+                                onChange={(e) => setSelectedClub(e.target.value)}
+                            >
+                                <option value="">Todos los Clubes</option>
+                                {clubes.map(c => (
+                                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-stats">
+                            Mostrando <strong>{filteredAtletas.length}</strong> de {atletas.length} atletas
+                        </div>
+                    </div>
+                    <div className="admin-search-row">
+                        <div className="search-input-wrapper main-search">
+                            <i><Search size={18} /></i>
+                            <input 
+                                type="text" 
+                                placeholder="Escribe nombre, apellido, DNI, email o categoría..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {view === 'lista' ? (
                 loading ? <div className="loader-container"><div className="loader"></div></div> : (
@@ -129,15 +228,26 @@ const GestionAtletasSection = () => {
                         <table className="admin-table">
                             <thead>
                                 <tr>
-                                    <th>Nombre Completo</th>
-                                    <th>DNI</th>
-                                    <th>Club</th>
-                                    <th>Sex / Edad</th>
+                                    <th className="sortable" onClick={() => requestSort('apellido')}>
+                                        Nombre Completo <span className="sort-icon">{getSortIcon('apellido')}</span>
+                                    </th>
+                                    <th className="sortable" onClick={() => requestSort('dni')}>
+                                        DNI <span className="sort-icon">{getSortIcon('dni')}</span>
+                                    </th>
+                                    <th className="sortable" onClick={() => requestSort('clubNombre')}>
+                                        Club <span className="sort-icon">{getSortIcon('clubNombre')}</span>
+                                    </th>
+                                    <th className="sortable" onClick={() => requestSort('categoriaNombre')}>
+                                        Categoría <span className="sort-icon">{getSortIcon('categoriaNombre')}</span>
+                                    </th>
+                                    <th className="sortable" onClick={() => requestSort('edad')}>
+                                        Sex / Edad <span className="sort-icon">{getSortIcon('edad')}</span>
+                                    </th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {atletas.length > 0 ? atletas.map(atleta => (
+                             <tbody>
+                                {displayedAtletas.length > 0 ? displayedAtletas.map(atleta => (
                                     <tr key={atleta.id}>
                                         <td>
                                             <div style={{fontWeight: 'bold'}}>{atleta.nombre} {atleta.apellido}</div>
@@ -149,17 +259,44 @@ const GestionAtletasSection = () => {
                                                 {atleta.clubNombre || 'Independiente'}
                                             </span>
                                         </td>
+                                        <td>
+                                            <span style={{fontSize: '0.9rem', color: 'var(--color-primary-light)', fontWeight: '600'}}>
+                                                {atleta.categoriaNombre || 'Sin Cat.'}
+                                            </span>
+                                        </td>
                                         <td>{atleta.sexoNombre?.[0]} / {atleta.edad}a</td>
                                         <td className="actions-cell">
-                                            <button className="btn-admin-secondary" onClick={() => handleOpenEditar(atleta)} style={{padding: '0.4rem 0.6rem', fontSize: '0.8rem', marginRight: '0.5rem'}}>✏️</button>
-                                            <button className="btn-admin-danger" onClick={() => handleDelete(atleta.id)} style={{padding: '0.4rem 0.6rem', fontSize: '0.8rem'}}>🗑️</button>
+                                            <button className="btn-icon-admin primary" onClick={() => handleOpenEditar(atleta)} title="Editar"><Edit2 size={16} /></button>
+                                            <button className="btn-admin-danger" onClick={() => handleDelete(atleta.id)} title="Eliminar" style={{padding: '0.4rem 0.6rem'}}><Trash2 size={16} /></button>
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="5" className="empty-row">No hay atletas registrados en el sistema.</td></tr>
+                                    <tr><td colSpan="6" className="empty-row">No hay atletas registrados en el sistema.</td></tr>
                                 )}
                             </tbody>
                         </table>
+                         {/* PAGINACIÓN */}
+                         {filteredAtletas.length > rowsPerPage && (
+                            <div className="admin-pagination">
+                                <button 
+                                    className="btn-pagination" 
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(prev => prev - 1)}
+                                >
+                                    Anterior
+                                </button>
+                                <div className="pagination-info">
+                                    Página <strong>{currentPage}</strong> de {totalPages}
+                                </div>
+                                <button 
+                                    className="btn-pagination" 
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(prev => prev + 1)}
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )
             ) : (

@@ -30,10 +30,18 @@ export const ENDPOINTS = {
         BY_EVENTO_PRUEBA: (id) => `/inscripciones/evento-prueba/${id}`,
     },
 
+    // Fases
+    FASES: {
+        BASE: '/fases',
+        BY_EVENTO_PRUEBA: (id) => `/fases/EventoPrueba/${id}`,
+        GENERAR: (id) => `/fases/Generar/${id}`,
+        PROMOVER: (id) => `/fases/Promover/${id}`,
+    },
+
     // Resultados
     RESULTADOS: {
-        UPSERT: '/resultados/upsert',
-        BY_PRUEBA: (id) => `/resultados/prueba/${id}`,
+        BATCH_UPDATE: '/resultados/BatchUpdate',
+        BY_FASE: (id) => `/resultados/Fase/${id}`,
     },
 
     // Catalogos
