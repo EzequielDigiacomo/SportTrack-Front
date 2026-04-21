@@ -4,18 +4,16 @@ import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants'
 // Create axios instance
 const api = axios.create({
     baseURL: API_BASE_URL,
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
 })
 
-// Request interceptor - Add auth token to requests
+// Request interceptor - Add auth token to requests (Opcional si usas Cookies)
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
+        // Con withCredentials: true, las cookies se envían solas
         return config
     },
     (error) => {

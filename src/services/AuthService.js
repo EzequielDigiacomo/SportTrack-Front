@@ -1,5 +1,5 @@
 import api from './api';
-import { ENDPOINTS } from '../utils/constants';
+import { ENDPOINTS, STORAGE_KEYS } from '../utils/constants';
 
 const AuthService = {
     login: async (credentials) => {
@@ -24,8 +24,18 @@ const AuthService = {
         return response.data;
     },
 
+    logout: async () => {
+        const response = await api.post(ENDPOINTS.AUTH.LOGOUT || '/auth/logout');
+        return response.data;
+    },
+
+    validateSession: async () => {
+        const response = await api.get('/auth/me');
+        return response.data;
+    },
+
     getCurrentUser: () => {
-        const userData = localStorage.getItem('sporttrack_user_data');
+        const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
         return userData ? JSON.parse(userData) : null;
     }
 };
