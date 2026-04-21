@@ -10,15 +10,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-xl);
-    padding-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .admin-section-header h2,
 .admin-title {
-    font-size: 1.6rem;
-    margin-bottom: var(--spacing-xs);
+    font-size: 1.3rem;
+    margin-bottom: 0;
     color: var(--color-text-primary);
 }
 
@@ -258,30 +258,33 @@
    ADMIN FORM SYSTEM
    ────────────────────────────────────────────────────────────────────────── */
 .admin-form-card {
-    padding: var(--spacing-xl);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--spacing-xl);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
     border: 1px solid rgba(255, 255, 255, 0.05);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .admin-grid-form {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl);
+    gap: 4px;
 }
 
 .form-section {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-sm);
     animation: slideUp 0.3s ease-out;
 }
 
 .form-section h4 {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--color-primary-light);
-    margin-bottom: var(--spacing-sm);
-    padding-bottom: 0.5rem;
+    margin-bottom: 0;
+    padding-bottom: 0.3rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -290,13 +293,13 @@
 .form-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-lg);
+    gap: var(--spacing-sm);
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 4px;
 }
 
 .form-group label {
@@ -311,12 +314,12 @@
 .admin-input, 
 .admin-select {
     width: 100%;
-    padding: 0.8rem 1rem;
+    padding: 0.5rem 0.6rem !important;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-md);
     color: white;
-    font-size: 1rem;
+    font-size: 0.9rem;
     transition: all var(--transition-base);
 }
 
@@ -336,12 +339,32 @@
     cursor: not-allowed;
 }
 
+/* Visual Validation Feedback */
+.admin-input:not(:placeholder-shown):invalid,
+.admin-select:not(:placeholder-shown):invalid,
+.form-group input:not(:placeholder-shown):invalid {
+    border-color: #ff4d4d !important;
+    background: rgba(255, 77, 77, 0.05) !important;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.2) !important;
+}
+
+.admin-input:focus:invalid,
+.admin-select:focus:invalid {
+    border-color: #ff4d4d !important;
+    box-shadow: 0 0 15px rgba(255, 77, 77, 0.3) !important;
+}
+
+/* Al intentar enviar, el navegador aplica :invalid a los campos required vacíos */
+form:invalid button[type="submit"] {
+    opacity: 0.8;
+}
+
 .form-footer-actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-md);
-    margin-top: var(--spacing-lg);
-    padding-top: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -956,8 +979,8 @@ th.sortable:hover .sort-icon {
 /* Competition Rules Styling */
 .form-rules-container {
     grid-column: 1 / -1;
-    margin-top: var(--spacing-lg);
-    padding: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: var(--radius-lg);
@@ -1137,8 +1160,8 @@ th.sortable:hover .sort-icon {
 .config-panels-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: var(--spacing-xl);
-    margin-top: var(--spacing-lg);
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
 }
 
 .config-group-card {
@@ -1149,10 +1172,10 @@ th.sortable:hover .sort-icon {
 }
 
 .config-group-header {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     border-bottom: 1px solid rgba(255,255,255,0.05);
     background: rgba(255,255,255,0.01);
 }
@@ -1237,9 +1260,9 @@ th.sortable:hover .sort-icon {
     color: white;
 }
 
-.mini-table th, .mini-table td {
-    padding: 0.5rem 0.8rem !important;
-    font-size: 0.85rem !important;
+.admin-table.mini th, .admin-table.mini td {
+    padding: 0.5rem 0.6rem !important;
+    font-size: 0.8rem !important;
 }
 
 .etapa-title-gold {
@@ -1276,5 +1299,72 @@ th.sortable:hover .sort-icon {
     border-radius: var(--radius-full);
     font-size: 0.85rem;
     border: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   DASHBOARD EVENTO HEADER & CHIPS
+   ────────────────────────────────────────────────────────────────────────── */
+.event-dashboard-header {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.event-dashboard-header h2 {
+    font-size: 2.2rem !important;
+    font-weight: 700;
+    margin: 0 !important;
+    color: var(--color-primary-light) !important;
+}
+
+.dashboard-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-dim);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.dashboard-meta svg {
+    color: var(--color-text-muted);
+}
+
+.dashboard-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+}
+
+.chip {
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.chip-ecu-yellow {
+    background: rgba(255, 165, 0, 0.15);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 165, 0, 0.3);
+}
+
+.chip-ecu-blue {
+    background: rgba(0, 150, 255, 0.15);
+    color: #4dabf5;
+    border: 1px solid rgba(0, 150, 255, 0.3);
+}
+
+.chip-ecu-red {
+    background: rgba(239, 51, 64, 0.15);
+    color: #ef3340;
+    border: 1px solid rgba(239, 51, 64, 0.3);
 }
 

@@ -89,6 +89,30 @@
 
 .input-wrapper {
     position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--color-text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.password-toggle-btn:hover {
+    color: var(--color-primary-light);
+}
+
+.password-input {
+    padding-right: 45px !important;
 }
 
 .form-group input {
@@ -164,8 +188,8 @@
 
 .recovery-link-container {
     text-align: right;
-    margin-top: -10px;
-    margin-bottom: var(--spacing-md);
+    margin-top: 8px;
+    margin-bottom: var(--spacing-lg);
 }
 
 .btn-link {

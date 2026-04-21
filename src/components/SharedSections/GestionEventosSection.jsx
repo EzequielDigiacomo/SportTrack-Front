@@ -12,6 +12,7 @@ import EventoService from '../../services/EventoService';
 import ConfigurarPruebasModal from './ConfigurarPruebasModal';
 import GestionResultadosSection from './GestionResultadosSection';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import ClubService from '../../services/ClubService';
 import EventGrid from './EventGrid';
 import EventForm from './EventForm';
 import { useAlert } from '../../hooks/useAlert';
@@ -24,6 +25,7 @@ const GestionEventosSection = () => {
     const [selectedEvento, setSelectedEvento] = useState(null);
     const [activeSubView, setActiveSubView] = useState(null); // 'startlist', 'resultados'
     const [showConfigModal, setShowConfigModal] = useState(false);
+    const [clubes, setClubes] = useState([]);
     
     const [form, setForm] = useState({
         nombre: '',
@@ -38,7 +40,8 @@ const GestionEventosSection = () => {
         permitirSub23EnSenior: false,
         permitirMasterBajarASenior: false,
         permitirCompletarK4: false,
-        limitacionBotesAB: false
+        limitacionBotesAB: false,
+        clubId: ''
     });
 
     const { alert: msg, showAlert } = useAlert();
@@ -47,6 +50,7 @@ const GestionEventosSection = () => {
 
     useEffect(() => {
         loadEventos();
+        loadClubes();
         
         const handlePopState = (e) => {
             if (!e.state) { setView('lista'); setSelectedEvento(null); setActiveSubView(null); setShowConfigModal(false); }
@@ -70,6 +74,15 @@ const GestionEventosSection = () => {
             setLoading(false);
         }
     };
+    
+    const loadClubes = async () => {
+        try {
+            const data = await ClubService.getAll();
+            setClubes(data);
+        } catch (e) {
+            console.error("Error al cargar clubes", e);
+        }
+    };
 
     const handleOpenDashboard = (evento) => {
         setSelectedEvento(evento);
@@ -89,12 +102,18 @@ const GestionEventosSection = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
+        
+        const payload = {
+            ...form,
+            clubId: form.clubId === "" ? null : parseInt(form.clubId)
+        };
+
         try {
             if (view === 'editar' && selectedEvento) {
-                await EventoService.update(selectedEvento.id, form);
+                await EventoService.update(selectedEvento.id, payload);
                 showAlert('success', '¡Evento actualizado exitosamente!');
             } else {
-                await EventoService.create(form);
+                await EventoService.create(payload);
                 showAlert('success', '¡Evento creado exitosamente!');
             }
             setView('lista');
@@ -119,7 +138,8 @@ const GestionEventosSection = () => {
             permitirSub23EnSenior: evento.permitirSub23EnSenior || false,
             permitirMasterBajarASenior: evento.permitirMasterBajarASenior || false,
             permitirCompletarK4: evento.permitirCompletarK4 || false,
-            limitacionBotesAB: evento.limitacionBotesAB || false
+            limitacionBotesAB: evento.limitacionBotesAB || false,
+            clubId: evento.clubId || ''
         });
         setView('editar');
     };
@@ -182,6 +202,7 @@ const GestionEventosSection = () => {
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
+                    clubes={clubes}
                 />
             )}
             

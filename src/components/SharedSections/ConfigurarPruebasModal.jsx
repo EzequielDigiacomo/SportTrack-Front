@@ -6,6 +6,60 @@ import './ConfigurarPruebas.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const BOTE_NAMES = {
+    1: 'K1',
+    2: 'K2',
+    3: 'K4',
+    4: 'C1',
+    5: 'C2',
+    6: 'C4'
+};
+
+const DISTANCIA_NAMES = {
+    1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m',
+    6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 10: '5000m',
+    11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m',
+    15: '22000m', 16: '30000m'
+};
+
+const CATEGORIA_NAMES = {
+    1: 'Pre-infantil (8-10 años)',
+    2: 'Infantil (11-12 años)',
+    3: 'Menor (13-14 años)',
+    4: 'Cadete (14-15 años)',
+    5: 'Junior (16-17 años)',
+    6: 'Sub-23 (18-22 años)',
+    7: 'Senior (18-35 años)',
+    8: 'Master A (40-45 años)',
+    9: 'Master B (46-50 años)',
+    10: 'Master C (50+ años)'
+};
+
+const SEXO_NAMES = {
+    1: 'Masculino',
+    2: 'Femenino',
+    3: 'Mixto'
+};
+
+const getISODatePart = (dateString) => {
+    if (!dateString) return '';
+    return dateString.substring(0, 10);
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString();
+};
+
+const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+};
+
 const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     const [categorias, setCategorias] = useState([]);
     const [botes, setBotes] = useState([]);
@@ -49,10 +103,10 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                     DistanciaService.getAll(),
                     PruebaService.getByEvento(evento.id)
                 ]);
-                setCategorias(c);
-                setBotes(b);
-                setDistancias(d);
-                setPruebasActuales(current);
+                setCategorias(cats);
+                setBotes(bts);
+                setDistancias(dists);
+                setPruebasActuales(actuals);
                 
                 if (evento.fecha) {
                     setSelectedDate(evento.fecha.substring(0, 10));
@@ -90,20 +144,21 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
 
         setSaving(true);
         try {
-            const fechaHora = `${selectedDate}T${selectedTime}:00`;
+            const localDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+            const fechaHora = localDateTime.toISOString();
             const payload = {
                 eventoId: evento.id,
                 categoriaId: parseInt(selectedCat),
                 boteId: parseInt(selectedBote),
                 distanciaId: parseInt(selectedDist),
-                sexoNombre: selectedSex,
+                sexoId: parseInt(selectedSex),
                 fechaHora
             };
 
             if (editingId) {
                 await PruebaService.updateAssign(editingId, payload);
             } else {
-                await PruebaService.assign(payload);
+                await PruebaService.assignToEvento(evento.id, null, payload);
             }
             
             const updated = await PruebaService.getByEvento(evento.id);
@@ -157,7 +212,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
         setSelectedCat(catId ? catId.toString() : '');
         setSelectedBote(botId ? botId.toString() : '');
         setSelectedDist(distId ? distId.toString() : '');
-        setSelectedSex(ep.prueba.sexo?.nombre || ep.prueba.sexoNombre || '');
+        setSelectedSex(ep.prueba.sexoId ? ep.prueba.sexoId.toString() : (ep.prueba.sexo?.id ? ep.prueba.sexo.id.toString() : ''));
         
         const date = new Date(ep.fechaHora);
         if (!isNaN(date.getTime())) {
@@ -192,10 +247,10 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                 index + 1,
                 formatTime(ep.fechaHora),
                 formatDate(ep.fechaHora),
-                ep.prueba?.categoria?.nombre || ep.prueba?.categoriaNombre || '',
-                ep.prueba?.bote?.nombre || ep.prueba?.boteNombre || '',
-                `${ep.prueba?.distancia?.metros || ep.prueba?.distanciaMetros || ''}m`,
-                ep.prueba?.sexo?.nombre || ep.prueba?.sexoNombre || ''
+                CATEGORIA_NAMES[ep.prueba?.categoria?.id] || ep.prueba?.categoria?.nombre || ep.prueba?.categoriaNombre || '',
+                BOTE_NAMES[ep.prueba?.bote?.id] || ep.prueba?.bote?.tipo || ep.prueba?.boteNombre || '',
+                DISTANCIA_NAMES[ep.prueba?.distancia?.id] || `${ep.prueba?.distancia?.metros || ep.prueba?.distanciaMetros || ''}m`,
+                SEXO_NAMES[ep.prueba?.sexoId] || ep.prueba?.sexo?.nombre || ep.prueba?.sexoNombre || ''
             ]);
 
             autoTable(doc, {
@@ -214,12 +269,11 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
 
     return (
         <div className="admin-modal-overlay">
-            <div className="admin-modal-content large glass-effect fade-in">
+            <div className="admin-modal glass-effect fade-in">
                 <div className="modal-header">
                     <h3>Configurar Pruebas - {evento.nombre}</h3>
                     <div className="flex-row gap-sm">
                         <button className="btn-admin-secondary" onClick={handleExportPDF}>📄 Exportar PDF</button>
-                        <button className="close-btn" onClick={onClose}>&times;</button>
                     </div>
                 </div>
 
@@ -227,39 +281,39 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                     <div className="admin-grid-layout">
                         {/* FORMULARIO DE ASIGNACIÓN */}
                         <div className="form-column">
-                            <h4 className="section-title">{editingId ? 'Editar Prueba' : 'Agregar Nueva Prueba'}</h4>
+                            <h4 className="section-title" style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-md)' }}>{editingId ? 'Editar Prueba' : 'Agregar Nueva Prueba'}</h4>
                             <div className="admin-grid-form">
                                 <div className="form-group">
                                     <label>Categoría</label>
                                     <select className="admin-select" value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
                                         <option value="">Seleccionar...</option>
-                                        {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                        {categorias.map(c => <option key={c.id} value={c.id}>{CATEGORIA_NAMES[c.id] || c.nombre}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Bote</label>
                                     <select className="admin-select" value={selectedBote} onChange={e => setSelectedBote(e.target.value)}>
                                         <option value="">Seleccionar...</option>
-                                        {botes.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                                        {botes.map(b => <option key={b.id} value={b.id}>{BOTE_NAMES[b.id] || b.tipo}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Distancia</label>
                                     <select className="admin-select" value={selectedDist} onChange={e => setSelectedDist(e.target.value)}>
                                         <option value="">Seleccionar...</option>
-                                        {distancias.map(d => <option key={d.id} value={d.id}>{d.metros}m</option>)}
+                                        {distancias.map(d => <option key={d.id} value={d.id}>{DISTANCIA_NAMES[d.id] || d.distanciaRegata + 'm'}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Rama / Sexo</label>
                                     <select className="admin-select" value={selectedSex} onChange={e => setSelectedSex(e.target.value)}>
                                         <option value="">Seleccionar...</option>
-                                        <option value="Masculino">Masculino</option>
-                                        <option value="Femenino">Femenino</option>
-                                        <option value="Mixto">Mixto</option>
+                                        <option value="1">Masculino</option>
+                                        <option value="2">Femenino</option>
+                                        <option value="3">Mixto</option>
                                     </select>
                                 </div>
-                                <div className="form-row">
+                                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="form-group">
                                         <label>Día</label>
                                         <input type="date" className="admin-input" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
@@ -285,7 +339,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                         {/* LISTADO DE PRUEBAS */}
                         <div className="list-column">
                             <div className="flex-between mb-md">
-                                <h4 className="section-title">Pruebas Habilitadas</h4>
+                                <h4 className="section-title" style={{ fontSize: '1.2rem', marginBottom: '0' }}>Pruebas Habilitadas ({pruebasFiltradas.length})</h4>
                                 <select className="admin-select-sm" value={filtroDia} onChange={e => setFiltroDia(e.target.value)}>
                                     {diasUnicos.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
@@ -299,24 +353,37 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                         <table className="admin-table mini">
                                             <thead>
                                                 <tr>
+                                                    <th>#</th>
+                                                    <th>Categoría</th>
+                                                    <th>Bote</th>
+                                                    <th>Distancia</th>
+                                                    <th>Sexo</th>
                                                     <th>Hora</th>
-                                                    <th>Prueba</th>
+                                                    <th>Inscritos</th>
                                                     <th>Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {pruebasFiltradas.sort((a,b) => new Date(a.fechaHora) - new Date(b.fechaHora)).map(ep => (
+                                                {pruebasFiltradas.sort((a,b) => new Date(a.fechaHora) - new Date(b.fechaHora)).map((ep, index) => (
                                                     <tr key={ep.id} className={editingId === ep.id ? 'row-editing' : ''}>
-                                                        <td><strong>{new Date(ep.fechaHora).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</strong></td>
-                                                        <td>
-                                                            <div className="prueba-desc-mini">
-                                                                {ep.prueba?.categoria?.nombre} {ep.prueba?.bote?.nombre} {ep.prueba?.distancia?.metros}m {ep.prueba?.sexo?.nombre}
-                                                            </div>
+                                                        <td>{index + 1}</td>
+                                                        <td>{CATEGORIA_NAMES[ep.prueba?.categoria?.id] || ep.prueba?.categoria?.nombre}</td>
+                                                        <td>{BOTE_NAMES[ep.prueba?.bote?.id] || ep.prueba?.bote?.tipo}</td>
+                                                        <td>{DISTANCIA_NAMES[ep.prueba?.distancia?.id] || (ep.prueba?.distancia?.metros + 'm')}</td>
+                                                        <td>{SEXO_NAMES[ep.prueba?.sexoId] || ep.prueba?.sexo?.nombre}</td>
+                                                        <td style={{ color: 'var(--color-primary-light)', fontWeight: 'bold' }}>
+                                                            {new Date(ep.fechaHora).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                                         </td>
-                                                        <td className="actions-cell">
+                                                        <td>
+                                                            <span className="badge-inscritos" style={{ background: 'rgba(0,150,255,0.15)', color: 'var(--color-primary-light)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                                                {ep.cantidadInscritos || 0}
+                                                            </span>
+                                                        </td>
+                                                        <td className="actions-cell" style={{ display: 'flex', gap: '0.5rem' }}>
                                                             <button 
                                                                 className="btn-icon-admin" 
                                                                 title="Editar"
+                                                                style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.3rem 0.5rem' }}
                                                                 onClick={() => handleEditStart(ep)}
                                                             >
                                                                 ✏️
@@ -324,6 +391,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                                             <button 
                                                                 className="btn-icon-delete" 
                                                                 title="Eliminar"
+                                                                style={{ border: '1px solid rgba(255,87,87,0.2)', background: 'rgba(255,87,87,0.1)', borderRadius: '4px', padding: '0.3rem 0.5rem' }}
                                                                 onClick={() => handleDeletePrueba(ep.id)}
                                                             >
                                                                 🗑️

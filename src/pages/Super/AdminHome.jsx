@@ -15,8 +15,10 @@ const AdminHome = () => {
 
     return (
         <div className="admin-home fade-in">
-            <h1>Panel Federativo</h1>
-            <p className="admin-home-subtitle">Bienvenido al centro de control de SportTrack. Seleccioná un módulo para comenzar.</p>
+            <div className="admin-home-header">
+                <h1 className="gradient-text">Panel Federativo</h1>
+                <p className="admin-home-subtitle">Bienvenido a tu centro de mando</p>
+            </div>
             <div className="admin-home-grid">
                 {cards.map(c => (
                     <div key={c.id} className="admin-home-card glass-effect" onClick={() => navigate(c.id)}>

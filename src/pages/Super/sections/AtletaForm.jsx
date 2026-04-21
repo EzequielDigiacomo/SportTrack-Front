@@ -11,6 +11,8 @@ const AtletaForm = ({
     isEditing,
     hideClubSelect = false
 }) => {
+    const today = new Date().toISOString().split('T')[0];
+
     return (
         <div className="atleta-form-container fade-in">
             <div className="admin-form-card glass-effect">
@@ -27,6 +29,7 @@ const AtletaForm = ({
                                     value={initialData.nombre} 
                                     onChange={(e) => onChange('nombre', e.target.value)} 
                                     required 
+                                    minLength={2}
                                 />
                             </div>
                             <div className="form-group">
@@ -38,6 +41,7 @@ const AtletaForm = ({
                                     value={initialData.apellido} 
                                     onChange={(e) => onChange('apellido', e.target.value)} 
                                     required 
+                                    minLength={2}
                                 />
                             </div>
                         </div>
@@ -76,7 +80,10 @@ const AtletaForm = ({
                                 value={initialData.fechaNacimiento} 
                                 onChange={(e) => onChange('fechaNacimiento', e.target.value)} 
                                 required 
+                                min="1940-01-01"
+                                max={today}
                             />
+                            <small style={{color: 'var(--color-text-dim)', fontSize: '0.75rem'}}>Permitido desde 1940 hasta hoy</small>
                         </div>
                     </div>
 
@@ -91,6 +98,7 @@ const AtletaForm = ({
                                 value={initialData.email} 
                                 onChange={(e) => onChange('email', e.target.value)} 
                                 placeholder="ejemplo@correo.com"
+                                required
                             />
                         </div>
                         

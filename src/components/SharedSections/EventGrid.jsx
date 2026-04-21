@@ -17,7 +17,7 @@ const EventGrid = ({
     return (
         <>
             {/* VISTA MOBILE: Cards */}
-            <div className="eventos-mobile-grid">
+            <div className="eventos-mobile-list">
                 {eventos.map(ev => (
                     <div key={ev.id} className="evento-native-row glass-effect fade-in">
                         <div className="evento-native-status-bar" style={{ background: 'var(--color-primary)' }} />
@@ -50,6 +50,7 @@ const EventGrid = ({
                     <thead>
                         <tr>
                             <th>Evento</th>
+                            <th>Organizador</th>
                             <th>Fecha</th>
                             <th>Ubicación</th>
                             <th>Inscripciones</th>
@@ -61,6 +62,11 @@ const EventGrid = ({
                         {eventos.map(ev => (
                             <tr key={ev.id}>
                                 <td><strong>{ev.nombre}</strong></td>
+                                <td>
+                                    <span className="chip chip-ecu-blue" style={{ fontSize: '0.75rem' }}>
+                                        {ev.clubNombre || 'Federación'}
+                                    </span>
+                                </td>
                                 <td>{new Date(ev.fecha).toLocaleDateString('es-AR')}</td>
                                 <td>{ev.ubicacion || '—'}</td>
                                 <td>

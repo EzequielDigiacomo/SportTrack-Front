@@ -35,10 +35,9 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true
 
-            try {
-                // Try to refresh token
-                const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
-                if (refreshToken) {
+            const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
+            if (refreshToken) {
+                try {
                     const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
                         refreshToken,
                     })
@@ -49,15 +48,18 @@ api.interceptors.response.use(
                     // Retry original request
                     originalRequest.headers.Authorization = `Bearer ${token}`
                     return api(originalRequest)
+                } catch (refreshError) {
+                    // Refresh failed
+                    console.error('Refresh token failed', refreshError)
                 }
-            } catch (refreshError) {
-                // Refresh failed - Clear auth and redirect to login
-                localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN)
-                localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
-                localStorage.removeItem(STORAGE_KEYS.USER_DATA)
-                window.location.href = '/login'
-                return Promise.reject(refreshError)
             }
+
+            // If we reach here, either there was no refresh token or refresh failed
+            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN)
+            localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
+            localStorage.removeItem(STORAGE_KEYS.USER_DATA)
+            window.location.href = '/login'
+            return Promise.reject(error)
         }
 
         // Handle other errors

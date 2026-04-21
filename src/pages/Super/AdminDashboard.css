@@ -299,15 +299,21 @@
 }
 
 /* HOME DE ADMIN */
+.admin-home-header {
+    margin-bottom: var(--spacing-2xl);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: var(--spacing-lg);
+}
+
 .admin-home h1 {
-    font-size: 2rem;
-    margin-bottom: var(--spacing-sm);
+    font-size: 1.8rem;
+    margin-bottom: 0;
 }
 
 .admin-home-subtitle {
     color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-2xl);
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+    margin-bottom: 0;
 }
 
 .admin-home-grid {
@@ -323,6 +329,11 @@
     transition: all var(--transition-base);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--spacing-sm);
 }
 
 .admin-home-card:hover {
@@ -336,8 +347,8 @@
 }
 
 .admin-home-card-icon {
-    font-size: 2.4rem;
-    margin-bottom: var(--spacing-md);
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-xs);
 }
 
 .admin-home-card h3 {
@@ -352,10 +363,7 @@
 }
 
 .card-arrow {
-    font-size: 1.2rem;
-    color: var(--color-text-muted);
-    transition: all var(--transition-fast);
-    display: inline-block;
+    display: none;
 }
 
 /* PLACEHOLDER */

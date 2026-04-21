@@ -1,7 +1,9 @@
-import React from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
-const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing }) => {
+const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, clubes = [] }) => {
+    const { user } = useAuth();
+    const isAdmin = user?.rol === 'Admin';
     return (
         <div className="event-form-container fade-in">
             <div className="section-header-row" style={{ marginBottom: '2rem' }}>
@@ -54,6 +56,21 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 placeholder="Ej: Lago San Pablo, Imbabura"
                             />
                         </div>
+
+                        {isAdmin && (
+                            <div className="form-group">
+                                <label>Organizador (Club / Federación)</label>
+                                <select 
+                                    value={initialData.clubId} 
+                                    onChange={(e) => onChange('clubId', e.target.value)}
+                                >
+                                    <option value="">Federación</option>
+                                    {clubes.map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     <div className="form-section">
@@ -79,48 +96,60 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                             />
                         </div>
                         
-                        <div className="checkbox-group-admin glass-effect mt-md">
-                            <h5>Reglas Técnicas Federativas</h5>
-                            <label className="admin-checkbox">
-                                <input 
-                                    type="checkbox" 
-                                    checked={initialData.restringirSoloCategoriaPropia} 
-                                    onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
-                                />
-                                <span>Solo permitir inscripción en categoría propia del atleta</span>
-                            </label>
-                            <label className="admin-checkbox">
-                                <input 
-                                    type="checkbox" 
-                                    checked={initialData.permitirSub23EnSenior} 
-                                    onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
-                                />
-                                <span>Permitir atletas Sub23 en pruebas Senior</span>
-                            </label>
-                            <label className="admin-checkbox">
-                                <input 
-                                    type="checkbox" 
-                                    checked={initialData.permitirMasterBajarASenior} 
-                                    onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
-                                />
-                                <span>Permitir atletas Master en pruebas Senior</span>
-                            </label>
-                            <label className="admin-checkbox">
-                                <input 
-                                    type="checkbox" 
-                                    checked={initialData.permitirCompletarK4} 
-                                    onChange={(e) => onChange('permitirCompletarK4', e.target.checked)} 
-                                />
-                                <span>Permitir completar K4 con atletas de otras categorías</span>
-                            </label>
-                            <label className="admin-checkbox">
-                                <input 
-                                    type="checkbox" 
-                                    checked={initialData.limitacionBotesAB} 
-                                    onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
-                                />
-                                <span>Limitación de Clubes (Máximo 2 botes por prueba: A y B)</span>
-                            </label>
+                        <div className="form-rules-container glass-effect mt-md">
+                            <h4>Reglas Técnicas Federativas</h4>
+                            <div className="rules-grid">
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.restringirSoloCategoriaPropia} 
+                                        onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Solo permitir inscripción en categoría propia del atleta</strong>
+                                    </div>
+                                </label>
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.permitirSub23EnSenior} 
+                                        onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Permitir atletas Sub23 en pruebas Senior</strong>
+                                    </div>
+                                </label>
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.permitirMasterBajarASenior} 
+                                        onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Permitir atletas Master en pruebas Senior</strong>
+                                    </div>
+                                </label>
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.permitirCompletarK4} 
+                                        onChange={(e) => onChange('permitirCompletarK4', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Permitir completar K4 con atletas de otras categorías</strong>
+                                    </div>
+                                </label>
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.limitacionBotesAB} 
+                                        onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Limitación de Clubes (Máximo 2 botes por prueba: A y B)</strong>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
 

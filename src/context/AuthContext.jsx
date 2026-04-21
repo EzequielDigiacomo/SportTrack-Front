@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
+import { isTokenExpired } from '../utils/tokenUtils';
 
 const AuthContext = createContext(null);
 
@@ -10,9 +11,14 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const storedUser = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-        if (storedUser && token) {
+        
+        if (token && isTokenExpired(token)) {
+            console.warn('Sesión expirada detectada. Cerrando sesión...');
+            logout();
+        } else if (storedUser && token) {
             setUser(JSON.parse(storedUser));
         }
+        
         setLoading(false);
     }, [token]);
 
