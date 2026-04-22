@@ -174,7 +174,7 @@ const GestionEventosSection = () => {
             {view === 'lista' && (
                 <div className="fade-in">
                     <div className="section-header-row">
-                        <h1>Gestión de Eventos</h1>
+                        <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800' }}>Gestión de Eventos</h1>
                         <button className="btn-admin-primary" onClick={() => setView('crear')}>
                             <Plus size={20} /> Nuevo Evento
                         </button>
@@ -208,6 +208,7 @@ const GestionEventosSection = () => {
             
             {view === 'dashboard' && (
                 <div className="event-dashboard fade-in">
+                    <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', marginBottom: '1.5rem' }}>Gestión de Eventos</h1>
                     {!activeSubView ? (
                         <>
                             <div className="event-dashboard-header glass-effect">

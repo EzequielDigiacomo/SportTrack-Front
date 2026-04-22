@@ -218,9 +218,9 @@ const GestionAtletasSection = () => {
                         
                         {filteredAtletas.length > rowsPerPage && (
                             <div className="admin-pagination">
-                                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Anterior</button>
+                                <button className="btn-admin-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Anterior</button>
                                 <span className="page-indicator">Página <b>{currentPage}</b> de {totalPages}</span>
-                                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Siguiente</button>
+                                <button className="btn-admin-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Siguiente</button>
                             </div>
                         )}
                     </>

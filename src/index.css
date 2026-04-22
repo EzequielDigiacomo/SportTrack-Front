@@ -219,6 +219,15 @@ a:hover {
   animation: fadeIn var(--transition-base);
 }
 
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 10px;

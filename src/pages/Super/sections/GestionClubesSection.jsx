@@ -64,7 +64,7 @@ const GestionClubesSection = () => {
 
             <div className="section-header-row mb-lg">
                 <div>
-                    <h1>Clubes Federados</h1>
+                    <h1 className="gradient-text">Clubes Federados</h1>
                     <p className="section-subtitle">Gestión de instituciones habilitadas para competir.</p>
                 </div>
                 {view === 'lista' ? (
