@@ -42,7 +42,15 @@
 .resultados-grid-container {
     padding: 1.5rem;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible; /* was 'hidden' — needed for PDF dropdown to appear above content */
+}
+
+/* Ensure action bars with dropdowns don't clip their children */
+.action-bar-premium {
+    overflow: visible !important;
+    isolation: auto !important;
+    z-index: 10;
+    position: relative;
 }
 
 .grid-instructions {

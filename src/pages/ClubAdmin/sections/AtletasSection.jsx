@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserPlus, ArrowLeft } from 'lucide-react';
 import AtletaService from '../../../services/AtletaService';
 import { useAuth } from '../../../context/AuthContext';
@@ -11,6 +12,7 @@ import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
 const AtletasSection = () => {
+    const navigate = useNavigate();
     const [atletas, setAtletas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
@@ -32,9 +34,16 @@ const AtletasSection = () => {
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 5;
+
     useEffect(() => {
         loadAtletas();
     }, []);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     const loadAtletas = async () => {
         if (!user?.clubId) return setLoading(false);
@@ -135,19 +144,33 @@ const AtletasSection = () => {
             return 0;
         });
 
+    const totalPages = Math.ceil(filteredAtletas.length / rowsPerPage);
+    const displayedAtletas = filteredAtletas.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
     return (
         <div className="admin-section-container fade-in">
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
 
             <div className="section-header-row">
-                <h1>Mis Atletas</h1>
-                {view === 'lista' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    {view !== 'lista' && (
+                        <button 
+                            className="btn-admin-secondary" 
+                            onClick={() => setView('lista')}
+                            title="Volver"
+                            style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                    )}
+                    <h1 style={{ margin: 0 }}>Mis Atletas</h1>
+                </div>
+                {view === 'lista' && (
                     <button className="btn-admin-primary" onClick={handleOpenCrear}>
                         <UserPlus size={20} /> Nuevo Atleta
-                    </button>
-                ) : (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
-                        <ArrowLeft size={20} /> Volver
                     </button>
                 )}
             </div>
@@ -164,13 +187,22 @@ const AtletasSection = () => {
 
             {view === 'lista' ? (
                 loading ? <div className="loader-container"><div className="loader"></div></div> : (
-                    <AtletaGrid 
-                        atletas={filteredAtletas}
-                        onEdit={handleOpenEditar}
-                        onDelete={handleDelete}
-                        sortConfig={sortConfig}
-                        requestSort={requestSort}
-                    />
+                    <>
+                        <AtletaGrid 
+                            atletas={displayedAtletas}
+                            onEdit={handleOpenEditar}
+                            onDelete={handleDelete}
+                            sortConfig={sortConfig}
+                            requestSort={requestSort}
+                        />
+                        {filteredAtletas.length > rowsPerPage && (
+                            <div className="admin-pagination">
+                                <button className="btn-admin-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Anterior</button>
+                                <span className="page-indicator">Página <b>{currentPage}</b> de {totalPages}</span>
+                                <button className="btn-admin-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Siguiente</button>
+                            </div>
+                        )}
+                    </>
                 )
             ) : (
                 <AtletaForm 

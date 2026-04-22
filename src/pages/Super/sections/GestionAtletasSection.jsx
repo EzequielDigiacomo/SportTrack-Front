@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserPlus, ArrowLeft, Filter } from 'lucide-react';
 import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
@@ -10,6 +11,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionAtletasSection = () => {
+    const navigate = useNavigate();
     const [atletas, setAtletas] = useState([]);
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -169,17 +171,23 @@ const GestionAtletasSection = () => {
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
 
             <div className="section-header-row">
-                <div>
-                    <h1>Nómina de Atletas</h1>
-                    <p className="section-subtitle">Gestión global de atletas y sus representatividades de club.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <button 
+                        className="btn-admin-secondary" 
+                        onClick={() => view === 'lista' ? navigate(-1) : setView('lista')}
+                        title="Volver"
+                        style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 style={{ margin: 0 }}>Nómina de Atletas</h1>
+                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Gestión global de atletas y sus representatividades de club.</p>
+                    </div>
                 </div>
-                {view === 'lista' ? (
+                {view === 'lista' && (
                     <button className="btn-admin-primary" onClick={handleOpenCrear}>
                         <UserPlus size={20} /> Nuevo Atleta
-                    </button>
-                ) : (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
-                        <ArrowLeft size={20} /> Volver a la lista
                     </button>
                 )}
             </div>

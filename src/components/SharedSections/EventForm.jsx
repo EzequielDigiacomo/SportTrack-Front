@@ -7,10 +7,17 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
     return (
         <div className="event-form-container fade-in">
             <div className="section-header-row" style={{ marginBottom: '2rem' }}>
-                <button className="btn-admin-secondary" onClick={onCancel}>
-                    <ArrowLeft size={18} style={{ marginRight: '6px' }} /> Volver
-                </button>
-                <h2>{isEditing ? 'Editar Evento' : 'Nuevo Evento'}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <button 
+                        className="btn-admin-secondary" 
+                        onClick={onCancel}
+                        title="Volver"
+                        style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <h2 style={{ margin: 0 }}>{isEditing ? 'Editar Evento' : 'Nuevo Evento'}</h2>
+                </div>
             </div>
 
             <div className="admin-form-card glass-effect">

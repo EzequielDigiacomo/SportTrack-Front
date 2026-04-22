@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowLeft } from 'lucide-react';
 import AuthService from '../../../services/AuthService';
 import api from '../../../services/api';
@@ -9,12 +10,13 @@ import { useAlert } from '../../../hooks/useAlert';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionLoginsSection = () => {
+    const navigate = useNavigate();
     const [usuarios, setUsuarios] = useState([]);
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [form, setForm] = useState({ username: '', password: '', email: '', clubId: '', newPassword: '' });
+    const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', newPassword: '', confirmNewPassword: '' });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
 
@@ -38,13 +40,13 @@ const GestionLoginsSection = () => {
     };
 
     const handleOpenCrear = () => {
-        setForm({ username: '', password: '', email: '', clubId: '', newPassword: '' });
+        setForm({ username: '', password: '', confirmPassword: '', email: '', clubId: '', newPassword: '', confirmNewPassword: '' });
         setView('crear');
     };
 
     const handleOpenEditar = (user) => {
         setSelectedUser(user);
-        setForm({ username: user.username, newPassword: '' });
+        setForm({ username: user.username, newPassword: '', confirmNewPassword: '' });
         setView('editar');
     };
 
@@ -54,6 +56,19 @@ const GestionLoginsSection = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (view === 'editar') {
+            if (form.newPassword !== form.confirmNewPassword) {
+                showAlert('error', 'Las contraseñas no coinciden');
+                return;
+            }
+        } else {
+            if (form.password !== form.confirmPassword) {
+                showAlert('error', 'Las contraseñas no coinciden');
+                return;
+            }
+        }
+
         setSaving(true);
         try {
             if (view === 'editar') {
@@ -81,17 +96,23 @@ const GestionLoginsSection = () => {
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
 
             <div className="section-header-row mb-lg">
-                <div>
-                    <h1>Gestión de Logins</h1>
-                    <p className="section-subtitle">Administrá las credenciales de acceso para los clubes.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <button 
+                        className="btn-admin-secondary" 
+                        onClick={() => view === 'lista' ? navigate(-1) : setView('lista')}
+                        title="Volver"
+                        style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 style={{ margin: 0 }}>Gestión de Logins</h1>
+                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Administrá las credenciales de acceso para los clubes.</p>
+                    </div>
                 </div>
-                {view === 'lista' ? (
+                {view === 'lista' && (
                     <button className="btn-admin-primary" onClick={handleOpenCrear}>
                         <Plus size={20} /> Nueva Credencial
-                    </button>
-                ) : (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
-                        <ArrowLeft size={20} /> Volver
                     </button>
                 )}
             </div>

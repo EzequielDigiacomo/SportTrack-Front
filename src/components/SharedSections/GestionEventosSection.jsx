@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     Plus, 
     Calendar, 
@@ -19,6 +20,7 @@ import { useAlert } from '../../hooks/useAlert';
 import './AdminSections.css';
 
 const GestionEventosSection = () => {
+    const navigate = useNavigate();
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'dashboard'
@@ -174,7 +176,17 @@ const GestionEventosSection = () => {
             {view === 'lista' && (
                 <div className="fade-in">
                     <div className="section-header-row">
-                        <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800' }}>Gestión de Eventos</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                            <button 
+                                className="btn-admin-secondary" 
+                                onClick={() => navigate(-1)}
+                                title="Volver"
+                                style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
+                            <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', margin: 0 }}>Gestión de Eventos</h1>
+                        </div>
                         <button className="btn-admin-primary" onClick={() => setView('crear')}>
                             <Plus size={20} /> Nuevo Evento
                         </button>
@@ -251,11 +263,16 @@ const GestionEventosSection = () => {
                         </>
                     ) : (
                         <div>
-                            <div className="subview-header">
-                                <button className="btn-admin-secondary" onClick={() => window.history.back()}>
-                                    <ArrowLeft size={16} /> Volver al Dashboard
+                            <div className="subview-header" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.5rem' }}>
+                                <button 
+                                    className="btn-admin-secondary" 
+                                    onClick={() => window.history.back()}
+                                    title="Volver al Dashboard"
+                                    style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                                >
+                                    <ArrowLeft size={20} />
                                 </button>
-                                <h3>{activeSubView === 'startlist' ? 'Gestión de Start List y Sorteos' : 'Carga de Tiempos Oficiales'}</h3>
+                                <h3 style={{ margin: 0 }}>{activeSubView === 'startlist' ? 'Gestión de Start List y Sorteos' : 'Carga de Tiempos Oficiales'}</h3>
                             </div>
                             <GestionResultadosSection 
                                 preselectedEventoId={selectedEvento.id} 

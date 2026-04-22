@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowLeft } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
@@ -8,6 +9,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionClubesSection = () => {
+    const navigate = useNavigate();
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
@@ -63,17 +65,23 @@ const GestionClubesSection = () => {
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
 
             <div className="section-header-row mb-lg">
-                <div>
-                    <h1 className="gradient-text">Clubes Federados</h1>
-                    <p className="section-subtitle">Gestión de instituciones habilitadas para competir.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <button 
+                        className="btn-admin-secondary" 
+                        onClick={() => view === 'lista' ? navigate(-1) : setView('lista')}
+                        title="Volver"
+                        style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 className="gradient-text" style={{ margin: 0 }}>Clubes Federados</h1>
+                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Gestión de instituciones habilitadas para competir.</p>
+                    </div>
                 </div>
-                {view === 'lista' ? (
+                {view === 'lista' && (
                     <button className="btn-admin-primary" onClick={handleOpenCrear}>
                         <Plus size={20} /> Nuevo Club
-                    </button>
-                ) : (
-                    <button className="btn-admin-secondary" onClick={() => setView('lista')}>
-                        <ArrowLeft size={20} /> Volver
                     </button>
                 )}
             </div>

@@ -106,21 +106,54 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const parseTimeToTimeSpan = (timeStr) => {
+        if (!timeStr || timeStr.trim() === '') return null;
+        // Accepts formats: m:ss.cc, mm:ss.cc, h:mm:ss.cc
+        // Backend expects TimeSpan: "00:mm:ss.fffffff"
+        try {
+            const parts = timeStr.trim().split(':');
+            if (parts.length === 2) {
+                // mm:ss.cc
+                const [min, secStr] = parts;
+                const [sec, ms] = (secStr || '0').split('.');
+                const msFormatted = (ms || '00').padEnd(7, '0');
+                return `00:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
+            } else if (parts.length === 3) {
+                // h:mm:ss.cc
+                const [hr, min, secStr] = parts;
+                const [sec, ms] = (secStr || '0').split('.');
+                const msFormatted = (ms || '00').padEnd(7, '0');
+                return `${String(parseInt(hr)).padStart(2,'0')}:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
+            }
+        } catch (e) {}
+        return null;
+    };
+
     const handleSaveTiempos = async () => {
         setSaving(true);
         try {
-            const dto = Object.keys(tiemposLocales).map(id => {
-                const data = tiemposLocales[id];
-                return { id: parseInt(id), tiempoOficial: data.tiempoOficial, posicion: data.posicion ? parseInt(data.posicion) : null };
-            }).filter(i => i.tiempoOficial || i.posicion);
+            const dto = Object.keys(tiemposLocales)
+                .map(id => {
+                    const data = tiemposLocales[id];
+                    const tiempoParseado = parseTimeToTimeSpan(data.tiempoOficial);
+                    return {
+                        id: parseInt(id),
+                        tiempoOficial: tiempoParseado,
+                        posicion: data.posicion ? parseInt(data.posicion) : null
+                    };
+                })
+                .filter(i => i.tiempoOficial || i.posicion);
 
             if (dto.length > 0) {
                 await ResultadoService.batchUpdate(dto);
                 await loadDatosPrueba(selectedPrueba);
-                setMessage("✅ Tiempos guardados localmente.");
+                setMessage('✅ Tiempos oficiales guardados correctamente.');
+            } else {
+                setMessage('⚠️ No hay tiempos válidos para guardar.');
             }
         } catch (err) {
-            setMessage("❌ Error al guardar.");
+            console.error('Error guardando tiempos:', err);
+            setMessage('❌ Error al guardar: ' + (err.response?.data?.message || err.message));
         } finally {
             setSaving(false);
         }

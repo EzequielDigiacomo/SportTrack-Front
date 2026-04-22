@@ -15,16 +15,29 @@ const ClubDashboard = () => {
 
     return (
         <div className="dashboard-page container">
-            <div className="dashboard-header-inline">
-                <div>
-                    <h1 className="gradient-text">Panel del Club</h1>
-                    <p className="dashboard-subtitle">Bienvenido a tu centro de mando</p>
+            <div className="dashboard-header-inline" style={{ alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    {!isRoot && (
+                        <button 
+                            className="btn-admin-secondary" 
+                            onClick={() => navigate('/club')}
+                            title="Volver al inicio del panel"
+                            style={{ 
+                                padding: '0', 
+                                width: '42px', 
+                                height: '42px', 
+                                borderRadius: '50%',
+                                flexShrink: 0
+                            }}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                    )}
+                    <div>
+                        <h1 className="gradient-text" style={{ margin: 0 }}>Panel del Club</h1>
+                        <p className="dashboard-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Bienvenido a tu centro de mando</p>
+                    </div>
                 </div>
-                {!isRoot && (
-                    <button className="btn-back" onClick={() => navigate('/club')}>
-                        <ArrowLeft size={18} /> Atrás
-                    </button>
-                )}
             </div>
 
             <div className="dashboard-content-area">
