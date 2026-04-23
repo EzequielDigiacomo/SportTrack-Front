@@ -12,7 +12,7 @@ const formatTime = (timeStr) => {
             if (parts.length === 3) {
                 const [h, m, sFull] = parts;
                 const [s, ms] = sFull.split('.');
-                const msShort = (ms || '00').substring(0, 2);
+                const msShort = (ms || '0').substring(0, 3);
                 const totalMin = parseInt(h) * 60 + parseInt(m);
                 return `${String(totalMin).padStart(2, '0')}:${s.padStart(2, '0')}.${msShort}`;
             }
@@ -21,7 +21,7 @@ const formatTime = (timeStr) => {
         // rest = "mm:ss.fffffff"
         const [m, sFull] = rest.split(':');
         const [s, ms] = (sFull || '').split('.');
-        const msShort = (ms || '00').substring(0, 2);
+        const msShort = (ms || '0').substring(0, 3);
         return `${m.padStart(2, '0')}:${(s || '00').padStart(2, '0')}.${msShort}`;
     } catch {
         return timeStr;

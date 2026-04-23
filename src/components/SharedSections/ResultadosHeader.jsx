@@ -31,7 +31,8 @@ const ResultadosHeader = ({
     selectedPrueba, 
     setSelectedPrueba,
     currentTab,
-    setCurrentTab
+    setCurrentTab,
+    hideTabs
 }) => {
     return (
         <div className="resultados-header-section admin-form-card glass-effect mb-xl">
@@ -80,7 +81,7 @@ const ResultadosHeader = ({
                 </div>
             </div>
 
-            {selectedPrueba && (
+            {selectedPrueba && !hideTabs && (
                 <div className="admin-tabs-nav mt-xl">
                     <button 
                         className={`admin-tab-btn ${currentTab === 'startList' ? 'active' : ''}`}

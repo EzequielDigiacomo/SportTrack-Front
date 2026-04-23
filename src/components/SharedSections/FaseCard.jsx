@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trash2, Clock } from 'lucide-react';
 
-const FaseCard = ({ fase, onDelete, filtroVisualFase }) => {
+const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas' }) => {
     if (filtroVisualFase !== 'Todas' && fase.nombreFase !== filtroVisualFase) return null;
 
     const sortedResultados = [...fase.resultados].sort((a, b) => (a.carril || 99) - (b.carril || 99));

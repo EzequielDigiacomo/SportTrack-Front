@@ -59,6 +59,7 @@ const GestionEventosSection = () => {
             else if (e.state.panel === 'dashboard') { setView('dashboard'); setActiveSubView(null); setShowConfigModal(false); }
             else if (e.state.panel === 'config') { setShowConfigModal(true); }
             else if (e.state.panel === 'startlist') { setActiveSubView('startlist'); }
+            else if (e.state.panel === 'tiempos') { setActiveSubView('tiempos'); }
             else if (e.state.panel === 'resultados') { setActiveSubView('resultados'); }
         };
         window.addEventListener('popstate', handlePopState);
@@ -237,7 +238,7 @@ const GestionEventosSection = () => {
                                 </div>
                             </div>
 
-                            <div className="dashboard-grid dashboard-grid-3col">
+                            <div className="dashboard-grid dashboard-grid-4col">
                                 <div className="dashboard-card glass-effect clickable" onClick={handleOpenConfig}>
                                     <div className="card-icon"><Calendar size={32} /></div>
                                     <h3>1. Armar Schedule</h3>
@@ -252,12 +253,20 @@ const GestionEventosSection = () => {
                                     <p>Cerrar inscripciones, armar series y sortear carriles aleatoriamente.</p>
                                 </div>
                                 <div className="dashboard-card glass-effect clickable" onClick={() => { 
+                                    window.history.pushState({ panel: 'tiempos' }, ''); 
+                                    setActiveSubView('tiempos'); 
+                                }}>
+                                    <div className="card-icon"><ClipboardList size={32} color="#ffdd00" /></div>
+                                    <h3>3. Carga de Tiempos</h3>
+                                    <p>Ingresar los tiempos oficiales y posiciones de cada fase finalizada.</p>
+                                </div>
+                                <div className="dashboard-card glass-effect clickable" onClick={() => { 
                                     window.history.pushState({ panel: 'resultados' }, ''); 
                                     setActiveSubView('resultados'); 
                                 }}>
                                     <div className="card-icon"><Trophy size={32} /></div>
-                                    <h3>3. Result List</h3>
-                                    <p>Cargar tiempos oficiales al cruzar la meta y publicarlos en vivo.</p>
+                                    <h3>4. Result List</h3>
+                                    <p>Ver resultados finales, generar reportes y exportar PDFs de la competencia.</p>
                                 </div>
                             </div>
                         </>
@@ -272,12 +281,17 @@ const GestionEventosSection = () => {
                                 >
                                     <ArrowLeft size={20} />
                                 </button>
-                                <h3 style={{ margin: 0 }}>{activeSubView === 'startlist' ? 'Gestión de Start List y Sorteos' : 'Carga de Tiempos Oficiales'}</h3>
+                                <h3 style={{ margin: 0 }}>
+                                    {activeSubView === 'startlist' && 'Gestión de Start List y Sorteos'}
+                                    {activeSubView === 'tiempos' && 'Carga de Tiempos Oficiales'}
+                                    {activeSubView === 'resultados' && 'Resultados Finales y Reportes'}
+                                </h3>
                             </div>
                             <GestionResultadosSection 
                                 preselectedEventoId={selectedEvento.id} 
                                 defaultTab={activeSubView === 'startlist' ? 'startList' : 'resultados'} 
                                 isEmbedded={true}
+                                viewMode={activeSubView} // Pasamos la subvista para filtrar UI
                             />
                         </div>
                     )}

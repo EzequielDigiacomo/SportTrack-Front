@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, FileDown, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Star, FileDown, ChevronDown, Trash2 } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
@@ -10,7 +10,7 @@ import { useAlert } from '../../hooks/useAlert';
 import PdfExportService from '../../services/PdfExportService';
 import './GestionResultados.css';
 
-const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded }) => {
+const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode }) => {
     const navigate = useNavigate();
     const [showPdfMenu, setShowPdfMenu] = useState(false);
     const {
@@ -21,11 +21,14 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
         loading, saving, isLocked, message,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
         loadDatosPrueba, setMessage
     } = useResultados(preselectedEventoId, defaultTab);
 
     const { alert, showAlert } = useAlert();
+
+    // Si venimos de las nuevas cards, forzamos el tab pero ocultamos el selector de tabs
+    const hideTabs = viewMode === 'tiempos' || viewMode === 'resultados' || viewMode === 'startlist';
 
     const agrupadoPorEtapa = fases.reduce((acc, f) => {
         const etapa = f.etapaNombre || f.EtapaNombre || 'Competencia';
@@ -41,19 +44,33 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
     const handleSimulateResults = () => {
         const tls = {};
         fases.forEach(f => {
-            const sorted = [...f.resultados].sort((a, b) => (a.carril || 99) - (b.carril || 99));
-            sorted.forEach((r, idx) => {
+            // 1. Generar tiempos aleatorios para cada participante
+            const baseResults = f.resultados.map(r => {
                 const minutos = Math.floor(Math.random() * 2) + 1;
-                const segundos = String(Math.floor(Math.random() * 60)).padStart(2, '0');
-                const centesimas = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
-                tls[r.id] = {
-                    tiempoOficial: `0${minutos}:${segundos}.${centesimas}`,
+                const segundos = Math.floor(Math.random() * 60);
+                const centesimas = Math.floor(Math.random() * 99);
+                
+                // Formato mm:ss.cc
+                const tiempoStr = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}.${String(centesimas).padStart(2, '0')}`;
+                
+                // Valor numérico para sortear
+                const totalMs = (minutos * 60000) + (segundos * 1000) + (centesimas * 10);
+                
+                return { id: r.id, tiempoStr, totalMs };
+            });
+
+            // 2. Ordenar por tiempo y asignar posiciones
+            baseResults.sort((a, b) => a.totalMs - b.totalMs);
+
+            baseResults.forEach((res, idx) => {
+                tls[res.id] = {
+                    tiempoOficial: res.tiempoStr,
                     posicion: idx + 1
                 };
             });
         });
         setTiemposLocales(tls);
-        setMessage('✅ Simulación completada. Revisá los tiempos y guardá si estás conforme.');
+        setMessage('✅ Simulación completada. Las posiciones se calcularon automáticamente por tiempo.');
     };
 
     const handleResultChange = (id, field, val) => {
@@ -65,7 +82,6 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
 
     const eventoNombre = eventos.find(e => String(e.id) === String(selectedEvento))?.nombre || 'Evento';
     const pruebaNombre = pruebas.find(p => String(p.id) === String(selectedPrueba))?.nombre || 'Prueba';
-
     const etiquetasEtapas = Object.keys(agrupadoPorEtapa);
 
     const handleExportFase = () => {
@@ -87,24 +103,26 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
 
     return (
         <div className="gestion-resultados-container fade-in">
-            <div className="admin-header-main">
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                        {!isEmbedded && (
-                            <button 
-                                className="btn-admin-secondary" 
-                                onClick={() => navigate(-1)}
-                                title="Volver"
-                                style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
-                            >
-                                <ArrowLeft size={20} />
-                            </button>
-                        )}
-                        <h2 className="admin-title" style={{ margin: 0 }}>Panel de Resultados y Start List</h2>
+            {!hideTabs && (
+                <div className="admin-header-main">
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                            {!isEmbedded && (
+                                <button 
+                                    className="btn-admin-secondary" 
+                                    onClick={() => navigate(-1)}
+                                    title="Volver"
+                                    style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                            )}
+                            <h2 className="admin-title" style={{ margin: 0 }}>Panel de Resultados y Start List</h2>
+                        </div>
+                        <p className="admin-subtitle" style={{ marginTop: '0.5rem' }}>Sorteo de carriles, armado de heats y carga de resultados oficiales.</p>
                     </div>
-                    <p className="admin-subtitle" style={{ marginTop: '0.5rem' }}>Sorteo de carriles, armado de heats y carga de resultados oficiales.</p>
                 </div>
-            </div>
+            )}
 
             {message && <div className="alert-msg info fade-in">{message}</div>}
 
@@ -117,6 +135,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
                 setSelectedPrueba={setSelectedPrueba}
                 currentTab={currentTab}
                 setCurrentTab={setCurrentTab}
+                hideTabs={hideTabs}
             />
 
             {loading ? (
@@ -143,11 +162,11 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
                             </div>
 
                             {inscriptos.length > 0 && (
-                                <div className="inscriptos-seeding-panel glass-effect p-md mb-lg">
+                                <div className="inscriptos-seeding-panel glass-effect p-md mb-lg" style={{ borderRadius: 'var(--radius-lg)' }}>
                                     <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: 'var(--color-primary-light)' }}>
                                         Nómina de Inscritos y Siembra
                                     </h3>
-                                    <div className="admin-table-wrapper" style={{ maxHeight: '300px' }}>
+                                    <div className="admin-table-wrapper" style={{ maxHeight: '300px', borderRadius: 'var(--radius-md)' }}>
                                         <table className="admin-table">
                                             <thead>
                                                 <tr>
@@ -161,7 +180,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
                                                     <tr key={ins.id} style={{ background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.05)' : 'transparent' }}>
                                                         <td>
                                                             <strong style={{ color: ins.esCabezaDeSerie ? '#ffdd00' : 'inherit' }}>
-                                                                {ins.participanteNombreCompleto || "Bote de Equipo"}
+                                                                 {ins.participanteNombreCompleto || "Bote de Equipo"}
                                                             </strong>
                                                             {ins.tripulantes && ins.tripulantes.length > 0 && (
                                                                 <div style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
@@ -199,15 +218,23 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
                             )}
 
                             {Object.keys(agrupadoPorEtapa).length > 0 ? (
-                                Object.entries(agrupadoPorEtapa).map(([etapa, fasesDeEtapa]) => (
-                                    <div key={etapa} className="etapa-wrapper mb-lg">
-                                        <div className="fases-grid-responsive">
-                                            {fasesDeEtapa.map(f => (
-                                                <FaseCard key={f.id} fase={f} />
-                                            ))}
+                                <div className="series-preview-section fade-in">
+                                    <h3 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1.1rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                        🏁 Series y Sorteo de Carriles
+                                    </h3>
+                                    {Object.entries(agrupadoPorEtapa).map(([etapa, fasesDeEtapa]) => (
+                                        <div key={etapa} className="etapa-wrapper mb-lg">
+                                            <div className="fases-grid-responsive">
+                                                {fasesDeEtapa.map(f => (
+                                                    <FaseCard 
+                                                        key={f.id} 
+                                                        fase={f} 
+                                                    />
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="empty-state-card glass-effect">
                                     <p>No se han generado las series para esta prueba.</p>
@@ -226,24 +253,55 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
                                         <strong>{fases.length}</strong> {fases.length === 1 ? 'Fase' : 'Fases'} generadas
                                     </div>
                                     {fases.length > 0 && (
-                                        <select
-                                            className="admin-select"
-                                            value={filtroVisualFase}
-                                            onChange={(e) => setFiltroVisualFase(e.target.value)}
-                                            style={{ minWidth: '200px', fontSize: '0.9rem' }}
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <select
+                                                className="admin-select"
+                                                value={filtroVisualFase}
+                                                onChange={(e) => setFiltroVisualFase(e.target.value)}
+                                                style={{ minWidth: '200px', fontSize: '0.9rem' }}
+                                            >
+                                                <option value="Todas">— Seleccionar Fase —</option>
+                                                {fases
+                                                    .filter(f => viewMode !== 'resultados' || f.resultados.some(r => r.tiempoOficial))
+                                                    .map(f => (
+                                                        <option key={f.id} value={f.nombreFase}>
+                                                            {f.nombreFase} {f.fechaHoraProgramada ? `· ${new Date(f.fechaHoraProgramada).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                            {viewMode === 'tiempos' && filtroVisualFase !== 'Todas' && (
+                                                <button 
+                                                    className="btn-icon-admin danger"
+                                                    onClick={() => {
+                                                        const f = fases.find(f => f.nombreFase === filtroVisualFase);
+                                                        if (f) handleDeleteFase(f.id);
+                                                    }}
+                                                    title="Eliminar esta fase seleccionada"
+                                                    style={{ padding: '0 1rem' }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {fases.length > 0 && viewMode === 'tiempos' && (
+                                        <button 
+                                            className="btn-admin-primary" 
+                                            onClick={handlePromoverEtapa}
+                                            disabled={saving || isLocked}
+                                            style={{ 
+                                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                                            }}
+                                            title="Generar la siguiente etapa (Semifinales/Finales) basado en estos resultados"
                                         >
-                                            <option value="Todas">— Seleccionar Fase —</option>
-                                            {fases.map(f => (
-                                                <option key={f.id} value={f.nombreFase}>
-                                                    {f.nombreFase} {f.fechaHoraProgramada ? `· ${new Date(f.fechaHoraProgramada).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            🏆 Promover Etapa
+                                        </button>
                                     )}
                                 </div>
 
                                 {/* PDF Export Dropdown */}
-                                {fases.length > 0 && (
+                                {fases.length > 0 && viewMode !== 'tiempos' && (
                                     <div style={{ position: 'relative', zIndex: 9999 }}>
                                         <button
                                             className="btn-admin-secondary"
@@ -309,22 +367,35 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded 
                                     <ResultadosTable 
                                         fase={faseSeleccionada}
                                         tiemposLocales={tiemposLocales}
-                                        isLocked={isLocked}
+                                        isLocked={isLocked || viewMode === 'resultados'}
                                         onResultChange={handleResultChange}
                                     />
 
-                                    <div className="form-footer-actions mt-md">
-                                        <button 
-                                            className="btn-admin-primary" 
-                                            onClick={handleSaveTiempos}
-                                            disabled={saving || isLocked}
-                                        >
-                                            💾 {saving ? 'Guardando...' : 'Guardar Tiempos Oficiales'}
-                                        </button>
-                                    </div>
+                                    {viewMode !== 'resultados' && (
+                                        <div className="form-footer-actions mt-md" style={{ justifyContent: 'space-between' }}>
+                                            <button 
+                                                className="btn-admin-secondary" 
+                                                onClick={handleSimulateResults}
+                                                style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
+                                            >
+                                                ⚡ Simular Tiempos
+                                            </button>
+                                            <button 
+                                                className="btn-admin-primary" 
+                                                onClick={handleSaveTiempos}
+                                                disabled={saving || isLocked}
+                                            >
+                                                💾 {saving ? 'Guardando...' : 'Guardar Tiempos Oficiales'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <div className="empty-state">Seleccioná una fase para cargar tiempos.</div>
+                                <div className="empty-state">
+                                    {viewMode === 'resultados' 
+                                        ? 'No hay resultados oficiales guardados para esta prueba todavía.' 
+                                        : 'Seleccioná una fase para cargar tiempos.'}
+                                </div>
                             )}
                         </div>
                     )}

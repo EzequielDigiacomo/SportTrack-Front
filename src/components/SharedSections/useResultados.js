@@ -37,7 +37,8 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     useEffect(() => {
         if (selectedPrueba) {
             const lockedPruebas = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
-            setIsLocked(lockedPruebas.includes(selectedPrueba));
+            const sealedPruebas = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
+            setIsLocked(lockedPruebas.includes(selectedPrueba) || sealedPruebas.includes(selectedPrueba));
             loadDatosPrueba(selectedPrueba);
         } else {
             setInscriptos([]);
@@ -106,23 +107,46 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const handlePromoverEtapa = async () => {
+        setSaving(true);
+        try {
+            const newFases = await FaseService.promover(selectedPrueba);
+            setFases(newFases || []);
+            setMessage("✅ Etapa promocionada exitosamente. Se generaron los pases a la siguiente fase.");
+            loadDatosPrueba(selectedPrueba);
+        } catch (error) {
+            setMessage("❌ Error al promover etapa: " + (error.response?.data?.message || error.message));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteFase = async (id) => {
+        if (!window.confirm("¿Estás seguro de eliminar esta fase? Esto podría invalidar los pases a fases posteriores si ya fueron generados.")) return;
+        
+        try {
+            await FaseService.delete(id);
+            setMessage("✅ Fase eliminada correctamente.");
+            loadDatosPrueba(selectedPrueba);
+        } catch (error) {
+            setMessage("❌ Error al eliminar la fase.");
+        }
+    };
+
     const parseTimeToTimeSpan = (timeStr) => {
         if (!timeStr || timeStr.trim() === '') return null;
-        // Accepts formats: m:ss.cc, mm:ss.cc, h:mm:ss.cc
-        // Backend expects TimeSpan: "00:mm:ss.fffffff"
         try {
             const parts = timeStr.trim().split(':');
             if (parts.length === 2) {
-                // mm:ss.cc
                 const [min, secStr] = parts;
                 const [sec, ms] = (secStr || '0').split('.');
-                const msFormatted = (ms || '00').padEnd(7, '0');
+                // ms can be 1, 2, 3 digits... pad to 7
+                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
                 return `00:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
             } else if (parts.length === 3) {
-                // h:mm:ss.cc
                 const [hr, min, secStr] = parts;
                 const [sec, ms] = (secStr || '0').split('.');
-                const msFormatted = (ms || '00').padEnd(7, '0');
+                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
                 return `${String(parseInt(hr)).padStart(2,'0')}:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
             }
         } catch (e) {}
@@ -132,22 +156,66 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const handleSaveTiempos = async () => {
         setSaving(true);
         try {
-            const dto = Object.keys(tiemposLocales)
-                .map(id => {
-                    const data = tiemposLocales[id];
-                    const tiempoParseado = parseTimeToTimeSpan(data.tiempoOficial);
-                    return {
-                        id: parseInt(id),
-                        tiempoOficial: tiempoParseado,
-                        posicion: data.posicion ? parseInt(data.posicion) : null
-                    };
-                })
-                .filter(i => i.tiempoOficial || i.posicion);
+            // 1. Preparar datos y recalcular posiciones si es necesario
+            const resultsToSave = Object.keys(tiemposLocales).map(id => ({
+                id: parseInt(id),
+                tiempoOficial: tiemposLocales[id].tiempoOficial,
+                posicion: tiemposLocales[id].posicion,
+                totalMs: (() => {
+                    const t = tiemposLocales[id].tiempoOficial || '';
+                    const parts = t.split(':');
+                    if (parts.length === 2) {
+                        const [m, sFull] = parts;
+                        const [s, ms] = (sFull || '0').split('.');
+                        return (parseInt(m) * 60000) + (parseInt(s) * 1000) + (parseInt((ms || '0').substring(0,3).padEnd(3,'0')));
+                    }
+                    return 99999999;
+                })()
+            }));
+
+            // Si el usuario no puso posiciones, las calculamos por tiempo
+            const needsPositions = resultsToSave.some(r => !r.posicion);
+            if (needsPositions) {
+                resultsToSave.sort((a,b) => a.totalMs - b.totalMs);
+                resultsToSave.forEach((r, idx) => {
+                    if (!r.posicion) r.posicion = idx + 1;
+                });
+            }
+
+            const dto = resultsToSave.map(r => ({
+                id: r.id,
+                tiempoOficial: parseTimeToTimeSpan(r.tiempoOficial),
+                posicion: r.posicion ? parseInt(r.posicion) : null
+            })).filter(i => i.tiempoOficial || i.posicion);
 
             if (dto.length > 0) {
                 await ResultadoService.batchUpdate(dto);
+                
+                // Bloquear la prueba
+                const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+                if (!locked.includes(selectedPrueba)) {
+                    locked.push(selectedPrueba);
+                    localStorage.setItem('locked_pruebas', JSON.stringify(locked));
+                }
+
+                // Si es una Final, guardamos una marca especial de "sellado"
+                const esFinal = fases.some(f => 
+                    f.nombreFase.toLowerCase().includes('final') && 
+                    f.resultados.some(r => dto.some(d => d.id === r.id))
+                );
+                
+                if (esFinal) {
+                    const sealed = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
+                    if (!sealed.includes(selectedPrueba)) {
+                        sealed.push(selectedPrueba);
+                        localStorage.setItem('sealed_pruebas', JSON.stringify(sealed));
+                    }
+                }
+
+                setIsLocked(true);
+
                 await loadDatosPrueba(selectedPrueba);
-                setMessage('✅ Tiempos oficiales guardados correctamente.');
+                setMessage(esFinal ? '🔒 PRUEBA SELLADA: Resultados finales oficiales guardados.' : '✅ Tiempos guardados y prueba bloqueada para edición oficial.');
             } else {
                 setMessage('⚠️ No hay tiempos válidos para guardar.');
             }
@@ -160,6 +228,20 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     };
 
     const handleToggleSeeding = async (inscId) => {
+        const insToToggle = inscriptos.find(i => i.id === inscId);
+        if (!insToToggle) return;
+
+        // Validar límite si se intenta activar (pasar de false a true)
+        if (!insToToggle.esCabezaDeSerie) {
+            const currentSeedsCount = inscriptos.filter(i => i.esCabezaDeSerie).length;
+            const maxSeedsAllowed = Math.ceil(inscriptos.length / 9.0);
+
+            if (currentSeedsCount >= maxSeedsAllowed) {
+                setMessage(`⚠️ Límite alcanzado: máximo ${maxSeedsAllowed} ${maxSeedsAllowed === 1 ? 'cabeza' : 'cabezas'} de serie para ${inscriptos.length} atletas.`);
+                return;
+            }
+        }
+
         try {
             await InscripcionService.toggleSeeding(inscId);
             setInscriptos(prev => prev.map(ins => 
@@ -178,7 +260,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         loading, saving, isLocked, message, setMessage,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
         loadDatosPrueba
     };
 };

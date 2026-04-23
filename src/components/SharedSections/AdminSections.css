@@ -89,6 +89,34 @@
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
 }
 
+.btn-icon-admin {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-text-secondary);
+    padding: 0.4rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon-admin:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-primary);
+}
+
+.btn-icon-admin.danger {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.btn-icon-admin.danger:hover {
+    background: #ef4444;
+    color: white;
+}
+
 /* TABLE */
 .admin-table-wrapper {
     border-radius: var(--radius-lg);
@@ -603,15 +631,27 @@ form:invalid button[type="submit"] {
     gap: 1.5rem;
 }
 
+/* Dashboard 4 columnas (desktop) */
+.dashboard-grid-4col {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+    .dashboard-grid-4col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 /* En mobile: una columna, cards en fila horizontal */
 @media (max-width: 768px) {
-    .dashboard-grid-3col {
+    .dashboard-grid-3col, .dashboard-grid-4col {
         grid-template-columns: 1fr;
         gap: 0.75rem;
     }
 
     /* Card horizontal: icono izquierda, texto derecha */
-    .dashboard-grid-3col .dashboard-card {
+    .dashboard-grid-3col .dashboard-card, .dashboard-grid-4col .dashboard-card {
         flex-direction: row;
         align-items: center;
         text-align: left;
@@ -620,7 +660,7 @@ form:invalid button[type="submit"] {
         min-height: 68px;
     }
 
-    .dashboard-grid-3col .card-icon {
+    .dashboard-grid-3col .card-icon, .dashboard-grid-4col .card-icon {
         font-size: 1.8rem;
         flex-shrink: 0;
         width: 44px;
@@ -629,13 +669,15 @@ form:invalid button[type="submit"] {
         justify-content: center;
     }
 
-    .dashboard-grid-3col .dashboard-card h3 {
+    .dashboard-grid-3col .dashboard-card h3, .dashboard-grid-4col .dashboard-card h3 {
         font-size: 0.95rem;
         margin: 0 0 0.15rem;
     }
 
-    .dashboard-grid-3col .card-label {
+    .dashboard-grid-3col .card-label, .dashboard-grid-4col .card-label,
+    .dashboard-grid-3col .dashboard-card p, .dashboard-grid-4col .dashboard-card p {
         font-size: 0.78rem;
+        margin: 0;
     }
 }
 
