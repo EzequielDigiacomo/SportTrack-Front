@@ -1411,3 +1411,24 @@ th.sortable:hover .sort-icon {
     border: 1px solid rgba(239, 51, 64, 0.3);
 }
 
+
+/* Feedback de Guardado Exitoso */
+.grid-success-flash {
+    animation: successFlash 2s ease-out forwards;
+}
+
+@keyframes successFlash {
+    0% {
+        background-color: rgba(16, 185, 129, 0.2);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    }
+    100% {
+        background-color: transparent;
+        box-shadow: none;
+    }
+}
+
+.saved-row {
+    border-left: 4px solid #10b981 !important;
+    transition: all 0.3s ease;
+}

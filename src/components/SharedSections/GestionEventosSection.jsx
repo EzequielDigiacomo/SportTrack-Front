@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Plus, 
-    Calendar, 
-    MapPin, 
-    Settings, 
-    ArrowLeft, 
-    ClipboardList, 
+import {
+    Plus,
+    Calendar,
+    MapPin,
+    Settings,
+    ArrowLeft,
+    ClipboardList,
     Trophy,
 } from 'lucide-react';
 import EventoService from '../../services/EventoService';
@@ -28,7 +28,7 @@ const GestionEventosSection = () => {
     const [activeSubView, setActiveSubView] = useState(null); // 'startlist', 'resultados'
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [clubes, setClubes] = useState([]);
-    
+
     const [form, setForm] = useState({
         nombre: '',
         fecha: '',
@@ -53,7 +53,7 @@ const GestionEventosSection = () => {
     useEffect(() => {
         loadEventos();
         loadClubes();
-        
+
         const handlePopState = (e) => {
             if (!e.state) { setView('lista'); setSelectedEvento(null); setActiveSubView(null); setShowConfigModal(false); }
             else if (e.state.panel === 'dashboard') { setView('dashboard'); setActiveSubView(null); setShowConfigModal(false); }
@@ -77,7 +77,7 @@ const GestionEventosSection = () => {
             setLoading(false);
         }
     };
-    
+
     const loadClubes = async () => {
         try {
             const data = await ClubService.getAll();
@@ -105,7 +105,7 @@ const GestionEventosSection = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
-        
+
         const payload = {
             ...form,
             clubId: form.clubId === "" ? null : parseInt(form.clubId)
@@ -173,13 +173,13 @@ const GestionEventosSection = () => {
     return (
         <div className="admin-section-container">
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
-            
+
             {view === 'lista' && (
                 <div className="fade-in">
                     <div className="section-header-row">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                            <button 
-                                className="btn-admin-secondary" 
+                            <button
+                                className="btn-admin-secondary"
                                 onClick={() => navigate(-1)}
                                 title="Volver"
                                 style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
@@ -196,7 +196,7 @@ const GestionEventosSection = () => {
                     {loading ? (
                         <div className="loader-container"><div className="loader"></div></div>
                     ) : (
-                        <EventGrid 
+                        <EventGrid
                             eventos={eventos}
                             onOpenDashboard={handleOpenDashboard}
                             onEdit={handleEdit}
@@ -208,7 +208,7 @@ const GestionEventosSection = () => {
             )}
 
             {(view === 'crear' || view === 'editar') && (
-                <EventForm 
+                <EventForm
                     initialData={form}
                     saving={saving}
                     isEditing={view === 'editar'}
@@ -218,10 +218,24 @@ const GestionEventosSection = () => {
                     clubes={clubes}
                 />
             )}
-            
+
             {view === 'dashboard' && (
                 <div className="event-dashboard fade-in">
-                    <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', marginBottom: '1.5rem' }}>Gestión de Eventos</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.5rem' }}>
+                        <button
+                            className="btn-admin-secondary"
+                            onClick={() => {
+                                setView('lista');
+                                setSelectedEvento(null);
+                                window.history.pushState(null, '');
+                            }}
+                            title="Volver a la lista"
+                            style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', margin: 0 }}>Gestión de Eventos</h1>
+                    </div>
                     {!activeSubView ? (
                         <>
                             <div className="event-dashboard-header glass-effect">
@@ -244,25 +258,25 @@ const GestionEventosSection = () => {
                                     <h3>1. Armar Schedule</h3>
                                     <p>Crear pruebas y horarios para que los clubes inscriban a sus atletas.</p>
                                 </div>
-                                <div className="dashboard-card glass-effect clickable" onClick={() => { 
-                                    window.history.pushState({ panel: 'startlist' }, ''); 
-                                    setActiveSubView('startlist'); 
+                                <div className="dashboard-card glass-effect clickable" onClick={() => {
+                                    window.history.pushState({ panel: 'startlist' }, '');
+                                    setActiveSubView('startlist');
                                 }}>
                                     <div className="card-icon"><ClipboardList size={32} /></div>
                                     <h3>2. Start List</h3>
                                     <p>Cerrar inscripciones, armar series y sortear carriles aleatoriamente.</p>
                                 </div>
-                                <div className="dashboard-card glass-effect clickable" onClick={() => { 
-                                    window.history.pushState({ panel: 'tiempos' }, ''); 
-                                    setActiveSubView('tiempos'); 
+                                <div className="dashboard-card glass-effect clickable" onClick={() => {
+                                    window.history.pushState({ panel: 'tiempos' }, '');
+                                    setActiveSubView('tiempos');
                                 }}>
                                     <div className="card-icon"><ClipboardList size={32} color="#ffdd00" /></div>
                                     <h3>3. Carga de Tiempos</h3>
                                     <p>Ingresar los tiempos oficiales y posiciones de cada fase finalizada.</p>
                                 </div>
-                                <div className="dashboard-card glass-effect clickable" onClick={() => { 
-                                    window.history.pushState({ panel: 'resultados' }, ''); 
-                                    setActiveSubView('resultados'); 
+                                <div className="dashboard-card glass-effect clickable" onClick={() => {
+                                    window.history.pushState({ panel: 'resultados' }, '');
+                                    setActiveSubView('resultados');
                                 }}>
                                     <div className="card-icon"><Trophy size={32} /></div>
                                     <h3>4. Result List</h3>
@@ -273,11 +287,11 @@ const GestionEventosSection = () => {
                     ) : (
                         <div>
                             <div className="subview-header" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.5rem' }}>
-                                <button 
-                                    className="btn-admin-secondary" 
+                                <button
+                                    className="btn-admin-secondary"
                                     onClick={() => window.history.back()}
                                     title="Volver al Dashboard"
-                                    style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                                    style={{ padding: '0', width: '30px', height: '30px', borderRadius: '10%', flexShrink: 0 }}
                                 >
                                     <ArrowLeft size={20} />
                                 </button>
@@ -287,9 +301,9 @@ const GestionEventosSection = () => {
                                     {activeSubView === 'resultados' && 'Resultados Finales y Reportes'}
                                 </h3>
                             </div>
-                            <GestionResultadosSection 
-                                preselectedEventoId={selectedEvento.id} 
-                                defaultTab={activeSubView === 'startlist' ? 'startList' : 'resultados'} 
+                            <GestionResultadosSection
+                                preselectedEventoId={selectedEvento.id}
+                                defaultTab={activeSubView === 'startlist' ? 'startList' : 'resultados'}
                                 isEmbedded={true}
                                 viewMode={activeSubView} // Pasamos la subvista para filtrar UI
                             />
@@ -299,14 +313,14 @@ const GestionEventosSection = () => {
             )}
 
             {showConfigModal && (
-                <ConfigurarPruebasModal 
-                    evento={selectedEvento} 
-                    onClose={() => window.history.back()} 
+                <ConfigurarPruebasModal
+                    evento={selectedEvento}
+                    onClose={() => window.history.back()}
                     onRefresh={loadEventos}
                 />
             )}
 
-            <ConfirmDialog 
+            <ConfirmDialog
                 isOpen={deleteConfirm.show}
                 onClose={() => setDeleteConfirm({ show: false, evento: null })}
                 onConfirm={confirmDelete}

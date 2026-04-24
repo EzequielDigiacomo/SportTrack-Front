@@ -19,6 +19,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const [message, setMessage] = useState('');
     const [filtroVisualFase, setFiltroVisualFase] = useState('Todas');
     const [tiemposLocales, setTiemposLocales] = useState({});
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     useEffect(() => {
         loadEventos();
@@ -39,8 +40,10 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             const lockedPruebas = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
             const sealedPruebas = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
             setIsLocked(lockedPruebas.includes(selectedPrueba) || sealedPruebas.includes(selectedPrueba));
+            setFiltroVisualFase('Todas');
             loadDatosPrueba(selectedPrueba);
         } else {
+            setFiltroVisualFase('Todas');
             setInscriptos([]);
             setFases([]);
             setTiemposLocales({});
@@ -86,6 +89,12 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 });
             });
             setTiemposLocales(tls);
+
+            // Sincronizar bloqueo con la realidad de los datos (SOLO bloquea si hay tiempos oficiales REALES)
+            const hasAnyOfficialTime = (fs || []).some(f => f.resultados.some(r => r.tiempoOficial && r.tiempoOficial !== ''));
+            const sealedPruebas = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
+            const isSealed = sealedPruebas.includes(pruebaId);
+            setIsLocked(isSealed || hasAnyOfficialTime);
         } catch (error) {
             setMessage("Error al cargar los datos.");
         } finally {
@@ -97,6 +106,13 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         setSaving(true);
         try {
             const newFases = await FaseService.generar(selectedPrueba);
+            
+            // LIMPIAR BLOQUEOS: Si estamos sorteando de nuevo, la prueba NO está bloqueada
+            const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+            const newLocked = locked.filter(id => id !== selectedPrueba);
+            localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
+            setIsLocked(false);
+
             setFases(newFases || []);
             setMessage("✅ Heats generados y carriles asignados.");
             loadDatosPrueba(selectedPrueba);
@@ -154,24 +170,44 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     };
 
     const handleSaveTiempos = async () => {
+        window.alert("Iniciando proceso de guardado..."); // Diagnóstico forzado
         setSaving(true);
+        setMessage('⏳ Iniciando guardado...');
         try {
-            // 1. Preparar datos y recalcular posiciones si es necesario
-            const resultsToSave = Object.keys(tiemposLocales).map(id => ({
-                id: parseInt(id),
-                tiempoOficial: tiemposLocales[id].tiempoOficial,
-                posicion: tiemposLocales[id].posicion,
-                totalMs: (() => {
-                    const t = tiemposLocales[id].tiempoOficial || '';
-                    const parts = t.split(':');
-                    if (parts.length === 2) {
-                        const [m, sFull] = parts;
-                        const [s, ms] = (sFull || '0').split('.');
-                        return (parseInt(m) * 60000) + (parseInt(s) * 1000) + (parseInt((ms || '0').substring(0,3).padEnd(3,'0')));
-                    }
-                    return 99999999;
-                })()
-            }));
+            const resultsToSave = [];
+            const ids = Object.keys(tiemposLocales);
+            
+            for (const id of ids) {
+                const item = tiemposLocales[id];
+                if (!item) continue;
+
+                const t = item.tiempoOficial || '';
+                const p = item.posicion;
+                
+                // Solo procesar si tiene algo
+                if (!t && !p) continue;
+
+                let totalMs = 99999999;
+                const parts = String(t).split(':');
+                if (parts.length === 2) {
+                    const [m, sFull] = parts;
+                    const [s, ms] = (sFull || '0').split('.');
+                    totalMs = (parseInt(m) * 60000) + (parseInt(s) * 1000) + (parseInt((ms || '0').substring(0,3).padEnd(3,'0')));
+                }
+
+                resultsToSave.push({
+                    id: parseInt(id),
+                    tiempoOficial: t,
+                    posicion: p,
+                    totalMs
+                });
+            }
+
+            if (resultsToSave.length === 0) {
+                setMessage('⚠️ No hay datos nuevos para guardar.');
+                setSaving(false);
+                return;
+            }
 
             // Si el usuario no puso posiciones, las calculamos por tiempo
             const needsPositions = resultsToSave.some(r => !r.posicion);
@@ -186,42 +222,41 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 id: r.id,
                 tiempoOficial: parseTimeToTimeSpan(r.tiempoOficial),
                 posicion: r.posicion ? parseInt(r.posicion) : null
-            })).filter(i => i.tiempoOficial || i.posicion);
+            }));
 
-            if (dto.length > 0) {
-                await ResultadoService.batchUpdate(dto);
-                
-                // Bloquear la prueba
-                const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
-                if (!locked.includes(selectedPrueba)) {
-                    locked.push(selectedPrueba);
-                    localStorage.setItem('locked_pruebas', JSON.stringify(locked));
-                }
+            setMessage(`⏳ Enviando ${dto.length} resultados...`);
+            await ResultadoService.batchUpdate(dto);
+            
+            // Efecto visual de éxito
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
 
-                // Si es una Final, guardamos una marca especial de "sellado"
-                const esFinal = fases.some(f => 
-                    f.nombreFase.toLowerCase().includes('final') && 
-                    f.resultados.some(r => dto.some(d => d.id === r.id))
-                );
-                
-                if (esFinal) {
-                    const sealed = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
-                    if (!sealed.includes(selectedPrueba)) {
-                        sealed.push(selectedPrueba);
-                        localStorage.setItem('sealed_pruebas', JSON.stringify(sealed));
-                    }
-                }
-
-                setIsLocked(true);
-
-                await loadDatosPrueba(selectedPrueba);
-                setMessage(esFinal ? '🔒 PRUEBA SELLADA: Resultados finales oficiales guardados.' : '✅ Tiempos guardados y prueba bloqueada para edición oficial.');
-            } else {
-                setMessage('⚠️ No hay tiempos válidos para guardar.');
+            // Bloquear la prueba localmente
+            const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+            if (!locked.includes(selectedPrueba)) {
+                locked.push(selectedPrueba);
+                localStorage.setItem('locked_pruebas', JSON.stringify(locked));
             }
+
+            const esFinal = fases.some(f => 
+                f.nombreFase.toLowerCase().includes('final') && 
+                f.resultados.some(r => dto.some(d => d.id === r.id))
+            );
+            
+            if (esFinal) {
+                const sealed = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
+                if (!sealed.includes(selectedPrueba)) {
+                    sealed.push(selectedPrueba);
+                    localStorage.setItem('sealed_pruebas', JSON.stringify(sealed));
+                }
+            }
+
+            setIsLocked(true);
+            await loadDatosPrueba(selectedPrueba);
+            setMessage(esFinal ? '🔒 PRUEBA SELLADA: Resultados finales oficiales guardados.' : '✅ Tiempos guardados correctamente.');
         } catch (err) {
-            console.error('Error guardando tiempos:', err);
-            setMessage('❌ Error al guardar: ' + (err.response?.data?.message || err.message));
+            console.error('Error crítico en handleSaveTiempos:', err);
+            setMessage('❌ Error interno al procesar: ' + err.message);
         } finally {
             setSaving(false);
         }
@@ -260,6 +295,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         loading, saving, isLocked, message, setMessage,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
+        saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
         loadDatosPrueba
     };

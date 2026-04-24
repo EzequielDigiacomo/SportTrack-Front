@@ -32,7 +32,8 @@ const ResultadosTable = ({
     fase, 
     tiemposLocales, 
     onResultChange, 
-    isLocked 
+    isLocked,
+    isSuccess
 }) => {
     if (!fase) return null;
 
@@ -44,7 +45,7 @@ const ResultadosTable = ({
     });
 
     return (
-        <div className="resultados-table-wrapper fade-in">
+        <div className={`resultados-table-wrapper fade-in ${isSuccess ? 'grid-success-flash' : ''}`}>
             <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
                 Fase: <span style={{ color: 'var(--color-primary-light)' }}>{fase.nombreFase}</span>
             </h3>
@@ -62,13 +63,22 @@ const ResultadosTable = ({
                     {sortedResultados.map(res => {
                         const local = tiemposLocales[res.id] || {};
                         const displayTime = local.tiempoOficial !== undefined 
-                            ? local.tiempoOficial  // user is editing — show raw
+                            ? local.tiempoOficial 
                             : formatTime(res.tiempoOficial);
                         const displayPos = local.posicion !== undefined ? local.posicion : (res.posicion || '');
+                        
+                        const isOfficial = res.tiempoOficial && res.tiempoOficial !== '';
+                        const rowClass = isOfficial ? 'row-official-saved' : (isSuccess ? 'saved-row' : '');
+                        
                         return (
-                            <tr key={res.id}>
-                                <td className="text-center" style={{ fontWeight: 'bold' }}>{res.carril || '-'}</td>
-                                <td>{res.participanteNombre}</td>
+                            <tr key={res.id} className={rowClass}>
+                                <td className="text-center" style={{ fontWeight: 'bold' }}>
+                                    {res.carril || '-'}
+                                </td>
+                                <td>
+                                    {res.participanteNombre}
+                                    {isOfficial && <span className="official-badge">Oficial</span>}
+                                </td>
                                 <td><span className="chip chip-ecu-blue">{res.clubSigla}</span></td>
                                 <td>
                                     <input 
@@ -77,7 +87,7 @@ const ResultadosTable = ({
                                         className="admin-input-small"
                                         value={displayTime}
                                         onChange={(e) => onResultChange(res.id, 'tiempoOficial', e.target.value)}
-                                        disabled={isLocked}
+                                        disabled={isLocked || isOfficial}
                                         style={{ fontFamily: 'monospace', textAlign: 'center' }}
                                     />
                                 </td>
@@ -87,7 +97,7 @@ const ResultadosTable = ({
                                         className="admin-input-small"
                                         value={displayPos}
                                         onChange={(e) => onResultChange(res.id, 'posicion', e.target.value)}
-                                        disabled={isLocked}
+                                        disabled={isLocked || isOfficial}
                                         style={{ textAlign: 'center' }}
                                     />
                                 </td>

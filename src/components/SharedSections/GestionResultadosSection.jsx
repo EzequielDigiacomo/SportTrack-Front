@@ -21,6 +21,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         loading, saving, isLocked, message,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
+        saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
         loadDatosPrueba, setMessage
     } = useResultados(preselectedEventoId, defaultTab);
@@ -37,40 +38,50 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         return acc;
     }, {});
 
-    const faseSeleccionada = (filtroVisualFase === 'Todas' || !fases.find(f => f.nombreFase === filtroVisualFase))
-        ? fases[0]
-        : fases.find(f => f.nombreFase === filtroVisualFase);
+    const faseSeleccionada = filtroVisualFase === 'Todas' 
+        ? null 
+        : (fases.find(f => f.nombreFase === filtroVisualFase) || fases[0]);
 
     const handleSimulateResults = () => {
-        const tls = {};
-        fases.forEach(f => {
-            // 1. Generar tiempos aleatorios para cada participante
-            const baseResults = f.resultados.map(r => {
-                const minutos = Math.floor(Math.random() * 2) + 1;
-                const segundos = Math.floor(Math.random() * 60);
-                const centesimas = Math.floor(Math.random() * 99);
-                
-                // Formato mm:ss.cc
-                const tiempoStr = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}.${String(centesimas).padStart(2, '0')}`;
-                
-                // Valor numérico para sortear
-                const totalMs = (minutos * 60000) + (segundos * 1000) + (centesimas * 10);
-                
-                return { id: r.id, tiempoStr, totalMs };
-            });
+        if (!faseSeleccionada) {
+            setMessage('⚠️ Seleccioná una fase primero para simular.');
+            return;
+        }
 
-            // 2. Ordenar por tiempo y asignar posiciones
-            baseResults.sort((a, b) => a.totalMs - b.totalMs);
+        // Bloqueo granular: Solo bloqueamos si LA FASE seleccionada ya tiene tiempos oficiales
+        const faseYaTieneTiempos = faseSeleccionada.resultados.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00');
+        
+        if (faseYaTieneTiempos) {
+            setMessage('⚠️ No se puede simular: Esta fase ya tiene resultados oficiales guardados.');
+            return;
+        }
 
-            baseResults.forEach((res, idx) => {
-                tls[res.id] = {
-                    tiempoOficial: res.tiempoStr,
-                    posicion: idx + 1
-                };
-            });
+        const tls = { ...tiemposLocales };
+        
+        // 1. Generar tiempos aleatorios solo para los resultados de la fase seleccionada
+        const baseResults = faseSeleccionada.resultados.map(r => {
+            const minutos = Math.floor(Math.random() * 2) + 1;
+            const segundos = Math.floor(Math.random() * 60);
+            const centesimas = Math.floor(Math.random() * 99);
+            
+            const tiempoStr = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}.${String(centesimas).padStart(2, '0')}`;
+            const totalMs = (minutos * 60000) + (segundos * 1000) + (centesimas * 10);
+            
+            return { id: r.id, tiempoStr, totalMs };
         });
+
+        // 2. Ordenar por tiempo y asignar posiciones
+        baseResults.sort((a, b) => a.totalMs - b.totalMs);
+
+        baseResults.forEach((res, idx) => {
+            tls[res.id] = {
+                tiempoOficial: res.tiempoStr,
+                posicion: idx + 1
+            };
+        });
+
         setTiemposLocales(tls);
-        setMessage('✅ Simulación completada. Las posiciones se calcularon automáticamente por tiempo.');
+        setMessage(`✅ Simulación completada para ${faseSeleccionada.nombreFase}.`);
     };
 
     const handleResultChange = (id, field, val) => {
@@ -112,9 +123,17 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                                     className="btn-admin-secondary" 
                                     onClick={() => navigate(-1)}
                                     title="Volver"
-                                    style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                                    style={{ 
+                                        padding: '0', 
+                                        width: '22px', 
+                                        height: '22px', 
+                                        minWidth: '22px',
+                                        minHeight: '22px',
+                                        borderRadius: '50%', 
+                                        flexShrink: 0 
+                                    }}
                                 >
-                                    <ArrowLeft size={20} />
+                                    <ArrowLeft size={12} />
                                 </button>
                             )}
                             <h2 className="admin-title" style={{ margin: 0 }}>Panel de Resultados y Start List</h2>
@@ -288,7 +307,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                                         <button 
                                             className="btn-admin-primary" 
                                             onClick={handlePromoverEtapa}
-                                            disabled={saving || isLocked}
+                                            disabled={saving}
                                             style={{ 
                                                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
@@ -367,8 +386,9 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                                     <ResultadosTable 
                                         fase={faseSeleccionada}
                                         tiemposLocales={tiemposLocales}
-                                        isLocked={isLocked || viewMode === 'resultados'}
                                         onResultChange={handleResultChange}
+                                        isLocked={isLocked || viewMode === 'resultados'}
+                                        isSuccess={saveSuccess}
                                     />
 
                                     {viewMode !== 'resultados' && (
@@ -377,16 +397,22 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                                                 className="btn-admin-secondary" 
                                                 onClick={handleSimulateResults}
                                                 style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
+                                                disabled={faseSeleccionada?.resultados?.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00')}
                                             >
                                                 ⚡ Simular Tiempos
                                             </button>
                                             <button 
                                                 className="btn-admin-primary" 
                                                 onClick={handleSaveTiempos}
-                                                disabled={saving || isLocked}
+                                                disabled={saving}
                                             >
                                                 💾 {saving ? 'Guardando...' : 'Guardar Tiempos Oficiales'}
                                             </button>
+                                        </div>
+                                    )}
+                                    {isLocked && (
+                                        <div style={{ marginTop: '0.5rem', color: 'var(--color-warning)', fontSize: '0.85rem', textAlign: 'right' }}>
+                                            ⚠️ Esta prueba está marcada como bloqueada, pero puedes guardar cambios si es necesario.
                                         </div>
                                     )}
                                 </div>
