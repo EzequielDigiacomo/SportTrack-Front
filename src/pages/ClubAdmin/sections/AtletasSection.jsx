@@ -11,6 +11,25 @@ import { useAlert } from '../../../hooks/useAlert';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
+import Skeleton from '../../../components/Common/Skeleton';
+
+const AtletaSkeleton = () => (
+    <div className="admin-table-wrapper glass-effect" style={{ padding: '1rem' }}>
+        {[...Array(5)].map((_, i) => (
+            <div key={i} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <Skeleton width="150px" height="20px" variant="rounded" />
+                <Skeleton width="100px" height="20px" variant="rounded" />
+                <Skeleton width="120px" height="20px" variant="rounded" />
+                <Skeleton width="80px" height="20px" variant="rounded" />
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                    <Skeleton width="30px" height="30px" variant="circle" />
+                    <Skeleton width="30px" height="30px" variant="circle" />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
 const AtletasSection = () => {
     const navigate = useNavigate();
     const [atletas, setAtletas] = useState([]);
@@ -186,7 +205,7 @@ const AtletasSection = () => {
             )}
 
             {view === 'lista' ? (
-                loading ? <div className="loader-container"><div className="loader"></div></div> : (
+                loading ? <AtletaSkeleton /> : (
                     <>
                         <AtletaGrid 
                             atletas={displayedAtletas}

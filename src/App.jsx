@@ -6,10 +6,15 @@ import SuperDashboard from './pages/Super/Dashboard'
 import LiveResults from './pages/Home/LiveResults'
 import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/Common/ProtectedRoute'
+import { useToast } from './context/ToastContext'
+import ToastContainer from './components/Common/ToastContainer'
 
 function App() {
+    const { toasts, removeToast } = useToast()
+
     return (
-        <Routes>
+        <>
+            <Routes>
             {/* Rutas públicas */}
             <Route path="/login" element={<MainLayout><Login /></MainLayout>} />
             <Route path="/" element={<MainLayout><Home /></MainLayout>} />
@@ -34,6 +39,8 @@ function App() {
                 </ProtectedRoute>
             } />
         </Routes>
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+        </>
     )
 }
 

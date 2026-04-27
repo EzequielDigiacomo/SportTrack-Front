@@ -4,20 +4,25 @@ import { useAuth } from '../../context/AuthContext'
 import EventoService from '../../services/EventoService'
 import logo from '../../assets/logo-sporttrack.png'
 import './Home.css'
+import Skeleton from '../../components/Common/Skeleton'
 
 function Home() {
     const { isAuthenticated, user } = useAuth()
     const navigate = useNavigate()
     const [ultimoEvento, setUltimoEvento] = useState(null)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         // Cargar el último evento finalizado
+        setLoading(true)
         EventoService.getAll().then(eventos => {
             const finalizados = eventos.filter(e => e.estado === 'Finalizado')
             if (finalizados.length > 0) {
                 setUltimoEvento(finalizados[finalizados.length - 1])
             }
-        }).catch(() => { })
+        })
+        .catch(() => { })
+        .finally(() => setLoading(false))
     }, [])
 
     const handleClubAccess = () => {
@@ -72,19 +77,30 @@ function Home() {
             </section>
 
             {/* ── ÚLTIMO EVENTO ── */}
-            {ultimoEvento && (
+            {(loading || ultimoEvento) && (
                 <section className="ultimo-evento-section container" id="eventos">
                     <div className="section-label">🏁 Último Evento Finalizado</div>
-                    <div className="ultimo-evento-card glass-effect">
-                        <div className="evento-info">
-                            <h2>{ultimoEvento.nombre}</h2>
-                            <p className="evento-meta">📅 {new Date(ultimoEvento.fecha).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            <p className="evento-meta">📍 {ultimoEvento.ubicacion}</p>
+                    {loading ? (
+                        <div className="ultimo-evento-card glass-effect" style={{ padding: '2rem' }}>
+                            <div className="evento-info">
+                                <Skeleton width="250px" height="32px" variant="rounded" className="mb-md" />
+                                <Skeleton width="180px" height="20px" variant="rounded" className="mb-sm" />
+                                <Skeleton width="150px" height="20px" variant="rounded" />
+                            </div>
+                            <Skeleton width="180px" height="45px" variant="rounded" />
                         </div>
-                        <Link to={`/resultados/${ultimoEvento.id}`} className="btn-ver-resultados">
-                            Ver Resultados Completos →
-                        </Link>
-                    </div>
+                    ) : (
+                        <div className="ultimo-evento-card glass-effect">
+                            <div className="evento-info">
+                                <h2>{ultimoEvento.nombre}</h2>
+                                <p className="evento-meta">📅 {new Date(ultimoEvento.fecha).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                <p className="evento-meta">📍 {ultimoEvento.ubicacion}</p>
+                            </div>
+                            <Link to={`/resultados/${ultimoEvento.id}`} className="btn-ver-resultados">
+                                Ver Resultados Completos →
+                            </Link>
+                        </div>
+                    )}
                 </section>
             )}
 

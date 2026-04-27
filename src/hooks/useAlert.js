@@ -1,32 +1,20 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useToast } from '../context/ToastContext';
 
 /**
- * Hook for managing temporary alert messages
- * @param {number} duration - Time in ms before the message disappears
+ * Hook for managing temporary alert messages (Refactored to use global Toasts)
  */
-export const useAlert = (duration = 4000) => {
-    const [alert, setAlert] = useState(null);
+export const useAlert = () => {
+    const { addToast } = useToast();
 
     const showAlert = useCallback((type, text) => {
-        setAlert({ type, text });
-    }, []);
+        addToast(type, text);
+    }, [addToast]);
 
-    const hideAlert = useCallback(() => {
-        setAlert(null);
-    }, []);
-
-    useEffect(() => {
-        if (alert) {
-            const timer = setTimeout(() => {
-                setAlert(null);
-            }, duration);
-            return () => clearTimeout(timer);
-        }
-    }, [alert, duration]);
-
+    // Returning empty alert and hideAlert for compatibility, but they are no longer needed
     return {
-        alert,
+        alert: null, 
         showAlert,
-        hideAlert
+        hideAlert: () => {}
     };
 };
