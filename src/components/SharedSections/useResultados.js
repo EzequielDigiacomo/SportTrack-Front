@@ -171,6 +171,20 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const handleFinalizarFase = async (id) => {
+        if (!window.confirm("¿Confirmar estos resultados como OFICIALES y publicarlos en la web?")) return;
+        setSaving(true);
+        try {
+            await FaseService.finalizar(id);
+            setMessage("✅ Fase oficializada y publicada correctamente.");
+            await loadDatosPrueba(selectedPrueba);
+        } catch (error) {
+            setMessage("❌ Error al oficializar la fase.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const parseTimeToTimeSpan = (timeStr) => {
         if (!timeStr || timeStr.trim() === '') return null;
         try {
@@ -318,7 +332,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
         loadDatosPrueba
     };
 };

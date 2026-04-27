@@ -22,7 +22,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
         loadDatosPrueba, setMessage
     } = useResultados(preselectedEventoId, defaultTab);
 
@@ -383,6 +383,18 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                             {faseSeleccionada ? (
                                 <div className="resultados-main-card glass-effect p-md">
+                                    {faseSeleccionada.estado === "Pendiente de Validación" && (
+                                        <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #fbbf24', background: 'rgba(251, 191, 36, 0.1)' }}>
+                                            <span style={{ color: '#fbbf24', fontWeight: 600 }}>⚠️ Serie enviada por cronometrista. Pendiente de validación oficial.</span>
+                                            <button 
+                                                className="btn-admin-primary"
+                                                onClick={() => handleFinalizarFase(faseSeleccionada.id)}
+                                                style={{ background: '#10b981', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', fontWeight: 700 }}
+                                            >
+                                                ✅ Validar y Hacer Oficial
+                                            </button>
+                                        </div>
+                                    )}
                                     <ResultadosTable 
                                         fase={faseSeleccionada}
                                         tiemposLocales={tiemposLocales}

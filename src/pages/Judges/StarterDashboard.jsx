@@ -61,15 +61,14 @@ const StarterDashboard = () => {
 
     const handleStartRace = async () => {
         if (!selectedFase) return;
-        if (!window.confirm(`¿Confirmar largada de ${selectedFase.nombreFase}?`)) return;
+        // Eliminado confirm para largada instantánea
 
         try {
             setLoading(true);
             await timingSignalRService.connect(selectedFase.id);
             await FaseService.iniciar(selectedFase.id);
-            addToast('success', `¡Carrera iniciada: ${selectedFase.nombreFase}!`);
+            // Eliminado addToast para evitar distracciones
         } catch (err) {
-            addToast('error', 'Error al iniciar la carrera');
             console.error(err);
         } finally {
             setLoading(false);

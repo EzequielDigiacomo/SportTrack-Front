@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Flag, Trophy, RefreshCw, Save } from 'lucide-react';
+import { Flag, Trophy, RefreshCw, Save, HelpCircle, XCircle } from 'lucide-react';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import ResultadoService from '../../services/ResultadoService';
@@ -19,9 +19,76 @@ const FinisherDashboard = () => {
     const [startTime, setStartTime] = useState(null);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isRaceRunning, setIsRaceRunning] = useState(false);
+    const [rawTimes, setRawTimes] = useState([]); // Tiempos capturados sin asignar (Photo-finish)
     const { addToast } = useToast();
     
     const timerRef = useRef(null);
+
+    // Manejo de teclado para cronometraje rápido
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (!isRaceRunning) return;
+
+            // Barra espaciadora: Captura rápida (Photo-finish)
+            if (e.code === 'Space') {
+                e.preventDefault();
+                handleGenericFinish();
+            }
+
+            // Números 1-9: Carriles directos
+            const num = parseInt(e.key);
+            if (num >= 1 && num <= 9) {
+                handleLaneFinish(num);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isRaceRunning, elapsedTime, resultados]);
+
+    const handleLaneFinish = (laneNumber) => {
+        const resultado = resultados.find(r => r.carril === laneNumber);
+        if (resultado && !resultado.tiempoOficial) {
+            handleRecordFinish(resultado.id);
+        }
+    };
+
+    const handleGenericFinish = () => {
+        const newTime = {
+            id: Date.now(),
+            time: formatTimer(elapsedTime),
+            ms: elapsedTime
+        };
+        
+        const newRawTimes = [...rawTimes, newTime];
+        setRawTimes(newRawTimes);
+
+        // Verificar si la suma de asignados + dudas completa la serie
+        const asignadosCount = resultados.filter(r => r.tiempoOficial).length;
+        if (asignadosCount + newRawTimes.length >= resultados.length) {
+            stopLocalTimer();
+        }
+    };
+
+    const assignRawTime = (rawTimeObj, resultadoId) => {
+        setResultados(prev => {
+            const updated = prev.map(r => 
+                r.id === resultadoId ? { ...r, tiempoOficial: rawTimeObj.time, msLlegada: rawTimeObj.ms, status: 'finished' } : r
+            );
+
+            const todosTerminaron = updated.every(r => r.tiempoOficial);
+            if (todosTerminaron) {
+                stopLocalTimer();
+            }
+
+            return updated;
+        });
+        setRawTimes(prev => prev.filter(t => t.id !== rawTimeObj.id));
+    };
+
+    const removeRawTime = (timeId) => {
+        setRawTimes(prev => prev.filter(t => t.id !== timeId));
+    };
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -70,13 +137,11 @@ const FinisherDashboard = () => {
         timingSignalRService.onRaceStarted((id, sTime) => {
             if (id.toString() === selectedFase.id.toString()) {
                 startLocalTimer(new Date(sTime));
-                addToast('info', '¡Carrera iniciada por el largador!');
             }
         });
 
         timingSignalRService.onRaceFinished(() => {
             stopLocalTimer();
-            addToast('success', 'Carrera finalizada oficialmente.');
         });
 
         timingSignalRService.onRaceReset((id) => {
@@ -118,26 +183,45 @@ const FinisherDashboard = () => {
     const handleRecordFinish = (resultadoId) => {
         if (!isRaceRunning) return;
         const finalTime = formatTimer(elapsedTime);
-        setResultados(prev => prev.map(r => r.id === resultadoId ? { ...r, tiempoOficial: finalTime, status: 'finished' } : r));
+        const currentMs = elapsedTime;
+        
+        setResultados(prev => {
+            const updated = prev.map(r => r.id === resultadoId ? { ...r, tiempoOficial: finalTime, msLlegada: currentMs, status: 'finished' } : r);
+            
+            const asignadosCount = updated.filter(r => r.tiempoOficial).length;
+            if (asignadosCount + rawTimes.length >= updated.length) {
+                stopLocalTimer();
+            }
+            
+            return updated;
+        });
     };
 
     const handleSaveResults = async () => {
         try {
             const dataToSave = resultados
-                .filter(r => r.status === 'finished' || r.tiempoOficial)
+                .filter(r => r.tiempoOficial)
                 .map(r => ({
                     id: r.id,
                     tiempoOficial: r.tiempoOficial,
-                    estado: 'Finalizado'
+                    estado: 2 // Preliminar
                 }));
             
             await ResultadoService.batchUpdate(dataToSave);
-            await FaseService.finalizar(selectedFase.id);
-            addToast('success', 'Resultados guardados y serie cerrada.');
+            await FaseService.enviarARevision(selectedFase.id);
+            // Redirigir o limpiar estado
+            window.location.reload(); 
         } catch (err) {
-            addToast('error', 'Error al guardar los resultados');
         }
     };
+
+    // Combinar atletas con tiempo y dudas para la grilla de llegada
+    const arrivals = [
+        ...resultados.filter(r => r.tiempoOficial).map(r => ({ type: 'atleta', ...r, sortMs: r.msLlegada })),
+        ...rawTimes.map(rt => ({ type: 'duda', ...rt, sortMs: rt.ms }))
+    ].sort((a, b) => a.sortMs - b.sortMs);
+
+    const pendientes = resultados.filter(r => !r.tiempoOficial);
 
     return (
         <div className="finisher-dashboard fade-in">
@@ -153,53 +237,149 @@ const FinisherDashboard = () => {
 
             <div className="finisher-layout">
                 <aside className="finisher-sidebar glass-effect">
-                    <select value={selectedPrueba?.id || ''} onChange={(e) => setSelectedPrueba(pruebas.find(p => p.id === parseInt(e.target.value)))}>
-                        <option value="">Seleccionar Prueba...</option>
-                        {pruebas.map(p => <option key={p.id} value={p.id}>{p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo}</option>)}
-                    </select>
+                    <div className="selection-group">
+                        <select value={selectedPrueba?.id || ''} onChange={(e) => setSelectedPrueba(pruebas.find(p => p.id === parseInt(e.target.value)))}>
+                            <option value="">Seleccionar Prueba...</option>
+                            {pruebas.map(p => <option key={p.id} value={p.id}>{p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo}</option>)}
+                        </select>
 
-                    <div className="fase-mini-list">
-                        {fases.map(f => (
-                            <button 
-                                key={f.id} 
-                                className={`fase-mini-btn ${selectedFase?.id === f.id ? 'active' : ''}`}
-                                onClick={() => setSelectedFase(f)}
-                            >
-                                {f.nombreFase} {f.estado === 'Finalizada' && '✅'}
-                            </button>
-                        ))}
+                        <div className="fase-mini-list">
+                            {fases.map(f => (
+                                <button 
+                                    key={f.id} 
+                                    className={`fase-mini-btn ${selectedFase?.id === f.id ? 'active' : ''}`}
+                                    onClick={() => setSelectedFase(f)}
+                                >
+                                    {f.nombreFase} {f.estado === 'Finalizada' && '✅'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+
+                    {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
+                        <div className="pendientes-panel glass-effect fade-in">
+                            <h3 style={{ color: '#fbbf24' }}>Atletas por Clasificar</h3>
+                            <div className="pendientes-list">
+                                {pendientes.map(p => (
+                                    <div key={p.id} className="pendiente-item">
+                                        <span className="p-lane">{p.carril}</span>
+                                        <div className="p-info">
+                                            <span className="p-name">{p.participanteNombre}</span>
+                                            <button 
+                                                className="btn-assign-quick"
+                                                onClick={() => {
+                                                    if (rawTimes.length > 0) {
+                                                        assignRawTime(rawTimes[0], p.id);
+                                                    } else {
+                                                        handleRecordFinish(p.id);
+                                                    }
+                                                }}
+                                            >
+                                                {rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {rawTimes.length > 0 && (
+                                <p style={{ fontSize: '0.7rem', marginTop: '10px', color: '#fbbf24' }}>
+                                    Haga clic en el atleta para asignarle el tiempo #{1} de la grilla.
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </aside>
 
                 <main className="finisher-main glass-effect">
-                    <div className="athletes-finish-list">
-                        {resultados.map((r, index) => (
-                            <div key={r.id} className={`finish-row ${r.tiempoOficial ? 'done' : ''}`}>
-                                <div className="lane-circle">{r.carril}</div>
-                                <div className="athlete-details">
-                                    <span className="a-name">{r.participanteNombre}</span>
-                                    <span className="a-club">{r.clubNombre}</span>
-                                </div>
-                                <div className="finish-time">
-                                    {r.tiempoOficial || '--:--.--'}
-                                </div>
-                                <button 
-                                    className="btn-finish-action"
-                                    onClick={() => handleRecordFinish(r.id)}
-                                    disabled={!isRaceRunning || r.tiempoOficial}
-                                >
-                                    {r.tiempoOficial ? <Trophy size={20} /> : 'LLEGADA'}
-                                </button>
+                    {/* Controles Rápidos */}
+                    <div className="quick-controls-panel mb-lg">
+                        <div className="lane-buttons-grid">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
+                                const res = resultados.find(r => r.carril === num);
+                                const isOccupied = !!res;
+                                const isFinished = res?.tiempoOficial;
+                                return (
+                                    <button 
+                                        key={num}
+                                        className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''}`}
+                                        onClick={() => handleLaneFinish(num)}
+                                        disabled={!isRaceRunning || !isOccupied || isFinished}
+                                    >
+                                        <span className="num">{num}</span>
+                                        <span className="label">{isOccupied ? (isFinished ? 'LLEGÓ' : 'LLEGADA') : '-'}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        
+                        <button 
+                            className={`btn-photo-finish ${isRaceRunning ? 'active' : ''}`}
+                            onClick={handleGenericFinish}
+                            disabled={!isRaceRunning}
+                            style={{ background: '#fbbf24', color: '#000' }}
+                        >
+                            <HelpCircle size={24} />
+                            <span>REGISTRAR DUDA (?) [Espacio]</span>
+                        </button>
+                    </div>
+
+                    {/* Grilla Dinámica de Orden de Llegada */}
+                    <div className="arrivals-board">
+                        <div className="board-header">
+                            <span className="bh-pos">POS</span>
+                            <span className="bh-lane">CARRIL</span>
+                            <span className="bh-name">COMPETIDOR / ESTADO</span>
+                            <span className="bh-time">TIEMPO</span>
+                        </div>
+                        
+                        {arrivals.length === 0 ? (
+                            <div className="empty-board">
+                                <Flag size={48} />
+                                <p>{isRaceRunning ? 'Esperando llegadas...' : 'Seleccione una fase para comenzar'}</p>
                             </div>
-                        ))}
+                        ) : (
+                            <div className="arrivals-list">
+                                {arrivals.map((arrival, index) => (
+                                    <div key={arrival.id} className={`arrival-row pos-${index + 1} ${arrival.type}`}>
+                                        <div className="arrival-pos">{index + 1}º</div>
+                                        <div className="arrival-lane">{arrival.type === 'atleta' ? arrival.carril : '?'}</div>
+                                        <div className="arrival-details">
+                                            {arrival.type === 'atleta' ? (
+                                                <>
+                                                    <span className="arr-name">{arrival.participanteNombre}</span>
+                                                    <span className="arr-club">{arrival.clubNombre}</span>
+                                                </>
+                                            ) : (
+                                                <div className="doubt-indicator">
+                                                    <HelpCircle size={14} />
+                                                    <span>REVISIÓN PHOTOFINISH PENDIENTE</span>
+                                                    <div className="assign-hint">Asigna este tiempo a un atleta de la lista lateral</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="arrival-time">{arrival.type === 'atleta' ? arrival.tiempoOficial : arrival.time}</div>
+                                        {arrival.type === 'duda' && (
+                                            <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}>
+                                                <XCircle size={18} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <footer className="finisher-actions">
-                        <button className="btn-reset" onClick={() => { setElapsedTime(0); stopLocalTimer(); }}>
+                        <button className="btn-reset" onClick={() => { 
+                            if(window.confirm('¿Reiniciar reloj local?')) {
+                                setElapsedTime(0); stopLocalTimer(); setRawTimes([]);
+                                setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null })));
+                            }
+                        }}>
                             <RefreshCw size={18} /> Reiniciar Reloj
                         </button>
-                        <button className="btn-save-official" onClick={handleSaveResults} disabled={resultados.every(r => !r.tiempoOficial)}>
-                            <Save size={18} /> Guardar y Cerrar Serie
+                        <button className="btn-save-official" onClick={handleSaveResults} disabled={arrivals.length === 0 || arrivals.some(a => a.type === 'duda')}>
+                            <Save size={18} /> Enviar para Revisión
                         </button>
                     </footer>
                 </main>
