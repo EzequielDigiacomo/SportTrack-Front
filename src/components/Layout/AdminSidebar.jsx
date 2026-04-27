@@ -41,7 +41,7 @@ const AdminSidebar = ({
                 {navItems.map(item => (
                     <NavLink
                         key={item.id}
-                        to={item.path === '' ? '/super' : `/super/${item.path}`}
+                        to={item.isExternal || item.path.startsWith('/') ? item.path : (item.path === '' ? '/super' : `/super/${item.path}`)}
                         end={item.exact}
                         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                         onClick={onNavClick}

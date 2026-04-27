@@ -149,6 +149,28 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const handleResetFase = async (id) => {
+        if (!window.confirm("¿Estás seguro de reiniciar esta fase? Se borrarán todos los tiempos oficiales y posiciones de esta serie, pero se conservarán los carriles.")) return;
+        
+        setSaving(true);
+        try {
+            await FaseService.reiniciar(id);
+            
+            // Limpiar bloqueos locales para esta prueba si existían
+            const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+            const newLocked = locked.filter(itemId => itemId !== selectedPrueba);
+            localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
+            
+            setIsLocked(false);
+            setMessage("✅ Fase reiniciada correctamente. Tiempos borrados.");
+            await loadDatosPrueba(selectedPrueba);
+        } catch (error) {
+            setMessage("❌ Error al reiniciar la fase.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const parseTimeToTimeSpan = (timeStr) => {
         if (!timeStr || timeStr.trim() === '') return null;
         try {
@@ -296,7 +318,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase,
         loadDatosPrueba
     };
 };

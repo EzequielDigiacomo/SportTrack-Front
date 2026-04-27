@@ -61,6 +61,11 @@ class TimingSignalRService {
         this.connection.on("RaceFinished", callback);
     }
 
+    onRaceReset(callback) {
+        if (!this.connection) return;
+        this.connection.on("RaceReset", callback);
+    }
+
     disconnect() {
         if (this.connection) {
             this.connection.stop();

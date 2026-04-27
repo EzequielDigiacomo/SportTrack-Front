@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, FileDown, ChevronDown, Trash2 } from 'lucide-react';
+import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
@@ -22,7 +22,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase,
         loadDatosPrueba, setMessage
     } = useResultados(preselectedEventoId, defaultTab);
 
@@ -393,14 +393,24 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                                     {viewMode !== 'resultados' && (
                                         <div className="form-footer-actions mt-md" style={{ justifyContent: 'space-between' }}>
-                                            <button 
-                                                className="btn-admin-secondary" 
-                                                onClick={handleSimulateResults}
-                                                style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
-                                                disabled={faseSeleccionada?.resultados?.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00')}
-                                            >
-                                                ⚡ Simular Tiempos
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '0.8rem' }}>
+                                                <button 
+                                                    className="btn-admin-secondary" 
+                                                    onClick={handleSimulateResults}
+                                                    style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
+                                                    disabled={faseSeleccionada?.resultados?.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00')}
+                                                >
+                                                    ⚡ Simular Tiempos
+                                                </button>
+                                                <button 
+                                                    className="btn-admin-secondary" 
+                                                    onClick={() => handleResetFase(faseSeleccionada.id)}
+                                                    style={{ borderColor: 'rgba(255, 100, 100, 0.3)', color: '#ff6b6b' }}
+                                                    title="Borrar todos los tiempos y reiniciar cronómetro"
+                                                >
+                                                    <RotateCcw size={14} style={{ marginRight: '6px' }} /> Reiniciar Fase
+                                                </button>
+                                            </div>
                                             <button 
                                                 className="btn-admin-primary" 
                                                 onClick={handleSaveTiempos}

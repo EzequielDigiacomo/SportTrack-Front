@@ -30,7 +30,7 @@ const NAV_ITEMS = [
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
-    { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)' },
+    { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true },
     { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
 ];
 
