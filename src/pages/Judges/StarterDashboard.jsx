@@ -44,6 +44,21 @@ const StarterDashboard = () => {
         loadFases();
     }, [selectedPrueba]);
 
+    useEffect(() => {
+        if (!selectedFase) return;
+
+        timingSignalRService.connect(selectedFase.id);
+
+        timingSignalRService.onRaceReset((id) => {
+            if (id.toString() === selectedFase.id.toString()) {
+                setSelectedFase(prev => ({ ...prev, estado: 'Programada' }));
+                addToast('info', 'La fase ha sido reiniciada. El botón de largada está habilitado.');
+            }
+        });
+
+        return () => timingSignalRService.disconnect();
+    }, [selectedFase]);
+
     const handleStartRace = async () => {
         if (!selectedFase) return;
         if (!window.confirm(`¿Confirmar largada de ${selectedFase.nombreFase}?`)) return;
