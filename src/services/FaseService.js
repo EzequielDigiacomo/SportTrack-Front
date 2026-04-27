@@ -16,6 +16,14 @@ const FaseService = {
     },
     delete: async (id) => {
         await api.delete(`${ENDPOINTS.FASES.BASE}/${id}`);
+    },
+    iniciar: async (id) => {
+        const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Iniciar`);
+        return response.data;
+    },
+    finalizar: async (id) => {
+        const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Finalizar`);
+        return response.data;
     }
 };
 

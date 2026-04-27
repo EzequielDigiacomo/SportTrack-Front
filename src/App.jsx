@@ -5,6 +5,9 @@ import ClubDashboard from './pages/ClubAdmin/Dashboard'
 import SuperDashboard from './pages/Super/Dashboard'
 import LiveResults from './pages/Home/LiveResults'
 import Login from './pages/Auth/Login'
+import JudgesDashboard from './pages/Judges/JudgesDashboard'
+import StarterDashboard from './pages/Judges/StarterDashboard'
+import FinisherDashboard from './pages/Judges/FinisherDashboard'
 import ProtectedRoute from './components/Common/ProtectedRoute'
 import { useToast } from './context/ToastContext'
 import ToastContainer from './components/Common/ToastContainer'
@@ -38,6 +41,11 @@ function App() {
                     <SuperDashboard />
                 </ProtectedRoute>
             } />
+
+            {/* Módulo de Jueces */}
+            <Route path="/jueces" element={<ProtectedRoute requiredRole="Admin"><MainLayout><JudgesDashboard /></MainLayout></ProtectedRoute>} />
+            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole="Admin"><MainLayout><StarterDashboard /></MainLayout></ProtectedRoute>} />
+            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole="Admin"><MainLayout><FinisherDashboard /></MainLayout></ProtectedRoute>} />
         </Routes>
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         </>
