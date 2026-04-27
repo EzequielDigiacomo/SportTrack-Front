@@ -79,6 +79,16 @@ const FinisherDashboard = () => {
             addToast('success', 'Carrera finalizada oficialmente.');
         });
 
+        timingSignalRService.onRaceReset((id) => {
+            if (id.toString() === selectedFase.id.toString()) {
+                stopLocalTimer();
+                setElapsedTime(0);
+                setStartTime(null);
+                setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, status: 'pending' })));
+                addToast('warning', '¡La serie ha sido reiniciada por administración!');
+            }
+        });
+
         return () => timingSignalRService.disconnect();
     }, [selectedFase]);
 
