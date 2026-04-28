@@ -83,6 +83,10 @@ const FinisherDashboard = () => {
 
             return updated;
         });
+        
+        // Emitir vía SignalR para monitoreo en vivo
+        timingSignalRService.sendTime(selectedFase.id, resultadoId, rawTimeObj.time, rawTimeObj.ms);
+        
         setRawTimes(prev => prev.filter(t => t.id !== rawTimeObj.id));
     };
 
@@ -109,6 +113,12 @@ const FinisherDashboard = () => {
         loadPruebas();
     }, [selectedEvento]);
 
+    const parseDate = (dateStr) => {
+        if (!dateStr) return null;
+        if (dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
+        return new Date(dateStr + 'Z');
+    };
+
     useEffect(() => {
         if (!selectedPrueba) return;
         const loadFases = async () => {
@@ -120,41 +130,78 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         if (!selectedFase) return;
-        const loadResultados = async () => {
-            const data = await ResultadoService.getByFase(selectedFase.id);
-            setResultados(data.sort((a,b) => (a.carril - b.carril)));
-            
-            if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-                startLocalTimer(new Date(selectedFase.fechaHoraInicioReal));
-            } else {
-                stopLocalTimer();
+        
+        let isMounted = true;
+
+        const setupSignalR = async () => {
+            try {
+                // Primero cargamos resultados
+                const data = await ResultadoService.getByFase(selectedFase.id);
+                if (!isMounted) return;
+                
+                // Formateamos los tiempos que ya vienen del servidor
+                const formattedData = data.map(r => {
+                    const tiempoLimpio = r.tiempoOficial ? parseBackendTime(r.tiempoOficial) : null;
+                    return {
+                        ...r,
+                        tiempoOficial: tiempoLimpio,
+                        msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
+                        status: r.tiempoOficial ? 'finished' : 'pending'
+                    };
+                });
+                
+                setResultados(formattedData.sort((a,b) => (a.carril - b.carril)));
+                
+                if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
+                    const parsed = parseDate(selectedFase.fechaHoraInicioReal);
+                    if (!isNaN(parsed)) startLocalTimer(parsed);
+                } else {
+                    stopLocalTimer();
+                }
+
+                // AHORA SÍ conectamos y esperamos
+                await timingSignalRService.connect(selectedFase.id);
+                if (!isMounted) return;
+
+                // Y RECIÉN AHÍ registramos los eventos
+                timingSignalRService.onRaceStarted((id, sTime) => {
+                    if (id.toString() === selectedFase.id.toString()) {
+                        const parsed = parseDate(sTime);
+                        if (!isNaN(parsed)) startLocalTimer(parsed);
+                    }
+                });
+
+                timingSignalRService.onRaceFinished(() => {
+                    if (isMounted) stopLocalTimer();
+                });
+
+                timingSignalRService.onRaceReset((id) => {
+                    if (isMounted && id.toString() === selectedFase.id.toString()) {
+                        stopLocalTimer();
+                        setElapsedTime(0);
+                        setStartTime(null);
+                        setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null, status: 'pending', estadoCanto: 'Pendiente' })));
+                    }
+                });
+
+                timingSignalRService.onResultStatusUpdated((resId, status) => {
+                    if (isMounted) {
+                        setResultados(prev => prev.map(r => 
+                            r.id.toString() === resId.toString() ? { ...r, estadoCanto: status } : r
+                        ));
+                    }
+                });
+            } catch (err) {
+                if (isMounted) console.error("Error setting up SignalR:", err);
             }
         };
-        loadResultados();
 
-        // SignalR connection
-        timingSignalRService.connect(selectedFase.id);
-        timingSignalRService.onRaceStarted((id, sTime) => {
-            if (id.toString() === selectedFase.id.toString()) {
-                startLocalTimer(new Date(sTime));
-            }
-        });
+        setupSignalR();
 
-        timingSignalRService.onRaceFinished(() => {
-            stopLocalTimer();
-        });
-
-        timingSignalRService.onRaceReset((id) => {
-            if (id.toString() === selectedFase.id.toString()) {
-                stopLocalTimer();
-                setElapsedTime(0);
-                setStartTime(null);
-                setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, status: 'pending' })));
-                addToast('warning', '¡La serie ha sido reiniciada por administración!');
-            }
-        });
-
-        return () => timingSignalRService.disconnect();
+        return () => {
+            isMounted = false;
+            timingSignalRService.disconnect();
+        };
     }, [selectedFase]);
 
     const startLocalTimer = (sTime) => {
@@ -172,12 +219,45 @@ const FinisherDashboard = () => {
         clearInterval(timerRef.current);
     };
 
+    const parseBackendTime = (timeStr) => {
+        if (!timeStr || timeStr === '') return '';
+        try {
+            const parts = timeStr.split(':');
+            if (parts.length === 3) {
+                const [h, m, sFull] = parts;
+                const [s, ms] = (sFull || '00.000').split('.');
+                const msShort = (ms || '0').substring(0, 3).padEnd(3, '0');
+                const totalMin = (parseInt(h) * 60) + parseInt(m);
+                return `${String(totalMin).padStart(2, '0')}:${s.padStart(2, '0')}.${msShort}`;
+            }
+            return timeStr;
+        } catch { return timeStr; }
+    };
+
     const formatTimer = (ms) => {
         const totalSeconds = Math.floor(ms / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
-        const milliseconds = Math.floor((ms % 1000) / 10);
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+        const milliseconds = Math.floor(ms % 1000);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+    };
+
+    const parseTimeToMs = (timeStr) => {
+        if (!timeStr) return 0;
+        try {
+            const parts = timeStr.split(':');
+            if (parts.length === 2) {
+                const [m, sFull] = parts;
+                const [s, ms] = sFull.split('.');
+                return (parseInt(m) * 60000) + (parseInt(s) * 1000) + parseInt((ms || '0').substring(0, 3).padEnd(3, '0'));
+            }
+            if (parts.length === 3) {
+                const [h, m, sFull] = parts;
+                const [s, ms] = sFull.split('.');
+                return (parseInt(h) * 3600000) + (parseInt(m) * 60000) + (parseInt(s) * 1000) + parseInt((ms || '0').substring(0, 3).padEnd(3, '0'));
+            }
+        } catch { return 0; }
+        return 0;
     };
 
     const handleRecordFinish = (resultadoId) => {
@@ -195,16 +275,35 @@ const FinisherDashboard = () => {
             
             return updated;
         });
+
+        // Emitir vía SignalR para monitoreo en vivo
+        timingSignalRService.sendTime(selectedFase.id, resultadoId, finalTime, currentMs);
+    };
+
+    const parseTimeToTimeSpan = (timeStr) => {
+        if (!timeStr || timeStr.trim() === '') return null;
+        try {
+            const parts = timeStr.trim().split(':');
+            if (parts.length === 2) {
+                const [min, secStr] = parts;
+                const [sec, ms] = (secStr || '0').split('.');
+                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
+                return `00:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
+            }
+        } catch (e) {}
+        return timeStr;
     };
 
     const handleSaveResults = async () => {
         try {
             const dataToSave = resultados
-                .filter(r => r.tiempoOficial)
+                .filter(r => r.tiempoOficial || (r.estadoCanto && r.estadoCanto !== 'Pendiente'))
                 .map(r => ({
                     id: r.id,
-                    tiempoOficial: r.tiempoOficial,
-                    estado: 2 // Preliminar
+                    tiempoOficial: r.tiempoOficial ? parseTimeToTimeSpan(r.tiempoOficial) : null,
+                    estado: (r.estadoCanto && r.estadoCanto !== 'Pendiente') 
+                        ? (r.estadoCanto === 'DSQ' ? 'Descalificado' : r.estadoCanto) 
+                        : "Preliminar"
                 }));
             
             await ResultadoService.batchUpdate(dataToSave);
@@ -212,16 +311,23 @@ const FinisherDashboard = () => {
             // Redirigir o limpiar estado
             window.location.reload(); 
         } catch (err) {
+            console.error("Error saving results:", err);
         }
     };
 
     // Combinar atletas con tiempo y dudas para la grilla de llegada
     const arrivals = [
-        ...resultados.filter(r => r.tiempoOficial).map(r => ({ type: 'atleta', ...r, sortMs: r.msLlegada })),
+        ...resultados
+            .filter(r => r.tiempoOficial || (r.estadoCanto && r.estadoCanto !== 'Pendiente'))
+            .map(r => ({ 
+                type: 'atleta', 
+                ...r, 
+                sortMs: r.estadoCanto && r.estadoCanto !== 'Pendiente' && !r.tiempoOficial ? 999999999 : r.msLlegada 
+            })),
         ...rawTimes.map(rt => ({ type: 'duda', ...rt, sortMs: rt.ms }))
     ].sort((a, b) => a.sortMs - b.sortMs);
 
-    const pendientes = resultados.filter(r => !r.tiempoOficial);
+    const pendientes = resultados.filter(r => !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente'));
 
     return (
         <div className="finisher-dashboard fade-in">
@@ -238,6 +344,22 @@ const FinisherDashboard = () => {
             <div className="finisher-layout">
                 <aside className="finisher-sidebar glass-effect">
                     <div className="selection-group">
+                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                        <select 
+                            value={selectedEvento?.id || ''} 
+                            onChange={(e) => {
+                                const ev = eventos.find(x => x.id === parseInt(e.target.value));
+                                setSelectedEvento(ev);
+                                setSelectedPrueba(null); // Reset proof when event changes
+                                setSelectedFase(null);
+                            }}
+                            className="mb-sm"
+                        >
+                            <option value="">Seleccionar Evento...</option>
+                            {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+                        </select>
+
+                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Prueba:</label>
                         <select value={selectedPrueba?.id || ''} onChange={(e) => setSelectedPrueba(pruebas.find(p => p.id === parseInt(e.target.value)))}>
                             <option value="">Seleccionar Prueba...</option>
                             {pruebas.map(p => <option key={p.id} value={p.id}>{p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo}</option>)}
@@ -298,15 +420,19 @@ const FinisherDashboard = () => {
                                 const res = resultados.find(r => r.carril === num);
                                 const isOccupied = !!res;
                                 const isFinished = res?.tiempoOficial;
+                                const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
+                                
                                 return (
                                     <button 
                                         key={num}
-                                        className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''}`}
+                                        className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`}
                                         onClick={() => handleLaneFinish(num)}
-                                        disabled={!isRaceRunning || !isOccupied || isFinished}
+                                        disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}
                                     >
                                         <span className="num">{num}</span>
-                                        <span className="label">{isOccupied ? (isFinished ? 'LLEGÓ' : 'LLEGADA') : '-'}</span>
+                                        <span className="label">
+                                            {isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}
+                                        </span>
                                     </button>
                                 );
                             })}
@@ -357,7 +483,13 @@ const FinisherDashboard = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="arrival-time">{arrival.type === 'atleta' ? arrival.tiempoOficial : arrival.time}</div>
+                                        <div className="arrival-time">
+                                            {arrival.type === 'atleta' 
+                                                ? (arrival.estadoCanto && arrival.estadoCanto !== 'Pendiente' && !arrival.tiempoOficial 
+                                                    ? arrival.estadoCanto 
+                                                    : arrival.tiempoOficial) 
+                                                : arrival.time}
+                                        </div>
                                         {arrival.type === 'duda' && (
                                             <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}>
                                                 <XCircle size={18} />

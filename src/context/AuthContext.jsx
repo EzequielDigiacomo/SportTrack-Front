@@ -27,9 +27,11 @@ export const AuthProvider = ({ children }) => {
         checkSession();
     }, []);
 
-    const login = (userData) => {
+    const login = (userData, token) => {
         setUser(userData);
-        // Guardamos solo los datos del usuario para UI, el token está en la Cookie HttpOnly
+        if (token) {
+            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+        }
         localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
     };
 
@@ -40,6 +42,8 @@ export const AuthProvider = ({ children }) => {
             console.error("Error al cerrar sesión en el servidor", e);
         } finally {
             setUser(null);
+            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
             localStorage.removeItem(STORAGE_KEYS.USER_DATA);
             window.location.href = '/login';
         }

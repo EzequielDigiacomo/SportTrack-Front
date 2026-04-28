@@ -35,8 +35,11 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     }
 
     // Rol incorrecto → home
-    if (requiredRole && user?.rol !== requiredRole) {
-        return <Navigate to="/" replace />;
+    if (requiredRole) {
+        const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+        if (!roles.includes(user?.rol)) {
+            return <Navigate to="/" replace />;
+        }
     }
 
     return children;

@@ -84,22 +84,40 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                             </div>
 
                             <div className="form-section">
-                                <h4>Asignación de Club</h4>
+                                <h4>Rol y Permisos</h4>
                                 <div className="form-group">
-                                    <label>Club Correspondiente *</label>
+                                    <label>Tipo de Usuario / Rol *</label>
                                     <select 
                                         className="admin-select"
-                                        name="clubId"
-                                        value={initialData.clubId} 
-                                        onChange={(e) => onChange('clubId', e.target.value)}
+                                        name="rol"
+                                        value={initialData.rol} 
+                                        onChange={(e) => onChange('rol', e.target.value)}
                                         required
                                     >
-                                        <option value="">Seleccionar Club...</option>
-                                        {clubes.map(c => (
-                                            <option key={c.id} value={c.id}>{c.nombre}</option>
-                                        ))}
+                                        <option value="Club">Club (Representante)</option>
+                                        <option value="Largador">Juez: Largador</option>
+                                        <option value="Cronometrista">Juez: Cronometrista</option>
+                                        <option value="Admin">Administrador (Acceso Total)</option>
                                     </select>
                                 </div>
+
+                                {initialData.rol === 'Club' && (
+                                    <div className="form-group fade-in">
+                                        <label>Club Correspondiente *</label>
+                                        <select 
+                                            className="admin-select"
+                                            name="clubId"
+                                            value={initialData.clubId} 
+                                            onChange={(e) => onChange('clubId', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Seleccionar Club...</option>
+                                            {clubes.map(c => (
+                                                <option key={c.id} value={c.id}>{c.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         </>
                     ) : (

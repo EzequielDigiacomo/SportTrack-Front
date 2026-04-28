@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle, Clock, Users } from 'lucide-react';
+import { Play, CheckCircle, Clock, Users, Activity, Search } from 'lucide-react';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import { PruebaService } from '../../services/ConfigService';
@@ -47,16 +47,47 @@ const StarterDashboard = () => {
     useEffect(() => {
         if (!selectedFase) return;
 
-        timingSignalRService.connect(selectedFase.id);
+        let isMounted = true;
 
-        timingSignalRService.onRaceReset((id) => {
-            if (id.toString() === selectedFase.id.toString()) {
-                setSelectedFase(prev => ({ ...prev, estado: 'Programada' }));
-                addToast('info', 'La fase ha sido reiniciada. El botón de largada está habilitado.');
+        const connectSignalR = async () => {
+            try {
+                await timingSignalRService.connect(selectedFase.id);
+                if (!isMounted) return;
+
+                timingSignalRService.onRaceReset((id) => {
+                    if (id.toString() === selectedFase.id.toString()) {
+                        setSelectedFase(prev => ({ ...prev, estado: 'Programada' }));
+                    }
+                });
+
+                timingSignalRService.onRaceFinished(() => {
+                    setSelectedFase(prev => ({ ...prev, estado: 'Finalizada' }));
+                });
+
+                timingSignalRService.onResultStatusUpdated((resId, status) => {
+                    if (isMounted) {
+                        setSelectedFase(prev => {
+                            if (!prev || !prev.resultados) return prev;
+                            return {
+                                ...prev,
+                                resultados: prev.resultados.map(r => 
+                                    r.id.toString() === resId.toString() ? { ...r, estadoCanto: status } : r
+                                )
+                            };
+                        });
+                    }
+                });
+            } catch (err) {
+                if (isMounted) console.error("SignalR Connection Error:", err);
             }
-        });
+        };
 
-        return () => timingSignalRService.disconnect();
+        connectSignalR();
+
+        return () => {
+            isMounted = false;
+            timingSignalRService.disconnect();
+        };
     }, [selectedFase]);
 
     const handleStartRace = async () => {
@@ -70,8 +101,30 @@ const StarterDashboard = () => {
             // Eliminado addToast para evitar distracciones
         } catch (err) {
             console.error(err);
+            if (err.message === 'Fase no encontrada') {
+                // Si la fase no existe, refrescamos la lista automáticamente
+                const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
+                setFases(data);
+                setSelectedFase(null);
+                alert("⚠️ La regata fue re-sorteada. Se ha actualizado la lista, por favor selecciona la serie nuevamente.");
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleStatusChange = async (resultadoId, status) => {
+        if (!selectedFase) return;
+        try {
+            await timingSignalRService.updateResultStatus(selectedFase.id, resultadoId, status);
+            setSelectedFase(prev => ({
+                ...prev,
+                resultados: prev.resultados.map(r => 
+                    r.id === resultadoId ? { ...r, estadoCanto: status } : r
+                )
+            }));
+        } catch (err) {
+            console.error("Error updating status:", err);
         }
     };
 
@@ -80,10 +133,13 @@ const StarterDashboard = () => {
             <aside className="starter-sidebar glass-effect">
                 <h3><Clock size={18} /> Próximas Pruebas</h3>
                 <div className="selection-stack">
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
                     <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
                         <option value="">Seleccionar Evento...</option>
                         {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                     </select>
+
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1rem', marginBottom: '4px', display: 'block' }}>Pruebas del Cronograma:</label>
 
                     <div className="pruebas-list">
                         {pruebas.map(p => (
@@ -95,6 +151,34 @@ const StarterDashboard = () => {
                                 {p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo}
                             </div>
                         ))}
+                    </div>
+
+                    <div className="fases-list">
+                        {fases.map(f => (
+                            <button 
+                                key={f.id} 
+                                className={`fase-btn-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
+                                onClick={() => setSelectedFase(f)}
+                            >
+                                {f.nombreFase}
+                            </button>
+                        ))}
+                        {fases.length > 0 && (
+                            <button 
+                                className="btn-refresh-fases"
+                                onClick={async () => {
+                                    const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
+                                    setFases(data);
+                                    if (selectedFase) {
+                                        const updated = data.find(x => x.id === selectedFase.id);
+                                        if (updated) setSelectedFase(updated);
+                                    }
+                                }}
+                                style={{ marginTop: '1rem', width: '100%', fontSize: '0.75rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#94a3b8', borderRadius: '4px' }}
+                            >
+                                🔄 Actualizar estados
+                            </button>
+                        )}
                     </div>
                 </div>
             </aside>
@@ -128,7 +212,23 @@ const StarterDashboard = () => {
                                                 <span className="lane-badge">{r.carril}</span>
                                                 <span className="athlete-name">{r.participanteNombre}</span>
                                                 <span className="club-tag">{r.clubSigla}</span>
-                                                <CheckCircle size={18} className="icon-ready" />
+                                                
+                                                <div className="status-quick-actions">
+                                                    <button 
+                                                        className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`}
+                                                        onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}
+                                                    >DNS</button>
+                                                    <button 
+                                                        className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`}
+                                                        onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}
+                                                    >DNF</button>
+                                                    <button 
+                                                        className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`}
+                                                        onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}
+                                                    >DSQ</button>
+                                                </div>
+
+                                                <CheckCircle size={18} className={`icon-ready ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'hidden' : ''}`} />
                                             </div>
                                         ))}
                                     </div>
@@ -136,12 +236,31 @@ const StarterDashboard = () => {
 
                                 <div className="control-actions">
                                     <button 
-                                        className={`btn-start-big ${loading ? 'loading' : ''}`}
+                                        className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''}`}
                                         onClick={handleStartRace}
-                                        disabled={loading || selectedFase.estado === 'En Carrera'}
+                                        disabled={selectedFase.estado !== 'Programada' || loading}
                                     >
-                                        <Play size={40} fill="currentColor" />
-                                        <span>{selectedFase.estado === 'En Carrera' ? 'EN CARRERA' : 'LARGAR CARRERA'}</span>
+                                        {selectedFase.estado === 'Programada' ? (
+                                            <>
+                                                <Play size={48} fill="currentColor" />
+                                                <span>LARGAR CARRERA</span>
+                                            </>
+                                        ) : selectedFase.estado === 'En Carrera' ? (
+                                            <>
+                                                <Activity size={48} className="pulse" />
+                                                <span>EN CARRERA</span>
+                                            </>
+                                        ) : selectedFase.estado === 'Pendiente de Validación' ? (
+                                            <>
+                                                <Search size={48} />
+                                                <span>EN REVISIÓN</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle size={48} />
+                                                <span>FINALIZADA</span>
+                                            </>
+                                        )}
                                     </button>
                                     <p className="hint">Este botón sincroniza el tiempo 0 para todos los jueces.</p>
                                 </div>

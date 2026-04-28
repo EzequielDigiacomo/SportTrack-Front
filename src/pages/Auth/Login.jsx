@@ -17,7 +17,12 @@ const Login = () => {
     // Redirigir si ya está autenticado
     React.useEffect(() => {
         if (isAuthenticated && user) {
-            const path = user.rol === 'Admin' ? '/super' : (user.rol === 'Club' ? '/club' : '/');
+            let path = '/';
+            if (user.rol === 'Admin') path = '/super';
+            else if (user.rol === 'Club') path = '/club';
+            else if (user.rol === 'Largador') path = '/jueces/largador';
+            else if (user.rol === 'Cronometrista') path = '/jueces/llegada';
+            
             navigate(path, { replace: true });
         }
     }, [isAuthenticated, user, navigate]);
@@ -38,7 +43,12 @@ const Login = () => {
             login(data, data.token);
             
             // Redirect based on role
-            const targetPath = data.rol === 'Admin' ? '/super' : (data.rol === 'Club' ? '/club' : '/');
+            let targetPath = '/';
+            if (data.rol === 'Admin') targetPath = '/super';
+            else if (data.rol === 'Club') targetPath = '/club';
+            else if (data.rol === 'Largador') targetPath = '/jueces/largador';
+            else if (data.rol === 'Cronometrista') targetPath = '/jueces/llegada';
+            
             navigate(targetPath, { replace: true });
             
         } catch (err) {

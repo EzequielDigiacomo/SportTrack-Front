@@ -10,16 +10,19 @@ const api = axios.create({
     },
 })
 
-// Request interceptor - Add auth token to requests (Opcional si usas Cookies)
+// Request interceptor - Add auth token to requests
 api.interceptors.request.use(
     (config) => {
-        // Con withCredentials: true, las cookies se envían solas
-        return config
+        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
     },
     (error) => {
-        return Promise.reject(error)
+        return Promise.reject(error);
     }
-)
+);
 
 // Response interceptor - Handle errors globally
 api.interceptors.response.use(

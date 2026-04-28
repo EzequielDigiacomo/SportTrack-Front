@@ -46,6 +46,11 @@ class TimingSignalRService {
         }
     }
 
+    async sendTime(faseId, resultadoId, timeStr, ms) {
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
+        await this.connection.invoke("SendTime", faseId.toString(), resultadoId.toString(), timeStr, ms);
+    }
+
     onRaceStarted(callback) {
         if (!this.connection) return;
         this.connection.on("RaceStarted", callback);
@@ -61,9 +66,29 @@ class TimingSignalRService {
         this.connection.on("RaceFinished", callback);
     }
 
+    onRaceInReview(callback) {
+        if (!this.connection) return;
+        this.connection.on("RaceInReview", callback);
+    }
+
     onRaceReset(callback) {
         if (!this.connection) return;
         this.connection.on("RaceReset", callback);
+    }
+
+    onTimeReceived(callback) {
+        if (!this.connection) return;
+        this.connection.on("TimeReceived", callback);
+    }
+
+    async updateResultStatus(faseId, resultadoId, status) {
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
+        await this.connection.invoke("UpdateResultStatus", faseId.toString(), resultadoId.toString(), status);
+    }
+
+    onResultStatusUpdated(callback) {
+        if (!this.connection) return;
+        this.connection.on("ResultStatusUpdated", callback);
     }
 
     disconnect() {

@@ -302,15 +302,37 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         const insToToggle = inscriptos.find(i => i.id === inscId);
         if (!insToToggle) return;
 
-        // Validar límite si se intenta activar (pasar de false a true)
-        if (!insToToggle.esCabezaDeSerie) {
-            const currentSeedsCount = inscriptos.filter(i => i.esCabezaDeSerie).length;
-            const maxSeedsAllowed = Math.ceil(inscriptos.length / 9.0);
+        const maxSeedsAllowed = Math.ceil(inscriptos.length / 9.0);
+        const currentSeeds = inscriptos.filter(i => i.esCabezaDeSerie);
 
-            if (currentSeedsCount >= maxSeedsAllowed) {
-                setMessage(`⚠️ Límite alcanzado: máximo ${maxSeedsAllowed} ${maxSeedsAllowed === 1 ? 'cabeza' : 'cabezas'} de serie para ${inscriptos.length} atletas.`);
-                return;
+        // Si se intenta activar y ya se alcanzó el límite
+        if (!insToToggle.esCabezaDeSerie && currentSeeds.length >= maxSeedsAllowed) {
+            // Si el límite es 1, podemos hacer un SWAP automático para mejorar UX
+            if (maxSeedsAllowed === 1 && currentSeeds.length === 1) {
+                const oldSeed = currentSeeds[0];
+                try {
+                    // 1. Quitar la vieja
+                    await InscripcionService.toggleSeeding(oldSeed.id);
+                    // 2. Poner la nueva
+                    await InscripcionService.toggleSeeding(inscId);
+                    
+                    setInscriptos(prev => prev.map(ins => {
+                        if (ins.id === oldSeed.id) return { ...ins, esCabezaDeSerie: false };
+                        if (ins.id === inscId) return { ...ins, esCabezaDeSerie: true };
+                        return ins;
+                    }));
+                    setMessage("✅ Cabeza de serie actualizada.");
+                    return;
+                } catch (error) {
+                    console.error("Error en swap de seeding:", error);
+                    setMessage("❌ Error al cambiar el cabeza de serie.");
+                    return;
+                }
             }
+
+            // Si el límite es > 1, mostramos el mensaje original
+            setMessage(`⚠️ Límite alcanzado: máximo ${maxSeedsAllowed} ${maxSeedsAllowed === 1 ? 'cabeza' : 'cabezas'} de serie.`);
+            return;
         }
 
         try {
@@ -319,7 +341,8 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 ins.id === inscId ? { ...ins, esCabezaDeSerie: !ins.esCabezaDeSerie } : ins
             ));
         } catch (error) {
-            setMessage("Error al cambiar sembrado.");
+            console.error("Error al toggle seeding:", error);
+            setMessage("❌ Error de servidor al cambiar sembrado.");
         }
     };
 

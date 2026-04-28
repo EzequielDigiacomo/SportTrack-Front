@@ -31,6 +31,15 @@ const JudgesDashboard = () => {
                     <p>Toma de tiempos, orden de llegada y cierre de serie.</p>
                     <button className="btn-judge">Entrar como Cronometrista</button>
                 </div>
+
+                <div className="judge-card manual-timing" onClick={() => navigate('/jueces/carga-manual')}>
+                    <div className="card-icon">
+                        <List size={48} color="#ffdd00" />
+                    </div>
+                    <h2>Carga Manual</h2>
+                    <p>Salvavidas: Carga directa de tiempos y posiciones si el cronómetro falla.</p>
+                    <button className="btn-judge" style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}>Abrir Salvavidas</button>
+                </div>
             </div>
 
             <div className="judges-info glass-effect">

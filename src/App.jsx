@@ -8,6 +8,7 @@ import Login from './pages/Auth/Login'
 import JudgesDashboard from './pages/Judges/JudgesDashboard'
 import StarterDashboard from './pages/Judges/StarterDashboard'
 import FinisherDashboard from './pages/Judges/FinisherDashboard'
+import ManualTiming from './pages/Judges/ManualTiming'
 import ProtectedRoute from './components/Common/ProtectedRoute'
 import { useToast } from './context/ToastContext'
 import ToastContainer from './components/Common/ToastContainer'
@@ -44,8 +45,9 @@ function App() {
 
             {/* Módulo de Jueces */}
             <Route path="/jueces" element={<ProtectedRoute requiredRole="Admin"><MainLayout><JudgesDashboard /></MainLayout></ProtectedRoute>} />
-            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole="Admin"><MainLayout><StarterDashboard /></MainLayout></ProtectedRoute>} />
-            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole="Admin"><MainLayout><FinisherDashboard /></MainLayout></ProtectedRoute>} />
+            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'Largador']}><MainLayout><StarterDashboard /></MainLayout></ProtectedRoute>} />
+            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'Cronometrista']}><MainLayout><FinisherDashboard /></MainLayout></ProtectedRoute>} />
+            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole="Admin"><MainLayout><ManualTiming /></MainLayout></ProtectedRoute>} />
         </Routes>
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         </>

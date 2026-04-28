@@ -16,7 +16,7 @@ const GestionLoginsSection = () => {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', newPassword: '', confirmNewPassword: '' });
+    const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '' });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
 
@@ -40,7 +40,7 @@ const GestionLoginsSection = () => {
     };
 
     const handleOpenCrear = () => {
-        setForm({ username: '', password: '', confirmPassword: '', email: '', clubId: '', newPassword: '', confirmNewPassword: '' });
+        setForm({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '' });
         setView('crear');
     };
 
@@ -77,8 +77,7 @@ const GestionLoginsSection = () => {
             } else {
                 await AuthService.register({
                     ...form,
-                    clubId: form.clubId ? parseInt(form.clubId) : null,
-                    rol: 'Club'
+                    clubId: (form.rol === 'Club') ? (form.clubId ? parseInt(form.clubId) : null) : null
                 });
                 showAlert('success', 'Usuario creado exitosamente');
             }

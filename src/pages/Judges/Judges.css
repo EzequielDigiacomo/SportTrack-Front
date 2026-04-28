@@ -702,13 +702,35 @@
     padding: 60px;
 }
 
-.btn-cancel-doubt {
-    background: none;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    opacity: 0.5;
-    transition: opacity 0.2s;
+.btn-cancel-doubt:hover { opacity: 1; }
+
+/* Status Quick Actions (Starter) */
+.status-quick-actions {
+    display: flex;
+    gap: 5px;
 }
 
-.btn-cancel-doubt:hover { opacity: 1; }
+.btn-status-toggle {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    font-size: 0.65rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-status-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.btn-status-toggle.active.dns { background: #64748b; color: white; border-color: #94a3b8; }
+.btn-status-toggle.active.dnf { background: #f59e0b; color: white; border-color: #fbbf24; }
+.btn-status-toggle.active.dsq { background: #ef4444; color: white; border-color: #f87171; }
+
+.icon-ready.hidden {
+    display: none;
+}
