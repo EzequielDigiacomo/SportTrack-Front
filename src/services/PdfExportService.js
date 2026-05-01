@@ -279,6 +279,73 @@ const PdfExportService = {
 
         doc.save(`${eventoNombre}_Cronograma_General.pdf`.replace(/\s+/g, '_'));
     },
+
+    /**
+     * Export the initial provisional program (mixed scheduled phases and unseeded proofs)
+     */
+    exportProgramaInicial: (items, eventoNombre) => {
+        if (!items || items.length === 0) return;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        // Header inicial
+        let y = addHeader(doc, 'Programa Provisorio de Regatas', eventoNombre, 'Cronograma Unificado');
+
+        const rows = items.map((it, idx) => {
+            const isF = it.tipo === 'fase';
+            const raw = it.raw;
+            const p = isF ? (raw.etapa?.eventoPrueba?.prueba || raw.prueba?.prueba || raw.prueba) : raw.prueba;
+            
+            const catId = p?.categoriaId || p?.categoria?.id;
+            const botId = p?.boteId || p?.bote?.id;
+            const distId = p?.distanciaId || p?.distancia?.id;
+            const sexId = p?.sexoId || p?.sexo?.id;
+
+            const catName = CATEGORIA_NAMES[catId] || p?.categoria?.nombre || '-';
+            const botName = BOTE_NAMES[botId] || p?.bote?.nombre || '-';
+            const distName = DISTANCIA_NAMES[distId] || (p?.distancia?.metros ? `${p.distancia.metros}m` : '-');
+            const sexName = SEXO_NAMES[sexId] || p?.sexoNombre || '-';
+            
+            const inscritos = isF 
+                ? (raw.resultados?.length || 0) 
+                : (raw.inscripciones?.length || raw.inscriptosCount || 0);
+
+            let timeStr = it.nuevaHora || '--:--';
+            
+            // Si el item tiene un offset de días, lo mostramos
+            if (it.diaOffset > 0) {
+                timeStr += ` (Día ${it.diaOffset + 1})`;
+            }
+
+            return [
+                idx + 1,
+                timeStr,
+                catName,
+                isF ? it.nombre : 'A Sortear',
+                botName,
+                distName,
+                sexName,
+                inscritos
+            ];
+        });
+
+        autoTable(doc, {
+            startY: y,
+            head: [['#', 'Hora', 'Categoría', 'Fase', 'Bote', 'Dist.', 'Rama', 'Ins.']],
+            body: rows,
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [30, 50, 90], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [240, 244, 255] },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { halign: 'center', cellWidth: 25, font: 'courier', fontStyle: 'bold' },
+                7: { halign: 'center', cellWidth: 15 },
+            },
+            margin: { left: 14, right: 14 },
+        });
+
+        doc.save(`${eventoNombre}_Programa_Provisorio.pdf`.replace(/\s+/g, '_'));
+    },
 };
 
 export default PdfExportService;

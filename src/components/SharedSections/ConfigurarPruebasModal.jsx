@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../services/ConfigService';
 import SchedulerService from '../../services/SchedulerService';
+import PdfExportService from '../../services/PdfExportService';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import './ConfigurarPruebas.css';
 
@@ -245,9 +246,19 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                     );
 
                                     return (
-                                        <table className="admin-table mini">
-                                            <thead>
-                                                <tr>
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.8rem' }}>
+                                                <button 
+                                                    className="btn-admin-secondary" 
+                                                    onClick={() => PdfExportService.exportProgramaInicial(itemsFinales, evento?.nombre || 'Evento')}
+                                                    style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                                >
+                                                    📥 Exportar Programa PDF
+                                                </button>
+                                            </div>
+                                            <table className="admin-table mini">
+                                                <thead>
+                                                    <tr>
                                                     <th>#</th>
                                                     <th>Categoría</th>
                                                     <th>Bote</th>
@@ -323,6 +334,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                                 })}
                                             </tbody>
                                         </table>
+                                        </>
                                     );
                                 })()}
                             </div>
