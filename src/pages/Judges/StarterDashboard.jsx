@@ -119,7 +119,7 @@ const StarterDashboard = () => {
         try {
             setLoading(true);
             await timingSignalRService.connect(selectedFase.id);
-            await FaseService.iniciar(selectedFase.id);
+            await timingSignalRService.requestStartRace(selectedFase.id);
             // Eliminado addToast para evitar distracciones
         } catch (err) {
             console.error(err);
@@ -162,7 +162,7 @@ const StarterDashboard = () => {
 
         try {
             setLoading(true);
-            await FaseService.reiniciar(selectedFase.id);
+            await timingSignalRService.requestResetRace(selectedFase.id);
         } catch (err) {
             console.error("Error resetting race:", err);
         } finally {

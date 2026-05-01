@@ -5,15 +5,14 @@ class TimingSignalRService {
     constructor() {
         this.connection = null;
         this.currentFaseId = null;
+        this.serverOffset = 0; // Diferencia en ms entre server y cliente
     }
 
     async connect(faseId) {
-        // 1. Si ya estamos conectados a esta fase, no hacer nada
         if (this.currentFaseId === faseId.toString() && this.connection?.state === signalR.HubConnectionState.Connected) {
             return;
         }
 
-        // 2. Si hay una conexión activa o en proceso, la cerramos limpiamente
         if (this.connection) {
             try {
                 if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
@@ -41,11 +40,15 @@ class TimingSignalRService {
         try {
             await this.connection.start();
             console.log("TimingHub Connected!");
+            
+            // Sincronizar reloj inmediatamente después de conectar
+            await this.syncClock();
+            
             await this.joinRaceGroup(faseId);
             this.currentFaseId = faseId.toString();
         } catch (err) {
             if (err.name === 'AbortError') {
-                console.log("SignalR connection aborted (expected during rapid navigation)");
+                console.log("SignalR connection aborted");
             } else {
                 console.error("TimingHub Connection Error: ", err);
                 throw err;
@@ -53,16 +56,47 @@ class TimingSignalRService {
         }
     }
 
+    async syncClock() {
+        if (!this.connection) return;
+        
+        const start = Date.now();
+        
+        // Escuchamos la respuesta del server time
+        this.connection.on("ReceiveServerTime", (serverTime) => {
+            const end = Date.now();
+            const latency = (end - start) / 2;
+            const serverDate = new Date(serverTime);
+            // Offset = Tiempo Real Server - Tiempo Local Cliente
+            this.serverOffset = (serverDate.getTime() + latency) - end;
+            console.log(`[Sync] Latency: ${latency}ms, Clock Offset: ${this.serverOffset}ms`);
+        });
+
+        await this.connection.invoke("GetServerTime");
+    }
+
+    // Retorna la hora "del servidor" calculada localmente
+    getSyncedNow() {
+        return new Date(Date.now() + this.serverOffset);
+    }
+
     async joinRaceGroup(faseId) {
         if (!this.connection || !faseId) return;
         await this.connection.invoke("JoinRaceGroup", faseId.toString());
     }
 
-    async leaveRaceGroup(faseId) {
-        if (!this.connection || !faseId) return;
-        if (this.connection.state === signalR.HubConnectionState.Connected) {
-            await this.connection.invoke("LeaveRaceGroup", faseId.toString());
+    // Métodos de acción ultra-rápidos vía WebSocket
+    async requestStartRace(faseId) {
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
+            throw new Error("No hay conexión activa con el servidor de tiempos");
         }
+        await this.connection.invoke("RequestStartRace", parseInt(faseId));
+    }
+
+    async requestResetRace(faseId) {
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
+            throw new Error("No hay conexión activa con el servidor de tiempos");
+        }
+        await this.connection.invoke("RequestResetRace", parseInt(faseId));
     }
 
     async sendTime(faseId, resultadoId, timeStr, ms) {
@@ -72,7 +106,11 @@ class TimingSignalRService {
 
     onRaceStarted(callback) {
         if (!this.connection) return;
-        this.connection.on("RaceStarted", callback);
+        this.connection.on("RaceStarted", (id, sTime) => {
+            // Ajustamos sTime si el servidor lo mandó sin Z (ISO string local del server)
+            const serverDate = new Date(sTime);
+            callback(id, serverDate);
+        });
     }
 
     onLapRecorded(callback) {
@@ -83,11 +121,6 @@ class TimingSignalRService {
     onRaceFinished(callback) {
         if (!this.connection) return;
         this.connection.on("RaceFinished", callback);
-    }
-
-    onRaceInReview(callback) {
-        if (!this.connection) return;
-        this.connection.on("RaceInReview", callback);
     }
 
     onRaceReset(callback) {
@@ -102,7 +135,7 @@ class TimingSignalRService {
 
     async updateResultStatus(faseId, resultadoId, status) {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
-            throw new Error("No hay conexión con el servidor de tiempos. Reintentando...");
+            throw new Error("No hay conexión con el servidor de tiempos");
         }
         await this.connection.invoke("UpdateResultStatus", faseId.toString(), resultadoId.toString(), status);
     }

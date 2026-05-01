@@ -235,7 +235,7 @@ const FinisherDashboard = () => {
         setIsRaceRunning(true);
         clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
-            const now = new Date();
+            const now = timingSignalRService.getSyncedNow();
             setElapsedTime(now - sTime);
         }, 10);
     };
