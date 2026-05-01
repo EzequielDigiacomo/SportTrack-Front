@@ -8,9 +8,9 @@ const ManualTiming = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="manual-timing-page fade-in" style={{ padding: '2rem', minHeight: '100vh', background: 'var(--color-bg)' }}>
-            <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <header style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2.5rem' }}>
+        <div className="manual-timing-page fade-in" style={{ padding: '3rem 2rem', minHeight: '100vh', background: 'var(--color-bg)' }}>
+            <div className="container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                <header style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '3.5rem' }}>
                     <button 
                         className="btn-admin-secondary" 
                         onClick={() => navigate('/jueces')}
@@ -24,7 +24,7 @@ const ManualTiming = () => {
                     </div>
                 </header>
 
-                <div className="glass-effect" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                <div className="manual-timing-content">
                     <GestionResultadosSection 
                         viewMode="tiempos"
                         defaultTab="resultados"

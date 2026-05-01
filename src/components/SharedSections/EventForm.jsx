@@ -81,7 +81,7 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                     </div>
 
                     <div className="form-section">
-                        <h4>Reglas y Estado</h4>
+                        <h4>Estado y Reglas Básicas</h4>
                         <div className="form-group">
                             <label>Estado del Evento</label>
                             <select 
@@ -113,7 +113,7 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                         onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
                                     />
                                     <div className="rule-info">
-                                        <strong>Solo permitir inscripción en categoría propia del atleta</strong>
+                                        <strong>Solo permitir categoría propia</strong>
                                     </div>
                                 </label>
                                 <label className="checkbox-label rule-card">
@@ -123,7 +123,7 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                         onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
                                     />
                                     <div className="rule-info">
-                                        <strong>Permitir atletas Sub23 en pruebas Senior</strong>
+                                        <strong>Permitir Sub23 en Senior</strong>
                                     </div>
                                 </label>
                                 <label className="checkbox-label rule-card">
@@ -133,17 +133,7 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                         onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
                                     />
                                     <div className="rule-info">
-                                        <strong>Permitir atletas Master en pruebas Senior</strong>
-                                    </div>
-                                </label>
-                                <label className="checkbox-label rule-card">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.permitirCompletarK4} 
-                                        onChange={(e) => onChange('permitirCompletarK4', e.target.checked)} 
-                                    />
-                                    <div className="rule-info">
-                                        <strong>Permitir completar K4 con atletas de otras categorías</strong>
+                                        <strong>Permitir Master en Senior</strong>
                                     </div>
                                 </label>
                                 <label className="checkbox-label rule-card">
@@ -153,7 +143,170 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                         onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
                                     />
                                     <div className="rule-info">
-                                        <strong>Limitación de Clubes (Máximo 2 botes por prueba: A y B)</strong>
+                                        <strong>Límite Botes A/B por Club</strong>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="form-section">
+                        <h4>Configuración de Cronograma Inteligente</h4>
+                        <div className="form-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                            <div className="form-group">
+                                <label>Hora de Inicio</label>
+                                <input 
+                                    type="time" 
+                                    value={initialData.horaInicioEvento} 
+                                    onChange={(e) => onChange('horaInicioEvento', e.target.value)} 
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Carriles</label>
+                                <select 
+                                    value={initialData.carrilesDisponibles} 
+                                    onChange={(e) => onChange('carrilesDisponibles', parseInt(e.target.value))}
+                                >
+                                    <option value={8}>8 Carriles</option>
+                                    <option value={9}>9 Carriles</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Huso Horario (Sede)</label>
+                                <select 
+                                    value={initialData.timeZoneId} 
+                                    onChange={(e) => onChange('timeZoneId', e.target.value)}
+                                    className="admin-select"
+                                >
+                                    <option value="America/Argentina/Buenos_Aires">Argentina (UTC-3)</option>
+                                    <option value="America/Montevideo">Uruguay (UTC-3)</option>
+                                    <option value="America/Santiago">Chile (UTC-4)</option>
+                                    <option value="America/Bogota">Colombia / Ecuador (UTC-5)</option>
+                                    <option value="America/Lima">Perú (UTC-5)</option>
+                                    <option value="America/Asuncion">Paraguay (UTC-4)</option>
+                                    <option value="America/Mexico_City">México (UTC-6)</option>
+                                    <option value="Europe/Madrid">España (UTC+1)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Escenario de Cronograma (Presets)</label>
+                            <div className="scenarios-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginTop: '0.5rem' }}>
+                                <button 
+                                    type="button"
+                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso1' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        onChange('perfilTiempo', 'Caso1');
+                                        onChange('gapEntrePruebas', 7); // Un promedio para terminar temprano
+                                        onChange('sinReceso', true);
+                                        onChange('horaFinReceso', '14:00');
+                                    }}
+                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso1' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 1: Intensivo</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Terminar ~14:00hs. Sin receso. Gap corto.</div>
+                                </button>
+                                <button 
+                                    type="button"
+                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso2' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        onChange('perfilTiempo', 'Caso2');
+                                        onChange('gapEntrePruebas', 10);
+                                        onChange('sinReceso', true);
+                                    }}
+                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso2' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 2: Jornada Corrida</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Hasta 17:30hs. Sin receso. Gap 10'.</div>
+                                </button>
+                                <button 
+                                    type="button"
+                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso3' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        onChange('perfilTiempo', 'Caso3');
+                                        onChange('gapEntrePruebas', 10);
+                                        onChange('sinReceso', false);
+                                        onChange('horaInicioReceso', '13:00');
+                                        onChange('horaFinReceso', '14:00');
+                                    }}
+                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso3' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 3: Con Receso</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Hasta 16:30hs. Con almuerzo (13-14hs).</div>
+                                </button>
+                                <button 
+                                    type="button"
+                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Personalizado' ? 'active' : ''}`}
+                                    onClick={() => onChange('perfilTiempo', 'Personalizado')}
+                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Personalizado' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                >
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 4: Manual</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tú eliges gaps y recesos libremente.</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                            <div className="form-group">
+                                <label>Pausa entre Largadas (Minutos)</label>
+                                <select 
+                                    value={initialData.gapEntrePruebas} 
+                                    onChange={(e) => onChange('gapEntrePruebas', parseInt(e.target.value))}
+                                    className="admin-select"
+                                >
+                                    <option value={5}>Cada 5 min (Muy rápido)</option>
+                                    <option value={7}>Cada 7 min (Optimizado)</option>
+                                    <option value={8}>Cada 8 min (Ágil)</option>
+                                    <option value={10}>Cada 10 min (Estándar)</option>
+                                    <option value={12}>Cada 12 min (Holgado)</option>
+                                    <option value={15}>Cada 15 min (Lento)</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="checkbox-label" style={{ marginBottom: '10px' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.sinReceso} 
+                                        onChange={(e) => onChange('sinReceso', e.target.checked)} 
+                                    />
+                                    <strong>Eliminar Receso de Almuerzo</strong>
+                                </label>
+                            </div>
+                        </div>
+
+                        {!initialData.sinReceso && (
+                            <div className="form-row fade-in">
+                                <div className="form-group">
+                                    <label>Inicio Receso</label>
+                                    <input 
+                                        type="time" 
+                                        value={initialData.horaInicioReceso} 
+                                        onChange={(e) => onChange('horaInicioReceso', e.target.value)} 
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Fin Receso</label>
+                                    <input 
+                                        type="time" 
+                                        value={initialData.horaFinReceso} 
+                                        onChange={(e) => onChange('horaFinReceso', e.target.value)} 
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="form-rules-container glass-effect mt-md">
+                            <h4>Optimización de Series</h4>
+                            <div className="rules-grid">
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.permitirCombinadas} 
+                                        onChange={(e) => onChange('permitirCombinadas', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Permitir Sugerencia de Series Combinadas</strong>
                                     </div>
                                 </label>
                             </div>

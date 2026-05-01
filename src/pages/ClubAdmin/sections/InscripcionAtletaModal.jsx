@@ -13,11 +13,37 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
     const [loading, setLoading] = useState(true);
 
     const [selectedPrueba, setSelectedPrueba] = useState(null);
-    const [selectedAtletas, setSelectedAtletas] = useState([]);
+    // selectionsMap guardará { [pruebaId]: [atleta1, atleta2... ] }
+    const [selectionsMap, setSelectionsMap] = useState({});
     const [inscripcionesActuales, setInscripcionesActuales] = useState([]);
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
+
+    const CATEGORIA_COLORS = {
+        1: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
+        2: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' },
+        3: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
+        4: { bg: 'rgba(6, 182, 212, 0.15)', text: '#06b6d4' },
+        5: { bg: 'rgba(99, 102, 241, 0.15)', text: '#6366f1' },
+        6: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' },
+        7: { bg: 'rgba(236, 72, 153, 0.15)', text: '#ec4899' },
+        8: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
+        9: { bg: 'rgba(132, 204, 22, 0.15)', text: '#84cc16' },
+        10: { bg: 'rgba(107, 114, 128, 0.15)', text: '#9ca3af' }
+    };
+
+    const BOTE_COLORS = {
+        1: { bg: 'rgba(99, 102, 241, 0.15)', text: '#6366f1' },
+        2: { bg: 'rgba(139, 92, 246, 0.15)', text: '#8b5cf6' },
+        3: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' },
+        4: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
+        5: { bg: 'rgba(249, 115, 22, 0.15)', text: '#f97316' },
+        6: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' }
+    };
+
+    // Derivamos los atletas seleccionados para la prueba actual del mapa
+    const selectedAtletas = selectedPrueba ? (selectionsMap[selectedPrueba.id] || []) : [];
 
     // Verificar si las inscripciones están abiertas
     const ahora = new Date();
@@ -62,16 +88,25 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
 
     const handleSelectPrueba = (ep) => {
         setSelectedPrueba(ep);
-        setSelectedAtletas([]);
         setMsg(null);
     };
 
     const toggleAtleta = (atleta) => {
-        if (selectedAtletas.find(a => a.id === atleta.id)) {
-            setSelectedAtletas(selectedAtletas.filter(a => a.id !== atleta.id));
+        if (!selectedPrueba) return;
+
+        const currentSelections = selectionsMap[selectedPrueba.id] || [];
+        let newSelections;
+
+        if (currentSelections.find(a => a.id === atleta.id)) {
+            newSelections = currentSelections.filter(a => a.id !== atleta.id);
         } else {
-            setSelectedAtletas([...selectedAtletas, atleta]);
+            newSelections = [...currentSelections, atleta];
         }
+
+        setSelectionsMap({
+            ...selectionsMap,
+            [selectedPrueba.id]: newSelections
+        });
     };
 
     const handleConfirmInscripcion = async () => {
@@ -108,11 +143,16 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                 await InscripcionService.create(payload);
             }
 
-            setMsg({ type: 'success', text: `¡${botes.length} inscripción(es) realizada(s) con éxito!` });
+            setMsg({ type: 'success', text: `¡${botes.length} inscripción(es) realizada(s) con éxito en ${selectedPrueba.prueba.categoria.nombre}!` });
             await loadInscripcionesClub();
-            setSelectedAtletas([]);
+            
+            // Limpiar solo las selecciones de ESTA prueba en el mapa
+            setSelectionsMap({
+                ...selectionsMap,
+                [selectedPrueba.id]: []
+            });
 
-            // No cerramos el modal automáticamente así puede seguir inscribiendo en otras pruebas
+            // Mantenemos el modal abierto para que siga inscribiendo
             setTimeout(() => setMsg(null), 3000);
         } catch (err) {
             setMsg({ type: 'error', text: 'Error al inscribir: ' + err.message });
@@ -174,18 +214,39 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                         <div className="pruebas-habilitadas-grid">
                             {loading ? <div className="loader"></div> : (
                                 pruebasHabilitadas.length > 0 ? pruebasHabilitadas.map(ep => (
-                                    <div
-                                        key={ep.id}
-                                        className={`prueba-selector-card glass-effect ${selectedPrueba?.id === ep.id ? 'active' : ''}`}
-                                        onClick={() => handleSelectPrueba(ep)}
-                                    >
-                                        <div className="p-cat">{ep.prueba.categoria?.nombre}</div>
-                                        <div className="p-bote">{ep.prueba.bote?.tipo}</div>
-                                        <div className="p-dist">
-                                            {ep.prueba.distancia?.descripcion}
-                                            <div className="p-dist-sex">{ep.prueba.sexoNombre || ep.prueba.sexo?.nombre || 'Mixto'}</div>
+                                        <div
+                                            key={ep.id}
+                                            className={`prueba-selector-card glass-effect ${selectedPrueba?.id === ep.id ? 'active' : ''}`}
+                                            onClick={() => handleSelectPrueba(ep)}
+                                        >
+                                            {(selectionsMap[ep.id]?.length > 0) && (
+                                                <div className="selection-count-badge">
+                                                    {selectionsMap[ep.id].length}
+                                                </div>
+                                            )}
+                                            <div className="p-cat" style={{ 
+                                                background: CATEGORIA_COLORS[ep.prueba?.categoria?.id || ep.prueba?.categoriaId]?.bg,
+                                                color: CATEGORIA_COLORS[ep.prueba?.categoria?.id || ep.prueba?.categoriaId]?.text,
+                                                padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold'
+                                            }}>
+                                                {ep.prueba.categoria?.nombre}
+                                            </div>
+                                            <div className="p-bote" style={{ 
+                                                color: BOTE_COLORS[ep.prueba?.bote?.id || ep.prueba?.boteId]?.text,
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {ep.prueba.bote?.tipo}
+                                            </div>
+                                            <div className="p-dist">
+                                                {ep.prueba.distancia?.descripcion}
+                                                <div className="p-dist-sex" style={{ 
+                                                    color: (ep.prueba.sexoId === 1 || (ep.prueba.sexo?.id === 1)) ? '#3b82f6' : (ep.prueba.sexoId === 2 || (ep.prueba.sexo?.id === 2)) ? '#ec4899' : '#14b8a6',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {ep.prueba.sexoNombre || ep.prueba.sexo?.nombre || 'Mixto'}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
                                 )) : <p>No hay pruebas habilitadas para inscribirse.</p>
                             )}
                         </div>
@@ -385,14 +446,71 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                             </div>
                         )}
                     </div>
-                    <button className="btn-admin-secondary" onClick={onClose}>Cancelar</button>
-                    <button
-                        className={`btn-admin-primary ${(botesDisponibles === 0 && selectedAtletas.length === 0) ? 'disabled' : ''}`}
-                        disabled={!selectedPrueba || selectedAtletas.length === 0 || saving || inscripcionesCerradas || botesDisponibles === 0}
-                        onClick={handleConfirmInscripcion}
-                    >
-                        {inscripcionesCerradas ? "Inscripciones Cerradas" : (saving ? "Procesando..." : "Confirmar Inscripción")}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.8rem' }}>
+                        <button className="btn-admin-secondary" onClick={onClose}>Cerrar</button>
+                        
+                        {/* Botón de Confirmar Todo (Solo si hay múltiples pruebas con selecciones) */}
+                        {Object.keys(selectionsMap).filter(k => selectionsMap[k]?.length > 0).length > 1 && (
+                            <button 
+                                className="btn-admin-primary"
+                                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }}
+                                onClick={async () => {
+                                    setSaving(true);
+                                    const pruebasConSeleccion = Object.keys(selectionsMap).filter(k => selectionsMap[k]?.length > 0);
+                                    let exitos = 0;
+                                    
+                                    for (const pId of pruebasConSeleccion) {
+                                        const ep = pruebasHabilitadas.find(ph => String(ph.id) === String(pId));
+                                        if (!ep) continue;
+                                        
+                                        const atletas = selectionsMap[pId];
+                                        const maxReq = getMaxTripulantes(ep.prueba.bote?.tipo);
+                                        
+                                        if (atletas.length % maxReq === 0) {
+                                            // Lógica de guardado simplificada para el loop
+                                            for (let i = 0; i < atletas.length; i += maxReq) {
+                                                const trip = atletas.slice(i, i + maxReq);
+                                                const payload = {
+                                                    eventoPruebaId: parseInt(pId),
+                                                    numeroCompetidor: `BOTE-${Math.floor(Math.random() * 10000)}`,
+                                                    participanteId: trip[0].id
+                                                };
+                                                if (maxReq > 1) {
+                                                    payload.tripulantes = trip.slice(1).map((a, idx) => ({
+                                                        participanteId: a.id,
+                                                        posicionEnBote: idx + 2
+                                                    }));
+                                                }
+                                                await InscripcionService.create(payload);
+                                            }
+                                            exitos++;
+                                        }
+                                    }
+                                    
+                                    setMsg({ type: 'success', text: `¡Se confirmaron inscripciones para ${exitos} pruebas correctamente!` });
+                                    setSelectionsMap({});
+                                    await loadInscripcionesClub();
+                                    setSaving(false);
+                                    
+                                    // Cerramos el modal automáticamente después de un breve delay
+                                    setTimeout(() => {
+                                        onClose();
+                                    }, 1500);
+                                }}
+                                disabled={saving}
+                            >
+                                ✅ Confirmar TODAS las Pendientes
+                            </button>
+                        )}
+
+                        <button
+                            className={`btn-admin-primary ${(botesDisponibles === 0 && selectedAtletas.length === 0) ? 'disabled' : ''}`}
+                            disabled={!selectedPrueba || selectedAtletas.length === 0 || saving || inscripcionesCerradas || botesDisponibles === 0}
+                            onClick={handleConfirmInscripcion}
+                        >
+                            {inscripcionesCerradas ? "Inscripciones Cerradas" : (saving ? "Procesando..." : `Confirmar ${selectedPrueba?.prueba?.categoria?.nombre || ''}`)}
+                        </button>
+                    </div>
                 </div>
             </div>
 

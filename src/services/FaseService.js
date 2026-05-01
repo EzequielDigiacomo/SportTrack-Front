@@ -32,6 +32,16 @@ const FaseService = {
     enviarARevision: async (id) => {
         const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/EnviarARevision`);
         return response.data;
+    },
+    getByEvento: async (eventoId) => {
+        const url = ENDPOINTS.FASES.BY_EVENTO(eventoId);
+        console.log('[DEBUG] getByEvento calling:', url);
+        const response = await api.get(url);
+        return response.data;
+    },
+    batchUpdate: async (dto) => {
+        const response = await api.post(ENDPOINTS.FASES.BATCH_UPDATE, dto);
+        return response.data;
     }
 };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
@@ -18,12 +18,13 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         eventos, selectedEvento, setSelectedEvento,
         pruebas, selectedPrueba, setSelectedPrueba,
         currentTab, setCurrentTab,
-        inscriptos, fases,
+        inscriptos, fases, cronograma,
         loading, saving, isLocked, message,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
+        handleRecalcularCronograma, handleSelectRegata,
         loadDatosPrueba, setMessage
     } = useResultados(preselectedEventoId, defaultTab);
 
@@ -236,6 +237,11 @@ const handleExportPrueba = () => {
     setShowPdfMenu(false);
 };
 
+const handleExportEvento = () => {
+    PdfExportService.exportCronogramaCompleto(cronograma, eventoNombre);
+    setShowPdfMenu(false);
+};
+
 return (
     <div className="gestion-resultados-container fade-in">
         {!hideTabs && (
@@ -279,6 +285,8 @@ return (
             currentTab={currentTab}
             setCurrentTab={setCurrentTab}
             hideTabs={hideTabs}
+            cronograma={cronograma}
+            onSelectRegata={handleSelectRegata}
         />
 
         {loading ? (
@@ -301,6 +309,69 @@ return (
                                 >
                                     🎲 {fases.length > 0 ? 'Resortear y Regenerar' : 'Generar Heats y Sortear'}
                                 </button>
+                                {fases.length > 0 && (
+                                    <div style={{ position: 'relative' }}>
+                                        <button
+                                            className="btn-admin-secondary"
+                                            onClick={() => setShowPdfMenu(v => !v)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                        >
+                                            <FileDown size={16} /> Exportar Start List PDF <ChevronDown size={14} />
+                                        </button>
+                                        {showPdfMenu && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+                                                    zIndex: 9999,
+                                                    minWidth: '260px', borderRadius: '12px', overflow: 'hidden',
+                                                    background: 'rgba(18, 26, 48, 0.98)',
+                                                    border: '1px solid rgba(100, 160, 255, 0.2)',
+                                                    boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
+                                                }}
+                                            >
+                                                <div style={{ padding: '0.4rem 0' }}>
+                                                    <button
+                                                        onClick={handleExportEvento}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#ffdd00', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
+                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(255,221,0,0.1)'}
+                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
+                                                    >
+                                                        📅 Cronograma General (Todo el Evento)
+                                                    </button>
+                                                    <button
+                                                        onClick={handleExportPrueba}
+                                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
+                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
+                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
+                                                    >
+                                                        🏆 Prueba Seleccionada (con Horarios)
+                                                    </button>
+                                                    {etiquetasEtapas.map(etapa => (
+                                                        <button
+                                                            key={etapa}
+                                                            onClick={() => handleExportGrupo(etapa)}
+                                                            style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.9rem' }}
+                                                            onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
+                                                            onMouseOut={e => e.currentTarget.style.background = 'none'}
+                                                        >
+                                                            📋 Solo {etapa}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {fases.length > 0 && (
+                                    <button
+                                        className="btn-admin-secondary"
+                                        onClick={handleRecalcularCronograma}
+                                        disabled={saving}
+                                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                                    >
+                                        🧠 Reprogramación Inteligente
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -322,14 +393,19 @@ return (
                                             {inscriptos.map(ins => (
                                                 <tr key={ins.id} style={{ background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.05)' : 'transparent' }}>
                                                     <td>
-                                                        <strong style={{ color: ins.esCabezaDeSerie ? '#ffdd00' : 'inherit' }}>
-                                                            {ins.participanteNombreCompleto || "Bote de Equipo"}
-                                                        </strong>
-                                                        {ins.tripulantes && ins.tripulantes.length > 0 && (
-                                                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
-                                                                {ins.tripulantes.map(t => t.participanteNombreCompleto).join(' • ')}
-                                                            </div>
-                                                        )}
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <strong style={{ color: ins.esCabezaDeSerie ? '#ffdd00' : 'inherit', fontSize: '1.1rem' }}>
+                                                                {ins.tripulantes && ins.tripulantes.length > 0 
+                                                                    ? [ins.participanteNombreCompleto, ...ins.tripulantes.map(t => t.participanteNombreCompleto)].join(' - ')
+                                                                    : (ins.participanteNombreCompleto || "Bote de Equipo")
+                                                                }
+                                                            </strong>
+                                                            {ins.tripulantes && ins.tripulantes.length > 0 && (
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: '2px', letterSpacing: '0.5px' }}>
+                                                                    TRIPULACIÓN COMPLETA
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td>{ins.clubNombre || ins.clubSigla || 'Independiente'}</td>
                                                     <td style={{ textAlign: 'center' }}>
@@ -424,9 +500,23 @@ return (
                                                 <Trash2 size={16} />
                                             </button>
                                         )}
+                                        <button
+                                            className="btn-icon-admin"
+                                            onClick={() => loadDatosPrueba(selectedPrueba)}
+                                            disabled={loading}
+                                            title="Actualizar resultados de la grilla"
+                                            style={{ 
+                                                padding: '0 1rem', 
+                                                background: 'rgba(96, 165, 250, 0.1)', 
+                                                color: '#60a5fa', 
+                                                border: '1px solid rgba(96, 165, 250, 0.2)' 
+                                            }}
+                                        >
+                                            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+                                        </button>
                                     </div>
                                 )}
-                                {fases.length > 0 && viewMode === 'tiempos' && (
+                                {fases.length > 0 && (viewMode === 'tiempos' || viewMode === 'resultados') && (
                                     <button
                                         className="btn-admin-primary"
                                         onClick={handlePromoverEtapa}
@@ -536,21 +626,23 @@ return (
                                     fase={faseSeleccionada}
                                     tiemposLocales={tiemposLocales}
                                     onResultChange={handleResultChange}
-                                    isLocked={isLocked || viewMode !== 'tiempos'}
+                                    isLocked={viewMode === 'resultados' ? false : isLocked}
                                     isSuccess={saveSuccess}
                                 />
 
-                                {viewMode === 'tiempos' && (
+                                {(viewMode === 'tiempos' || viewMode === 'resultados') && (
                                     <div className="form-footer-actions mt-md" style={{ justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', gap: '0.8rem' }}>
-                                            <button
-                                                className="btn-admin-secondary"
-                                                onClick={handleSimulateResults}
-                                                style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
-                                                disabled={faseSeleccionada?.resultados?.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00')}
-                                            >
-                                                ⚡ Simular Tiempos
-                                            </button>
+                                            {viewMode === 'tiempos' && (
+                                                <button
+                                                    className="btn-admin-secondary"
+                                                    onClick={handleSimulateResults}
+                                                    style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
+                                                    disabled={faseSeleccionada?.resultados?.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00')}
+                                                >
+                                                    ⚡ Simular Tiempos
+                                                </button>
+                                            )}
                                             <button
                                                 className="btn-admin-secondary"
                                                 onClick={() => handleResetFase(faseSeleccionada.id)}
@@ -585,11 +677,48 @@ return (
                     </div>
                 )}
             </div>
+        ) : selectedEvento && cronograma.length > 0 ? (
+            <div className="global-cronograma-view fade-in" style={{ padding: '0 1rem' }}>
+                <div className="section-header-row mb-lg" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h3 style={{ color: 'var(--color-primary-light)', margin: 0 }}>📅 Cronograma General del Evento</h3>
+                        <p style={{ color: 'var(--color-text-dim)', fontSize: '0.9rem', margin: '0.3rem 0 0 0' }}>
+                            Vista consolidada de todas las series, semifinales y finales programadas.
+                        </p>
+                    </div>
+                    <button 
+                        className="btn-admin-secondary"
+                        onClick={handleRecalcularCronograma}
+                        disabled={saving}
+                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                    >
+                        🧠 Reprogramar Todo el Evento
+                    </button>
+                </div>
+                
+                <div className="fases-grid-responsive">
+                    {cronograma.map(f => (
+                        <div 
+                            key={f.id} 
+                            onClick={() => handleSelectRegata(f)} 
+                            style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+                            onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            <FaseCard 
+                                fase={f} 
+                                showPruebaName={true} 
+                                filtroVisualFase="Cronograma" 
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
         ) : (
             <div className="empty-selection-state">
                 <div className="icon-circle">🎯</div>
                 <h3>Seleccioná un evento y una regata</h3>
-                <p>Para comenzar a gestionar los carriles o cargar tiempos, debés elegir una competencia del menú superior.</p>
+                <p>Para comenzar a gestionar los carriles o cargar tiempos, debés elegir una competencia del menú superior o ver el cronograma completo.</p>
             </div>
         )}
     </div>

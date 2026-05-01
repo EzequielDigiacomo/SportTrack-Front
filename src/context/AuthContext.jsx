@@ -36,16 +36,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
+        // Limpiamos el estado local INMEDIATAMENTE para evitar flashes de contenido protegido
+        setUser(null);
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+
         try {
             await AuthService.logout();
         } catch (e) {
             console.error("Error al cerrar sesión en el servidor", e);
-        } finally {
-            setUser(null);
-            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-            localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-            localStorage.removeItem(STORAGE_KEYS.USER_DATA);
-            window.location.href = '/login';
         }
     };
 

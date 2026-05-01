@@ -356,3 +356,115 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* BADGE STYLES FROM SCREENSHOT */
+.badge-outline {
+    background: transparent;
+    border: 1px solid currentColor;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.phase-tag {
+    color: white;
+    opacity: 0.8;
+    font-weight: normal;
+}
+
+.badge-bote {
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.badge-distancia {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.badge-sexo {
+    padding: 0.2rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.badge-sexo.masc {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-sexo.fem {
+    background: rgba(236, 72, 153, 0.2);
+    color: #f472b6;
+    border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.badge-sexo.mix {
+    background: rgba(20, 184, 166, 0.2);
+    color: #2dd4bf;
+    border: 1px solid rgba(20, 184, 166, 0.3);
+}
+
+.badge-inscritos {
+    background: rgba(0, 150, 255, 0.15);
+    color: #60a5fa;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    min-width: 25px;
+    text-align: center;
+    display: inline-block;
+}
+
+.btn-icon-admin.edit {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-icon-delete {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.admin-table.mini td {
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    vertical-align: middle;
+}
+
+.admin-table.mini th {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px 8px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+}
+
+.row-fase {
+    border-left: 3px solid #3b82f6;
+}

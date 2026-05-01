@@ -43,7 +43,15 @@ const GestionEventosSection = () => {
         permitirMasterBajarASenior: false,
         permitirCompletarK4: false,
         limitacionBotesAB: false,
-        clubId: ''
+        clubId: '',
+        horaInicioEvento: '08:00',
+        carrilesDisponibles: 9,
+        perfilTiempo: 'Estandar',
+        horaInicioReceso: '13:00',
+        horaFinReceso: '14:00',
+        sinReceso: false,
+        gapEntrePruebas: 10,
+        permitirCombinadas: false,
     });
 
     const { alert: msg, showAlert } = useAlert();
@@ -55,12 +63,32 @@ const GestionEventosSection = () => {
         loadClubes();
 
         const handlePopState = (e) => {
-            if (!e.state) { setView('lista'); setSelectedEvento(null); setActiveSubView(null); setShowConfigModal(false); }
-            else if (e.state.panel === 'dashboard') { setView('dashboard'); setActiveSubView(null); setShowConfigModal(false); }
-            else if (e.state.panel === 'config') { setShowConfigModal(true); }
-            else if (e.state.panel === 'startlist') { setActiveSubView('startlist'); }
-            else if (e.state.panel === 'tiempos') { setActiveSubView('tiempos'); }
-            else if (e.state.panel === 'resultados') { setActiveSubView('resultados'); }
+            if (!e.state) { 
+                setView('lista'); 
+                setSelectedEvento(null); 
+                setActiveSubView(null); 
+                setShowConfigModal(false); 
+            }
+            else {
+                if (e.state.evento) setSelectedEvento(e.state.evento);
+                
+                if (e.state.panel === 'dashboard') { 
+                    setView('dashboard'); 
+                    setActiveSubView(null); 
+                    setShowConfigModal(false); 
+                }
+                else if (e.state.panel === 'config') { 
+                    setShowConfigModal(true); 
+                }
+                else if (e.state.panel === 'startlist') { 
+                    setView('dashboard');
+                    setActiveSubView('startlist'); 
+                }
+                else if (e.state.panel === 'resultados') { 
+                    setView('dashboard');
+                    setActiveSubView('resultados'); 
+                }
+            }
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
@@ -89,12 +117,12 @@ const GestionEventosSection = () => {
 
     const handleOpenDashboard = (evento) => {
         setSelectedEvento(evento);
-        window.history.pushState({ panel: 'dashboard' }, '');
+        window.history.pushState({ panel: 'dashboard', evento }, '');
         setView('dashboard');
     };
 
     const handleOpenConfig = () => {
-        window.history.pushState({ panel: 'config' }, '');
+        window.history.pushState({ panel: 'config', evento: selectedEvento }, '');
         setShowConfigModal(true);
     };
 
@@ -142,7 +170,15 @@ const GestionEventosSection = () => {
             permitirMasterBajarASenior: evento.permitirMasterBajarASenior || false,
             permitirCompletarK4: evento.permitirCompletarK4 || false,
             limitacionBotesAB: evento.limitacionBotesAB || false,
-            clubId: evento.clubId || ''
+            clubId: evento.clubId || '',
+            horaInicioEvento: evento.horaInicioEvento || '08:00',
+            carrilesDisponibles: evento.carrilesDisponibles || 9,
+            perfilTiempo: evento.perfilTiempo || 'Estandar',
+            horaInicioReceso: evento.horaInicioReceso || '13:00',
+            horaFinReceso: evento.horaFinReceso || '14:00',
+            sinReceso: evento.sinReceso || false,
+            gapEntrePruebas: evento.gapEntrePruebas || 10,
+            permitirCombinadas: evento.permitirCombinadas || false,
         });
         setView('editar');
     };
@@ -236,7 +272,7 @@ const GestionEventosSection = () => {
                         </button>
                         <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', margin: 0 }}>Gestión de Eventos</h1>
                     </div>
-                    {!activeSubView ? (
+                    {selectedEvento && !activeSubView ? (
                         <>
                             <div className="event-dashboard-header glass-effect">
                                 <h2 style={{ margin: 0, color: 'var(--color-primary)' }}>{selectedEvento.nombre}</h2>
@@ -259,7 +295,7 @@ const GestionEventosSection = () => {
                                     <p>Crear pruebas y horarios para que los clubes inscriban a sus atletas.</p>
                                 </div>
                                 <div className="dashboard-card glass-effect clickable" onClick={() => {
-                                    window.history.pushState({ panel: 'startlist' }, '');
+                                    window.history.pushState({ panel: 'startlist', evento: selectedEvento }, '');
                                     setActiveSubView('startlist');
                                 }}>
                                     <div className="card-icon"><ClipboardList size={32} /></div>
@@ -267,7 +303,7 @@ const GestionEventosSection = () => {
                                     <p>Cerrar inscripciones, armar series y sortear carriles aleatoriamente.</p>
                                 </div>
                                 <div className="dashboard-card glass-effect clickable" onClick={() => {
-                                    window.history.pushState({ panel: 'resultados' }, '');
+                                    window.history.pushState({ panel: 'resultados', evento: selectedEvento }, '');
                                     setActiveSubView('resultados');
                                 }}>
                                     <div className="card-icon"><Trophy size={32} /></div>
@@ -276,7 +312,7 @@ const GestionEventosSection = () => {
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    ) : selectedEvento ? (
                         <div>
                             <div className="subview-header" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.5rem' }}>
                                 <button
@@ -300,6 +336,8 @@ const GestionEventosSection = () => {
                                 viewMode={activeSubView} // Pasamos la subvista para filtrar UI
                             />
                         </div>
+                    ) : (
+                        <div className="loader-container"><div className="loader"></div></div>
                     )}
                 </div>
             )}

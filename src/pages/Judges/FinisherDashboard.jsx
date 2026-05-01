@@ -1,14 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Flag, Trophy, RefreshCw, Save, HelpCircle, XCircle } from 'lucide-react';
+import { Flag, Trophy, RefreshCw, Save, HelpCircle, XCircle, LogOut, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import ResultadoService from '../../services/ResultadoService';
 import { PruebaService } from '../../services/ConfigService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { useToast } from '../../context/ToastContext';
+import InscripcionService from '../../services/InscripcionService';
 import './Judges.css';
 
+const getSoloApellido = (nombreCompleto) => {
+    if (!nombreCompleto) return "-";
+    const parts = nombreCompleto.trim().split(' ');
+    return parts[parts.length - 1];
+};
+
 const FinisherDashboard = () => {
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+    const isAdmin = user?.rol === 'Admin';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
     const [pruebas, setPruebas] = useState([]);
@@ -135,11 +147,14 @@ const FinisherDashboard = () => {
 
         const setupSignalR = async () => {
             try {
-                // Primero cargamos resultados
-                const data = await ResultadoService.getByFase(selectedFase.id);
+                // Primero cargamos resultados e inscripciones para cruzar datos
+                const [data, inscs] = await Promise.all([
+                    ResultadoService.getByFase(selectedFase.id),
+                    InscripcionService.getByEventoPrueba(selectedPrueba.id)
+                ]);
+                
                 if (!isMounted) return;
                 
-                // Formateamos los tiempos que ya vienen del servidor
                 const formattedData = data.map(r => {
                     const tiempoLimpio = r.tiempoOficial ? parseBackendTime(r.tiempoOficial) : null;
                     return {
@@ -186,9 +201,20 @@ const FinisherDashboard = () => {
 
                 timingSignalRService.onResultStatusUpdated((resId, status) => {
                     if (isMounted) {
-                        setResultados(prev => prev.map(r => 
-                            r.id.toString() === resId.toString() ? { ...r, estadoCanto: status } : r
-                        ));
+                        setResultados(prev => {
+                            const updated = prev.map(r => 
+                                String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
+                            );
+                            
+                            // Verificar si este cambio de estado debe detener el reloj
+                            const asignadosCount = updated.filter(r => r.tiempoOficial).length;
+                            const activosCount = updated.filter(r => !r.estadoCanto || r.estadoCanto === 'Pendiente').length;
+                            if (asignadosCount >= activosCount && activosCount > 0) {
+                                stopLocalTimer();
+                            }
+                            
+                            return updated;
+                        });
                     }
                 });
             } catch (err) {
@@ -269,7 +295,9 @@ const FinisherDashboard = () => {
             const updated = prev.map(r => r.id === resultadoId ? { ...r, tiempoOficial: finalTime, msLlegada: currentMs, status: 'finished' } : r);
             
             const asignadosCount = updated.filter(r => r.tiempoOficial).length;
-            if (asignadosCount + rawTimes.length >= updated.length) {
+            const activosCount = updated.filter(r => !r.estadoCanto || r.estadoCanto === 'Pendiente').length;
+
+            if (asignadosCount + rawTimes.length >= activosCount) {
                 stopLocalTimer();
             }
             
@@ -316,16 +344,20 @@ const FinisherDashboard = () => {
     };
 
     // Combinar atletas con tiempo y dudas para la grilla de llegada
-    const arrivals = [
+    const timedArrivals = [
         ...resultados
-            .filter(r => r.tiempoOficial || (r.estadoCanto && r.estadoCanto !== 'Pendiente'))
-            .map(r => ({ 
-                type: 'atleta', 
-                ...r, 
-                sortMs: r.estadoCanto && r.estadoCanto !== 'Pendiente' && !r.tiempoOficial ? 999999999 : r.msLlegada 
-            })),
+            .filter(r => r.tiempoOficial)
+            .map(r => ({ type: 'atleta', ...r, sortMs: r.msLlegada })),
         ...rawTimes.map(rt => ({ type: 'duda', ...rt, sortMs: rt.ms }))
     ].sort((a, b) => a.sortMs - b.sortMs);
+
+    // Atletas con estado (DNS/DNF/DSQ) pero sin tiempo
+    const statusOnly = resultados.filter(r => !r.tiempoOficial && r.estadoCanto && r.estadoCanto !== 'Pendiente');
+
+    // Durante la carrera, solo mostramos los que cruzan la meta. Al finalizar (o cuando el reloj para), los mandamos al fondo.
+    const arrivals = isRaceRunning 
+        ? timedArrivals 
+        : [...timedArrivals, ...statusOnly.map(r => ({ type: 'atleta', ...r, sortMs: 999999999 }))];
 
     const pendientes = resultados.filter(r => !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente'));
 
@@ -333,6 +365,26 @@ const FinisherDashboard = () => {
         <div className="finisher-dashboard fade-in">
             <header className="finisher-header glass-effect">
                 <div className="header-left">
+                    {!isAdmin && (
+                        <div style={{ display: 'flex', gap: '0.8rem', marginRight: '1.5rem' }}>
+                            <button 
+                                className="btn-admin-secondary" 
+                                onClick={() => navigate('/jueces')} 
+                                title="Volver al Menú de Jueces"
+                                style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }}
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
+                            <button 
+                                className="btn-admin-danger" 
+                                onClick={logout} 
+                                title="Cerrar Sesión"
+                                style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                            >
+                                <LogOut size={20} />
+                            </button>
+                        </div>
+                    )}
                     <div className="badge-live blue">MODO CRONOMETRISTA</div>
                     <h2>{selectedPrueba?.prueba?.categoria?.nombre} - {selectedFase?.nombreFase}</h2>
                 </div>
@@ -386,7 +438,12 @@ const FinisherDashboard = () => {
                                     <div key={p.id} className="pendiente-item">
                                         <span className="p-lane">{p.carril}</span>
                                         <div className="p-info">
-                                            <span className="p-name">{p.participanteNombre}</span>
+                                            <span className="p-name">
+                                                {p.tripulantes && p.tripulantes.length > 0 
+                                                    ? [p.participanteNombre, ...p.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
+                                                    : getSoloApellido(p.participanteNombre)
+                                                }
+                                            </span>
                                             <button 
                                                 className="btn-assign-quick"
                                                 onClick={() => {
@@ -472,7 +529,12 @@ const FinisherDashboard = () => {
                                         <div className="arrival-details">
                                             {arrival.type === 'atleta' ? (
                                                 <>
-                                                    <span className="arr-name">{arrival.participanteNombre}</span>
+                                                    <span className="arr-name">
+                                                        {arrival.tripulantes && arrival.tripulantes.length > 0 
+                                                            ? [arrival.participanteNombre, ...arrival.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
+                                                            : getSoloApellido(arrival.participanteNombre)
+                                                        }
+                                                    </span>
                                                     <span className="arr-club">{arrival.clubNombre}</span>
                                                 </>
                                             ) : (

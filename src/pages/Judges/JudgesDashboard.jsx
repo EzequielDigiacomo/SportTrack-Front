@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Flag, List } from 'lucide-react';
+import { Play, Flag, List, ArrowLeft } from 'lucide-react';
 import './Judges.css';
 
 const JudgesDashboard = () => {
@@ -9,6 +9,13 @@ const JudgesDashboard = () => {
     return (
         <div className="judges-container glass-effect">
             <header className="judges-header">
+                <button 
+                    className="btn-back-header" 
+                    onClick={() => navigate('/super')}
+                    title="Volver al Panel Admin"
+                >
+                    <ArrowLeft size={24} />
+                </button>
                 <h1>Módulo de Jueces Oficiales</h1>
                 <p>Seleccione su rol para la competencia actual</p>
             </header>

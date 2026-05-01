@@ -4,6 +4,7 @@ import { PruebaService } from '../../services/ConfigService';
 import InscripcionService from '../../services/InscripcionService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
+import SchedulerService from '../../services/SchedulerService';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
     const [eventos, setEventos] = useState([]);
@@ -13,6 +14,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const [currentTab, setCurrentTab] = useState(defaultTab || 'startList');
     const [inscriptos, setInscriptos] = useState([]);
     const [fases, setFases] = useState([]);
+    const [cronograma, setCronograma] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
@@ -28,6 +30,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     useEffect(() => {
         if (selectedEvento) {
             loadPruebas(selectedEvento);
+            loadCronograma(selectedEvento);
             setSelectedPrueba('');
             setInscriptos([]);
             setFases([]);
@@ -69,14 +72,56 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const loadCronograma = async (eventoId) => {
+        const id = eventoId || selectedEvento;
+        if (!id || id === 'undefined') return;
+        
+        try {
+            const data = await FaseService.getByEvento(id);
+            // Ordenar por fecha programada (evitando desvíos de zona horaria al comparar strings)
+            const sorted = (data || []).sort((a, b) => {
+                const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
+                const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
+                return dateA.localeCompare(dateB);
+            });
+            setCronograma(sorted);
+        } catch (error) {
+            console.error("Error al cargar cronograma:", error);
+        }
+    };
+
     const loadDatosPrueba = async (pruebaId) => {
+        if (!pruebaId || pruebaId === "EventoPrueba") return;
         setLoading(true);
         try {
             const [inscs, fs] = await Promise.all([
                 InscripcionService.getByEventoPrueba(pruebaId),
                 FaseService.getByEventoPrueba(pruebaId)
             ]);
-            setInscriptos(inscs || []);
+            const rawInscs = inscs || [];
+            
+            // Lógica de Agrupación por Bote para K2/K4
+            // Si varios inscriptos comparten la misma lista de tripulantes, es el mismo bote.
+            const uniqueBoats = [];
+            const seenKeys = new Set();
+
+            rawInscs.forEach(ins => {
+                // Obtenemos todos los IDs de la tripulación (Líder + Tripulantes)
+                const allMemberIds = [
+                    ins.participanteId, 
+                    ...(ins.tripulantes || []).map(t => t.participanteId)
+                ].filter(id => id != null);
+
+                // Creamos una llave única basada en los IDs ordenados para identificar al mismo bote
+                const boatKey = allMemberIds.sort((a, b) => a - b).join('-');
+
+                if (!seenKeys.has(boatKey)) {
+                    seenKeys.add(boatKey);
+                    uniqueBoats.push(ins);
+                }
+            });
+
+            setInscriptos(uniqueBoats);
             setFases(fs || []);
             
             const tls = {};
@@ -105,19 +150,24 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const handleSortearCarriles = async () => {
         setSaving(true);
         try {
-            const newFases = await FaseService.generar(selectedPrueba);
+            // 1. Generar los Heats en el backend
+            await FaseService.generar(selectedPrueba);
             
-            // LIMPIAR BLOQUEOS: Si estamos sorteando de nuevo, la prueba NO está bloqueada
+            // 2. AUTO-REPROGRAMAR: Aplicar el algoritmo de entreverado inteligente a todo el evento
+            await handleRecalcularCronograma();
+
+            // LIMPIAR BLOQUEOS
             const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
             const newLocked = locked.filter(id => id !== selectedPrueba);
             localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
             setIsLocked(false);
 
-            setFases(newFases || []);
-            setMessage("✅ Heats generados y carriles asignados.");
-            loadDatosPrueba(selectedPrueba);
+            setMessage("✅ Heats generados y sincronizados con el horario original.");
+            await loadDatosPrueba(selectedPrueba);
+            await loadCronograma();
         } catch (error) {
-            setMessage("❌ Error al generar las Fases.");
+            console.error("Error al sortear:", error);
+            setMessage("❌ Error al generar heats.");
         } finally {
             setSaving(false);
         }
@@ -126,11 +176,13 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const handlePromoverEtapa = async () => {
         setSaving(true);
         try {
-            const newFases = await FaseService.promover(selectedPrueba);
-            setFases(newFases || []);
-            setMessage("✅ Etapa promocionada exitosamente. Se generaron los pases a la siguiente fase.");
-            loadDatosPrueba(selectedPrueba);
+            await FaseService.promover(selectedPrueba);
+            await handleRecalcularCronograma();
+            setMessage("✅ Etapa promocionada exitosamente. Cronograma actualizado.");
+            await loadDatosPrueba(selectedPrueba);
+            await loadCronograma();
         } catch (error) {
+            console.error("Error al promover:", error);
             setMessage("❌ Error al promover etapa: " + (error.response?.data?.message || error.message));
         } finally {
             setSaving(false);
@@ -346,16 +398,111 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    async function handleRecalcularCronograma() {
+        if (!selectedEvento) return;
+        setSaving(true);
+        setMessage("⏳ Analizando cronograma y calculando gaps...");
+        try {
+            // 1. Obtener TODAS las fases del evento (no solo de la prueba actual)
+            const todasLasFases = await FaseService.getByEvento(selectedEvento);
+            const eventoConfig = eventos.find(e => String(e.id) === String(selectedEvento));
+
+            if (!todasLasFases || todasLasFases.length === 0) {
+                setMessage("⚠️ No hay fases generadas para este evento.");
+                return;
+            }
+
+            // Mapear el GapSugerido desde la distancia para el motor
+            const fasesConGaps = todasLasFases.map(f => ({
+                ...f,
+                gapSugerido: f.etapa?.eventoPrueba?.prueba?.distancia?.gapSugerido || 0
+            }));
+
+            // 2. Usar el motor matemático para recalcular
+            const config = {
+                horaInicioEvento: eventoConfig?.horaInicioEvento || "08:00",
+                gapEntrePruebas: eventoConfig?.gapEntrePruebas || 10,
+                sinReceso: eventoConfig?.sinReceso || false,
+                horaInicioReceso: eventoConfig?.horaInicioReceso || "13:00",
+                horaFinReceso: eventoConfig?.horaFinReceso || "14:00",
+                gapRecuperacionMs: 40 * 60 * 1000,
+            };
+            const fasesReprogramadas = SchedulerService.recalcularTiempos(fasesConGaps, config);
+            
+            // Informar al usuario si el cronograma abarca múltiples días
+            const diasTotales = Math.max(...fasesReprogramadas.map(f => f.diaOffset || 0)) + 1;
+            
+            if (diasTotales > 1) {
+                if (!window.confirm(`⚠️ El cronograma se extenderá automáticamente a ${diasTotales} días para respetar el límite horario (18:00 hs). ¿Deseas aplicar el salto de día?`)) {
+                    setSaving(false);
+                    setMessage("❌ Operación cancelada por el usuario.");
+                    return;
+                }
+            }
+
+            // 3. Guardar cambios en masa (Batch Update de Fases)
+            const dto = fasesReprogramadas.map(f => ({
+                id: f.id,
+                fechaHoraProgramada: f.nuevaHora || "08:00",
+                diaOffset: f.diaOffset || 0
+            }));
+
+            // El backend necesita el DateTime completo, combinamos la fecha del evento, hora y offset de días
+            const baseDateStr = (eventoConfig?.fecha || new Date().toISOString()).substring(0, 10);
+            const [year, month, day] = baseDateStr.split('-').map(Number);
+            
+            const dtoFinal = dto.map(item => {
+                // Instanciar a las 12:00 para evitar que el cambio de Zona Horaria reste 1 día por accidente
+                const fDate = new Date(year, month - 1, day, 12, 0, 0);
+                fDate.setDate(fDate.getDate() + item.diaOffset);
+                
+                const yyyy = fDate.getFullYear();
+                const mm = String(fDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(fDate.getDate()).padStart(2, '0');
+                
+                return {
+                    id: item.id,
+                    fechaHoraProgramada: `${yyyy}-${mm}-${dd}T${item.fechaHoraProgramada}:00`
+                };
+            });
+
+            await FaseService.batchUpdate(dtoFinal);
+            
+            setMessage("✅ ¡Cronograma optimizado exitosamente! Gaps y recesos aplicados.");
+            loadDatosPrueba(selectedPrueba);
+            loadCronograma();
+        } catch (error) {
+            console.error("Error al recalcular:", error);
+            setMessage("❌ Error al aplicar el cronograma inteligente.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSelectRegata = (fase) => {
+        if (!fase) {
+            setSelectedPrueba(null);
+            setFiltroVisualFase('Cronograma');
+            return;
+        }
+        // 1. Seleccionar la prueba (EventoPruebaId)
+        setSelectedPrueba(fase.eventoPruebaId);
+        // 2. Establecer el filtro visual para que muestre esa fase específica
+        setFiltroVisualFase(fase.nombreFase);
+    };
+
     return {
         eventos, selectedEvento, setSelectedEvento,
         pruebas, selectedPrueba, setSelectedPrueba,
         currentTab, setCurrentTab,
-        inscriptos, fases,
+        inscriptos, fases, cronograma,
         loading, saving, isLocked, message, setMessage,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
+        handleRecalcularCronograma,
+        handleSelectRegata, loadCronograma,
         loadDatosPrueba
     };
 };

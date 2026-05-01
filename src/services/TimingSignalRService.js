@@ -8,9 +8,21 @@ class TimingSignalRService {
     }
 
     async connect(faseId) {
-        if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
-            if (this.currentFaseId === faseId.toString()) return;
-            await this.leaveRaceGroup(this.currentFaseId);
+        // 1. Si ya estamos conectados a esta fase, no hacer nada
+        if (this.currentFaseId === faseId.toString() && this.connection?.state === signalR.HubConnectionState.Connected) {
+            return;
+        }
+
+        // 2. Si hay una conexión activa o en proceso, la cerramos limpiamente
+        if (this.connection) {
+            try {
+                if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
+                    await this.connection.stop();
+                }
+            } catch (err) {
+                console.warn("SignalR stop error (non-critical):", err);
+            }
+            this.connection = null;
         }
 
         const token = localStorage.getItem('sporttrack_auth_token');
@@ -18,9 +30,12 @@ class TimingSignalRService {
 
         this.connection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {
-                accessTokenFactory: () => token
+                accessTokenFactory: () => token,
+                skipNegotiation: false,
+                transport: signalR.HttpTransportType.WebSockets
             })
             .withAutomaticReconnect()
+            .configureLogging(signalR.LogLevel.Information)
             .build();
 
         try {
@@ -29,8 +44,12 @@ class TimingSignalRService {
             await this.joinRaceGroup(faseId);
             this.currentFaseId = faseId.toString();
         } catch (err) {
-            console.error("TimingHub Connection Error: ", err);
-            throw err;
+            if (err.name === 'AbortError') {
+                console.log("SignalR connection aborted (expected during rapid navigation)");
+            } else {
+                console.error("TimingHub Connection Error: ", err);
+                throw err;
+            }
         }
     }
 
@@ -82,7 +101,9 @@ class TimingSignalRService {
     }
 
     async updateResultStatus(faseId, resultadoId, status) {
-        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
+            throw new Error("No hay conexión con el servidor de tiempos. Reintentando...");
+        }
         await this.connection.invoke("UpdateResultStatus", faseId.toString(), resultadoId.toString(), status);
     }
 

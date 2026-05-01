@@ -58,8 +58,8 @@ const SuperDashboard = () => {
         timeoutRef.current = setTimeout(() => setIsSidebarOpen(false), 800);
     };
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/login', { replace: true });
     };
 

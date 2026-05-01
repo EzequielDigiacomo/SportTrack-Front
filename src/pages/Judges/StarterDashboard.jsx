@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle, Clock, Users, Activity, Search } from 'lucide-react';
+import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import { PruebaService } from '../../services/ConfigService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { useToast } from '../../context/ToastContext';
+import InscripcionService from '../../services/InscripcionService';
 import './Judges.css';
 
+const getSoloApellido = (nombreCompleto) => {
+    if (!nombreCompleto) return "-";
+    const parts = nombreCompleto.trim().split(' ');
+    return parts[parts.length - 1];
+};
+
 const StarterDashboard = () => {
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+    const isAdmin = user?.rol === 'Admin';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
     const [pruebas, setPruebas] = useState([]);
@@ -38,8 +50,12 @@ const StarterDashboard = () => {
     useEffect(() => {
         if (!selectedPrueba) return;
         const loadFases = async () => {
-            const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
-            setFases(data);
+            const [fs, inscs] = await Promise.all([
+                FaseService.getByEventoPrueba(selectedPrueba.id),
+                InscripcionService.getByEventoPrueba(selectedPrueba.id)
+            ]);
+
+            setFases(fs);
         };
         loadFases();
     }, [selectedPrueba]);
@@ -57,6 +73,12 @@ const StarterDashboard = () => {
                 timingSignalRService.onRaceReset((id) => {
                     if (id.toString() === selectedFase.id.toString()) {
                         setSelectedFase(prev => ({ ...prev, estado: 'Programada' }));
+                    }
+                });
+
+                timingSignalRService.onRaceStarted((id) => {
+                    if (id.toString() === selectedFase.id.toString()) {
+                        setSelectedFase(prev => ({ ...prev, estado: 'En Carrera' }));
                     }
                 });
 
@@ -116,7 +138,10 @@ const StarterDashboard = () => {
     const handleStatusChange = async (resultadoId, status) => {
         if (!selectedFase) return;
         try {
+            // Primero intentamos enviar la señal
             await timingSignalRService.updateResultStatus(selectedFase.id, resultadoId, status);
+            
+            // Si el envío fue exitoso, actualizamos localmente para feedback instantáneo
             setSelectedFase(prev => ({
                 ...prev,
                 resultados: prev.resultados.map(r => 
@@ -125,6 +150,23 @@ const StarterDashboard = () => {
             }));
         } catch (err) {
             console.error("Error updating status:", err);
+            if (addToast) addToast("Error de conexión. Reintentando...", "error");
+            // Intentar reconectar automáticamente
+            try { await timingSignalRService.connect(selectedFase.id); } catch(e) {}
+        }
+    };
+
+    const handleResetRace = async () => {
+        if (!selectedFase) return;
+        if (!window.confirm("⚠️ ¿Confirmar partida en falso? Esto reseteará el cronómetro y los resultados para TODOS los jueces.")) return;
+
+        try {
+            setLoading(true);
+            await FaseService.reiniciar(selectedFase.id);
+        } catch (err) {
+            console.error("Error resetting race:", err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -187,8 +229,30 @@ const StarterDashboard = () => {
                 {selectedPrueba ? (
                     <div className="race-control glass-effect">
                         <header className="race-header">
-                            <div className="badge-live">MODO LARGADOR</div>
-                            <h2>{selectedPrueba.prueba?.categoria?.nombre} {selectedPrueba.prueba?.bote?.tipo}</h2>
+                            <div className="header-left-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                {!isAdmin && (
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginRight: '0.5rem' }}>
+                                        <button 
+                                            className="btn-admin-secondary" 
+                                            onClick={() => navigate('/jueces')} 
+                                            title="Volver al Menú"
+                                            style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }}
+                                        >
+                                            <ArrowLeft size={18} />
+                                        </button>
+                                        <button 
+                                            className="btn-admin-danger" 
+                                            onClick={logout} 
+                                            title="Cerrar Sesión"
+                                            style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                                        >
+                                            <LogOut size={18} />
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="badge-live">MODO LARGADOR</div>
+                                <h2>{selectedPrueba.prueba?.categoria?.nombre} {selectedPrueba.prueba?.bote?.tipo}</h2>
+                            </div>
                             <div className="fase-selector">
                                 {fases.map(f => (
                                     <button 
@@ -208,9 +272,14 @@ const StarterDashboard = () => {
                                     <h3><Users size={20} /> Atletas en Carriles</h3>
                                     <div className="checkin-grid">
                                         {selectedFase.resultados?.sort((a,b) => (a.carril - b.carril)).map(r => (
-                                            <div key={r.id} className="checkin-row">
+                                            <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
                                                 <span className="lane-badge">{r.carril}</span>
-                                                <span className="athlete-name">{r.participanteNombre}</span>
+                                                <span className="athlete-name">
+                                                    {r.tripulantes && r.tripulantes.length > 0 
+                                                        ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
+                                                        : getSoloApellido(r.participanteNombre)
+                                                    }
+                                                </span>
                                                 <span className="club-tag">{r.clubSigla}</span>
                                                 
                                                 <div className="status-quick-actions">
@@ -262,6 +331,18 @@ const StarterDashboard = () => {
                                             </>
                                         )}
                                     </button>
+                                    
+                                    {(selectedFase.estado === 'En Carrera' || selectedFase.estado === 'Pendiente de Validación') && (
+                                        <button 
+                                            className="btn-reset-starter fade-in"
+                                            onClick={handleResetRace}
+                                            disabled={loading}
+                                        >
+                                            <RefreshCw size={20} />
+                                            <span>PARTIDA EN FALSO / REINICIAR</span>
+                                        </button>
+                                    )}
+                                    
                                     <p className="hint">Este botón sincroniza el tiempo 0 para todos los jueces.</p>
                                 </div>
                             </div>

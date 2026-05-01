@@ -1,6 +1,29 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const CATEGORIA_NAMES = {
+    1: 'Pre-infantil (8-10 años)',
+    2: 'Infantil (11-12 años)',
+    3: 'Menor (13-14 años)',
+    4: 'Cadete (14-15 años)',
+    5: 'Junior (16-17 años)',
+    6: 'Sub-23 (18-22 años)',
+    7: 'Senior (18-35 años)',
+    8: 'Master A (40-45 años)',
+    9: 'Master B (46-50 años)',
+    10: 'Master C (50+ años)'
+};
+
+const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
+
+const DISTANCIA_NAMES = {
+    1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m',
+    6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 10: '5000m',
+    11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
+};
+
+const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
+
 // Format TimeSpan string from backend to mm:ss.cc
 const formatTime = (timeStr) => {
     if (!timeStr || timeStr === '') return '-';
@@ -18,23 +41,35 @@ const formatTime = (timeStr) => {
 };
 
 const buildFaseTable = (doc, fase, yPos, showEtapa = true) => {
-    // Section title
+    // Section title with Time
     if (showEtapa) {
         doc.setFontSize(11);
         doc.setTextColor(100, 180, 255);
-        doc.text(fase.nombreFase, 14, yPos);
+        let timeStr = '';
+        if (fase.fechaHoraProgramada && fase.fechaHoraProgramada.includes('T')) {
+            timeStr = ` - ${fase.fechaHoraProgramada.split('T')[1].substring(0, 5)} hs`;
+        }
+        doc.text(`${fase.nombreFase}${timeStr}`, 14, yPos);
         yPos += 6;
     }
 
-    const rows = [...fase.resultados]
-        .sort((a, b) => (a.posicion || 99) - (b.posicion || 99) || (a.carril || 99) - (b.carril || 99))
-        .map(r => [
-            r.posicion || '-',
-            r.carril || '-',
-            r.participanteNombre || '-',
-            r.clubNombre || r.clubSigla || '-',
-            formatTime(r.tiempoOficial),
-        ]);
+    const rows = (fase.resultados && fase.resultados.length > 0)
+        ? [...fase.resultados]
+            .sort((a, b) => (a.posicion || 99) - (b.posicion || 99) || (a.carril || 99) - (b.carril || 99))
+            .map(r => {
+                const crew = (r.tripulantes && r.tripulantes.length > 0)
+                    ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].join(' - ')
+                    : (r.participanteNombre || '-');
+                
+                return [
+                    r.posicion || '-',
+                    r.carril || '-',
+                    crew,
+                    r.clubNombre || r.clubSigla || '-',
+                    formatTime(r.tiempoOficial),
+                ];
+            })
+        : [['-', '-', 'A definir (según resultados previos)', '-', '-']];
 
     autoTable(doc, {
         startY: yPos,
@@ -165,7 +200,11 @@ const PdfExportService = {
             fasesGrupo.forEach((fase) => {
                 doc.setFontSize(11);
                 doc.setTextColor(100, 180, 255);
-                doc.text(fase.nombreFase, 14, y);
+                let timeStr = '';
+                if (fase.fechaHoraProgramada && fase.fechaHoraProgramada.includes('T')) {
+                    timeStr = ` - ${fase.fechaHoraProgramada.split('T')[1].substring(0, 5)} hs`;
+                }
+                doc.text(`${fase.nombreFase}${timeStr}`, 14, y);
                 y += 5;
                 y = buildFaseTable(doc, fase, y, false);
                 if (y > 260) { doc.addPage(); y = 20; }
@@ -173,6 +212,72 @@ const PdfExportService = {
         });
 
         doc.save(`${eventoNombre}_${pruebaNombre}_Completo.pdf`.replace(/\s+/g, '_'));
+    },
+
+    /**
+     * Export all phases of an entire EVENT (the global schedule)
+     */
+    exportCronogramaCompleto: (cronograma, eventoNombre) => {
+        if (!cronograma || cronograma.length === 0) return;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        // Header inicial
+        let y = addHeader(doc, 'Cronograma General de Regatas', eventoNombre, 'Start List Consolidado');
+
+        cronograma.forEach((fase, idx) => {
+            // Verificar si necesitamos nueva página (si queda menos de 60mm de espacio)
+            if (y > 230) {
+                doc.addPage();
+                y = 20;
+            }
+
+            // Encabezado de la Regata
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(18, 26, 48); // Azul oscuro
+            
+            // Extraer hora del string para evitar desfases de zona horaria
+            let timeStr = '--:--';
+            if (fase.fechaHoraProgramada && fase.fechaHoraProgramada.includes('T')) {
+                timeStr = fase.fechaHoraProgramada.split('T')[1].substring(0, 5);
+            }
+            
+            const p = fase.prueba?.prueba;
+            const parts = [];
+            if (p) {
+                const catId = p.categoria?.id;
+                const botId = p.bote?.id;
+                const distId = p.distancia?.id;
+                const sexId = p.sexoId || p.sexo?.id;
+
+                const catName = CATEGORIA_NAMES[catId] || p.categoria?.nombre;
+                const botName = BOTE_NAMES[botId] || p.bote?.nombre;
+                const distName = DISTANCIA_NAMES[distId] || (p.distancia?.metros ? `${p.distancia.metros}m` : '');
+                const sexName = SEXO_NAMES[sexId] || p.sexoNombre;
+                
+                if (catName) parts.push(catName);
+                if (botName) parts.push(botName);
+                if (distName) parts.push(distName);
+                if (sexName) parts.push(sexName);
+            }
+            
+            const pruebaInfo = parts.join(' - ');
+            
+            doc.text(`${timeStr} hs - ${fase.nombreFase} - ${pruebaInfo}`, 14, y);
+            
+            // Línea sutil debajo del título de la regata
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, y + 1, 196, y + 1);
+            
+            doc.setFont(undefined, 'normal');
+            y += 6;
+
+            // Tabla de inscriptos para esta regata
+            y = buildFaseTable(doc, fase, y, false);
+            y += 5; // Espacio entre regatas
+        });
+
+        doc.save(`${eventoNombre}_Cronograma_General.pdf`.replace(/\s+/g, '_'));
     },
 };
 

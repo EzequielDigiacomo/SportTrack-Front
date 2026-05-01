@@ -39,6 +39,8 @@ export const ENDPOINTS = {
         BY_EVENTO_PRUEBA: (id) => `/fases/EventoPrueba/${id}`,
         GENERAR: (id) => `/fases/Generar/${id}`,
         PROMOVER: (id) => `/fases/Promover/${id}`,
+        BY_EVENTO: (id) => `/eventos/${id}/fases`,
+        BATCH_UPDATE: '/fases/BatchUpdate',
     },
 
     // Resultados
