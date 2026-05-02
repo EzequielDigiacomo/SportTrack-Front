@@ -27,13 +27,6 @@ const StarterDashboard = () => {
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
 
     useEffect(() => {
-        // Al seleccionar un evento, podemos autoseleccionar la primera fase si no hay ninguna
-        if (fases.length > 0 && !selectedFase) {
-            // setSelectedFase(fases[0]); // Opcional
-        }
-    }, [fases]);
-
-    useEffect(() => {
         const loadEventos = async () => {
             const data = await EventoService.getProximos();
             setEventos(data);
@@ -47,7 +40,6 @@ const StarterDashboard = () => {
         const loadFases = async () => {
             try {
                 const data = await FaseService.getByEvento(selectedEvento.id);
-                // Ordenar por nroPrueba o por id si no tiene nro
                 const sorted = data.sort((a, b) => (a.nroPrueba || a.id) - (b.nroPrueba || b.id));
                 setFases(sorted);
             } catch (err) {
@@ -111,7 +103,6 @@ const StarterDashboard = () => {
 
     const handleStartRace = async () => {
         if (!selectedFase) return;
-
         try {
             setLoading(true);
             await timingSignalRService.connect(selectedFase.id);
@@ -122,7 +113,7 @@ const StarterDashboard = () => {
                 const data = await FaseService.getByEvento(selectedEvento.id);
                 setFases(data);
                 setSelectedFase(null);
-                alert("⚠️ La regata fue re-sorteada. Se ha actualizado la lista, por favor selecciona la serie nuevamente.");
+                alert("⚠️ La regata fue re-sorteada. Se ha actualizado la lista.");
             }
         } finally {
             setLoading(false);
@@ -133,7 +124,6 @@ const StarterDashboard = () => {
         if (!selectedFase) return;
         try {
             await timingSignalRService.updateResultStatus(selectedFase.id, resultadoId, status);
-            
             setSelectedFase(prev => ({
                 ...prev,
                 resultados: prev.resultados.map(r => 
@@ -143,14 +133,12 @@ const StarterDashboard = () => {
         } catch (err) {
             console.error("Error updating status:", err);
             if (addToast) addToast("Error de conexión. Reintentando...", "error");
-            try { await timingSignalRService.connect(selectedFase.id); } catch(e) {}
         }
     };
 
     const handleResetRace = async () => {
         if (!selectedFase) return;
-        if (!window.confirm("⚠️ ¿Confirmar partida en falso? Esto reseteará el cronómetro y los resultados para TODOS los jueces.")) return;
-
+        if (!window.confirm("⚠️ ¿Confirmar partida en falso?")) return;
         try {
             setLoading(true);
             await timingSignalRService.requestResetRace(selectedFase.id);
@@ -174,11 +162,7 @@ const StarterDashboard = () => {
 
                     <div className="sidebar-section-header">
                         <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
-                        <button 
-                            className="btn-view-toggle"
-                            onClick={() => setIsCompact(!isCompact)}
-                            title={isCompact ? "Ver detalles" : "Ver cuadrícula"}
-                        >
+                        <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
                             {isCompact ? <Layout size={14} /> : <Grid size={14} />}
                         </button>
                     </div>
@@ -196,12 +180,8 @@ const StarterDashboard = () => {
                                     <>
                                         <span className="race-num-prefix">#{f.nroPrueba || f.id}</span>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                {f.eventoPrueba?.prueba?.categoria?.nombre}
-                                            </span>
-                                            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                                                {f.nombreFase} - {f.eventoPrueba?.prueba?.bote?.tipo}
-                                            </span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{f.eventoPrueba?.prueba?.categoria?.nombre}</span>
+                                            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{f.nombreFase} - {f.eventoPrueba?.prueba?.bote?.tipo}</span>
                                         </div>
                                     </>
                                 )}
@@ -215,117 +195,71 @@ const StarterDashboard = () => {
                 {selectedFase ? (
                     <div className="race-control glass-effect">
                         <header className="race-header">
-                            <div className="header-left-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                {!isAdmin && (
-                                    <div style={{ display: 'flex', gap: '0.5rem', marginRight: '0.5rem' }}>
-                                        <button 
-                                            className="btn-admin-secondary" 
-                                            onClick={() => navigate('/jueces')} 
-                                            title="Volver al Menú"
-                                            style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }}
-                                        >
-                                            <ArrowLeft size={18} />
-                                        </button>
-                                        <button 
-                                            className="btn-admin-danger" 
-                                            onClick={logout} 
-                                            title="Cerrar Sesión"
-                                            style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-                                        >
-                                            <LogOut size={18} />
-                                        </button>
-                                    </div>
-                                )}
+                            <div className="header-left-actions">
                                 <div className="badge-live">MODO LARGADOR</div>
                                 <h2>
                                     <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>#{selectedFase.nroPrueba}</span>
                                     {selectedFase.eventoPrueba?.prueba?.categoria?.nombre} - {selectedFase.nombreFase}
                                 </h2>
-                                <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{selectedFase.eventoPrueba?.prueba?.bote?.tipo} | {selectedFase.eventoPrueba?.prueba?.distancia}m</p>
+                                <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                                    {selectedFase.eventoPrueba?.prueba?.bote?.tipo} | {selectedFase.eventoPrueba?.prueba?.distancia}m
+                                </p>
                             </div>
                         </header>
 
-                                        {([...(selectedFase.resultados || [])]).sort((a,b) => (a.carril - b.carril)).map(r => (
-                                            <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
-                                                <span className="lane-badge">{r.carril}</span>
-                                                <span className="athlete-name">
-                                                    {r.tripulantes && r.tripulantes.length > 0 
-                                                        ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                                        : getSoloApellido(r.participanteNombre)
-                                                    }
-                                                </span>
-                                                <span className="club-tag">{r.clubSigla}</span>
-                                                
-                                                <div className="status-quick-actions">
-                                                    <button 
-                                                        className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`}
-                                                        onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}
-                                                    >DNS</button>
-                                                    <button 
-                                                        className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`}
-                                                        onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}
-                                                    >DNF</button>
-                                                    <button 
-                                                        className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`}
-                                                        onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}
-                                                    >DSQ</button>
-                                                </div>
-
-                                                <CheckCircle size={18} className={`icon-ready ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'hidden' : ''}`} />
+                        <div className="fase-details">
+                            <div className="athletes-checkin">
+                                <h3><Users size={20} /> Atletas en Carriles</h3>
+                                <div className="checkin-grid">
+                                    {(selectedFase.resultados || []).sort((a,b) => a.carril - b.carril).map(r => (
+                                        <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
+                                            <span className="lane-badge">{r.carril}</span>
+                                            <span className="athlete-name">
+                                                {r.tripulantes && r.tripulantes.length > 0 
+                                                    ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
+                                                    : getSoloApellido(r.participanteNombre)
+                                                }
+                                            </span>
+                                            <span className="club-tag">{r.clubSigla}</span>
+                                            <div className="status-quick-actions">
+                                                <button className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}>DNS</button>
+                                                <button className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}>DNF</button>
+                                                <button className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}>DSQ</button>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="control-actions">
-                                    <button 
-                                        className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''}`}
-                                        onClick={handleStartRace}
-                                        disabled={selectedFase.estado !== 'Programada' || loading}
-                                    >
-                                        {selectedFase.estado === 'Programada' ? (
-                                            <>
-                                                <Play size={48} fill="currentColor" />
-                                                <span>LARGAR CARRERA</span>
-                                            </>
-                                        ) : selectedFase.estado === 'En Carrera' ? (
-                                            <>
-                                                <Activity size={48} className="pulse" />
-                                                <span>EN CARRERA</span>
-                                            </>
-                                        ) : selectedFase.estado === 'Pendiente de Validación' ? (
-                                            <>
-                                                <Search size={48} />
-                                                <span>EN REVISIÓN</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle size={48} />
-                                                <span>FINALIZADA</span>
-                                            </>
-                                        )}
-                                    </button>
-                                    
-                                    {(selectedFase.estado === 'En Carrera' || selectedFase.estado === 'Pendiente de Validación') && (
-                                        <button 
-                                            className="btn-reset-starter fade-in"
-                                            onClick={handleResetRace}
-                                            disabled={loading}
-                                        >
-                                            <RefreshCw size={20} />
-                                            <span>PARTIDA EN FALSO / REINICIAR</span>
-                                        </button>
-                                    )}
-                                    
-                                    <p className="hint">Este botón sincroniza el tiempo 0 para todos los jueces.</p>
+                                            <CheckCircle size={18} className={`icon-ready ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'hidden' : ''}`} />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="empty-msg">Seleccione una serie o final</div>
-                        )}
+
+                            <div className="control-actions">
+                                <button 
+                                    className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''}`}
+                                    onClick={handleStartRace}
+                                    disabled={selectedFase.estado !== 'Programada' || loading}
+                                >
+                                    {selectedFase.estado === 'Programada' ? (
+                                        <>
+                                            <Play size={48} fill="currentColor" />
+                                            <span>LARGAR CARRERA</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Activity size={48} className={selectedFase.estado === 'En Carrera' ? 'pulse' : ''} />
+                                            <span>{selectedFase.estado.toUpperCase()}</span>
+                                        </>
+                                    )}
+                                </button>
+                                {(selectedFase.estado === 'En Carrera' || selectedFase.estado === 'Pendiente de Validación') && (
+                                    <button className="btn-reset-starter" onClick={handleResetRace} disabled={loading}>
+                                        <RefreshCw size={20} /> <span>REINICIAR</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 ) : (
-                    <div className="empty-msg">Seleccione una prueba del cronograma</div>
+                    <div className="empty-msg">Seleccione una carrera del cronograma</div>
                 )}
             </main>
         </div>

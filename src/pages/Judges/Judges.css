@@ -658,10 +658,9 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
-    background: rgba(255, 255, 255, 0.02);
-    padding: var(--spacing-lg) !important;
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: var(--spacing-sm) !important;
+    background: transparent;
+    border: none;
     height: auto !important;
     overflow: visible !important;
 }
@@ -669,10 +668,16 @@
 .lane-buttons-grid {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 10px !important;
+    gap: 12px !important;
 }
 
 @media (min-width: 1024px) {
+    .quick-controls-panel {
+        background: rgba(255, 255, 255, 0.02);
+        padding: var(--spacing-lg) !important;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
     .lane-buttons-grid {
         grid-template-columns: repeat(9, 1fr) !important;
     }
