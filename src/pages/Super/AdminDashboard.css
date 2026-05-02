@@ -167,7 +167,17 @@
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
+    pointer-events: auto;
+}
+
+.sidebar-trigger-favicon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--color-primary-light);
+    transform: scale(1.05);
+}
+
+.sidebar-trigger-favicon:active {
+    transform: scale(0.95);
 }
 
 .sidebar-trigger-favicon.active {
@@ -422,6 +432,7 @@
 
     .admin-layout { 
         display: block; 
+        overflow-x: hidden;
     }
     .admin-sidebar { 
         position: fixed; 
@@ -434,12 +445,19 @@
     }
     .admin-main { 
         margin-left: 0; 
-        padding-top: 100px;
-        padding-left: var(--spacing-md);
-        padding-right: var(--spacing-md);
+        padding-top: 80px;
+        padding-left: 0;
+        padding-right: 0;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    .admin-content-wrapper {
+        padding: 0 var(--spacing-sm);
+        width: 100%;
     }
     .sidebar-trigger-favicon {
         pointer-events: auto;
+        display: flex;
     }
     /* Mostrar botón X en mobile */
     .sidebar-close-btn {

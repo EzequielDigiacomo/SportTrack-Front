@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Flag, Trophy, RefreshCw, Save, HelpCircle, XCircle, LogOut, ArrowLeft } from 'lucide-react';
+import { Flag, Trophy, RefreshCw, Save, HelpCircle, XCircle, LogOut, ArrowLeft, Layout, Grid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
@@ -23,15 +23,14 @@ const FinisherDashboard = () => {
     const isAdmin = user?.rol === 'Admin';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
-    const [pruebas, setPruebas] = useState([]);
-    const [selectedPrueba, setSelectedPrueba] = useState(null);
-    const [fases, setFases] = useState([]);
+    const [fases, setFases] = useState([]); // Todas las fases (Cronograma completo)
     const [selectedFase, setSelectedFase] = useState(null);
     const [resultados, setResultados] = useState([]);
     const [startTime, setStartTime] = useState(null);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isRaceRunning, setIsRaceRunning] = useState(false);
     const [rawTimes, setRawTimes] = useState([]); // Tiempos capturados sin asignar (Photo-finish)
+    const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const { addToast } = useToast();
     
     const timerRef = useRef(null);
@@ -118,11 +117,16 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         if (!selectedEvento) return;
-        const loadPruebas = async () => {
-            const data = await PruebaService.getByEvento(selectedEvento.id);
-            setPruebas(data);
+        const loadFases = async () => {
+            try {
+                const data = await FaseService.getByEvento(selectedEvento.id);
+                const sorted = data.sort((a, b) => (a.nroPrueba || a.id) - (b.nroPrueba || b.id));
+                setFases(sorted);
+            } catch (err) {
+                console.error("Error loading event phases:", err);
+            }
         };
-        loadPruebas();
+        loadFases();
     }, [selectedEvento]);
 
     const parseDate = (dateStr) => {
@@ -132,29 +136,17 @@ const FinisherDashboard = () => {
     };
 
     useEffect(() => {
-        if (!selectedPrueba) return;
-        const loadFases = async () => {
-            const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
-            setFases(data);
-        };
-        loadFases();
-    }, [selectedPrueba]);
-
-    useEffect(() => {
-        if (!selectedFase) return;
+        if (!selectedFase) {
+            setResultados([]);
+            setIsRaceRunning(false);
+            setStartTime(null);
+            setElapsedTime(0);
+            return;
+        }
         
-        let isMounted = true;
-
         const setupSignalR = async () => {
             try {
-                // Primero cargamos resultados e inscripciones para cruzar datos
-                const [data, inscs] = await Promise.all([
-                    ResultadoService.getByFase(selectedFase.id),
-                    InscripcionService.getByEventoPrueba(selectedPrueba.id)
-                ]);
-                
-                if (!isMounted) return;
-                
+                const data = await ResultadoService.getByFase(selectedFase.id);
                 const formattedData = data.map(r => {
                     const tiempoLimpio = r.tiempoOficial ? parseBackendTime(r.tiempoOficial) : null;
                     return {
@@ -174,11 +166,8 @@ const FinisherDashboard = () => {
                     stopLocalTimer();
                 }
 
-                // AHORA SÍ conectamos y esperamos
                 await timingSignalRService.connect(selectedFase.id);
-                if (!isMounted) return;
 
-                // Y RECIÉN AHÍ registramos los eventos
                 timingSignalRService.onRaceStarted((id, sTime) => {
                     if (id.toString() === selectedFase.id.toString()) {
                         const parsed = parseDate(sTime);
@@ -187,11 +176,11 @@ const FinisherDashboard = () => {
                 });
 
                 timingSignalRService.onRaceFinished(() => {
-                    if (isMounted) stopLocalTimer();
+                    stopLocalTimer();
                 });
 
                 timingSignalRService.onRaceReset((id) => {
-                    if (isMounted && id.toString() === selectedFase.id.toString()) {
+                    if (id.toString() === selectedFase.id.toString()) {
                         stopLocalTimer();
                         setElapsedTime(0);
                         setStartTime(null);
@@ -200,32 +189,28 @@ const FinisherDashboard = () => {
                 });
 
                 timingSignalRService.onResultStatusUpdated((resId, status) => {
-                    if (isMounted) {
-                        setResultados(prev => {
-                            const updated = prev.map(r => 
-                                String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
-                            );
-                            
-                            // Verificar si este cambio de estado debe detener el reloj
-                            const asignadosCount = updated.filter(r => r.tiempoOficial).length;
-                            const activosCount = updated.filter(r => !r.estadoCanto || r.estadoCanto === 'Pendiente').length;
-                            if (asignadosCount >= activosCount && activosCount > 0) {
-                                stopLocalTimer();
-                            }
-                            
-                            return updated;
-                        });
-                    }
+                    setResultados(prev => {
+                        const updated = prev.map(r => 
+                            String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
+                        );
+                        
+                        const asignadosCount = updated.filter(r => r.tiempoOficial).length;
+                        const activosCount = updated.filter(r => !r.estadoCanto || r.estadoCanto === 'Pendiente').length;
+                        if (asignadosCount >= activosCount && activosCount > 0) {
+                            stopLocalTimer();
+                        }
+                        
+                        return updated;
+                    });
                 });
             } catch (err) {
-                if (isMounted) console.error("Error setting up SignalR:", err);
+                console.error("Error setting up SignalR:", err);
             }
         };
 
         setupSignalR();
 
         return () => {
-            isMounted = false;
             timingSignalRService.disconnect();
         };
     }, [selectedFase]);
@@ -304,7 +289,6 @@ const FinisherDashboard = () => {
             return updated;
         });
 
-        // Emitir vía SignalR para monitoreo en vivo
         timingSignalRService.sendTime(selectedFase.id, resultadoId, finalTime, currentMs);
     };
 
@@ -336,14 +320,12 @@ const FinisherDashboard = () => {
             
             await ResultadoService.batchUpdate(dataToSave);
             await FaseService.enviarARevision(selectedFase.id);
-            // Redirigir o limpiar estado
             window.location.reload(); 
         } catch (err) {
             console.error("Error saving results:", err);
         }
     };
 
-    // Combinar atletas con tiempo y dudas para la grilla de llegada
     const timedArrivals = [
         ...resultados
             .filter(r => r.tiempoOficial)
@@ -351,10 +333,8 @@ const FinisherDashboard = () => {
         ...rawTimes.map(rt => ({ type: 'duda', ...rt, sortMs: rt.ms }))
     ].sort((a, b) => a.sortMs - b.sortMs);
 
-    // Atletas con estado (DNS/DNF/DSQ) pero sin tiempo
     const statusOnly = resultados.filter(r => !r.tiempoOficial && r.estadoCanto && r.estadoCanto !== 'Pendiente');
 
-    // Durante la carrera, solo mostramos los que cruzan la meta. Al finalizar (o cuando el reloj para), los mandamos al fondo.
     const arrivals = isRaceRunning 
         ? timedArrivals 
         : [...timedArrivals, ...statusOnly.map(r => ({ type: 'atleta', ...r, sortMs: 999999999 }))];
@@ -386,7 +366,10 @@ const FinisherDashboard = () => {
                         </div>
                     )}
                     <div className="badge-live blue">MODO CRONOMETRISTA</div>
-                    <h2>{selectedPrueba?.prueba?.categoria?.nombre} - {selectedFase?.nombreFase}</h2>
+                    <h2>
+                        <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>#{selectedFase?.nroPrueba}</span>
+                        {selectedFase?.eventoPrueba?.prueba?.categoria?.nombre} - {selectedFase?.nombreFase}
+                    </h2>
                 </div>
                 <div className={`main-timer ${isRaceRunning ? 'running' : ''}`}>
                     {formatTimer(elapsedTime)}
@@ -402,7 +385,6 @@ const FinisherDashboard = () => {
                             onChange={(e) => {
                                 const ev = eventos.find(x => x.id === parseInt(e.target.value));
                                 setSelectedEvento(ev);
-                                setSelectedPrueba(null); // Reset proof when event changes
                                 setSelectedFase(null);
                             }}
                             className="mb-sm"
@@ -411,21 +393,40 @@ const FinisherDashboard = () => {
                             {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                         </select>
 
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Prueba:</label>
-                        <select value={selectedPrueba?.id || ''} onChange={(e) => setSelectedPrueba(pruebas.find(p => p.id === parseInt(e.target.value)))}>
-                            <option value="">Seleccionar Prueba...</option>
-                            {pruebas.map(p => <option key={p.id} value={p.id}>{p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo}</option>)}
-                        </select>
+                        <div className="sidebar-section-header">
+                            <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
+                            <button 
+                                className="btn-view-toggle"
+                                onClick={() => setIsCompact(!isCompact)}
+                                title={isCompact ? "Ver detalles" : "Ver cuadrícula"}
+                            >
+                                {isCompact ? <Layout size={14} /> : <Grid size={14} />}
+                            </button>
+                        </div>
 
-                        <div className="fase-mini-list">
-                            {fases.map(f => (
-                                <button 
+                        <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`} style={{ marginBottom: '1rem' }}>
+                            {fases.map((f) => (
+                                <div 
                                     key={f.id} 
-                                    className={`fase-mini-btn ${selectedFase?.id === f.id ? 'active' : ''}`}
+                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
                                     onClick={() => setSelectedFase(f)}
                                 >
-                                    {f.nombreFase} {f.estado === 'Finalizada' && '✅'}
-                                </button>
+                                    {isCompact ? (
+                                        <span className="race-num">#{f.nroPrueba || f.id}</span>
+                                    ) : (
+                                        <>
+                                            <span className="race-num-prefix">#{f.nroPrueba || f.id}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                    {f.eventoPrueba?.prueba?.categoria?.nombre}
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                                                    {f.nombreFase} - {f.eventoPrueba?.prueba?.bote?.tipo}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </div>

@@ -9,7 +9,8 @@ import {
     Users,
     Timer,
     LogOut,
-    ArrowLeft
+    ArrowLeft,
+    Menu
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import '../../pages/Super/AdminDashboard.css';
@@ -67,7 +68,7 @@ const JudgesLayout = ({ children }) => {
     const isAdmin = user?.rol === 'Admin';
 
     return (
-        <div className={`admin-layout ${!isAdmin ? 'no-sidebar' : ''}`}>
+        <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!isAdmin ? 'no-sidebar' : ''}`}>
             {isAdmin && (
                 <>
                     <div
@@ -75,6 +76,14 @@ const JudgesLayout = ({ children }) => {
                         onMouseEnter={handleMouseEnter}
                         onClick={handleMouseEnter}
                     />
+
+                    <button 
+                        className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
+                        onClick={() => setIsSidebarOpen(true)}
+                        title="Abrir menú"
+                    >
+                        <Menu size={24} color="var(--color-primary-light)" />
+                    </button>
 
                     {/* Quick Actions (Top Right) */}
                     <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>

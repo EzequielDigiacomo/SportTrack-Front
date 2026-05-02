@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       host: true, // Expone la IP de red local para acceso desde móvil/otros dispositivos
+      allowedHosts: true, // Permite túneles externos (Cloudflare, ngrok, etc.)
       proxy: {
         '/api': {
           target: apiTarget,

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft } from 'lucide-react';
+import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, Layout, Grid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
-import { PruebaService } from '../../services/ConfigService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { useToast } from '../../context/ToastContext';
-import InscripcionService from '../../services/InscripcionService';
 import './Judges.css';
 
 const getSoloApellido = (nombreCompleto) => {
@@ -22,12 +20,18 @@ const StarterDashboard = () => {
     const isAdmin = user?.rol === 'Admin';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
-    const [pruebas, setPruebas] = useState([]);
-    const [selectedPrueba, setSelectedPrueba] = useState(null);
-    const [fases, setFases] = useState([]);
+    const [fases, setFases] = useState([]); // Todas las fases del evento (Cronograma 61 pruebas)
     const [selectedFase, setSelectedFase] = useState(null);
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
+    const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
+
+    useEffect(() => {
+        // Al seleccionar un evento, podemos autoseleccionar la primera fase si no hay ninguna
+        if (fases.length > 0 && !selectedFase) {
+            // setSelectedFase(fases[0]); // Opcional
+        }
+    }, [fases]);
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -40,25 +44,18 @@ const StarterDashboard = () => {
 
     useEffect(() => {
         if (!selectedEvento) return;
-        const loadPruebas = async () => {
-            const data = await PruebaService.getByEvento(selectedEvento.id);
-            setPruebas(data);
-        };
-        loadPruebas();
-    }, [selectedEvento]);
-
-    useEffect(() => {
-        if (!selectedPrueba) return;
         const loadFases = async () => {
-            const [fs, inscs] = await Promise.all([
-                FaseService.getByEventoPrueba(selectedPrueba.id),
-                InscripcionService.getByEventoPrueba(selectedPrueba.id)
-            ]);
-
-            setFases(fs);
+            try {
+                const data = await FaseService.getByEvento(selectedEvento.id);
+                // Ordenar por nroPrueba o por id si no tiene nro
+                const sorted = data.sort((a, b) => (a.nroPrueba || a.id) - (b.nroPrueba || b.id));
+                setFases(sorted);
+            } catch (err) {
+                console.error("Error loading fases:", err);
+            }
         };
         loadFases();
-    }, [selectedPrueba]);
+    }, [selectedEvento]);
 
     useEffect(() => {
         if (!selectedFase) return;
@@ -114,18 +111,15 @@ const StarterDashboard = () => {
 
     const handleStartRace = async () => {
         if (!selectedFase) return;
-        // Eliminado confirm para largada instantánea
 
         try {
             setLoading(true);
             await timingSignalRService.connect(selectedFase.id);
             await timingSignalRService.requestStartRace(selectedFase.id);
-            // Eliminado addToast para evitar distracciones
         } catch (err) {
             console.error(err);
             if (err.message === 'Fase no encontrada') {
-                // Si la fase no existe, refrescamos la lista automáticamente
-                const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
+                const data = await FaseService.getByEvento(selectedEvento.id);
                 setFases(data);
                 setSelectedFase(null);
                 alert("⚠️ La regata fue re-sorteada. Se ha actualizado la lista, por favor selecciona la serie nuevamente.");
@@ -138,10 +132,8 @@ const StarterDashboard = () => {
     const handleStatusChange = async (resultadoId, status) => {
         if (!selectedFase) return;
         try {
-            // Primero intentamos enviar la señal
             await timingSignalRService.updateResultStatus(selectedFase.id, resultadoId, status);
             
-            // Si el envío fue exitoso, actualizamos localmente para feedback instantáneo
             setSelectedFase(prev => ({
                 ...prev,
                 resultados: prev.resultados.map(r => 
@@ -151,7 +143,6 @@ const StarterDashboard = () => {
         } catch (err) {
             console.error("Error updating status:", err);
             if (addToast) addToast("Error de conexión. Reintentando...", "error");
-            // Intentar reconectar automáticamente
             try { await timingSignalRService.connect(selectedFase.id); } catch(e) {}
         }
     };
@@ -181,52 +172,47 @@ const StarterDashboard = () => {
                         {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                     </select>
 
-                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1rem', marginBottom: '4px', display: 'block' }}>Pruebas del Cronograma:</label>
-
-                    <div className="pruebas-list">
-                        {pruebas.map(p => (
-                            <div 
-                                key={p.id} 
-                                className={`prueba-item-mini ${selectedPrueba?.id === p.id ? 'active' : ''}`}
-                                onClick={() => setSelectedPrueba(p)}
-                            >
-                                {p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo}
-                            </div>
-                        ))}
+                    <div className="sidebar-section-header">
+                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
+                        <button 
+                            className="btn-view-toggle"
+                            onClick={() => setIsCompact(!isCompact)}
+                            title={isCompact ? "Ver detalles" : "Ver cuadrícula"}
+                        >
+                            {isCompact ? <Layout size={14} /> : <Grid size={14} />}
+                        </button>
                     </div>
 
-                    <div className="fases-list">
-                        {fases.map(f => (
-                            <button 
+                    <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
+                        {fases.map((f) => (
+                            <div 
                                 key={f.id} 
-                                className={`fase-btn-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
+                                className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
                                 onClick={() => setSelectedFase(f)}
                             >
-                                {f.nombreFase}
-                            </button>
+                                {isCompact ? (
+                                    <span className="race-num">#{f.nroPrueba || f.id}</span>
+                                ) : (
+                                    <>
+                                        <span className="race-num-prefix">#{f.nroPrueba || f.id}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                {f.eventoPrueba?.prueba?.categoria?.nombre}
+                                            </span>
+                                            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                                                {f.nombreFase} - {f.eventoPrueba?.prueba?.bote?.tipo}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         ))}
-                        {fases.length > 0 && (
-                            <button 
-                                className="btn-refresh-fases"
-                                onClick={async () => {
-                                    const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
-                                    setFases(data);
-                                    if (selectedFase) {
-                                        const updated = data.find(x => x.id === selectedFase.id);
-                                        if (updated) setSelectedFase(updated);
-                                    }
-                                }}
-                                style={{ marginTop: '1rem', width: '100%', fontSize: '0.75rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#94a3b8', borderRadius: '4px' }}
-                            >
-                                🔄 Actualizar estados
-                            </button>
-                        )}
                     </div>
                 </div>
             </aside>
 
             <main className="starter-main">
-                {selectedPrueba ? (
+                {selectedFase ? (
                     <div className="race-control glass-effect">
                         <header className="race-header">
                             <div className="header-left-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
@@ -251,27 +237,15 @@ const StarterDashboard = () => {
                                     </div>
                                 )}
                                 <div className="badge-live">MODO LARGADOR</div>
-                                <h2>{selectedPrueba.prueba?.categoria?.nombre} {selectedPrueba.prueba?.bote?.tipo}</h2>
-                            </div>
-                            <div className="fase-selector">
-                                {fases.map(f => (
-                                    <button 
-                                        key={f.id} 
-                                        className={`fase-btn ${selectedFase?.id === f.id ? 'active' : ''}`}
-                                        onClick={() => setSelectedFase(f)}
-                                    >
-                                        {f.nombreFase}
-                                    </button>
-                                ))}
+                                <h2>
+                                    <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>#{selectedFase.nroPrueba}</span>
+                                    {selectedFase.eventoPrueba?.prueba?.categoria?.nombre} - {selectedFase.nombreFase}
+                                </h2>
+                                <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{selectedFase.eventoPrueba?.prueba?.bote?.tipo} | {selectedFase.eventoPrueba?.prueba?.distancia}m</p>
                             </div>
                         </header>
 
-                        {selectedFase ? (
-                            <div className="fase-details">
-                                <div className="athletes-checkin">
-                                    <h3><Users size={20} /> Atletas en Carriles</h3>
-                                    <div className="checkin-grid">
-                                        {selectedFase.resultados?.sort((a,b) => (a.carril - b.carril)).map(r => (
+                                        {([...(selectedFase.resultados || [])]).sort((a,b) => (a.carril - b.carril)).map(r => (
                                             <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
                                                 <span className="lane-badge">{r.carril}</span>
                                                 <span className="athlete-name">

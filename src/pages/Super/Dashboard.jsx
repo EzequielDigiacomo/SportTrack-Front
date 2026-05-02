@@ -18,7 +18,8 @@ import {
     Users, 
     Timer, 
     Settings, 
-    LogOut 
+    LogOut,
+    Menu
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -82,6 +83,14 @@ const SuperDashboard = () => {
                 onMouseEnter={handleMouseEnter}
                 onClick={handleMouseEnter}
             />
+
+            <button 
+                className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
+                onClick={() => setIsSidebarOpen(true)}
+                title="Abrir menú"
+            >
+                <Menu size={24} color="var(--color-primary-light)" />
+            </button>
 
             {/* Quick Actions (Top Right) */}
             <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
