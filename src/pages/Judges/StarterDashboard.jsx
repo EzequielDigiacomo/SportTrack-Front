@@ -173,14 +173,16 @@ const StarterDashboard = () => {
                 </div>
                 {!isSidebarCollapsed && (
                     <div className="selection-stack">
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
-                        <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
-                            <option value="">Seleccionar Evento...</option>
-                            {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
-                        </select>
+                        <div className="mobile-event-selector">
+                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                            <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
+                                <option value="">Seleccionar Evento...</option>
+                                {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+                            </select>
+                        </div>
 
                         <div className="sidebar-section-header">
-                            <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
+                            <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma ({fases.length}):</label>
                             <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
                                 {isCompact ? <Layout size={14} /> : <Grid size={14} />}
                             </button>
@@ -190,12 +192,14 @@ const StarterDashboard = () => {
                             {fases.map((f, index) => (
                                 <div 
                                     key={f.id} 
-                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
+                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`}
                                     onClick={() => {
                                         setSelectedFase(f);
-                                        if (window.innerWidth <= 768) setIsSidebarCollapsed(true);
+                                        // Auto-collapse on mobile selection
+                                        if (window.innerWidth <= 1000) setIsSidebarCollapsed(true);
                                     }}
                                 >
+                                    {['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
                                     <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
                                     {!isCompact && (() => {
                                         const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
@@ -218,6 +222,16 @@ const StarterDashboard = () => {
                 {selectedFase ? (
                     <div className="race-control glass-effect">
                         <header className="race-header">
+                            {!isAdmin && (
+                                <div className="header-actions-left" style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem' }}>
+                                    <button className="btn-admin-secondary" onClick={() => navigate('/jueces')} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>
+                                        <ArrowLeft size={20} />
+                                    </button>
+                                    <button className="btn-admin-danger" onClick={logout} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', cursor: 'pointer' }}>
+                                        <LogOut size={20} />
+                                    </button>
+                                </div>
+                            )}
                             <div className="header-left-actions">
                                 <div className="badge-live">MODO LARGADOR</div>
                                 {(() => {
@@ -230,21 +244,20 @@ const StarterDashboard = () => {
                                         : (selectedFase?.horaProgramada || '--:--');
                                     
                                     return (
-                                        <>
+                                        <div className="race-header-info">
                                             <h2>
-                                                <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>
+                                                <span className="race-id-prefix">
                                                     #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
                                                 </span>
-                                                {catName} - {selectedFase?.nombreFase}
+                                                {catName}
                                             </h2>
-                                            <div style={{ display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '0.85rem', marginTop: '4px' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <Clock size={14} /> {timeName}
-                                                </span>
-                                                <span>{boteName}</span>
-                                                <span>{distName}</span>
+                                            <div className="race-meta">
+                                                <span className="meta-item"><Clock size={14} /> {timeName}</span>
+                                                <span className="meta-item">{selectedFase?.nombreFase}</span>
+                                                <span className="meta-item">{boteName}</span>
+                                                <span className="meta-item">{distName}</span>
                                             </div>
-                                        </>
+                                        </div>
                                     );
                                 })()}
                             </div>
@@ -259,17 +272,16 @@ const StarterDashboard = () => {
                                             <span className="lane-badge">{r.carril}</span>
                                             <span className="athlete-name">
                                                 {r.tripulantes && r.tripulantes.length > 0 
-                                                    ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                                    : getSoloApellido(r.participanteNombre)
+                                                    ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].join(' - ')
+                                                    : r.participanteNombre
                                                 }
                                             </span>
-                                            <span className="club-tag">{r.clubSigla}</span>
+                                            <span className="club-tag-full">{r.clubNombre}</span>
                                             <div className="status-quick-actions">
                                                 <button className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}>DNS</button>
                                                 <button className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}>DNF</button>
                                                 <button className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}>DSQ</button>
                                             </div>
-                                            <CheckCircle size={18} className={`icon-ready ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'hidden' : ''}`} />
                                         </div>
                                     ))}
                                 </div>

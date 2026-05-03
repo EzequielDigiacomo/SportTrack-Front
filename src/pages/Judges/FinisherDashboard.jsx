@@ -312,19 +312,20 @@ const FinisherDashboard = () => {
                         
                         return (
                             <>
-                                <h2>
-                                    <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>
-                                        #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
-                                    </span>
-                                    {catName} - {selectedFase?.nombreFase}
-                                </h2>
-                                <div style={{ display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '0.85rem', marginTop: '4px' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Clock size={14} /> {timeName}
-                                    </span>
-                                    <span>{boteName}</span>
-                                    <span>{distName}</span>
-                                </div>
+                        <div className="race-header-info">
+                            <h2>
+                                <span className="race-id-prefix">
+                                    #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
+                                </span>
+                                {catName}
+                            </h2>
+                            <div className="race-meta">
+                                <span className="meta-item"><Clock size={14} /> {timeName}</span>
+                                <span className="meta-item">{selectedFase?.nombreFase}</span>
+                                <span className="meta-item">{boteName}</span>
+                                <span className="meta-item">{distName}</span>
+                            </div>
+                        </div>
                             </>
                         );
                     })()}
@@ -359,7 +360,12 @@ const FinisherDashboard = () => {
 
                             <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
                                 {fases.map((f, index) => (
-                                    <div key={f.id} className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`} onClick={() => { setSelectedFase(f); if (window.innerWidth <= 768) setIsSidebarCollapsed(true); }}>
+                                    <div 
+                                        key={f.id} 
+                                        className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`} 
+                                        onClick={() => { setSelectedFase(f); if (window.innerWidth <= 1000) setIsSidebarCollapsed(true); }}
+                                    >
+                                        {['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
                                         <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
                                         {!isCompact && (() => {
                                             const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
