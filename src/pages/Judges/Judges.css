@@ -710,44 +710,42 @@
         font-weight: 600;
     }
 
-    /* Timer sticky en móvil */
-    .finisher-header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background: var(--color-bg);
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding: var(--spacing-sm) var(--spacing-md);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-
-    .main-timer {
-        font-size: 3rem !important;
-        margin: 0 !important;
-    }
-
-    /* Grid de botones de carriles más grande en móvil */
+    /* Grid de botones de carriles en móvil - FORZAR 3 COLUMNAS */
     .lane-buttons-grid {
+        display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
-        gap: 10px !important;
-        margin-bottom: 1rem;
+        gap: 12px !important;
+        margin: 15px 0 !important;
     }
 
     .lane-btn {
-        height: 75px !important;
+        height: 80px !important;
+        background: rgba(59, 130, 246, 0.15) !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
     }
 
-    .lane-btn .num { font-size: 1.8rem; }
+    .lane-btn .num { font-size: 1.8rem !important; }
+    .lane-btn .label { font-size: 0.7rem !important; }
 
-    /* Ajustes de Starter */
-    .checkin-row {
-        padding: 12px !important;
+    /* Ajustar cabecera móvil */
+    .finisher-header {
+        flex-direction: column !important;
+        padding: 15px !important;
         gap: 10px !important;
     }
 
-    .btn-status-toggle {
-        padding: 8px 12px !important;
-        font-size: 0.75rem !important;
+    .header-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .main-timer {
+        font-size: 3.5rem !important;
+        width: 100%;
+        text-align: center;
+        margin: 10px 0 !important;
     }
 }
 
