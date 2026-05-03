@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Timer, CheckCircle, Clock, Users, XCircle, RefreshCw, Save, 
-    Play, Activity, Search, LogOut, ArrowLeft, Layout, Grid
+    Play, Activity, Search, LogOut, ArrowLeft, ArrowRight, Layout, Grid
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, Layout, Grid } from 'lucide-react';
+import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, ArrowRight, Layout, Grid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
