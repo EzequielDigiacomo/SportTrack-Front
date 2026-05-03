@@ -69,8 +69,37 @@ const FinisherDashboard = () => {
             });
             setFases(sorted);
         };
-        loadFases();
+        if (selectedEvento) {
+            loadFases();
+            localStorage.setItem('finisher_event_id', selectedEvento.id);
+        } else {
+            localStorage.removeItem('finisher_event_id');
+            localStorage.removeItem('finisher_fase_id');
+        }
     }, [selectedEvento]);
+
+    useEffect(() => {
+        if (selectedFase) {
+            localStorage.setItem('finisher_fase_id', selectedFase.id);
+        }
+    }, [selectedFase]);
+
+    // Recuperar estado al cargar
+    useEffect(() => {
+        const savedEventId = localStorage.getItem('finisher_event_id');
+        if (savedEventId && eventos.length > 0) {
+            const ev = eventos.find(e => e.id === parseInt(savedEventId));
+            if (ev) setSelectedEvento(ev);
+        }
+    }, [eventos]);
+
+    useEffect(() => {
+        const savedFaseId = localStorage.getItem('finisher_fase_id');
+        if (savedFaseId && fases.length > 0) {
+            const f = fases.find(x => x.id === parseInt(savedFaseId));
+            if (f) setSelectedFase(f);
+        }
+    }, [fases]);
 
     useEffect(() => {
         if (!selectedFase) {
