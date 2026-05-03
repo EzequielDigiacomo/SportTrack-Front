@@ -62,8 +62,37 @@ const StarterDashboard = () => {
                 console.error("Error loading fases:", err);
             }
         };
-        loadFases();
+        if (selectedEvento) {
+            loadFases();
+            localStorage.setItem('starter_event_id', selectedEvento.id);
+        } else {
+            localStorage.removeItem('starter_event_id');
+            localStorage.removeItem('starter_fase_id');
+        }
     }, [selectedEvento]);
+
+    useEffect(() => {
+        if (selectedFase) {
+            localStorage.setItem('starter_fase_id', selectedFase.id);
+        }
+    }, [selectedFase]);
+
+    // Recuperar estado al cargar
+    useEffect(() => {
+        const savedEventId = localStorage.getItem('starter_event_id');
+        if (savedEventId && eventos.length > 0) {
+            const ev = eventos.find(e => e.id === parseInt(savedEventId));
+            if (ev) setSelectedEvento(ev);
+        }
+    }, [eventos]);
+
+    useEffect(() => {
+        const savedFaseId = localStorage.getItem('starter_fase_id');
+        if (savedFaseId && fases.length > 0) {
+            const f = fases.find(x => x.id === parseInt(savedFaseId));
+            if (f) setSelectedFase(f);
+        }
+    }, [fases]);
 
     useEffect(() => {
         if (!selectedFase) return;

@@ -1092,7 +1092,51 @@
     color: white;
 }
 
-.btn-status-toggle.active.dns { background: #64748b; color: white; border-color: #94a3b8; }
+.quick-nav-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 2rem;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.btn-nav-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-nav-step:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-nav-step:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.nav-index {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .btn-nav-step span { display: none; }
+    .btn-nav-step { padding: 10px; }
+}
 .btn-status-toggle.active.dnf { background: #f59e0b; color: white; border-color: #fbbf24; }
 .btn-status-toggle.active.dsq { background: #ef4444; color: white; border-color: #f87171; }
 
