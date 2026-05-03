@@ -382,22 +382,6 @@ const FinisherDashboard = () => {
                             </div>
                         </div>
                     )}
-                    {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
-                        <div className="pendientes-panel glass-effect fade-in mt-md">
-                            <h3 style={{ color: '#fbbf24' }}>Atletas por Clasificar</h3>
-                            <div className="pendientes-list">
-                                {pendientes.map(p => (
-                                    <div key={p.id} className="pendiente-item">
-                                        <span className="p-lane">{p.carril}</span>
-                                        <div className="p-info">
-                                            <span className="p-name">{getSoloApellido(p.participanteNombre)}</span>
-                                            <button className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </aside>
 
                 <main className="finisher-main glass-effect">
@@ -464,6 +448,23 @@ const FinisherDashboard = () => {
                                 ))}
                             </div>
                         </div>
+
+                        {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
+                            <div className="pendientes-panel glass-effect fade-in" style={{ marginTop: '2rem', borderTop: '2px solid rgba(251, 191, 36, 0.3)', paddingTop: '1.5rem' }}>
+                                <h3 style={{ color: '#fbbf24', fontSize: '1rem', marginBottom: '1rem' }}>Atletas por Clasificar</h3>
+                                <div className="pendientes-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {pendientes.map(p => (
+                                        <div key={p.id} className="pendiente-item">
+                                            <span className="p-lane">{p.carril}</span>
+                                            <div className="p-info">
+                                                <span className="p-name">{p.participanteNombre}</span>
+                                                <button className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <footer className="finisher-actions">
