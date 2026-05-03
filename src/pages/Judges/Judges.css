@@ -1178,7 +1178,66 @@
     cursor: not-allowed;
 }
 
-/* Compact Check-in Rows */
+/* Global Race Alert Banner */
+.global-race-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    padding: 10px;
+    background: linear-gradient(to right, #b91c1c, #ef4444);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    animation: slide-down 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alert-content {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: white;
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+.btn-jump {
+    background: white;
+    color: #ef4444;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-weight: 900;
+    font-size: 0.75rem;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+
+.btn-jump:hover {
+    transform: scale(1.05);
+}
+
+.btn-close-alert {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+@keyframes slide-down {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+    .alert-content { flex-direction: column; gap: 8px; text-align: center; }
+    .btn-jump { width: 100%; }
+}
 .checkin-row {
     display: flex;
     align-items: center;

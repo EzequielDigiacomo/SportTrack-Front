@@ -123,6 +123,14 @@ class TimingSignalRService {
         this.connection.on("RaceFinished", callback);
     }
 
+    onGlobalRaceStarted(callback) {
+        if (!this.connection) return;
+        this.connection.on("GlobalRaceStarted", (faseId, serverTime) => {
+            console.log(`Global Event: Race (ID: ${faseId}) started at ${serverTime}`);
+            callback({ faseId, serverTime });
+        });
+    }
+
     onRaceReset(callback) {
         if (!this.connection) return;
         this.connection.on("RaceReset", callback);

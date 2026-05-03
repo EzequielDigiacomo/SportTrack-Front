@@ -47,6 +47,8 @@ const FinisherDashboard = () => {
     const [loading, setLoading] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
+    const { isAdmin } = user?.rol === 'Admin';
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -155,6 +157,13 @@ const FinisherDashboard = () => {
                     setResultados(prev => prev.map(r => 
                         String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
                     ));
+                });
+                
+                timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
+                    if (selectedFase && faseId !== selectedFase.id) {
+                        setGlobalAlert({ faseId, serverTime });
+                        setTimeout(() => setGlobalAlert(null), 10000);
+                    }
                 });
             } catch (err) {
                 console.error("SignalR Error:", err);
@@ -316,7 +325,30 @@ const FinisherDashboard = () => {
     const pendientes = resultados.filter(r => !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente'));
 
     return (
-        <div className="finisher-dashboard fade-in">
+        <div className={`finisher-dashboard ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            {globalAlert && (
+                <div className="global-race-alert fade-in">
+                    <div className="alert-content">
+                        <Activity className="pulse" size={20} />
+                        <span>¡Una prueba acaba de LARGAR!</span>
+                        <button className="btn-jump" onClick={() => {
+                            const target = fases.find(f => f.id === globalAlert.faseId);
+                            if (target) {
+                                setSelectedFase(target);
+                                // Sincronización inmediata del reloj
+                                const start = new Date(globalAlert.serverTime);
+                                setStartTime(start);
+                                setIsRaceRunning(true);
+                            }
+                            setGlobalAlert(null);
+                        }}>
+                            IR A LA PRUEBA
+                        </button>
+                        <button className="btn-close-alert" onClick={() => setGlobalAlert(null)}>×</button>
+                    </div>
+                </div>
+            )}
+            
             <header className="finisher-header glass-effect">
                 <div className="header-info">
                     {!isAdmin && (
