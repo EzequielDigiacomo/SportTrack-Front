@@ -48,7 +48,6 @@ const FinisherDashboard = () => {
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
-    const isAdmin = user?.rol === 'Admin';
     const { addToast } = useToast();
 
     useEffect(() => {
