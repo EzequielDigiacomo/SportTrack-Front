@@ -33,7 +33,14 @@ function Navbar() {
                         <div className="navbar-actions">
                             <button 
                                 className="btn-icon-nav" 
-                                onClick={() => navigate(user?.rol === 'Admin' ? '/super' : '/club')}
+                                onClick={() => {
+                                    if (!user?.rol) { navigate('/'); return; }
+                                    const role = user.rol.trim().toLowerCase();
+                                    if (role === 'admin') navigate('/super');
+                                    else if (role === 'club') navigate('/club');
+                                    else if (role === 'largador' || role === 'cronometrista') navigate('/jueces');
+                                    else navigate('/');
+                                }}
                                 title="Mi Dashboard"
                             >
                                 <User size={22} color="var(--color-primary)" />

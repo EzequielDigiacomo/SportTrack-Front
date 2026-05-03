@@ -1,14 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Flag, Trophy, RefreshCw, Save, HelpCircle, XCircle, LogOut, ArrowLeft, Layout, Grid } from 'lucide-react';
+import { 
+    Timer, CheckCircle, Clock, Users, XCircle, RefreshCw, Save, 
+    Play, Activity, Search, LogOut, ArrowLeft, Layout, Grid
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import ResultadoService from '../../services/ResultadoService';
-import { PruebaService } from '../../services/ConfigService';
+import { useAlert } from '../../hooks/useAlert';
 import timingSignalRService from '../../services/TimingSignalRService';
+
+const CATEGORIA_NAMES = {
+    1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (14-15 años)', 
+    5: 'Junior (16-17 años)', 6: 'Sub-23 (18-22 años)', 7: 'Senior (18-35 años)', 8: 'Master A (40-45 años)', 
+    9: 'Master B (46-50 años)', 10: 'Master C (50+ años)'
+};
+const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
+const DISTANCIA_NAMES = {
+    1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m', 6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 
+    10: '5000m', 11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
+};
 import { useToast } from '../../context/ToastContext';
-import InscripcionService from '../../services/InscripcionService';
 import './Judges.css';
 
 const getSoloApellido = (nombreCompleto) => {
@@ -23,87 +36,18 @@ const FinisherDashboard = () => {
     const isAdmin = user?.rol === 'Admin';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
-    const [fases, setFases] = useState([]); // Todas las fases (Cronograma completo)
+    const [fases, setFases] = useState([]);
     const [selectedFase, setSelectedFase] = useState(null);
     const [resultados, setResultados] = useState([]);
-    const [startTime, setStartTime] = useState(null);
-    const [elapsedTime, setElapsedTime] = useState(0);
+    const [rawTimes, setRawTimes] = useState([]);
     const [isRaceRunning, setIsRaceRunning] = useState(false);
-    const [rawTimes, setRawTimes] = useState([]); // Tiempos capturados sin asignar (Photo-finish)
-    const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
-    const { addToast } = useToast();
-    
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [startTime, setStartTime] = useState(null);
     const timerRef = useRef(null);
-
-    // Manejo de teclado para cronometraje rápido
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (!isRaceRunning) return;
-
-            // Barra espaciadora: Captura rápida (Photo-finish)
-            if (e.code === 'Space') {
-                e.preventDefault();
-                handleGenericFinish();
-            }
-
-            // Números 1-9: Carriles directos
-            const num = parseInt(e.key);
-            if (num >= 1 && num <= 9) {
-                handleLaneFinish(num);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isRaceRunning, elapsedTime, resultados]);
-
-    const handleLaneFinish = (laneNumber) => {
-        const resultado = resultados.find(r => r.carril === laneNumber);
-        if (resultado && !resultado.tiempoOficial) {
-            handleRecordFinish(resultado.id);
-        }
-    };
-
-    const handleGenericFinish = () => {
-        const newTime = {
-            id: Date.now(),
-            time: formatTimer(elapsedTime),
-            ms: elapsedTime
-        };
-        
-        const newRawTimes = [...rawTimes, newTime];
-        setRawTimes(newRawTimes);
-
-        // Verificar si la suma de asignados + dudas completa la serie
-        const asignadosCount = resultados.filter(r => r.tiempoOficial).length;
-        if (asignadosCount + newRawTimes.length >= resultados.length) {
-            stopLocalTimer();
-        }
-    };
-
-    const assignRawTime = (rawTimeObj, resultadoId) => {
-        setResultados(prev => {
-            const updated = prev.map(r => 
-                r.id === resultadoId ? { ...r, tiempoOficial: rawTimeObj.time, msLlegada: rawTimeObj.ms, status: 'finished' } : r
-            );
-
-            const todosTerminaron = updated.every(r => r.tiempoOficial);
-            if (todosTerminaron) {
-                stopLocalTimer();
-            }
-
-            return updated;
-        });
-        
-        // Emitir vía SignalR para monitoreo en vivo
-        timingSignalRService.sendTime(selectedFase.id, resultadoId, rawTimeObj.time, rawTimeObj.ms);
-        
-        setRawTimes(prev => prev.filter(t => t.id !== rawTimeObj.id));
-    };
-
-    const removeRawTime = (timeId) => {
-        setRawTimes(prev => prev.filter(t => t.id !== timeId));
-    };
+    const [loading, setLoading] = useState(false);
+    const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { addToast } = useToast();
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -112,28 +56,21 @@ const FinisherDashboard = () => {
             if (data.length > 0) setSelectedEvento(data[0]);
         };
         loadEventos();
-        return () => clearInterval(timerRef.current);
     }, []);
 
     useEffect(() => {
         if (!selectedEvento) return;
         const loadFases = async () => {
-            try {
-                const data = await FaseService.getByEvento(selectedEvento.id);
-                const sorted = data.sort((a, b) => (a.nroPrueba || a.id) - (b.nroPrueba || b.id));
-                setFases(sorted);
-            } catch (err) {
-                console.error("Error loading event phases:", err);
-            }
+            const data = await FaseService.getByEvento(selectedEvento.id);
+            const sorted = data.sort((a, b) => {
+                const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
+                const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
+                return dateA.localeCompare(dateB);
+            });
+            setFases(sorted);
         };
         loadFases();
     }, [selectedEvento]);
-
-    const parseDate = (dateStr) => {
-        if (!dateStr) return null;
-        if (dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
-        return new Date(dateStr + 'Z');
-    };
 
     useEffect(() => {
         if (!selectedFase) {
@@ -147,20 +84,17 @@ const FinisherDashboard = () => {
         const setupSignalR = async () => {
             try {
                 const data = await ResultadoService.getByFase(selectedFase.id);
-                const formattedData = data.map(r => {
-                    const tiempoLimpio = r.tiempoOficial ? parseBackendTime(r.tiempoOficial) : null;
-                    return {
-                        ...r,
-                        tiempoOficial: tiempoLimpio,
-                        msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
-                        status: r.tiempoOficial ? 'finished' : 'pending'
-                    };
-                });
+                const formattedData = data.map(r => ({
+                    ...r,
+                    tiempoOficial: r.tiempoOficial,
+                    msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
+                    status: r.tiempoOficial ? 'finished' : 'pending'
+                }));
                 
-                setResultados(formattedData.sort((a,b) => (a.carril - b.carril)));
+                setResultados(formattedData.sort((a,b) => a.carril - b.carril));
                 
                 if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-                    const parsed = parseDate(selectedFase.fechaHoraInicioReal);
+                    const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
                     if (!isNaN(parsed)) startLocalTimer(parsed);
                 } else {
                     stopLocalTimer();
@@ -170,7 +104,7 @@ const FinisherDashboard = () => {
 
                 timingSignalRService.onRaceStarted((id, sTime) => {
                     if (id.toString() === selectedFase.id.toString()) {
-                        const parsed = parseDate(sTime);
+                        const parsed = new Date(sTime).getTime();
                         if (!isNaN(parsed)) startLocalTimer(parsed);
                     }
                 });
@@ -189,22 +123,12 @@ const FinisherDashboard = () => {
                 });
 
                 timingSignalRService.onResultStatusUpdated((resId, status) => {
-                    setResultados(prev => {
-                        const updated = prev.map(r => 
-                            String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
-                        );
-                        
-                        const asignadosCount = updated.filter(r => r.tiempoOficial).length;
-                        const activosCount = updated.filter(r => !r.estadoCanto || r.estadoCanto === 'Pendiente').length;
-                        if (asignadosCount >= activosCount && activosCount > 0) {
-                            stopLocalTimer();
-                        }
-                        
-                        return updated;
-                    });
+                    setResultados(prev => prev.map(r => 
+                        String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
+                    ));
                 });
             } catch (err) {
-                console.error("Error setting up SignalR:", err);
+                console.error("SignalR Error:", err);
             }
         };
 
@@ -212,85 +136,26 @@ const FinisherDashboard = () => {
 
         return () => {
             timingSignalRService.disconnect();
+            stopLocalTimer();
         };
     }, [selectedFase]);
 
-    const startLocalTimer = (sTime) => {
-        setStartTime(sTime);
-        setIsRaceRunning(true);
-        clearInterval(timerRef.current);
-        timerRef.current = setInterval(() => {
-            const now = timingSignalRService.getSyncedNow();
-            setElapsedTime(now - sTime);
-        }, 10);
-    };
+    // Detener timer automáticamente cuando todos han llegado, tienen estado (DSQ, DNF, etc)
+    // o están cubiertos por una duda capturada en rawTimes
+    useEffect(() => {
+        if (isRaceRunning && resultados.length > 0) {
+            // Cuántos atletas siguen sin tiempo Y sin estado especial
+            const stillPending = resultados.filter(r =>
+                !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente')
+            ).length;
 
-    const stopLocalTimer = () => {
-        setIsRaceRunning(false);
-        clearInterval(timerRef.current);
-    };
-
-    const parseBackendTime = (timeStr) => {
-        if (!timeStr || timeStr === '') return '';
-        try {
-            const parts = timeStr.split(':');
-            if (parts.length === 3) {
-                const [h, m, sFull] = parts;
-                const [s, ms] = (sFull || '00.000').split('.');
-                const msShort = (ms || '0').substring(0, 3).padEnd(3, '0');
-                const totalMin = (parseInt(h) * 60) + parseInt(m);
-                return `${String(totalMin).padStart(2, '0')}:${s.padStart(2, '0')}.${msShort}`;
-            }
-            return timeStr;
-        } catch { return timeStr; }
-    };
-
-    const formatTimer = (ms) => {
-        const totalSeconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        const milliseconds = Math.floor(ms % 1000);
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
-    };
-
-    const parseTimeToMs = (timeStr) => {
-        if (!timeStr) return 0;
-        try {
-            const parts = timeStr.split(':');
-            if (parts.length === 2) {
-                const [m, sFull] = parts;
-                const [s, ms] = sFull.split('.');
-                return (parseInt(m) * 60000) + (parseInt(s) * 1000) + parseInt((ms || '0').substring(0, 3).padEnd(3, '0'));
-            }
-            if (parts.length === 3) {
-                const [h, m, sFull] = parts;
-                const [s, ms] = sFull.split('.');
-                return (parseInt(h) * 3600000) + (parseInt(m) * 60000) + (parseInt(s) * 1000) + parseInt((ms || '0').substring(0, 3).padEnd(3, '0'));
-            }
-        } catch { return 0; }
-        return 0;
-    };
-
-    const handleRecordFinish = (resultadoId) => {
-        if (!isRaceRunning) return;
-        const finalTime = formatTimer(elapsedTime);
-        const currentMs = elapsedTime;
-        
-        setResultados(prev => {
-            const updated = prev.map(r => r.id === resultadoId ? { ...r, tiempoOficial: finalTime, msLlegada: currentMs, status: 'finished' } : r);
-            
-            const asignadosCount = updated.filter(r => r.tiempoOficial).length;
-            const activosCount = updated.filter(r => !r.estadoCanto || r.estadoCanto === 'Pendiente').length;
-
-            if (asignadosCount + rawTimes.length >= activosCount) {
+            // Si la cantidad de tiempos crudos (dudas) cubre a todos los pendientes → parar
+            if (stillPending <= rawTimes.length) {
+                console.log(`Auto-stop: ${stillPending} pendiente(s), ${rawTimes.length} duda(s) capturada(s).`);
                 stopLocalTimer();
             }
-            
-            return updated;
-        });
-
-        timingSignalRService.sendTime(selectedFase.id, resultadoId, finalTime, currentMs);
-    };
+        }
+    }, [resultados, rawTimes, isRaceRunning]);
 
     const parseTimeToTimeSpan = (timeStr) => {
         if (!timeStr || timeStr.trim() === '') return null;
@@ -301,75 +166,168 @@ const FinisherDashboard = () => {
                 const [sec, ms] = (secStr || '0').split('.');
                 const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
                 return `00:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
+            } else if (parts.length === 3) {
+                const [hr, min, secStr] = parts;
+                const [sec, ms] = (secStr || '0').split('.');
+                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
+                return `${String(parseInt(hr)).padStart(2,'0')}:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
             }
         } catch (e) {}
-        return timeStr;
+        return null;
+    };
+
+    const parseTimeToMs = (timeStr) => {
+        if (!timeStr) return 0;
+        const [hms, msPart] = timeStr.split('.');
+        const [h, m, s] = hms.split(':').map(Number);
+        const ms = Number((msPart || '0').padEnd(3, '0'));
+        return (h * 3600000) + (m * 60000) + (s * 1000) + ms;
+    };
+
+    const formatTimer = (ms) => {
+        const m = Math.floor((ms % 3600000) / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        const mil = ms % 1000;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(mil).padStart(3, '0')}`;
+    };
+
+    const startLocalTimer = (sTime) => {
+        setIsRaceRunning(true);
+        setStartTime(sTime);
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => {
+            // Usar el reloj sincronizado con el servidor para máxima precisión
+            setElapsedTime(timingSignalRService.getSyncedNow().getTime() - sTime);
+        }, 37);
+    };
+
+    const stopLocalTimer = () => {
+        setIsRaceRunning(false);
+        if (timerRef.current) clearInterval(timerRef.current);
+    };
+
+    const handleLaneFinish = (laneNum) => {
+        const res = resultados.find(r => r.carril === laneNum);
+        if (!res) return;
+        handleRecordFinish(res.id);
+    };
+
+    const handleRecordFinish = async (resultadoId) => {
+        if (!isRaceRunning) return;
+        // getSyncedNow() aplica el offset calculado con el servidor para precisión máxima
+        const now = timingSignalRService.getSyncedNow().getTime();
+        const diff = now - startTime;
+        const formatted = formatTimer(diff);
+
+        setResultados(prev => prev.map(r => 
+            r.id === resultadoId ? { ...r, tiempoOficial: formatted, msLlegada: diff, status: 'finished' } : r
+        ));
+
+        try {
+            await timingSignalRService.sendTime(selectedFase.id, resultadoId, formatted, diff);
+        } catch (err) {
+            console.error("Error sending time:", err);
+        }
+    };
+
+    const recordDoubt = () => {
+        if (!isRaceRunning) return;
+        const now = timingSignalRService.getSyncedNow().getTime();
+        const diff = now - startTime;
+        const time = formatTimer(diff);
+        setRawTimes(prev => [...prev, { id: now, time, ms: diff, type: 'duda' }]);
+    };
+
+    const removeRawTime = (id) => {
+        setRawTimes(prev => prev.filter(t => t.id !== id));
+    };
+
+    const assignRawTime = async (raw, resId) => {
+        setResultados(prev => prev.map(r => 
+            r.id === resId ? { ...r, tiempoOficial: raw.time, msLlegada: raw.ms, status: 'finished' } : r
+        ));
+        setRawTimes(prev => prev.filter(t => t.id !== raw.id));
+        try {
+            await timingSignalRService.sendTime(selectedFase.id, resId, raw.time, raw.ms);
+        } catch (err) {
+            addToast("Error al asignar tiempo", "error");
+        }
     };
 
     const handleSaveResults = async () => {
+        if (!selectedFase) return;
+        setLoading(true);
         try {
             const dataToSave = resultados
                 .filter(r => r.tiempoOficial || (r.estadoCanto && r.estadoCanto !== 'Pendiente'))
                 .map(r => ({
                     id: r.id,
-                    tiempoOficial: r.tiempoOficial ? parseTimeToTimeSpan(r.tiempoOficial) : null,
-                    estado: (r.estadoCanto && r.estadoCanto !== 'Pendiente') 
-                        ? (r.estadoCanto === 'DSQ' ? 'Descalificado' : r.estadoCanto) 
-                        : "Preliminar"
+                    tiempoOficial: parseTimeToTimeSpan(r.tiempoOficial),
+                    estadoCanto: r.estadoCanto || 'Pendiente'
                 }));
-            
+
             await ResultadoService.batchUpdate(dataToSave);
-            await FaseService.enviarARevision(selectedFase.id);
-            window.location.reload(); 
+            addToast("Resultados enviados con éxito", "success");
         } catch (err) {
-            console.error("Error saving results:", err);
+            addToast("Error al guardar resultados", "error");
+        } finally {
+            setLoading(false);
         }
     };
 
-    const timedArrivals = [
-        ...resultados
-            .filter(r => r.tiempoOficial)
-            .map(r => ({ type: 'atleta', ...r, sortMs: r.msLlegada })),
-        ...rawTimes.map(rt => ({ type: 'duda', ...rt, sortMs: rt.ms }))
-    ].sort((a, b) => a.sortMs - b.sortMs);
-
-    const statusOnly = resultados.filter(r => !r.tiempoOficial && r.estadoCanto && r.estadoCanto !== 'Pendiente');
-
-    const arrivals = isRaceRunning 
-        ? timedArrivals 
-        : [...timedArrivals, ...statusOnly.map(r => ({ type: 'atleta', ...r, sortMs: 999999999 }))];
+    const arribosOrdenados = [...resultados.filter(r => r.tiempoOficial).map(r => ({
+        id: r.id,
+        time: r.tiempoOficial,
+        ms: r.msLlegada,
+        label: `Carril ${r.carril}`,
+        type: 'atleta',
+        participante: r.participanteNombre
+    })), ...rawTimes].sort((a, b) => a.ms - b.ms);
 
     const pendientes = resultados.filter(r => !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente'));
 
     return (
         <div className="finisher-dashboard fade-in">
             <header className="finisher-header glass-effect">
-                <div className="header-left">
+                <div className="header-info">
                     {!isAdmin && (
-                        <div style={{ display: 'flex', gap: '0.8rem', marginRight: '1.5rem' }}>
-                            <button 
-                                className="btn-admin-secondary" 
-                                onClick={() => navigate('/jueces')} 
-                                title="Volver al Menú de Jueces"
-                                style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }}
-                            >
+                        <div className="header-actions-left" style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem' }}>
+                            <button className="btn-admin-secondary" onClick={() => navigate('/jueces')} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }}>
                                 <ArrowLeft size={20} />
                             </button>
-                            <button 
-                                className="btn-admin-danger" 
-                                onClick={logout} 
-                                title="Cerrar Sesión"
-                                style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-                            >
+                            <button className="btn-admin-danger" onClick={logout} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                                 <LogOut size={20} />
                             </button>
                         </div>
                     )}
                     <div className="badge-live blue">MODO CRONOMETRISTA</div>
-                    <h2>
-                        <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>#{selectedFase?.nroPrueba}</span>
-                        {selectedFase?.eventoPrueba?.prueba?.categoria?.nombre} - {selectedFase?.nombreFase}
-                    </h2>
+                    {(() => {
+                        const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
+                        const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (selectedFase?.categoriaNombre || 'Sin Categoría');
+                        const boteName = p ? (BOTE_NAMES[p.bote?.id] || p.bote?.nombre) : (selectedFase?.boteTipo || selectedFase?.tipoBote || 'Sin Bote');
+                        const distName = p ? (DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm') : (selectedFase?.distancia ? selectedFase.distancia + 'm' : '0m');
+                        const timeName = selectedFase?.fechaHoraProgramada && selectedFase?.fechaHoraProgramada.includes('T') 
+                            ? selectedFase.fechaHoraProgramada.split('T')[1].substring(0, 5) 
+                            : (selectedFase?.horaProgramada || '--:--');
+                        
+                        return (
+                            <>
+                                <h2>
+                                    <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>
+                                        #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
+                                    </span>
+                                    {catName} - {selectedFase?.nombreFase}
+                                </h2>
+                                <div style={{ display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '0.85rem', marginTop: '4px' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Clock size={14} /> {timeName}
+                                    </span>
+                                    <span>{boteName}</span>
+                                    <span>{distName}</span>
+                                </div>
+                            </>
+                        );
+                    })()}
                 </div>
                 <div className={`main-timer ${isRaceRunning ? 'running' : ''}`}>
                     {formatTimer(elapsedTime)}
@@ -377,204 +335,137 @@ const FinisherDashboard = () => {
             </header>
 
             <div className="finisher-layout">
-                <aside className="finisher-sidebar glass-effect">
-                    <div className="selection-group">
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
-                        <select 
-                            value={selectedEvento?.id || ''} 
-                            onChange={(e) => {
-                                const ev = eventos.find(x => x.id === parseInt(e.target.value));
-                                setSelectedEvento(ev);
-                                setSelectedFase(null);
-                            }}
-                            className="mb-sm"
-                        >
-                            <option value="">Seleccionar Evento...</option>
-                            {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
-                        </select>
-
-                        <div className="sidebar-section-header">
-                            <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
-                            <button 
-                                className="btn-view-toggle"
-                                onClick={() => setIsCompact(!isCompact)}
-                                title={isCompact ? "Ver detalles" : "Ver cuadrícula"}
-                            >
-                                {isCompact ? <Layout size={14} /> : <Grid size={14} />}
-                            </button>
-                        </div>
-
-                        <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`} style={{ marginBottom: '1rem' }}>
-                            {fases.map((f) => (
-                                <div 
-                                    key={f.id} 
-                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
-                                    onClick={() => setSelectedFase(f)}
-                                >
-                                    {isCompact ? (
-                                        <span className="race-num">#{f.nroPrueba || f.id}</span>
-                                    ) : (
-                                        <>
-                                            <span className="race-num-prefix">#{f.nroPrueba || f.id}</span>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                    {f.eventoPrueba?.prueba?.categoria?.nombre}
-                                                </span>
-                                                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                                                    {f.nombreFase} - {f.eventoPrueba?.prueba?.bote?.tipo}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                <aside className={`finisher-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ margin: 0 }}><Clock size={18} /> Cronograma</h3>
+                        <button className="btn-collapse" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                            {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
+                        </button>
                     </div>
+                    {!isSidebarCollapsed && (
+                        <div className="selection-stack">
+                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                            <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
+                                <option value="">Seleccionar Evento...</option>
+                                {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+                            </select>
 
+                            <div className="sidebar-section-header">
+                                <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Pruebas ({fases.length}):</label>
+                                <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
+                                    {isCompact ? <Layout size={14} /> : <Grid size={14} />}
+                                </button>
+                            </div>
+
+                            <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
+                                {fases.map((f, index) => (
+                                    <div key={f.id} className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`} onClick={() => { setSelectedFase(f); if (window.innerWidth <= 768) setIsSidebarCollapsed(true); }}>
+                                        <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
+                                        {!isCompact && (() => {
+                                            const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
+                                            const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (f.categoriaNombre || 'Sin Categoría');
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{catName}</span>
+                                                    <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{f.nombreFase}</span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
-                        <div className="pendientes-panel glass-effect fade-in">
+                        <div className="pendientes-panel glass-effect fade-in mt-md">
                             <h3 style={{ color: '#fbbf24' }}>Atletas por Clasificar</h3>
                             <div className="pendientes-list">
                                 {pendientes.map(p => (
                                     <div key={p.id} className="pendiente-item">
                                         <span className="p-lane">{p.carril}</span>
                                         <div className="p-info">
-                                            <span className="p-name">
-                                                {p.tripulantes && p.tripulantes.length > 0 
-                                                    ? [p.participanteNombre, ...p.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                                    : getSoloApellido(p.participanteNombre)
-                                                }
-                                            </span>
-                                            <button 
-                                                className="btn-assign-quick"
-                                                onClick={() => {
-                                                    if (rawTimes.length > 0) {
-                                                        assignRawTime(rawTimes[0], p.id);
-                                                    } else {
-                                                        handleRecordFinish(p.id);
-                                                    }
-                                                }}
-                                            >
-                                                {rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}
-                                            </button>
+                                            <span className="p-name">{getSoloApellido(p.participanteNombre)}</span>
+                                            <button className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            {rawTimes.length > 0 && (
-                                <p style={{ fontSize: '0.7rem', marginTop: '10px', color: '#fbbf24' }}>
-                                    Haga clic en el atleta para asignarle el tiempo #{1} de la grilla.
-                                </p>
-                            )}
                         </div>
                     )}
                 </aside>
 
                 <main className="finisher-main glass-effect">
-                    {/* Controles Rápidos */}
-                    <div className="quick-controls-panel mb-lg">
+                    <div className="quick-controls-panel">
                         <div className="lane-buttons-grid">
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
                                 const res = resultados.find(r => r.carril === num);
                                 const isOccupied = !!res;
                                 const isFinished = res?.tiempoOficial;
                                 const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
-                                
                                 return (
-                                    <button 
-                                        key={num}
-                                        className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`}
-                                        onClick={() => handleLaneFinish(num)}
-                                        disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}
-                                    >
+                                    <button key={num} className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}>
                                         <span className="num">{num}</span>
-                                        <span className="label">
-                                            {isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}
-                                        </span>
+                                        <span className="label">{isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}</span>
                                     </button>
                                 );
                             })}
                         </div>
-                        
                         <button 
-                            className={`btn-photo-finish ${isRaceRunning ? 'active' : ''}`}
-                            onClick={handleGenericFinish}
+                            className="btn-doubt" 
+                            onClick={recordDoubt} 
                             disabled={!isRaceRunning}
-                            style={{ background: '#fbbf24', color: '#000' }}
+                            style={{
+                                width: '100%',
+                                padding: '15px',
+                                marginTop: '15px',
+                                background: isRaceRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
+                                color: isRaceRunning ? 'white' : 'var(--color-text-muted)',
+                                border: isRaceRunning ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                fontSize: '1.1rem',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '10px',
+                                cursor: isRaceRunning ? 'pointer' : 'not-allowed',
+                                boxShadow: isRaceRunning ? '0 4px 15px rgba(245, 158, 11, 0.3)' : 'none',
+                                transition: 'all 0.2s',
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px'
+                            }}
                         >
-                            <HelpCircle size={24} />
-                            <span>REGISTRAR DUDA (?) [Espacio]</span>
+                            <Activity size={24} /> <span>DUDA (?) [Espacio]</span>
                         </button>
-                    </div>
 
-                    {/* Grilla Dinámica de Orden de Llegada */}
-                    <div className="arrivals-board">
-                        <div className="board-header">
-                            <span className="bh-pos">POS</span>
-                            <span className="bh-lane">CARRIL</span>
-                            <span className="bh-name">COMPETIDOR / ESTADO</span>
-                            <span className="bh-time">TIEMPO</span>
-                        </div>
-                        
-                        {arrivals.length === 0 ? (
-                            <div className="empty-board">
-                                <Flag size={48} />
-                                <p>{isRaceRunning ? 'Esperando llegadas...' : 'Seleccione una fase para comenzar'}</p>
-                            </div>
-                        ) : (
-                            <div className="arrivals-list">
-                                {arrivals.map((arrival, index) => (
-                                    <div key={arrival.id} className={`arrival-row pos-${index + 1} ${arrival.type}`}>
-                                        <div className="arrival-pos">{index + 1}º</div>
-                                        <div className="arrival-lane">{arrival.type === 'atleta' ? arrival.carril : '?'}</div>
-                                        <div className="arrival-details">
-                                            {arrival.type === 'atleta' ? (
-                                                <>
-                                                    <span className="arr-name">
-                                                        {arrival.tripulantes && arrival.tripulantes.length > 0 
-                                                            ? [arrival.participanteNombre, ...arrival.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                                            : getSoloApellido(arrival.participanteNombre)
-                                                        }
-                                                    </span>
-                                                    <span className="arr-club">{arrival.clubNombre}</span>
-                                                </>
-                                            ) : (
-                                                <div className="doubt-indicator">
-                                                    <HelpCircle size={14} />
-                                                    <span>REVISIÓN PHOTOFINISH PENDIENTE</span>
-                                                    <div className="assign-hint">Asigna este tiempo a un atleta de la lista lateral</div>
-                                                </div>
-                                            )}
+                        <div className="arribos-list">
+                            <h3><Timer size={18} /> Arribos</h3>
+                            <div className="arribos-grid">
+                                {arribosOrdenados.map((arrival, idx) => (
+                                    <div key={arrival.id} className={`arrival-card ${arrival.type}`}>
+                                        <div className="a-rank">{idx + 1}°</div>
+                                        <div className="a-body">
+                                            <span className="a-label">
+                                                {arrival.type === 'duda' ? '⚠ DUDA' : (arrival.label || `Carril ${arrival.carril || '—'}`)}
+                                            </span>
+                                            <span className="a-name">{arrival.participante ? getSoloApellido(arrival.participante) : '—'}</span>
                                         </div>
-                                        <div className="arrival-time">
-                                            {arrival.type === 'atleta' 
-                                                ? (arrival.estadoCanto && arrival.estadoCanto !== 'Pendiente' && !arrival.tiempoOficial 
-                                                    ? arrival.estadoCanto 
-                                                    : arrival.tiempoOficial) 
-                                                : arrival.time}
+                                        <div className="a-time">{arrival.time}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                            {arrival.type === 'duda' && <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}><XCircle size={16} /></button>}
                                         </div>
-                                        {arrival.type === 'duda' && (
-                                            <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}>
-                                                <XCircle size={18} />
-                                            </button>
-                                        )}
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     <footer className="finisher-actions">
-                        <button className="btn-reset" onClick={() => { 
-                            if(window.confirm('¿Reiniciar reloj local?')) {
-                                setElapsedTime(0); stopLocalTimer(); setRawTimes([]);
-                                setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null })));
-                            }
-                        }}>
-                            <RefreshCw size={18} /> Reiniciar Reloj
+                        <button className="btn-reset" onClick={() => { if(window.confirm('¿Reiniciar reloj?')) { setElapsedTime(0); stopLocalTimer(); setRawTimes([]); setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null }))); } }}>
+                            <RefreshCw size={18} /> Reiniciar
                         </button>
-                        <button className="btn-save-official" onClick={handleSaveResults} disabled={arrivals.length === 0 || arrivals.some(a => a.type === 'duda')}>
-                            <Save size={18} /> Enviar para Revisión
+                        <button className="btn-save-official" onClick={handleSaveResults} disabled={arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
+                            <Save size={18} /> Enviar
                         </button>
                     </footer>
                 </main>

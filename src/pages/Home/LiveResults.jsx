@@ -5,8 +5,7 @@ import { PruebaService } from '../../services/ConfigService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import signalRServiceInstance from '../../services/SignalRService';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import PdfExportService from '../../services/PdfExportService';
 import './LiveResults.css';
 
 // Convierte "mm:ss.ms" o "hh:mm:ss.ms" a milisegundos
@@ -181,159 +180,62 @@ const LiveResults = () => {
     }, [selectedPrueba]);
 
     const handleDownloadPDF = (mode = 'current') => {
-        if (!selectedPrueba || !fases.length) {
-            console.error("No hay prueba o fases para exportar");
-            return;
-        }
+        if (!selectedPrueba || !fases.length) return;
 
         try {
-            const doc = new jsPDF();
-            const MARGIN = 15;
-            let currentY = 20;
+            const eventoNombre = evento?.nombre || evento?.Nombre || 'Evento';
+            const pruebaNombre = [
+                selectedPrueba.prueba?.categoria?.nombre,
+                selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.bote?.nombre,
+                selectedPrueba.prueba?.distancia?.descripcion || selectedPrueba.prueba?.distancia?.metros + 'm',
+                selectedPrueba.prueba?.sexo?.nombre,
+            ].filter(Boolean).join(' - ');
 
-            // 1. TÍTULO Y CABECERA
-            doc.setFontSize(20);
-            const eventName = (evento.nombre || evento.Nombre || 'SportTrack Event').toUpperCase();
-            doc.text(eventName, MARGIN, currentY);
-            currentY += 10;
-            
-            doc.setFontSize(12);
-            doc.text(`${evento.ubicacion || ''} | ${new Date(evento.fecha).toLocaleDateString()}`, MARGIN, currentY);
-            currentY += 15;
+            // Enrich each fase with the resultados from local state (real-time)
+            const enrichFase = (fase) => ({
+                ...fase,
+                nombreFase: fase.nombreFase || fase.NombreFase || `Fase ${fase.numeroFase}`,
+                fechaHoraProgramada: fase.fechaHoraProgramada || fase.FechaHoraProgramada,
+                resultados: resultados
+                    .filter(r => (r.faseId || r.FaseId) === fase.id)
+                    .map(r => ({
+                        posicion:          r.posicion          || r.Posicion,
+                        carril:            r.carril            || r.Carril,
+                        participanteNombre: r.participanteNombre || r.ParticipanteNombre,
+                        clubNombre:        r.clubNombre        || r.ClubNombre,
+                        clubSigla:         r.clubSigla         || r.ClubSigla,
+                        tiempoOficial:     r.tiempoOficial     || r.TiempoOficial,
+                        tripulantes:       r.tripulantes       || [],
+                    })),
+            });
 
-            // Título de la Prueba
-            const cat = selectedPrueba.prueba?.categoria?.nombre || selectedPrueba.prueba?.Categoria?.Nombre || '';
-            const bot = selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.Bote?.Tipo || '';
-            const dist = selectedPrueba.prueba?.distancia?.descripcion || selectedPrueba.prueba?.Distancia?.Descripcion || '';
-            const sex = selectedPrueba.prueba?.sexo?.nombre || selectedPrueba.prueba?.Sexo?.Nombre || 'Mixto';
-            const pruebaName = `${cat} ${bot} ${dist} (${sex})`;
-            
-            doc.setFontSize(16);
-            doc.setTextColor(0, 102, 204);
-            doc.text(pruebaName, MARGIN, currentY);
-            currentY += 10;
-
-            // 2. FILTRAR FASES SEGÚN EL MODO Y ORDENAR
+            // Filter fases by mode
+            let raw = [...fases];
             let fasesToExport = [];
             if (mode === 'current') {
                 fasesToExport = selectedFase ? [selectedFase] : [];
+            } else if (mode === 'series') {
+                fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('serie'));
+            } else if (mode === 'semis') {
+                fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('semi'));
+            } else if (mode === 'finals') {
+                fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('final'));
             } else {
-                const rawFases = [...fases];
-                if (mode === 'series') {
-                    fasesToExport = rawFases.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('serie'));
-                } else if (mode === 'semis') {
-                    fasesToExport = rawFases.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('semi'));
-                } else if (mode === 'finals') {
-                    fasesToExport = rawFases.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('final'));
-                } else {
-                    fasesToExport = rawFases;
-                }
-                
-                // Ordenar por EtapaOrden (Series 0, Semis 1, Finales 2) y luego por NumeroFase
-                fasesToExport.sort((a, b) => 
-                    (a.etapaOrden ?? a.EtapaOrden ?? 0) - (b.etapaOrden ?? b.EtapaOrden ?? 0) || 
-                    (a.numeroFase ?? a.NumeroFase ?? 0) - (b.numeroFase ?? b.NumeroFase ?? 0)
-                );
+                fasesToExport = raw;
             }
 
-            if (fasesToExport.length === 0) {
-                alert("No hay fases para el filtro seleccionado");
-                return;
-            }
+            fasesToExport.sort((a, b) =>
+                (a.etapaOrden ?? a.EtapaOrden ?? 0) - (b.etapaOrden ?? b.EtapaOrden ?? 0) ||
+                (a.numeroFase ?? a.NumeroFase ?? 0) - (b.numeroFase ?? b.NumeroFase ?? 0)
+            );
 
-            // 3. ITERAR FASES Y GENERAR TABLAS
-            let lastY = currentY + 15;
-            const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
+            if (!fasesToExport.length) { alert('No hay fases para el filtro seleccionado'); return; }
 
-            fasesToExport.forEach((fase, index) => {
-                // Si ya estamos más abajo de la mitad de la hoja y no es la primera fase, saltamos de hoja
-                // Esto ayuda a que entren 2 grillas por hoja aproximadamente
-                if (index > 0 && lastY > (PAGE_HEIGHT * 0.6)) {
-                    doc.addPage();
-                    lastY = 20;
-                } else if (index > 0) {
-                    // Si nos quedamos en la misma hoja, añadimos un espacio extra
-                    lastY += 15;
-                }
-                
-                const fNombre = fase.nombreFase || fase.NombreFase || `Fase ${fase.numeroFase || fase.NumeroFase}`;
-                const eNombre = fase.etapaNombre || fase.EtapaNombre || '';
-                const fTime = formatTime(fase.fechaHoraProgramada || fase.FechaHoraProgramada);
-
-                doc.setFontSize(14);
-                doc.setTextColor(50, 50, 50);
-                doc.text(`${eNombre} - ${fNombre} (${fTime} hs)`, MARGIN, lastY);
-
-                const phaseResults = resultados.filter(r => (r.faseId || r.FaseId) === fase.id);
-                const sortedResults = [...phaseResults].sort((a, b) => {
-                    const posA = a.posicion || a.Posicion;
-                    const posB = b.posicion || b.Posicion;
-                    if (posA && posB) return posA - posB;
-                    if (posA) return -1;
-                    if (posB) return 1;
-                    return (a.carril || a.Carril || 99) - (b.carril || b.Carril || 99);
-                });
-
-                const hasResults = sortedResults.some(r => r.tiempoOficial || r.TiempoOficial);
-                
-                const columns = hasResults 
-                    ? ["POS", "CARRIL", "ATLETA / TRIPULACION", "CLUB", "TIEMPO", "DIF."]
-                    : ["CARRIL", "ATLETA / TRIPULACION", "CLUB", "PROCEDENCIA"];
-                
-                const body = sortedResults.map(r => {
-                    const pName = r.participanteNombre || r.ParticipanteNombre || '';
-                    const cSigla = r.clubSigla || r.ClubSigla || '';
-                    const carril = r.carril || r.Carril || '-';
-
-                    if (hasResults) {
-                        const pos = r.posicion || r.Posicion;
-                        const isLeader = pos === 1;
-                        const tOficial = r.tiempoOficial || r.TiempoOficial;
-                        const tMs = timeToMs(tOficial);
-                        
-                        const lider = sortedResults.find(res => (res.posicion || res.Posicion) === 1);
-                        const liderT = lider ? (lider.tiempoOficial || lider.TiempoOficial) : null;
-                        const liderMs = liderT ? timeToMs(liderT) : null;
-                        
-                        const diff = (!isLeader && liderMs && tMs) ? formatDiff(tMs - liderMs) : (isLeader ? 'LIDER' : '-');
-
-                        return [
-                            pos || '-',
-                            carril,
-                            pName,
-                            cSigla,
-                            tOficial?.split('.')[0] || '--:--',
-                            diff
-                        ];
-                    } else {
-                        return [
-                            carril,
-                            pName,
-                            cSigla,
-                            r.clubNombre || r.ClubNombre || ''
-                        ];
-                    }
-                });
-
-                autoTable(doc, {
-                    startY: lastY + 5,
-                    head: [columns],
-                    body: body,
-                    theme: 'striped',
-                    headStyles: { fillColor: [0, 102, 204] },
-                    margin: { left: MARGIN, right: MARGIN },
-                    styles: { fontSize: 9 }
-                });
-
-                // Actualizamos lastY para la siguiente tabla basándonos en dónde terminó la actual
-                lastY = doc.lastAutoTable.finalY;
-            });
-
-            const fileName = `${pruebaName.replace(/ /g, '_')}_${mode}.pdf`;
-            doc.save(fileName);
+            const enriched = fasesToExport.map(enrichFase);
+            PdfExportService.exportGrupo(enriched, eventoNombre, pruebaNombre, mode === 'current' ? enriched[0]?.nombreFase : mode);
         } catch (err) {
-            console.error("Error generating PDF:", err);
-            alert("Error al generar el PDF. Revisa los datos de la fase.");
+            console.error('Error generating PDF:', err);
+            alert('Error al generar el PDF.');
         }
     };
 

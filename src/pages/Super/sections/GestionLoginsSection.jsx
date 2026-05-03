@@ -16,7 +16,7 @@ const GestionLoginsSection = () => {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '' });
+    const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
 
@@ -40,13 +40,13 @@ const GestionLoginsSection = () => {
     };
 
     const handleOpenCrear = () => {
-        setForm({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '' });
+        setForm({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
         setView('crear');
     };
 
     const handleOpenEditar = (user) => {
         setSelectedUser(user);
-        setForm({ username: user.username, newPassword: '', confirmNewPassword: '' });
+        setForm({ username: user.username, newPassword: '', confirmNewPassword: '', nombre: user.nombre || '', apellido: user.apellido || '' });
         setView('editar');
     };
 
@@ -90,6 +90,19 @@ const GestionLoginsSection = () => {
         }
     };
 
+    const handleToggleActivo = async (user) => {
+        const accion = user.activo ? 'deshabilitar' : 'habilitar';
+        if (!window.confirm(`¿Confirmar ${accion} la cuenta de "${user.username}"?`)) return;
+        try {
+            await AuthService.toggleActivo(user.id);
+            // Actualizar estado local optimistamente
+            setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, activo: !u.activo } : u));
+            showAlert('success', `Cuenta "${user.username}" ${user.activo ? 'deshabilitada' : 'habilitada'} correctamente.`);
+        } catch (err) {
+            showAlert('error', 'Error al cambiar el estado: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
     return (
         <div className="admin-section-container fade-in">
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
@@ -120,7 +133,8 @@ const GestionLoginsSection = () => {
                 loading ? <div className="loader-container"><div className="loader"></div></div> : (
                     <LoginGrid 
                         usuarios={usuarios} 
-                        onEditPassword={handleOpenEditar} 
+                        onEditPassword={handleOpenEditar}
+                        onToggleActivo={handleToggleActivo}
                     />
                 )
             ) : (

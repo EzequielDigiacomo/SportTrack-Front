@@ -562,21 +562,22 @@
     }
 
     .finisher-layout {
-        display: contents; /* Permite reordenar hijos junto con el header */
+        display: contents;
     }
 
     .finisher-sidebar { 
-        order: 1; /* 1. Selección de Evento/Prueba/Fase */
+        order: 1;
         height: auto; 
         max-height: none; 
         border-radius: var(--radius-lg);
         margin-bottom: var(--spacing-md);
         width: 100%;
         padding: var(--spacing-sm);
+        overflow: visible;
     }
 
     .finisher-header {
-        order: 2; /* 2. Cronómetro */
+        order: 2;
         margin-bottom: var(--spacing-md);
         flex-direction: column;
         align-items: center !important;
@@ -585,18 +586,17 @@
     }
 
     .finisher-main {
-        order: 3; /* 3. Botones de llegada y grilla */
+        order: 3;
         padding: var(--spacing-sm);
         width: 100%;
-        overflow-x: hidden;
+        overflow: visible;
     }
 
     .starter-dashboard {
-        grid-template-columns: 1fr !important;
+        display: flex;
+        flex-direction: column;
         padding: var(--spacing-xs);
-        overflow-x: hidden;
         height: auto !important;
-        min-height: 100vh;
     }
     
     .starter-sidebar { 
@@ -605,6 +605,7 @@
         border-radius: var(--radius-lg);
         margin-bottom: var(--spacing-md);
         width: 100%;
+        overflow: visible;
     }
 
     .btn-start-big {
@@ -801,11 +802,7 @@
     margin-bottom: 12px;
 }
 
-.pendientes-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+.pendientes-list { display: flex; flex-direction: column; gap: 8px; }
 
 .pendiente-item {
     display: flex;
@@ -817,44 +814,28 @@
 }
 
 .p-lane {
-    width: 24px;
-    height: 24px;
+    width: 24px; height: 24px;
     background: var(--color-primary);
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: bold;
 }
 
-.p-info {
-    flex: 1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
+.p-info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
 .p-name { font-size: 0.85rem; font-weight: 500; }
 
 .btn-assign-quick {
     padding: 4px 8px;
-    background: #fbbf24;
-    color: black;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    cursor: pointer;
+    background: #fbbf24; color: black;
+    border: none; border-radius: 4px;
+    font-size: 0.7rem; font-weight: 800; cursor: pointer;
 }
 
 .arrivals-board {
     background: rgba(0, 0, 0, 0.2);
     border-radius: var(--radius-lg);
-    overflow: hidden;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    overflow: hidden; flex: 1;
+    display: flex; flex-direction: column;
 }
 
 .board-header {
@@ -863,18 +844,11 @@
     padding: 15px 20px;
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
-    font-size: 0.8rem;
-    font-weight: 800;
-    text-transform: uppercase;
+    font-size: 0.8rem; font-weight: 800; text-transform: uppercase;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.arrivals-list {
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+.arrivals-list { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 
 .arrival-row {
     display: grid;
@@ -883,7 +857,6 @@
     padding: 12px 20px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: var(--radius-md);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: slide-in-right 0.4s ease-out forwards;
 }
 
@@ -892,10 +865,7 @@
     to { opacity: 1; transform: translateX(0); }
 }
 
-.arrival-row.duda {
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-}
+.arrival-row.duda { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); }
 
 .arrival-pos { font-size: 1.2rem; font-weight: 800; color: var(--color-primary); }
 .arrival-lane { font-size: 1.5rem; font-weight: 800; color: white; text-align: center; }
@@ -904,27 +874,104 @@
 .arr-club { font-size: 0.8rem; color: var(--text-secondary); }
 .arrival-time { font-family: monospace; font-size: 1.4rem; color: #10b981; font-weight: bold; }
 
-.doubt-indicator {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    color: #fbbf24;
-}
-
+.doubt-indicator { display: flex; flex-direction: column; gap: 4px; color: #fbbf24; }
 .doubt-indicator span { font-weight: 800; font-size: 0.9rem; }
-.assign-hint { font-size: 0.75rem; color: rgba(251, 191, 36, 0.7); }
+.assign-hint { font-size: 0.75rem; color: rgba(251,191,36,0.7); }
 
 .empty-board {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    gap: 15px;
-    padding: 60px;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--text-secondary); gap: 15px; padding: 60px;
 }
 
+/* ─── Compact Arrivals Cards (arribos-grid) ─── */
+.arribos-list { margin-top: var(--spacing-md); }
+
+.arribos-list h3 {
+    font-size: 0.75rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+}
+
+.arribos-grid { display: flex; flex-direction: column; gap: 5px; }
+
+/* ── Confirmed arrival — GREEN ── */
+.arrival-card {
+    display: grid;
+    grid-template-columns: 26px 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, rgba(16,185,129,0.13) 0%, rgba(5,150,105,0.07) 100%);
+    position: relative;
+    overflow: hidden;
+    animation: arrivals-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.arrival-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: #10b981;
+    border-radius: 8px 0 0 8px;
+}
+
+/* ── Duda card — AMBER/YELLOW ── */
+.arrival-card.duda {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, rgba(245,158,11,0.16) 0%, rgba(217,119,6,0.08) 100%);
+}
+
+.arrival-card.duda::before { background: #f59e0b; }
+
+@keyframes arrivals-pop {
+    0%   { opacity: 0; transform: translateX(14px) scale(0.97); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* Rank */
+.a-rank {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; font-weight: 800; flex-shrink: 0;
+    background: rgba(16,185,129,0.2); color: #10b981;
+}
+.arrival-card.duda .a-rank { background: rgba(245,158,11,0.2); color: #f59e0b; }
+
+/* Body */
+.a-body { display: flex; flex-direction: column; min-width: 0; }
+
+.a-label {
+    font-size: 0.58rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    color: #10b981; margin-bottom: 1px; line-height: 1;
+}
+.arrival-card.duda .a-label { color: #f59e0b; }
+
+.a-name {
+    font-size: 0.88rem; font-weight: 700; color: white;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Time */
+.a-time {
+    font-family: 'Courier New', monospace;
+    font-size: 0.88rem; font-weight: 800;
+    color: #34d399; letter-spacing: 0.3px;
+    white-space: nowrap; text-align: right;
+}
+.arrival-card.duda .a-time { color: #fcd34d; }
+
+/* Cancel duda */
+.btn-cancel-doubt {
+    background: none; border: none; color: #f87171;
+    cursor: pointer; padding: 2px;
+    display: flex; align-items: center;
+    opacity: 0.55; transition: opacity 0.15s;
+}
 .btn-cancel-doubt:hover { opacity: 1; }
 
 /* Status Quick Actions (Starter) */
@@ -990,4 +1037,56 @@
 .btn-reset-starter:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Compact Check-in Rows */
+.checkin-row {
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.checkin-row .lane-badge {
+    width: 22px;
+    height: 22px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.checkin-row .athlete-name {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.checkin-row .club-tag {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.checkin-row .status-quick-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.checkin-row .btn-status-toggle {
+    padding: 3px 6px;
+    font-size: 0.6rem;
 }

@@ -131,7 +131,7 @@ const ResultadosHeader = ({
                         value={cronograma.find(f => String(f.eventoPruebaId) === String(selectedPrueba))?.id || ''}
                     >
                         <option value="">-- Ver Cronograma Completo --</option>
-                        {cronograma.map(f => {
+                        {cronograma.map((f, idx) => {
                             let timeStr = '--:--';
                             if (f.fechaHoraProgramada && f.fechaHoraProgramada.includes('T')) {
                                 timeStr = f.fechaHoraProgramada.split('T')[1].substring(0, 5);
@@ -148,7 +148,7 @@ const ResultadosHeader = ({
                             const distName = DISTANCIA_NAMES[distId] || (p?.distancia?.metros ? `${p.distancia.metros}m` : '');
                             const sexName = SEXO_NAMES[sexId] || p?.sexoNombre || '';
 
-                            const label = [timeStr + ' hs', f.nombreFase, catName, botName, distName, sexName]
+                            const label = [`#${idx + 1}`, timeStr + ' hs', f.nombreFase, catName, botName, distName, sexName]
                                 .filter(Boolean)
                                 .join(' - ');
 

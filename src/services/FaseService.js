@@ -35,8 +35,8 @@ const FaseService = {
     },
     getByEvento: async (eventoId) => {
         const url = ENDPOINTS.FASES.BY_EVENTO(eventoId);
-        console.log('[DEBUG] getByEvento calling:', url);
         const response = await api.get(url);
+        console.log('[DEBUG_FASES] Data returned:', JSON.stringify(response.data[0], null, 2));
         return response.data;
     },
     batchUpdate: async (dto) => {

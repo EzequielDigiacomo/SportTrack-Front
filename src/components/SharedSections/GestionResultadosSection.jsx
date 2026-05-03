@@ -35,7 +35,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const { alert, showAlert } = useAlert();
 
     // Lógica de selección de fase (Movida arriba para evitar errores de hoisting)
-    const hideTabs = viewMode === 'tiempos' || viewMode === 'resultados' || viewMode === 'startlist';
+    const hideTabs = viewMode === 'tiempos' || viewMode === 'startlist';
 
     const agrupadoPorEtapa = (fases || []).reduce((acc, f) => {
         const etapa = f.etapaNombre || f.EtapaNombre || 'Competencia';
@@ -173,17 +173,9 @@ const handleSimulateResults = () => {
         return;
     }
 
-    // Bloqueo granular: Solo bloqueamos si LA FASE seleccionada ya tiene tiempos oficiales
-    const faseYaTieneTiempos = faseSeleccionada.resultados.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00');
-
-    if (faseYaTieneTiempos) {
-        setMessage('⚠️ No se puede simular: Esta fase ya tiene resultados oficiales guardados.');
-        return;
-    }
-
     const tls = { ...tiemposLocales };
 
-    // 1. Generar tiempos aleatorios solo para los resultados de la fase seleccionada
+    // Generar tiempos aleatorios para todos los resultados de la fase seleccionada
     const baseResults = faseSeleccionada.resultados.map(r => {
         const minutos = Math.floor(Math.random() * 2) + 1;
         const segundos = Math.floor(Math.random() * 60);
@@ -195,7 +187,7 @@ const handleSimulateResults = () => {
         return { id: r.id, tiempoStr, totalMs };
     });
 
-    // 2. Ordenar por tiempo y asignar posiciones
+    // Ordenar por tiempo y asignar posiciones
     baseResults.sort((a, b) => a.totalMs - b.totalMs);
 
     baseResults.forEach((res, idx) => {
@@ -208,6 +200,7 @@ const handleSimulateResults = () => {
     setTiemposLocales(tls);
     setMessage(`✅ Simulación completada para ${faseSeleccionada.nombreFase}.`);
 };
+
 
 const handleResultChange = (id, field, val) => {
     setTiemposLocales(prev => ({
@@ -436,30 +429,60 @@ return (
                             </div>
                         )}
 
-                        {Object.keys(agrupadoPorEtapa).length > 0 ? (
-                            <div className="series-preview-section fade-in">
-                                <h3 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1.1rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                    🏁 Series y Sorteo de Carriles
-                                </h3>
-                                {Object.entries(agrupadoPorEtapa).map(([etapa, fasesDeEtapa]) => (
-                                    <div key={etapa} className="etapa-wrapper mb-lg">
-                                        <div className="fases-grid-responsive">
-                                            {fasesDeEtapa.map(f => (
-                                                <FaseCard
-                                                    key={f.id}
-                                                    fase={f}
-                                                />
-                                            ))}
-                                        </div>
+                        {(() => {
+                            // Dropdown 3 → filtroVisualFase = specific fase name → show only that fase
+                            // Dropdown 2 → filtroVisualFase = 'Todas' → show all fases of the prueba
+                            const fasesParaStartList = filtroVisualFase !== 'Todas'
+                                ? fases.filter(f => f.nombreFase === filtroVisualFase)
+                                : fases;
+
+                            const gruposFiltrados = fasesParaStartList.reduce((acc, f) => {
+                                const etapa = f.etapaNombre || f.EtapaNombre || 'Competencia';
+                                if (!acc[etapa]) acc[etapa] = [];
+                                acc[etapa].push(f);
+                                return acc;
+                            }, {});
+
+                            if (Object.keys(gruposFiltrados).length === 0) {
+                                return (
+                                    <div className="empty-state-card glass-effect">
+                                        <p>No se han generado las series para esta prueba.</p>
+                                        <span>Presiona el botón de arriba para sortear los carriles automáticamente.</span>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="empty-state-card glass-effect">
-                                <p>No se han generado las series para esta prueba.</p>
-                                <span>Presiona el botón de arriba para sortear los carriles automáticamente.</span>
-                            </div>
-                        )}
+                                );
+                            }
+
+                            return (
+                                <div className="series-preview-section fade-in">
+                                    <h3 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1.1rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                        🏁 Series y Sorteo de Carriles
+                                        {filtroVisualFase !== 'Todas' && (
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 400, color: 'var(--color-text-dim)', background: 'rgba(100,160,255,0.1)', border: '1px solid rgba(100,160,255,0.2)', borderRadius: '6px', padding: '2px 10px' }}>
+                                                Mostrando: <strong style={{ color: 'var(--color-primary-light)' }}>{filtroVisualFase}</strong>
+                                                <button
+                                                    onClick={() => setFiltroVisualFase('Todas')}
+                                                    style={{ marginLeft: '8px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                    title="Ver todas las fases"
+                                                >✕</button>
+                                            </span>
+                                        )}
+                                    </h3>
+                                    {Object.entries(gruposFiltrados).map(([etapa, fasesDeEtapa]) => (
+                                        <div key={etapa} className="etapa-wrapper mb-lg">
+                                            <div className="fases-grid-responsive">
+                                                {fasesDeEtapa.map(f => (
+                                                    <FaseCard
+                                                        key={f.id}
+                                                        fase={f}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
+
                     </div>
                 )}
 
@@ -605,28 +628,36 @@ return (
                                 )}
 
                                 {(faseSeleccionada.estado === "Pendiente de Validación" || faseSeleccionada.estado === "Finalizada") && (
-                                    <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
-                                        <span style={{ color: '#10b981', fontWeight: 600 }}>
-                                            {faseSeleccionada.estado === "Pendiente de Validación"
-                                                ? '🏁 Serie completada por cronometrista. Lista para validación oficial.'
-                                                : '✅ Resultados oficiales publicados.'}
-                                        </span>
-                                        {faseSeleccionada.estado === "Pendiente de Validación" && (
-                                            <button
-                                                className="btn-admin-primary"
-                                                onClick={() => handleFinalizarFase(faseSeleccionada.id)}
-                                                style={{ background: '#10b981', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', fontWeight: 700 }}
-                                            >
-                                                ✅ Validar y Hacer Oficial
-                                            </button>
-                                        )}
-                                    </div>
+                                    viewMode === 'tiempos' ? (
+                                        <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #f59e0b', background: 'rgba(245,158,11,0.1)' }}>
+                                            <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                                                ⚠️ Modo Override — Esta fase ya fue {faseSeleccionada.estado === 'Finalizada' ? 'oficializada' : 'completada'}. Podés editar tiempos y posiciones directamente.
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
+                                            <span style={{ color: '#10b981', fontWeight: 600 }}>
+                                                {faseSeleccionada.estado === "Pendiente de Validación"
+                                                    ? '🏁 Serie completada por cronometrista. Lista para validación oficial.'
+                                                    : '✅ Resultados oficiales publicados.'}
+                                            </span>
+                                            {faseSeleccionada.estado === "Pendiente de Validación" && (
+                                                <button
+                                                    className="btn-admin-primary"
+                                                    onClick={() => handleFinalizarFase(faseSeleccionada.id)}
+                                                    style={{ background: '#10b981', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', fontWeight: 700 }}
+                                                >
+                                                    ✅ Validar y Hacer Oficial
+                                                </button>
+                                            )}
+                                        </div>
+                                    )
                                 )}
                                 <ResultadosTable
                                     fase={faseSeleccionada}
                                     tiemposLocales={tiemposLocales}
                                     onResultChange={handleResultChange}
-                                    isLocked={viewMode === 'resultados' ? false : isLocked}
+                                    isLocked={viewMode === 'tiempos' ? false : (viewMode === 'resultados' ? false : isLocked)}
                                     isSuccess={saveSuccess}
                                 />
 
@@ -638,7 +669,7 @@ return (
                                                     className="btn-admin-secondary"
                                                     onClick={handleSimulateResults}
                                                     style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
-                                                    disabled={faseSeleccionada?.resultados?.some(r => r.tiempoOficial && r.tiempoOficial !== '' && r.tiempoOficial !== '00:00:00')}
+                                                    title="Genera tiempos aleatorios para testear (sobreescribe los actuales)"
                                                 >
                                                     ⚡ Simular Tiempos
                                                 </button>
@@ -697,7 +728,7 @@ return (
                 </div>
                 
                 <div className="fases-grid-responsive">
-                    {cronograma.map(f => (
+                    {cronograma.map((f, idx) => (
                         <div 
                             key={f.id} 
                             onClick={() => handleSelectRegata(f)} 
@@ -708,7 +739,8 @@ return (
                             <FaseCard 
                                 fase={f} 
                                 showPruebaName={true} 
-                                filtroVisualFase="Cronograma" 
+                                filtroVisualFase="Cronograma"
+                                pruebaNro={idx + 1}
                             />
                         </div>
                     ))}

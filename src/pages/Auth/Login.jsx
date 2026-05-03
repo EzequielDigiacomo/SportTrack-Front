@@ -16,12 +16,14 @@ const Login = () => {
 
     // Redirigir si ya está autenticado
     React.useEffect(() => {
-        if (isAuthenticated && user) {
+        if (isAuthenticated && user?.rol) {
             let path = '/';
-            if (user.rol === 'Admin') path = '/super';
-            else if (user.rol === 'Club') path = '/club';
-            else if (user.rol === 'Largador') path = '/jueces/largador';
-            else if (user.rol === 'Cronometrista') path = '/jueces/llegada';
+            const role = user.rol.trim().toLowerCase();
+            if (role === 'admin') path = '/super';
+            else if (role === 'club') path = '/club';
+            else if (role === 'largador') path = '/jueces/largador';
+            else if (role === 'cronometrista') path = '/jueces/llegada';
+            else if (role === 'juezcontrol') path = '/juez-control';
             
             navigate(path, { replace: true });
         }
@@ -44,10 +46,14 @@ const Login = () => {
             
             // Redirect based on role
             let targetPath = '/';
-            if (data.rol === 'Admin') targetPath = '/super';
-            else if (data.rol === 'Club') targetPath = '/club';
-            else if (data.rol === 'Largador') targetPath = '/jueces/largador';
-            else if (data.rol === 'Cronometrista') targetPath = '/jueces/llegada';
+            if (data?.rol) {
+                const role = data.rol.trim().toLowerCase();
+                if (role === 'admin') targetPath = '/super';
+                else if (role === 'club') targetPath = '/club';
+                else if (role === 'largador') targetPath = '/jueces/largador';
+                else if (role === 'cronometrista') targetPath = '/jueces/llegada';
+                else if (role === 'juezcontrol') targetPath = '/juez-control';
+            }
             
             navigate(targetPath, { replace: true });
             

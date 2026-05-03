@@ -14,17 +14,29 @@ const getSoloApellido = (nombreCompleto) => {
     return parts[parts.length - 1];
 };
 
+const CATEGORIA_NAMES = {
+    1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (14-15 años)', 
+    5: 'Junior (16-17 años)', 6: 'Sub-23 (18-22 años)', 7: 'Senior (18-35 años)', 8: 'Master A (40-45 años)', 
+    9: 'Master B (46-50 años)', 10: 'Master C (50+ años)'
+};
+const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
+const DISTANCIA_NAMES = {
+    1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m', 6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 
+    10: '5000m', 11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
+};
+
 const StarterDashboard = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const isAdmin = user?.rol === 'Admin';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
-    const [fases, setFases] = useState([]); // Todas las fases del evento (Cronograma 61 pruebas)
+    const [fases, setFases] = useState([]);
     const [selectedFase, setSelectedFase] = useState(null);
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -40,7 +52,11 @@ const StarterDashboard = () => {
         const loadFases = async () => {
             try {
                 const data = await FaseService.getByEvento(selectedEvento.id);
-                const sorted = data.sort((a, b) => (a.nroPrueba || a.id) - (b.nroPrueba || b.id));
+                const sorted = data.sort((a, b) => {
+                    const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
+                    const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
+                    return dateA.localeCompare(dateB);
+                });
                 setFases(sorted);
             } catch (err) {
                 console.error("Error loading fases:", err);
@@ -109,12 +125,6 @@ const StarterDashboard = () => {
             await timingSignalRService.requestStartRace(selectedFase.id);
         } catch (err) {
             console.error(err);
-            if (err.message === 'Fase no encontrada') {
-                const data = await FaseService.getByEvento(selectedEvento.id);
-                setFases(data);
-                setSelectedFase(null);
-                alert("⚠️ La regata fue re-sorteada. Se ha actualizado la lista.");
-            }
         } finally {
             setLoading(false);
         }
@@ -132,7 +142,6 @@ const StarterDashboard = () => {
             }));
         } catch (err) {
             console.error("Error updating status:", err);
-            if (addToast) addToast("Error de conexión. Reintentando...", "error");
         }
     };
 
@@ -151,44 +160,58 @@ const StarterDashboard = () => {
 
     return (
         <div className="starter-dashboard fade-in">
-            <aside className="starter-sidebar glass-effect">
-                <h3><Clock size={18} /> Próximas Pruebas</h3>
-                <div className="selection-stack">
-                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
-                    <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
-                        <option value="">Seleccionar Evento...</option>
-                        {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
-                    </select>
-
-                    <div className="sidebar-section-header">
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
-                        <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
-                            {isCompact ? <Layout size={14} /> : <Grid size={14} />}
-                        </button>
-                    </div>
-
-                    <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
-                        {fases.map((f) => (
-                            <div 
-                                key={f.id} 
-                                className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
-                                onClick={() => setSelectedFase(f)}
-                            >
-                                {isCompact ? (
-                                    <span className="race-num">#{f.nroPrueba || f.id}</span>
-                                ) : (
-                                    <>
-                                        <span className="race-num-prefix">#{f.nroPrueba || f.id}</span>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{f.eventoPrueba?.prueba?.categoria?.nombre}</span>
-                                            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{f.nombreFase} - {f.eventoPrueba?.prueba?.bote?.tipo}</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+            <aside className={`starter-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ margin: 0 }}><Clock size={18} /> Próximas Pruebas</h3>
+                    <button 
+                        className="btn-collapse"
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}
+                    >
+                        {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
+                    </button>
                 </div>
+                {!isSidebarCollapsed && (
+                    <div className="selection-stack">
+                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                        <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
+                            <option value="">Seleccionar Evento...</option>
+                            {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+                        </select>
+
+                        <div className="sidebar-section-header">
+                            <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma de Pruebas ({fases.length}):</label>
+                            <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
+                                {isCompact ? <Layout size={14} /> : <Grid size={14} />}
+                            </button>
+                        </div>
+
+                        <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
+                            {fases.map((f, index) => (
+                                <div 
+                                    key={f.id} 
+                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setSelectedFase(f);
+                                        if (window.innerWidth <= 768) setIsSidebarCollapsed(true);
+                                    }}
+                                >
+                                    <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
+                                    {!isCompact && (() => {
+                                        const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
+                                        const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (f.categoriaNombre || 'Sin Categoría');
+                                        return (
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{catName}</span>
+                                                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{f.nombreFase}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </aside>
 
             <main className="starter-main">
@@ -197,13 +220,33 @@ const StarterDashboard = () => {
                         <header className="race-header">
                             <div className="header-left-actions">
                                 <div className="badge-live">MODO LARGADOR</div>
-                                <h2>
-                                    <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>#{selectedFase.nroPrueba}</span>
-                                    {selectedFase.eventoPrueba?.prueba?.categoria?.nombre} - {selectedFase.nombreFase}
-                                </h2>
-                                <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                                    {selectedFase.eventoPrueba?.prueba?.bote?.tipo} | {selectedFase.eventoPrueba?.prueba?.distancia}m
-                                </p>
+                                {(() => {
+                                    const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
+                                    const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (selectedFase?.categoriaNombre || 'Sin Categoría');
+                                    const boteName = p ? (BOTE_NAMES[p.bote?.id] || p.bote?.nombre) : (selectedFase?.boteTipo || selectedFase?.tipoBote || 'Sin Bote');
+                                    const distName = p ? (DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm') : (selectedFase?.distancia ? selectedFase.distancia + 'm' : '0m');
+                                    const timeName = selectedFase?.fechaHoraProgramada && selectedFase?.fechaHoraProgramada.includes('T') 
+                                        ? selectedFase.fechaHoraProgramada.split('T')[1].substring(0, 5) 
+                                        : (selectedFase?.horaProgramada || '--:--');
+                                    
+                                    return (
+                                        <>
+                                            <h2>
+                                                <span style={{ color: 'var(--color-primary)', marginRight: '10px' }}>
+                                                    #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
+                                                </span>
+                                                {catName} - {selectedFase?.nombreFase}
+                                            </h2>
+                                            <div style={{ display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '0.85rem', marginTop: '4px' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <Clock size={14} /> {timeName}
+                                                </span>
+                                                <span>{boteName}</span>
+                                                <span>{distName}</span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </header>
 

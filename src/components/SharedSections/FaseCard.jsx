@@ -19,7 +19,7 @@ const DISTANCIA_NAMES = {
 };
 const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
-const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName = false }) => {
+const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName = false, pruebaNro = null }) => {
     if (filtroVisualFase !== 'Todas' && filtroVisualFase !== 'Cronograma' && fase.nombreFase !== filtroVisualFase) return null;
 
     const p = fase.prueba?.prueba;
@@ -32,7 +32,24 @@ const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName =
             <div className="fase-card-header flex-between mb-sm">
                 <div className="flex-row gap-sm" style={{ flexWrap: 'wrap' }}>
                     {showPruebaName && p && (
-                        <div style={{ width: '100%', display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                        <div style={{ width: '100%', display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px', alignItems: 'center' }}>
+                            {pruebaNro !== null && (
+                                <span style={{
+                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(100, 180, 255, 0.15) 100%)',
+                                    color: '#bfdbfe',
+                                    fontSize: '1rem',
+                                    fontWeight: '900',
+                                    padding: '3px 12px',
+                                    borderRadius: '6px',
+                                    border: '1.5px solid rgba(100, 180, 255, 0.5)',
+                                    letterSpacing: '1px',
+                                    fontFamily: 'monospace',
+                                    boxShadow: '0 0 10px rgba(100, 180, 255, 0.2)',
+                                    flexShrink: 0,
+                                }}>
+                                    #{pruebaNro}
+                                </span>
+                            )}
                             <span className="chip" style={{ background: 'rgba(100, 180, 255, 0.15)', color: '#64b4ff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(100, 180, 255, 0.3)' }}>
                                 {CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre}
                             </span>

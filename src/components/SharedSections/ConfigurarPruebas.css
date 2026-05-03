@@ -32,21 +32,47 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
 }
 
-.modal-header h2 {
+.modal-header h2,
+.modal-header h3 {
     margin: 0;
-    font-size: 1.4rem;
+    font-size: 1.25rem;
+    font-weight: 700;
     color: var(--color-primary-light);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
+/* Legacy alias — apunta al design system de btn-icon-close */
 .btn-close {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-size: 2rem;
-    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    color: #f87171;
+    font-size: 1.25rem;
     line-height: 1;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    padding: 0;
+}
+
+.btn-close:hover {
+    background: rgba(248, 113, 113, 0.18);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #fca5a5;
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.25);
+    transform: scale(1.08);
 }
 
 .modal-body {

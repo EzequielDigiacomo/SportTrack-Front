@@ -24,6 +24,11 @@ const AuthService = {
         return response.data;
     },
 
+    toggleActivo: async (id) => {
+        const response = await api.patch(`/auth/usuarios/${id}/toggle-activo`);
+        return response.data;
+    },
+
     logout: async () => {
         // En JWT el logout es local (borrar tokens), el servidor no necesita un endpoint.
         return Promise.resolve({ message: 'Sesión cerrada localmente' });

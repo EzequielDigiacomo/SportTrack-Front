@@ -1,0 +1,3 @@
+
+en la configuracion del evento a la hora de crear un evento dejemos check para seleccionar las categorias y distancias que se podrian habilitar
+y asi evitar el deplegable eterno

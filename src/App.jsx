@@ -9,6 +9,7 @@ import JudgesDashboard from './pages/Judges/JudgesDashboard'
 import StarterDashboard from './pages/Judges/StarterDashboard'
 import FinisherDashboard from './pages/Judges/FinisherDashboard'
 import ManualTiming from './pages/Judges/ManualTiming'
+import JuezControlDashboard from './pages/JuezControl/JuezControlDashboard'
 import ProtectedRoute from './components/Common/ProtectedRoute'
 import { useToast } from './context/ToastContext'
 import ToastContainer from './components/Common/ToastContainer'
@@ -44,8 +45,15 @@ function App() {
                 </ProtectedRoute>
             } />
 
+            {/* Panel Juez de Control (Protegido — rol JuezControl o Admin) */}
+            <Route path="/juez-control/*" element={
+                <ProtectedRoute requiredRole={['Admin', 'JuezControl']}>
+                    <JuezControlDashboard />
+                </ProtectedRoute>
+            } />
+
             {/* Módulo de Jueces */}
-            <Route path="/jueces" element={<ProtectedRoute requiredRole="Admin"><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'Largador', 'Cronometrista']}><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'Largador']}><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole="Admin"><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />

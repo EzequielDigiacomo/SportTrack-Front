@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import EventoService from '../../services/EventoService';
 import { PruebaService } from '../../services/ConfigService';
 import InscripcionService from '../../services/InscripcionService';
@@ -23,6 +23,10 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const [tiemposLocales, setTiemposLocales] = useState({});
     const [saveSuccess, setSaveSuccess] = useState(false);
 
+    // When handleSelectRegata fires it fills this ref BEFORE changing selectedPrueba,
+    // so the useEffect below can apply the intended filtro instead of resetting to 'Todas'.
+    const pendingFiltro = useRef(null);
+
     useEffect(() => {
         loadEventos();
     }, []);
@@ -43,7 +47,13 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             const lockedPruebas = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
             const sealedPruebas = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
             setIsLocked(lockedPruebas.includes(selectedPrueba) || sealedPruebas.includes(selectedPrueba));
-            setFiltroVisualFase('Todas');
+            // If handleSelectRegata pre-loaded a specific fase, apply it; otherwise reset to 'Todas'
+            if (pendingFiltro.current !== null) {
+                setFiltroVisualFase(pendingFiltro.current);
+                pendingFiltro.current = null;
+            } else {
+                setFiltroVisualFase('Todas');
+            }
             loadDatosPrueba(selectedPrueba);
         } else {
             setFiltroVisualFase('Todas');
@@ -485,10 +495,10 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             setFiltroVisualFase('Cronograma');
             return;
         }
-        // 1. Seleccionar la prueba (EventoPruebaId)
+        // Store the desired filter BEFORE triggering the selectedPrueba useEffect
+        pendingFiltro.current = fase.nombreFase;
+        // 1. Select the prueba (EventoPruebaId) — triggers useEffect which will consume pendingFiltro
         setSelectedPrueba(fase.eventoPruebaId);
-        // 2. Establecer el filtro visual para que muestre esa fase específica
-        setFiltroVisualFase(fase.nombreFase);
     };
 
     return {
