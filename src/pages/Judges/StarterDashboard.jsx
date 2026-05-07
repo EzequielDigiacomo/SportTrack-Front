@@ -105,6 +105,9 @@ const StarterDashboard = () => {
                 if (!isMounted) return;
 
                 timingSignalRService.onRaceReset((id) => {
+                    setFases(prev => prev.map(f => 
+                        String(f.id) === String(id) ? { ...f, estado: 'Programada' } : f
+                    ));
                     if (String(id) === String(selectedFase.id)) {
                         setSelectedFase(prev => ({ ...prev, estado: 'Programada' }));
                     }
@@ -116,8 +119,25 @@ const StarterDashboard = () => {
                     }
                 });
 
-                timingSignalRService.onRaceFinished(() => {
-                    setSelectedFase(prev => ({ ...prev, estado: 'Finalizada' }));
+                timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
+                    setFases(prev => prev.map(f => 
+                        String(f.id) === String(faseId) 
+                            ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: serverTime } 
+                            : f
+                    ));
+                    if (selectedFase && String(selectedFase.id) === String(faseId)) {
+                        setSelectedFase(prev => ({ ...prev, estado: 'En Carrera', fechaHoraInicioReal: serverTime }));
+                    }
+                });
+
+                timingSignalRService.onRaceFinished((id) => {
+                    const finishedId = id || selectedFase.id;
+                    setFases(prev => prev.map(f => 
+                        String(f.id) === String(finishedId) ? { ...f, estado: 'Finalizada' } : f
+                    ));
+                    if (selectedFase && String(selectedFase.id) === String(finishedId)) {
+                        setSelectedFase(prev => ({ ...prev, estado: 'Finalizada' }));
+                    }
                 });
 
                 timingSignalRService.onResultStatusUpdated((resId, status) => {
