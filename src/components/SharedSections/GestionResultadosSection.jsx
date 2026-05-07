@@ -24,6 +24,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
+        handleGenerarManual,
         handleRecalcularCronograma, handleSelectRegata,
         loadDatosPrueba, setMessage
     } = useResultados(preselectedEventoId, defaultTab);
