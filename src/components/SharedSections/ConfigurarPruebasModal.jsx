@@ -20,7 +20,7 @@ const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)',
     4: 'Cadete (14-15 años)', 5: 'Junior (16-17 años)', 6: 'Sub-23 (18-22 años)',
     7: 'Senior (18-35 años)', 8: 'Master A (40-45 años)', 9: 'Master B (46-50 años)',
-    10: 'Master C (50+ años)'
+    10: 'Master C (50+ años)', 11: 'Control (Todas las edades)'
 };
 
 const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
@@ -35,7 +35,8 @@ const CATEGORIA_COLORS = {
     7: { bg: 'rgba(236, 72, 153, 0.15)', text: '#ec4899' },
     8: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
     9: { bg: 'rgba(132, 204, 22, 0.15)', text: '#84cc16' },
-    10: { bg: 'rgba(107, 114, 128, 0.15)', text: '#9ca3af' }
+    10: { bg: 'rgba(107, 114, 128, 0.15)', text: '#9ca3af' },
+    11: { bg: 'rgba(255, 255, 255, 0.1)', text: '#fff', border: '1px solid #6366f1' }
 };
 
 const BOTE_COLORS = {

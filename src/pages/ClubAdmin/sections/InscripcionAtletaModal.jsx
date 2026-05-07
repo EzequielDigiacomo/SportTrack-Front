@@ -30,7 +30,8 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
         7: { bg: 'rgba(236, 72, 153, 0.15)', text: '#ec4899' },
         8: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
         9: { bg: 'rgba(132, 204, 22, 0.15)', text: '#84cc16' },
-        10: { bg: 'rgba(107, 114, 128, 0.15)', text: '#9ca3af' }
+        10: { bg: 'rgba(107, 114, 128, 0.15)', text: '#9ca3af' },
+        11: { bg: 'rgba(255, 255, 255, 0.1)', text: '#fff', border: '1px solid #6366f1' }
     };
 
     const BOTE_COLORS = {
@@ -331,9 +332,17 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                                     let razonNoElegible = "";
                                     let esRefuerzoK4 = false;
 
+                                    // 0. Regla Especial: CONTROL (Permite a todas las categorías)
+                                    // Comprobamos ID 11 o el nombre "Control" para mayor robustez
+                                    const isControlPrueba = (catPrueba?.id === 11 || String(catPrueba?.id) === "11" || catPrueba?.nombre === "Control");
+                                    
+                                    if (isControlPrueba) {
+                                        esElegible = true;
+                                        razonNoElegible = "";
+                                    } 
                                     // 1. Regla: Categoría Única
-                                    if (evento.restringirSoloCategoriaPropia) {
-                                        if (atleta.categoriaId !== catPrueba.id) {
+                                    else if (evento.restringirSoloCategoriaPropia) {
+                                        if (atleta.categoriaId !== catPrueba?.id) {
                                             esElegible = false;
                                             razonNoElegible = "Regla de Categoría Única";
                                         }

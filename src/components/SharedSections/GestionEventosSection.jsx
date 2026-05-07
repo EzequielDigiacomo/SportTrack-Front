@@ -10,6 +10,7 @@ import {
     Trophy,
 } from 'lucide-react';
 import EventoService from '../../services/EventoService';
+import { PruebaService } from '../../services/ConfigService';
 import ConfigurarPruebasModal from './ConfigurarPruebasModal';
 import GestionResultadosSection from './GestionResultadosSection';
 import ConfirmDialog from '../Common/ConfirmDialog';
@@ -36,7 +37,7 @@ const GestionEventosSection = () => {
         fechaFinInscripciones: '',
         ubicacion: '',
         descripcion: '',
-        estado: 'Programado',
+        estado: 'Programada',
         inscripcionesHabilitadas: true,
         restringirSoloCategoriaPropia: false,
         permitirSub23EnSenior: false,
@@ -224,9 +225,14 @@ const GestionEventosSection = () => {
                             </button>
                             <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', margin: 0 }}>Gestión de Eventos</h1>
                         </div>
-                        <button className="btn-admin-primary" onClick={() => setView('crear')}>
-                            <Plus size={20} /> Nuevo Evento
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.8rem' }}>
+                            <button className="btn-admin-secondary" style={{ border: '1px solid var(--color-primary)', color: 'var(--color-primary)' }} onClick={() => setView('crearControl')}>
+                                <Plus size={20} /> Nuevo Control
+                            </button>
+                            <button className="btn-admin-primary" onClick={() => setView('crear')}>
+                                <Plus size={20} /> Nuevo Evento
+                            </button>
+                        </div>
                     </div>
 
                     {loading ? (
@@ -253,6 +259,98 @@ const GestionEventosSection = () => {
                     onChange={handleFieldChange}
                     clubes={clubes}
                 />
+            )}
+
+            {view === 'crearControl' && (
+                <div className="fade-in">
+                    <div className="section-header-row" style={{ marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                            <button className="btn-admin-secondary" onClick={() => setView('lista')} style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%' }}>
+                                <ArrowLeft size={20} />
+                            </button>
+                            <h2 style={{ margin: 0 }}>Nuevo Control Técnico</h2>
+                        </div>
+                    </div>
+                    <div className="admin-form-card glass-effect" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        <div className="admin-grid-form" style={{ padding: '2rem' }}>
+                            <div className="form-group">
+                                <label>Bote / Embarcación</label>
+                                <select className="admin-select" value={form.controlBote} onChange={e => handleFieldChange('controlBote', e.target.value)}>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="1">K1 - Kayak Individual</option>
+                                    <option value="2">K2 - Kayak Doble</option>
+                                    <option value="3">K4 - Kayak Cuádruple</option>
+                                    <option value="4">C1 - Canoa Individual</option>
+                                    <option value="5">C2 - Canoa Doble</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Distancia</label>
+                                <select className="admin-select" value={form.controlDist} onChange={e => handleFieldChange('controlDist', e.target.value)}>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="6">1000m</option>
+                                    <option value="1">200m</option>
+                                    <option value="5">500m</option>
+                                    <option value="10">5000m</option>
+                                    <option value="9">3000m</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Rama (Sexo)</label>
+                                <select className="admin-select" value={form.controlSex} onChange={e => handleFieldChange('controlSex', e.target.value)}>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="1">Masculino</option>
+                                    <option value="2">Femenino</option>
+                                    <option value="3">Mixto</option>
+                                </select>
+                            </div>
+                            <div className="form-footer-actions mt-lg">
+                                <button className="btn-admin-secondary" onClick={() => setView('lista')}>Cancelar</button>
+                                <button 
+                                    className="btn-admin-primary" 
+                                    disabled={saving || !form.controlBote || !form.controlDist || !form.controlSex}
+                                    onClick={async () => {
+                                        setSaving(true);
+                                        try {
+                                            const boteName = form.controlBote === "1" ? "K1" : form.controlBote === "2" ? "K2" : "K4";
+                                            const distName = form.controlDist === "6" ? "1000m" : "500m";
+                                            const sexName = form.controlSex === "1" ? "Masc" : "Fem";
+                                            
+                                            // 1. Crear Evento
+                                            const evPayload = {
+                                                nombre: `Control ${distName} ${boteName} ${sexName}`,
+                                                fecha: new Date().toISOString().substring(0, 10),
+                                                fechaFin: new Date().toISOString().substring(0, 10),
+                                                estado: 'Programada',
+                                                inscripcionesHabilitadas: true,
+                                                clubId: form.clubId || null
+                                            };
+                                            const newEv = await EventoService.create(evPayload);
+                                            
+                                            // 2. Crear Prueba (Categoría 11 = Control)
+                                            const prPayload = {
+                                                categoriaId: 11,
+                                                boteId: parseInt(form.controlBote),
+                                                distanciaId: parseInt(form.controlDist),
+                                                sexoId: parseInt(form.controlSex),
+                                                fechaHora: new Date().toISOString()
+                                            };
+                                            await PruebaService.assignToEvento(newEv.id, null, prPayload);
+                                            
+                                            showAlert('success', '¡Control creado exitosamente!');
+                                            setView('lista');
+                                            loadEventos();
+                                        } catch (err) {
+                                            showAlert('error', 'Error: ' + err.message);
+                                        } finally { setSaving(false); }
+                                    }}
+                                >
+                                    {saving ? 'Creando...' : 'Crear Control'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {view === 'dashboard' && (
