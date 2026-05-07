@@ -110,12 +110,28 @@ const FinisherDashboard = () => {
         
         const setupSignalR = async () => {
             try {
-                // Conectar al Hub (y unirse al grupo si hay una fase seleccionada)
+                // 1. Conectar al Hub (y unirse al grupo si hay una fase seleccionada)
                 await timingSignalRService.connect(selectedFase?.id);
 
-                // --- LISTENERS GLOBALES (Siempre activos mientras estemos en el dashboard) ---
+                // 2. LISTENERS GLOBALES (Siempre activos mientras estemos en el dashboard)
                 timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
-                    console.log("Global Alert received:", faseId);
+                    console.log("[SignalR] Global Race Started:", faseId);
+                    
+                    // Actualizar la lista de fases local para que el "estado" cambie visualmente en el cronograma
+                    setFases(prev => {
+                        const newFases = prev.map(f => 
+                            String(f.id) === String(faseId) 
+                                ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: serverTime } 
+                                : f
+                        );
+                        // Si la fase que largó es la que tenemos seleccionada, actualizarla también
+                        if (selectedFase && String(selectedFase.id) === String(faseId)) {
+                            const updated = newFases.find(x => String(x.id) === String(faseId));
+                            if (updated) setSelectedFase(updated);
+                        }
+                        return newFases;
+                    });
+
                     // Mostrar alerta si es otra carrera o si no tenemos ninguna seleccionada
                     if (!selectedFase || String(faseId) !== String(selectedFase.id)) {
                         setGlobalAlert({ faseId, serverTime });
@@ -123,26 +139,48 @@ const FinisherDashboard = () => {
                     }
                 });
 
-                // --- LISTENERS ESPECÍFICOS DE LA FASE SELECCIONADA ---
+                // 3. LÓGICA ESPECÍFICA DE LA FASE SELECCIONADA
                 if (selectedFase) {
-                    const data = await ResultadoService.getByFase(selectedFase.id);
-                    const formattedData = data.map(r => ({
-                        ...r,
-                        tiempoOficial: r.tiempoOficial,
-                        msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
-                        status: r.tiempoOficial ? 'finished' : 'pending'
-                    }));
-                    
-                    setResultados(formattedData.sort((a,b) => a.carril - b.carril));
-                    
-                    if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-                        const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
-                        if (!isNaN(parsed)) startLocalTimer(parsed);
-                    } else {
-                        stopLocalTimer();
-                    }
+                    console.log("[SignalR] Monitoring Phase:", selectedFase.id);
+
+                    // Sincronización proactiva: Si la fase dice "Programada" localmente,
+                    // verificamos si ya empezó en el servidor al cargarla.
+                    const loadFaseContext = async () => {
+                        const data = await ResultadoService.getByFase(selectedFase.id);
+                        const formattedData = data.map(r => ({
+                            ...r,
+                            tiempoOficial: r.tiempoOficial,
+                            msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
+                            status: r.tiempoOficial ? 'finished' : 'pending'
+                        }));
+                        setResultados(formattedData.sort((a,b) => a.carril - b.carril));
+
+                        // Si entramos a una fase que ya está en carrera en el objeto local (o actualizado por global alert)
+                        if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
+                            const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
+                            if (!isNaN(parsed)) startLocalTimer(parsed);
+                        } else {
+                            // Por las dudas, si el objeto dice Programada pero el servidor dice En Carrera
+                            // Podríamos hacer un fetch de la fase, o confiar en el mensaje RaceStarted que llegará.
+                            stopLocalTimer();
+                        }
+                    };
+
+                    await loadFaseContext();
 
                     timingSignalRService.onRaceStarted((id, sTime) => {
+                        console.log("[SignalR] Phase Started:", id);
+                        setFases(prev => {
+                            const newFases = prev.map(f => 
+                                String(f.id) === String(id) ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: sTime } : f
+                            );
+                            if (selectedFase && String(selectedFase.id) === String(id)) {
+                                const updated = newFases.find(x => String(x.id) === String(id));
+                                if (updated) setSelectedFase(updated);
+                            }
+                            return newFases;
+                        });
+
                         if (String(id) === String(selectedFase.id)) {
                             const parsed = new Date(sTime).getTime();
                             if (!isNaN(parsed)) startLocalTimer(parsed);
@@ -150,16 +188,22 @@ const FinisherDashboard = () => {
                     });
 
                     timingSignalRService.onRaceFinished(() => {
+                        console.log("[SignalR] Phase Finished");
                         stopLocalTimer();
+                        // Opcional: recargar fases para ver el check de terminada
                     });
 
                     timingSignalRService.onRaceReset((id) => {
+                        console.log("[SignalR] Phase Reset:", id);
                         if (String(id) === String(selectedFase.id)) {
                             stopLocalTimer();
                             setElapsedTime(0);
                             setStartTime(null);
                             setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null, status: 'pending', estadoCanto: 'Pendiente' })));
                         }
+                        setFases(prev => prev.map(f => 
+                            String(f.id) === String(id) ? { ...f, estado: 'Programada', fechaHoraInicioReal: null } : f
+                        ));
                     });
 
                     timingSignalRService.onResultStatusUpdated((resId, status) => {
@@ -168,7 +212,7 @@ const FinisherDashboard = () => {
                         ));
                     });
                 } else {
-                    // Si no hay fase seleccionada, limpiar estado local
+                    // Limpiar estado si no hay fase
                     setResultados([]);
                     setIsRaceRunning(false);
                     setStartTime(null);
@@ -176,15 +220,13 @@ const FinisherDashboard = () => {
                     stopLocalTimer();
                 }
             } catch (err) {
-                console.error("SignalR Error:", err);
+                console.error("[SignalR] Setup Error:", err);
             }
         };
 
         setupSignalR();
 
         return () => {
-            // No desconectamos aquí para mantener la conexión global si solo cambia la fase
-            // El componente se encarga de limpiar listeners en el próximo ciclo vía .off() en el servicio
             stopLocalTimer();
         };
     }, [selectedEvento, selectedFase?.id]);
