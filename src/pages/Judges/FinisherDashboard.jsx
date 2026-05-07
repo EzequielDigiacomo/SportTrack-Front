@@ -380,24 +380,33 @@ const FinisherDashboard = () => {
     return (
         <div className={`finisher-dashboard ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             {globalAlert && (
-                <div className="global-race-alert fade-in">
-                    <div className="alert-content">
-                        <Activity className="pulse" size={20} />
-                        <span>¡Una prueba acaba de LARGAR!</span>
-                        <button className="btn-jump" onClick={() => {
-                            const target = fases.find(f => f.id === globalAlert.faseId);
-                            if (target) {
-                                setSelectedFase(target);
-                                // Sincronización inmediata del reloj
-                                const start = new Date(globalAlert.serverTime);
-                                setStartTime(start);
-                                setIsRaceRunning(true);
-                            }
-                            setGlobalAlert(null);
-                        }}>
-                            IR A LA PRUEBA
-                        </button>
-                        <button className="btn-close-alert" onClick={() => setGlobalAlert(null)}>×</button>
+                <div className="global-race-alert-overlay">
+                    <div className="global-race-alert">
+                        <div className="alert-card-content">
+                            <div className="alert-icon-wrapper">
+                                <Activity className="pulse-red" size={48} />
+                            </div>
+                            <h3>¡NUEVA LARGADA!</h3>
+                            <p>Una prueba acaba de comenzar en el agua.</p>
+                            
+                            <div className="alert-actions-vertical">
+                                <button className="btn-jump-big" onClick={() => {
+                                    const target = fases.find(f => f.id === globalAlert.faseId);
+                                    if (target) {
+                                        setSelectedFase(target);
+                                        const start = new Date(globalAlert.serverTime);
+                                        setStartTime(start);
+                                        setIsRaceRunning(true);
+                                    }
+                                    setGlobalAlert(null);
+                                }}>
+                                    <Timer size={20} /> IR A LA PRUEBA Y CRONOMETRAR
+                                </button>
+                                <button className="btn-close-soft" onClick={() => setGlobalAlert(null)}>
+                                    Ignorar por ahora
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

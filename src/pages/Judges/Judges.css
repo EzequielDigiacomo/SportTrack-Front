@@ -1178,42 +1178,112 @@
     cursor: not-allowed;
 }
 
-/* Global Race Alert Banner */
-.global-race-alert {
+/* Global Race Alert Modal */
+.global-race-alert-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 2000;
-    padding: 10px;
-    background: linear-gradient(to right, #b91c1c, #ef4444);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    animation: slide-down 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.alert-content {
-    max-width: 800px;
-    margin: 0 auto;
+    bottom: 0;
+    background: rgba(10, 15, 30, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 15px;
-    color: white;
-    font-weight: 800;
-    font-size: 0.9rem;
+    padding: 20px;
+    animation: fade-in 0.3s ease;
 }
 
-.btn-jump {
-    background: white;
-    color: #ef4444;
-    border: none;
-    padding: 6px 15px;
+.global-race-alert {
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 2px solid #ef4444;
     border-radius: 20px;
+    width: 100%;
+    max-width: 400px;
+    padding: 30px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(239, 68, 68, 0.2);
+    text-align: center;
+    animation: alert-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alert-card-content h3 {
+    color: #ef4444;
+    font-size: 1.8rem;
     font-weight: 900;
-    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+}
+
+.alert-card-content p {
+    color: #94a3b8;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+}
+
+.alert-icon-wrapper {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.pulse-red {
+    color: #ef4444;
+    animation: pulse-animation 1.5s infinite;
+}
+
+@keyframes pulse-animation {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes alert-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.alert-actions-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn-jump-big {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-jump-big:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.btn-close-soft {
+    background: transparent;
+    color: #64748b;
+    border: none;
+    padding: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.btn-close-soft:hover {
+    color: #94a3b8;
 }
 
 .btn-jump:hover {
