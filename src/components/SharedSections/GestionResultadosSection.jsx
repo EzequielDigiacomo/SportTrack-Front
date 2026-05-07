@@ -33,6 +33,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const timerRef = React.useRef(null);
 
     const { alert, showAlert } = useAlert();
+    const [isManualMode, setIsManualMode] = useState(false);
+    const [manualPlacements, setManualPlacements] = useState({});
 
     // Lógica de selección de fase (Movida arriba para evitar errores de hoisting)
     const hideTabs = viewMode === 'tiempos' || viewMode === 'startlist';
@@ -201,6 +203,32 @@ const handleSimulateResults = () => {
     setMessage(`✅ Simulación completada para ${faseSeleccionada.nombreFase}.`);
 };
 
+const handleManualPlacementChange = (inscId, field, value) => {
+    setManualPlacements(prev => ({
+        ...prev,
+        [inscId]: {
+            ...(prev[inscId] || { serie: 1, carril: 1 }),
+            [field]: parseInt(value) || 0
+        }
+    }));
+};
+
+const handleApplyManualGeneration = () => {
+    const placements = inscriptos.map(ins => ({
+        inscripcionId: ins.id,
+        serie: manualPlacements[ins.id]?.serie || 1,
+        carril: manualPlacements[ins.id]?.carril || 1
+    }));
+
+    if (placements.some(p => p.carril < 1 || p.carril > 9)) {
+        setMessage("⚠️ Todos los carriles deben estar entre 1 y 9.");
+        return;
+    }
+
+    handleGenerarManual(placements);
+    setIsManualMode(false);
+};
+
 
 const handleResultChange = (id, field, val) => {
     setTiemposLocales(prev => ({
@@ -298,10 +326,42 @@ return (
                                 <button
                                     className="btn-admin-primary"
                                     onClick={handleSortearCarriles}
-                                    disabled={saving}
+                                    disabled={saving || isManualMode}
                                 >
                                     🎲 {fases.length > 0 ? 'Resortear y Regenerar' : 'Generar Heats y Sortear'}
                                 </button>
+                                <button
+                                    className={`btn-admin-secondary ${isManualMode ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (!isManualMode) {
+                                            // Pre-llenar con algo útil si está vacío
+                                            const initial = {};
+                                            inscriptos.forEach((ins, idx) => {
+                                                initial[ins.id] = { 
+                                                    serie: Math.floor(idx / 9) + 1, 
+                                                    carril: (idx % 9) + 1 
+                                                };
+                                            });
+                                            setManualPlacements(initial);
+                                        }
+                                        setIsManualMode(!isManualMode);
+                                    }}
+                                    style={{ 
+                                        borderColor: isManualMode ? '#ffdd00' : 'rgba(255,255,255,0.2)',
+                                        color: isManualMode ? '#ffdd00' : 'white'
+                                    }}
+                                >
+                                    {isManualMode ? '❌ Cancelar Manual' : '🛠️ Organización Manual'}
+                                </button>
+                                {isManualMode && (
+                                    <button
+                                        className="btn-admin-primary"
+                                        onClick={handleApplyManualGeneration}
+                                        style={{ background: '#ffdd00', color: '#121a30' }}
+                                    >
+                                        🚀 Aplicar y Generar
+                                    </button>
+                                )}
                                 {fases.length > 0 && (
                                     <div style={{ position: 'relative' }}>
                                         <button
@@ -379,7 +439,14 @@ return (
                                             <tr>
                                                 <th>Atleta / Tripulación</th>
                                                 <th>Club</th>
-                                                <th style={{ textAlign: 'center' }}>Cabeza de Serie (Carril 5)</th>
+                                                {isManualMode ? (
+                                                    <>
+                                                        <th style={{ textAlign: 'center' }}>Serie / Heat</th>
+                                                        <th style={{ textAlign: 'center' }}>Carril</th>
+                                                    </>
+                                                ) : (
+                                                    <th style={{ textAlign: 'center' }}>Cabeza de Serie (Carril 5)</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -402,21 +469,45 @@ return (
                                                     </td>
                                                     <td>{ins.clubNombre || ins.clubSigla || 'Independiente'}</td>
                                                     <td style={{ textAlign: 'center' }}>
-                                                        <button
-                                                            className="btn-icon-admin"
-                                                            onClick={() => handleToggleSeeding(ins.id)}
-                                                            title={ins.esCabezaDeSerie ? "Quitar Cabeza de Serie" : "Marcar como Cabeza de Serie"}
-                                                            style={{
-                                                                color: ins.esCabezaDeSerie ? '#ffdd00' : 'var(--color-text-muted)',
-                                                                background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.1)' : 'rgba(255,255,255,0.05)',
-                                                                border: ins.esCabezaDeSerie ? '1px solid rgba(255,221,0,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                                                                padding: '0.4rem',
-                                                                borderRadius: '50%'
-                                                            }}
-                                                        >
-                                                            <Star size={16} fill={ins.esCabezaDeSerie ? '#ffdd00' : 'none'} />
-                                                        </button>
+                                                        {isManualMode ? (
+                                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                                                                <input 
+                                                                    type="number"
+                                                                    className="admin-input-small"
+                                                                    style={{ width: '60px', textAlign: 'center' }}
+                                                                    value={manualPlacements[ins.id]?.serie || 1}
+                                                                    onChange={(e) => handleManualPlacementChange(ins.id, 'serie', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                className="btn-icon-admin"
+                                                                onClick={() => handleToggleSeeding(ins.id)}
+                                                                title={ins.esCabezaDeSerie ? "Quitar Cabeza de Serie" : "Marcar como Cabeza de Serie"}
+                                                                style={{
+                                                                    color: ins.esCabezaDeSerie ? '#ffdd00' : 'var(--color-text-muted)',
+                                                                    background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.1)' : 'rgba(255,255,255,0.05)',
+                                                                    border: ins.esCabezaDeSerie ? '1px solid rgba(255,221,0,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                                                    padding: '0.4rem',
+                                                                    borderRadius: '50%'
+                                                                }}
+                                                            >
+                                                                <Star size={16} fill={ins.esCabezaDeSerie ? '#ffdd00' : 'none'} />
+                                                            </button>
+                                                        )}
                                                     </td>
+                                                    {isManualMode && (
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <input 
+                                                                type="number"
+                                                                className="admin-input-small"
+                                                                style={{ width: '60px', textAlign: 'center' }}
+                                                                min="1" max="9"
+                                                                value={manualPlacements[ins.id]?.carril || 1}
+                                                                onChange={(e) => handleManualPlacementChange(ins.id, 'carril', e.target.value)}
+                                                            />
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
                                         </tbody>

@@ -183,6 +183,28 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const handleGenerarManual = async (placements) => {
+        setSaving(true);
+        try {
+            await FaseService.generarManual(selectedPrueba, placements);
+            await handleRecalcularCronograma();
+            
+            const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+            const newLocked = locked.filter(id => id !== selectedPrueba);
+            localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
+            setIsLocked(false);
+
+            setMessage("✅ Heats generados con organización manual.");
+            await loadDatosPrueba(selectedPrueba);
+            await loadCronograma();
+        } catch (error) {
+            console.error("Error al generar manual:", error);
+            setMessage("❌ Error al generar organización manual.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handlePromoverEtapa = async () => {
         setSaving(true);
         try {
@@ -511,6 +533,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
+        handleGenerarManual,
         handleRecalcularCronograma,
         handleSelectRegata, loadCronograma,
         loadDatosPrueba

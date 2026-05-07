@@ -10,6 +10,10 @@ const FaseService = {
         const response = await api.post(ENDPOINTS.FASES.GENERAR(eventoPruebaId));
         return response.data;
     },
+    generarManual: async (eventoPruebaId, placements) => {
+        const response = await api.post(`${ENDPOINTS.FASES.BASE}/GenerarManual/${eventoPruebaId}`, placements);
+        return response.data;
+    },
     promover: async (eventoPruebaId) => {
         const response = await api.post(ENDPOINTS.FASES.PROMOVER(eventoPruebaId));
         return response.data;
