@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info } from 'lucide-react';
+import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AtletaService from '../../services/AtletaService';
 import EventoService from '../../services/EventoService';
