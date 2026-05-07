@@ -8,8 +8,15 @@ class TimingSignalRService {
         this.serverOffset = 0; // Diferencia en ms entre server y cliente
     }
 
-    async connect(faseId) {
-        if (this.currentFaseId === faseId.toString() && this.connection?.state === signalR.HubConnectionState.Connected) {
+    async connect(faseId = null) {
+        if (faseId && this.currentFaseId === faseId.toString() && this.connection?.state === signalR.HubConnectionState.Connected) {
+            return;
+        }
+
+        // Si ya estamos conectados y solo queremos cambiar de fase (o unirnos a una)
+        if (this.connection?.state === signalR.HubConnectionState.Connected && faseId) {
+            await this.joinRaceGroup(faseId);
+            this.currentFaseId = faseId.toString();
             return;
         }
 
@@ -44,8 +51,12 @@ class TimingSignalRService {
             // Sincronizar reloj inmediatamente después de conectar
             await this.syncClock();
             
-            await this.joinRaceGroup(faseId);
-            this.currentFaseId = faseId.toString();
+            if (faseId) {
+                await this.joinRaceGroup(faseId);
+                this.currentFaseId = faseId.toString();
+            } else {
+                this.currentFaseId = null;
+            }
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log("SignalR connection aborted");
@@ -106,6 +117,7 @@ class TimingSignalRService {
 
     onRaceStarted(callback) {
         if (!this.connection) return;
+        this.connection.off("RaceStarted");
         this.connection.on("RaceStarted", (id, sTime) => {
             // Ajustamos sTime si el servidor lo mandó sin Z (ISO string local del server)
             const serverDate = new Date(sTime);
@@ -115,16 +127,19 @@ class TimingSignalRService {
 
     onLapRecorded(callback) {
         if (!this.connection) return;
+        this.connection.off("LapRecorded");
         this.connection.on("LapRecorded", callback);
     }
 
     onRaceFinished(callback) {
         if (!this.connection) return;
+        this.connection.off("RaceFinished");
         this.connection.on("RaceFinished", callback);
     }
 
     onGlobalRaceStarted(callback) {
         if (!this.connection) return;
+        this.connection.off("GlobalRaceStarted");
         this.connection.on("GlobalRaceStarted", (faseId, serverTime) => {
             console.log(`Global Event: Race (ID: ${faseId}) started at ${serverTime}`);
             callback({ faseId, serverTime });
@@ -133,11 +148,13 @@ class TimingSignalRService {
 
     onRaceReset(callback) {
         if (!this.connection) return;
+        this.connection.off("RaceReset");
         this.connection.on("RaceReset", callback);
     }
 
     onTimeReceived(callback) {
         if (!this.connection) return;
+        this.connection.off("TimeReceived");
         this.connection.on("TimeReceived", callback);
     }
 
@@ -150,6 +167,7 @@ class TimingSignalRService {
 
     onResultStatusUpdated(callback) {
         if (!this.connection) return;
+        this.connection.off("ResultStatusUpdated");
         this.connection.on("ResultStatusUpdated", callback);
     }
 

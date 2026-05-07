@@ -105,13 +105,13 @@ const StarterDashboard = () => {
                 if (!isMounted) return;
 
                 timingSignalRService.onRaceReset((id) => {
-                    if (id.toString() === selectedFase.id.toString()) {
+                    if (String(id) === String(selectedFase.id)) {
                         setSelectedFase(prev => ({ ...prev, estado: 'Programada' }));
                     }
                 });
 
                 timingSignalRService.onRaceStarted((id) => {
-                    if (id.toString() === selectedFase.id.toString()) {
+                    if (String(id) === String(selectedFase.id)) {
                         setSelectedFase(prev => ({ ...prev, estado: 'En Carrera' }));
                     }
                 });
@@ -127,7 +127,7 @@ const StarterDashboard = () => {
                             return {
                                 ...prev,
                                 resultados: prev.resultados.map(r => 
-                                    r.id.toString() === resId.toString() ? { ...r, estadoCanto: status } : r
+                                    String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
                                 )
                             };
                         });
