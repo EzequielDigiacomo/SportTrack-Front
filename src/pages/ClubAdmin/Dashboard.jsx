@@ -27,6 +27,8 @@ const ClubDashboard = () => {
         const loadDashboardData = async () => {
             try {
                 // 1. Obtener nombre del club
+                let activityItems = [];
+
                 if (user.clubId) {
                     const clubData = await ClubService.getById(user.clubId);
                     setClubName(clubData.nombre || clubData.Nombre);
@@ -35,18 +37,17 @@ const ClubDashboard = () => {
                     const atletas = await AtletaService.getByClub(user.clubId);
                     setStats(prev => ({ ...prev, athletes: atletas.length }));
 
-                    // 3. Simular Actividad Reciente (Ya que no hay endpoint de Auditoría todavía)
-                    // Tomamos los últimos 3 atletas creados
+                    // 3. Simular Actividad Reciente (Atletas)
                     const sortedAtletas = [...atletas].sort((a,b) => b.id - a.id).slice(0, 3);
-                    const activity = sortedAtletas.map(a => ({
+                    const athleteActivity = sortedAtletas.map(a => ({
                         id: `atleta-${a.id}`,
                         tipo: 'Atleta',
                         titulo: 'Nuevo Atleta Registrado',
                         detalle: `${a.nombre} ${a.apellido}`,
-                        fecha: 'Hoy', // Idealmente usaríamos una fecha real si existiera
+                        fecha: 'Hoy',
                         icon: <Users size={16} />
                     }));
-                    setRecentActivity(activity);
+                    activityItems = [...athleteActivity];
                 }
                 
                 // 4. Obtener eventos próximos (Filtrando controles para clubes)
@@ -63,8 +64,10 @@ const ClubDashboard = () => {
                         fecha: 'Inscripciones Abiertas',
                         icon: <Calendar size={16} />
                     }));
-                    setRecentActivity(prev => [...prev, ...eventActivity]);
+                    activityItems = [...activityItems, ...eventActivity];
                 }
+
+                setRecentActivity(activityItems);
                 
             } catch (err) {
                 console.error("Error loading dashboard stats:", err);
