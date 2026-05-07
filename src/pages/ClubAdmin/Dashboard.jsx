@@ -19,25 +19,51 @@ const ClubDashboard = () => {
     const isRoot = location.pathname === '/club' || location.pathname === '/club/';
     const [clubName, setClubName] = useState('');
     const [stats, setStats] = useState({ athletes: 0, events: 0 });
+    const [recentActivity, setRecentActivity] = useState([]);
 
     useEffect(() => {
         if (!user) return;
         
         const loadDashboardData = async () => {
             try {
-                // 1. Obtener nombre del club (si no está en el token)
+                // 1. Obtener nombre del club
                 if (user.clubId) {
                     const clubData = await ClubService.getById(user.clubId);
                     setClubName(clubData.nombre || clubData.Nombre);
                     
-                    // 2. Obtener total de atletas
+                    // 2. Obtener total de atletas (para los contadores en cards)
                     const atletas = await AtletaService.getByClub(user.clubId);
                     setStats(prev => ({ ...prev, athletes: atletas.length }));
+
+                    // 3. Simular Actividad Reciente (Ya que no hay endpoint de Auditoría todavía)
+                    // Tomamos los últimos 3 atletas creados
+                    const sortedAtletas = [...atletas].sort((a,b) => b.id - a.id).slice(0, 3);
+                    const activity = sortedAtletas.map(a => ({
+                        id: `atleta-${a.id}`,
+                        tipo: 'Atleta',
+                        titulo: 'Nuevo Atleta Registrado',
+                        detalle: `${a.nombre} ${a.apellido}`,
+                        fecha: 'Hoy', // Idealmente usaríamos una fecha real si existiera
+                        icon: <Users size={16} />
+                    }));
+                    setRecentActivity(activity);
                 }
                 
-                // 3. Obtener eventos próximos
+                // 4. Obtener eventos próximos
                 const proximos = await EventoService.getProximos();
                 setStats(prev => ({ ...prev, events: proximos.length }));
+                
+                if (proximos.length > 0) {
+                    const eventActivity = proximos.slice(0, 2).map(e => ({
+                        id: `evento-${e.id}`,
+                        tipo: 'Evento',
+                        titulo: 'Evento Próximo',
+                        detalle: e.nombre,
+                        fecha: 'Inscripciones Abiertas',
+                        icon: <Calendar size={16} />
+                    }));
+                    setRecentActivity(prev => [...prev, ...eventActivity]);
+                }
                 
             } catch (err) {
                 console.error("Error loading dashboard stats:", err);
@@ -78,7 +104,7 @@ const ClubDashboard = () => {
 
             <div className="dashboard-content-area">
                 <Routes>
-                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} />} />
+                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} />} />
                     <Route path="atletas" element={<AtletasSection />} />
                     <Route path="eventos" element={<EventosSection />} />
                     <Route path="perfil" element={<PerfilClubSection />} />
@@ -90,21 +116,9 @@ const ClubDashboard = () => {
     );
 };
 
-const DashboardMenu = ({ navigate, stats }) => (
+const DashboardMenu = ({ navigate, stats, recentActivity }) => (
     <div className="dashboard-menu-container fade-in">
-        <div className="stats-bar glass-effect mb-xl">
-            <div className="stat-item">
-                <span className="stat-value">{stats.athletes}</span>
-                <span className="stat-label">Atletas Registrados</span>
-            </div>
-            <div className="stat-divider"></div>
-            <div className="stat-item">
-                <span className="stat-value">{stats.events}</span>
-                <span className="stat-label">Eventos Próximos</span>
-            </div>
-        </div>
-
-        <div className="dashboard-grid">
+        <div className="dashboard-grid mb-xl">
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('atletas')}>
                 <div className="card-icon" style={{ color: 'var(--color-primary)' }}><Users size={40} /></div>
                 <h3>Atletas</h3>
@@ -127,6 +141,33 @@ const DashboardMenu = ({ navigate, stats }) => (
                 <div className="card-icon" style={{ color: 'var(--color-accent-orange)' }}><Trophy size={40} /></div>
                 <h3>Resultados</h3>
                 <p className="card-label">Carga de tiempos y Start List</p>
+            </div>
+        </div>
+
+        <div className="recent-activity-panel glass-effect">
+            <div className="panel-header">
+                <Activity size={20} className="text-primary" />
+                <h3>Últimos Movimientos</h3>
+            </div>
+            <div className="activity-list">
+                {recentActivity.length > 0 ? (
+                    recentActivity.map((act, idx) => (
+                        <div key={act.id} className="activity-item">
+                            <div className={`activity-icon-small ${act.tipo.toLowerCase()}`}>
+                                {act.icon}
+                            </div>
+                            <div className="activity-info">
+                                <div className="activity-title-row">
+                                    <span className="act-title">{act.titulo}</span>
+                                    <span className="act-date">{act.fecha}</span>
+                                </div>
+                                <p className="act-detail">{act.detalle}</p>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="empty-activity">No hay movimientos recientes registrados</div>
+                )}
             </div>
         </div>
     </div>
