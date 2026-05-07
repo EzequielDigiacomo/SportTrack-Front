@@ -361,7 +361,7 @@ const FinisherDashboard = () => {
                         </div>
                     )}
                     <div className="badge-live blue">MODO CRONOMETRISTA</div>
-                    {(() => {
+                    {selectedFase ? (() => {
                         const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
                         const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (selectedFase?.categoriaNombre || 'Sin Categoría');
                         const boteName = p ? (BOTE_NAMES[p.bote?.id] || p.bote?.nombre) : (selectedFase?.boteTipo || selectedFase?.tipoBote || 'Sin Bote');
@@ -371,24 +371,26 @@ const FinisherDashboard = () => {
                             : (selectedFase?.horaProgramada || '--:--');
                         
                         return (
-                            <>
-                        <div className="race-header-info">
-                            <h2>
-                                <span className="race-id-prefix">
-                                    #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
-                                </span>
-                                {catName}
-                            </h2>
-                            <div className="race-meta">
-                                <span className="meta-item"><Clock size={14} /> {timeName}</span>
-                                <span className="meta-item">{selectedFase?.nombreFase}</span>
-                                <span className="meta-item">{boteName}</span>
-                                <span className="meta-item">{distName}</span>
+                            <div className="race-header-info">
+                                <h2>
+                                    <span className="race-id-prefix">
+                                        #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
+                                    </span>
+                                    {catName}
+                                </h2>
+                                <div className="race-meta">
+                                    <span className="meta-item"><Clock size={14} /> {timeName}</span>
+                                    <span className="meta-item">{selectedFase?.nombreFase}</span>
+                                    <span className="meta-item">{boteName}</span>
+                                    <span className="meta-item">{distName}</span>
+                                </div>
                             </div>
-                        </div>
-                            </>
                         );
-                    })()}
+                    })() : (
+                        <div className="race-header-info">
+                            <h2 style={{ color: '#94a3b8' }}>Seleccione una prueba</h2>
+                        </div>
+                    )}
                 </div>
                 <div className={`main-timer ${isRaceRunning ? 'running' : ''}`}>
                     {formatTimer(elapsedTime)}
@@ -445,120 +447,127 @@ const FinisherDashboard = () => {
                 </aside>
 
                 <main className="finisher-main glass-effect">
-                    <div className="quick-controls-panel">
-                        <div className="lane-buttons-grid">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-                                const res = resultados.find(r => r.carril === num);
-                                const isOccupied = !!res;
-                                const isFinished = res?.tiempoOficial;
-                                const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
-                                return (
-                                    <button key={num} className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}>
-                                        <span className="num">{num}</span>
-                                        <span className="label">{isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <button 
-                            className="btn-doubt" 
-                            onClick={recordDoubt} 
-                            disabled={!isRaceRunning}
-                            style={{
-                                width: '100%',
-                                padding: '15px',
-                                marginTop: '15px',
-                                background: isRaceRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
-                                color: isRaceRunning ? 'white' : 'var(--color-text-muted)',
-                                border: isRaceRunning ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: '8px',
-                                fontSize: '1.1rem',
-                                fontWeight: 'bold',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px',
-                                cursor: isRaceRunning ? 'pointer' : 'not-allowed',
-                                boxShadow: isRaceRunning ? '0 4px 15px rgba(245, 158, 11, 0.3)' : 'none',
-                                transition: 'all 0.2s',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px'
-                            }}
-                        >
-                            <Activity size={24} /> <span>DUDA (?) [Espacio]</span>
-                        </button>
-
-                        <div className="arribos-list">
-                            <h3><Timer size={18} /> Arribos</h3>
-                            <div className="arribos-grid">
-                                {arribosOrdenados.map((arrival, idx) => (
-                                    <div key={arrival.id} className={`arrival-card ${arrival.type}`}>
-                                        <div className="a-rank">{idx + 1}°</div>
-                                        <div className="a-body">
-                                            <span className="a-label">
-                                                {arrival.type === 'duda' ? '⚠ DUDA' : (arrival.label || `Carril ${arrival.carril || '—'}`)}
-                                            </span>
-                                            <span className="a-name">{arrival.participante ? getSoloApellido(arrival.participante) : '—'}</span>
-                                        </div>
-                                        <div className="a-time">{arrival.time}</div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                            {arrival.type === 'duda' && <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}><XCircle size={16} /></button>}
-                                        </div>
-                                    </div>
-                                ))}
+                    {selectedFase ? (
+                        <div className="quick-controls-panel">
+                            <div className="lane-buttons-grid">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
+                                    const res = resultados.find(r => r.carril === num);
+                                    const isOccupied = !!res;
+                                    const isFinished = res?.tiempoOficial;
+                                    const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
+                                    return (
+                                        <button key={num} className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}>
+                                            <span className="num">{num}</span>
+                                            <span className="label">{isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        </div>
-
-                        {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
-                            <div className="pendientes-panel glass-effect fade-in" style={{ marginTop: '2rem', borderTop: '2px solid rgba(251, 191, 36, 0.3)', paddingTop: '1.5rem' }}>
-                                <h3 style={{ color: '#fbbf24', fontSize: '1rem', marginBottom: '1rem' }}>Atletas por Clasificar</h3>
-                                <div className="pendientes-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {pendientes.map(p => (
-                                        <div key={p.id} className="pendiente-item">
-                                            <span className="p-lane">{p.carril}</span>
-                                            <div className="p-info">
-                                                <span className="p-name">{p.participanteNombre}</span>
-                                                <button className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
+                            <button 
+                                className="btn-doubt" 
+                                onClick={recordDoubt} 
+                                disabled={!isRaceRunning}
+                                style={{
+                                    width: '100%',
+                                    padding: '15px',
+                                    marginTop: '15px',
+                                    background: isRaceRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
+                                    color: isRaceRunning ? 'white' : 'var(--color-text-muted)',
+                                    border: isRaceRunning ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '8px',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '10px',
+                                    cursor: isRaceRunning ? 'pointer' : 'not-allowed',
+                                    boxShadow: isRaceRunning ? '0 4px 15px rgba(245, 158, 11, 0.3)' : 'none',
+                                    transition: 'all 0.2s',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px'
+                                }}
+                            >
+                                <Activity size={24} /> <span>DUDA (?) [Espacio]</span>
+                            </button>
+    
+                            <div className="arribos-list">
+                                <h3><Timer size={18} /> Arribos</h3>
+                                <div className="arribos-grid">
+                                    {arribosOrdenados.map((arrival, idx) => (
+                                        <div key={arrival.id} className={`arrival-card ${arrival.type}`}>
+                                            <div className="a-rank">{idx + 1}°</div>
+                                            <div className="a-body">
+                                                <span className="a-label">
+                                                    {arrival.type === 'duda' ? '⚠ DUDA' : (arrival.label || `Carril ${arrival.carril || '—'}`)}
+                                                </span>
+                                                <span className="a-name">{arrival.participante ? getSoloApellido(arrival.participante) : '—'}</span>
+                                            </div>
+                                            <div className="a-time">{arrival.time}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                {arrival.type === 'duda' && <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}><XCircle size={16} /></button>}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        )}
-
-                        {/* Navegación Rápida */}
-                        <div className="quick-nav-footer">
-                            <button 
-                                className="btn-nav-step" 
-                                disabled={fases.findIndex(f => f.id === selectedFase.id) <= 0}
-                                onClick={() => {
-                                    const idx = fases.findIndex(f => f.id === selectedFase.id);
-                                    if (idx > 0) setSelectedFase(fases[idx - 1]);
-                                }}
-                            >
-                                <ArrowLeft size={16} /> Anterior
-                            </button>
-                            <span className="nav-index">
-                                Prueba {fases.findIndex(f => f.id === selectedFase.id) + 1} de {fases.length}
-                            </span>
-                            <button 
-                                className="btn-nav-step" 
-                                disabled={fases.findIndex(f => f.id === selectedFase.id) >= fases.length - 1}
-                                onClick={() => {
-                                    const idx = fases.findIndex(f => f.id === selectedFase.id);
-                                    if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
-                                }}
-                            >
-                                Siguiente <ArrowRight size={16} />
-                            </button>
+    
+                            {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
+                                <div className="pendientes-panel glass-effect fade-in" style={{ marginTop: '2rem', borderTop: '2px solid rgba(251, 191, 36, 0.3)', paddingTop: '1.5rem' }}>
+                                    <h3 style={{ color: '#fbbf24', fontSize: '1rem', marginBottom: '1rem' }}>Atletas por Clasificar</h3>
+                                    <div className="pendientes-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {pendientes.map(p => (
+                                            <div key={p.id} className="pendiente-item">
+                                                <span className="p-lane">{p.carril}</span>
+                                                <div className="p-info">
+                                                    <span className="p-name">{p.participanteNombre}</span>
+                                                    <button className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+    
+                            {/* Navegación Rápida */}
+                            <div className="quick-nav-footer">
+                                <button 
+                                    className="btn-nav-step" 
+                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) <= 0}
+                                    onClick={() => {
+                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
+                                        if (idx > 0) setSelectedFase(fases[idx - 1]);
+                                    }}
+                                >
+                                    <ArrowLeft size={16} /> Anterior
+                                </button>
+                                <span className="nav-index">
+                                    Prueba {fases.findIndex(f => f.id === selectedFase?.id) + 1} de {fases.length}
+                                </span>
+                                <button 
+                                    className="btn-nav-step" 
+                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) >= fases.length - 1}
+                                    onClick={() => {
+                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
+                                        if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
+                                    }}
+                                >
+                                    Siguiente <ArrowRight size={16} />
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="empty-msg" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: '#94a3b8' }}>
+                            <Activity size={48} opacity={0.2} />
+                            <p>Seleccione una carrera del cronograma para comenzar</p>
+                        </div>
+                    )}
 
                     <footer className="finisher-actions">
-                        <button className="btn-reset" onClick={() => { if(window.confirm('¿Reiniciar reloj?')) { setElapsedTime(0); stopLocalTimer(); setRawTimes([]); setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null }))); } }}>
+                        <button className="btn-reset" onClick={() => { if(window.confirm('¿Reiniciar reloj?')) { setElapsedTime(0); stopLocalTimer(); setRawTimes([]); setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null }))); } }} disabled={!selectedFase}>
                             <RefreshCw size={18} /> Reiniciar
                         </button>
-                        <button className="btn-save-official" onClick={handleSaveResults} disabled={arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
+                        <button className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
                             <Save size={18} /> Enviar
                         </button>
                     </footer>

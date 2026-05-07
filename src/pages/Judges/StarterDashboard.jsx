@@ -345,22 +345,22 @@ const StarterDashboard = () => {
                             <div className="quick-nav-footer">
                                 <button 
                                     className="btn-nav-step" 
-                                    disabled={fases.findIndex(f => f.id === selectedFase.id) <= 0}
+                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) <= 0}
                                     onClick={() => {
-                                        const idx = fases.findIndex(f => f.id === selectedFase.id);
+                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
                                         if (idx > 0) setSelectedFase(fases[idx - 1]);
                                     }}
                                 >
                                     <ArrowLeft size={16} /> Anterior
                                 </button>
                                 <span className="nav-index">
-                                    Prueba {fases.findIndex(f => f.id === selectedFase.id) + 1} de {fases.length}
+                                    Prueba {fases.findIndex(f => f.id === selectedFase?.id) + 1} de {fases.length}
                                 </span>
                                 <button 
                                     className="btn-nav-step" 
-                                    disabled={fases.findIndex(f => f.id === selectedFase.id) >= fases.length - 1}
+                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) >= fases.length - 1}
                                     onClick={() => {
-                                        const idx = fases.findIndex(f => f.id === selectedFase.id);
+                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
                                         if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
                                     }}
                                 >
