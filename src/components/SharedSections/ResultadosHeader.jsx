@@ -122,6 +122,14 @@ const ResultadosHeader = ({
                             </button>
                         )}
                     </div>
+                    <select 
+                        onChange={(e) => {
+                            const fase = cronograma.find(f => String(f.id) === e.target.value);
+                            if (onSelectRegata) onSelectRegata(fase || null);
+                        }}
+                        disabled={!selectedEvento || cronograma.length === 0}
+                        className="admin-select"
+                        style={{ border: '1px solid var(--color-primary)', boxShadow: '0 0 10px rgba(100, 180, 255, 0.1)' }}
                         value={selectedFaseId || ''}
                     >
                         <option value="">-- Ver Cronograma Completo --</option>
