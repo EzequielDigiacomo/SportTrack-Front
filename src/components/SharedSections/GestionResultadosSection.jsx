@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatTime } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useResultados } from './useResultados';
@@ -598,7 +599,7 @@ return (
                                             {fases
                                                 .map(f => (
                                                     <option key={f.id} value={f.nombreFase}>
-                                                        {f.nombreFase} {f.estado === 'En Carrera' ? '🔴 EN VIVO' : f.estado === 'Finalizada' || f.estado === 'Pendiente de Validación' ? '✅' : ''} {f.fechaHoraProgramada ? `· ${new Date(f.fechaHoraProgramada).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                                        {f.nombreFase} {f.estado === 'En Carrera' ? '🔴 EN VIVO' : f.estado === 'Finalizada' || f.estado === 'Pendiente de Validación' ? '✅' : ''} {f.fechaHoraProgramada ? `· ${formatTime(f.fechaHoraProgramada)}` : ''}
                                                     </option>
                                                 ))}
                                         </select>

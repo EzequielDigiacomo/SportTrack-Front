@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2, Clock } from 'lucide-react';
+import { formatTime } from '../../utils/dateUtils';
 
 const getSoloApellido = (nombreCompleto) => {
     if (!nombreCompleto) return "-";
@@ -71,9 +72,7 @@ const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName =
                     )}
                     <h4 style={{ margin: 0, color: 'var(--color-primary-light)' }}>{fase.nombreFase}</h4>
                     <span className="badge-time">
-                        <Clock size={12} /> {fase.fechaHoraProgramada && fase.fechaHoraProgramada.includes('T') 
-                            ? fase.fechaHoraProgramada.split('T')[1].substring(0, 5) + ' hs' 
-                            : '--:--'}
+                        <Clock size={12} /> {formatTime(fase.fechaHoraProgramada)} hs
                     </span>
                 </div>
                 {onDelete && (

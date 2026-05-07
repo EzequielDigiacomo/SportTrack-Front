@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatTime } from '../../utils/dateUtils';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)',
@@ -132,10 +133,8 @@ const ResultadosHeader = ({
                     >
                         <option value="">-- Ver Cronograma Completo --</option>
                         {cronograma.map((f, idx) => {
-                            let timeStr = '--:--';
-                            if (f.fechaHoraProgramada && f.fechaHoraProgramada.includes('T')) {
-                                timeStr = f.fechaHoraProgramada.split('T')[1].substring(0, 5);
-                            }
+                            let timeStr = formatTime(f.fechaHoraProgramada);
+                            if (timeStr !== '--:--') timeStr += ' hs';
 
                             const p = f.prueba?.prueba;
                             const catId = p?.categoria?.id || p?.categoriaId;

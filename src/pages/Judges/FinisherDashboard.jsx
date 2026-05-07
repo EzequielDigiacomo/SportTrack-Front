@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { formatTime } from '../../utils/dateUtils';
 import { 
     Timer, CheckCircle, Clock, Users, XCircle, RefreshCw, Save, 
     Play, Activity, Search, LogOut, ArrowLeft, ArrowRight, Layout, Grid
@@ -429,9 +430,7 @@ const FinisherDashboard = () => {
                         const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (selectedFase?.categoriaNombre || 'Sin Categoría');
                         const boteName = p ? (BOTE_NAMES[p.bote?.id] || p.bote?.nombre) : (selectedFase?.boteTipo || selectedFase?.tipoBote || 'Sin Bote');
                         const distName = p ? (DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm') : (selectedFase?.distancia ? selectedFase.distancia + 'm' : '0m');
-                        const timeName = selectedFase?.fechaHoraProgramada && selectedFase?.fechaHoraProgramada.includes('T') 
-                            ? selectedFase.fechaHoraProgramada.split('T')[1].substring(0, 5) 
-                            : (selectedFase?.horaProgramada || '--:--');
+                        const timeName = formatTime(selectedFase?.fechaHoraProgramada);
                         
                         return (
                             <div className="race-header-info">
