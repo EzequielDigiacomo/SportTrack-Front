@@ -49,8 +49,9 @@ const ClubDashboard = () => {
                     setRecentActivity(activity);
                 }
                 
-                // 4. Obtener eventos próximos
-                const proximos = await EventoService.getProximos();
+                // 4. Obtener eventos próximos (Filtrando controles para clubes)
+                const allProximos = await EventoService.getProximos();
+                const proximos = user.rol === 'Admin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
                 setStats(prev => ({ ...prev, events: proximos.length }));
                 
                 if (proximos.length > 0) {

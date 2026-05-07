@@ -8,7 +8,8 @@ const EventGrid = ({
     onOpenDashboard, 
     onEdit, 
     onDelete, 
-    onCopyLink 
+    onCopyLink,
+    isAdmin
 }) => {
     if (!eventos || eventos.length === 0) {
         return <EmptyState message="No hay eventos creados aún" description="Pulsa en '+ Nuevo Evento' para comenzar." />;
@@ -36,9 +37,13 @@ const EventGrid = ({
                         </div>
                         <div className="evento-native-actions">
                             <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Copy size={16} /></button>
-                            <button className="btn-icon-admin primary" onClick={() => onOpenDashboard(ev)} title="Dirigir"><Settings size={16} /></button>
-                            <button className="btn-icon-admin secondary" onClick={() => onEdit(ev)} title="Editar"><Edit2 size={16} /></button>
-                            <button className="btn-icon-admin danger" onClick={() => onDelete(ev)} title="Eliminar"><Trash2 size={16} /></button>
+                            {isAdmin && (
+                                <>
+                                    <button className="btn-icon-admin primary" onClick={() => onOpenDashboard(ev)} title="Dirigir"><Settings size={16} /></button>
+                                    <button className="btn-icon-admin secondary" onClick={() => onEdit(ev)} title="Editar"><Edit2 size={16} /></button>
+                                    <button className="btn-icon-admin danger" onClick={() => onDelete(ev)} title="Eliminar"><Trash2 size={16} /></button>
+                                </>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -77,9 +82,13 @@ const EventGrid = ({
                                 <td><StatusBadge estado={ev.estado} /></td>
                                 <td className="actions-cell">
                                     <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Copy size={18} /></button>
-                                    <button className="btn-admin-primary" onClick={() => onOpenDashboard(ev)} title="Dirigir Carrera"><Settings size={16} /> Dirigir</button>
-                                    <button className="btn-admin-secondary" onClick={() => onEdit(ev)} title="Editar"><Edit2 size={16} /></button>
-                                    <button className="btn-admin-danger" onClick={() => onDelete(ev)} title="Eliminar"><Trash2 size={16} /></button>
+                                    {isAdmin && (
+                                        <>
+                                            <button className="btn-admin-primary" onClick={() => onOpenDashboard(ev)} title="Dirigir Carrera"><Settings size={16} /> Dirigir</button>
+                                            <button className="btn-admin-secondary" onClick={() => onEdit(ev)} title="Editar"><Edit2 size={16} /></button>
+                                            <button className="btn-admin-danger" onClick={() => onDelete(ev)} title="Eliminar"><Trash2 size={16} /></button>
+                                        </>
+                                    )}
                                 </td>
                             </tr>
                         ))}
