@@ -35,7 +35,8 @@ const ResultadosHeader = ({
     setCurrentTab,
     hideTabs,
     cronograma = [],
-    onSelectRegata
+    onSelectRegata,
+    selectedFaseId
 }) => {
     const CATEGORIA_COLORS = {
         1: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
@@ -121,22 +122,14 @@ const ResultadosHeader = ({
                             </button>
                         )}
                     </div>
-                    <select 
-                        onChange={(e) => {
-                            const fase = cronograma.find(f => String(f.id) === e.target.value);
-                            if (onSelectRegata) onSelectRegata(fase || null);
-                        }}
-                        disabled={!selectedEvento || cronograma.length === 0}
-                        className="admin-select"
-                        style={{ border: '1px solid var(--color-primary)', boxShadow: '0 0 10px rgba(100, 180, 255, 0.1)' }}
-                        value={cronograma.find(f => String(f.eventoPruebaId) === String(selectedPrueba))?.id || ''}
+                        value={selectedFaseId || ''}
                     >
                         <option value="">-- Ver Cronograma Completo --</option>
                         {cronograma.map((f, idx) => {
-                            let timeStr = formatTime(f.fechaHoraProgramada);
-                            if (timeStr !== '--:--') timeStr += ' hs';
+                            const timeStr = formatTime(f.fechaHoraProgramada);
+                            const timeDisplay = timeStr !== '--:--' ? `${timeStr} hs` : '';
 
-                            const p = f.prueba?.prueba;
+                            const p = f.prueba?.prueba || f.prueba;
                             const catId = p?.categoria?.id || p?.categoriaId;
                             const botId = p?.bote?.id || p?.boteId;
                             const distId = p?.distancia?.id || p?.distanciaId;
@@ -147,7 +140,7 @@ const ResultadosHeader = ({
                             const distName = DISTANCIA_NAMES[distId] || (p?.distancia?.metros ? `${p.distancia.metros}m` : '');
                             const sexName = SEXO_NAMES[sexId] || p?.sexoNombre || '';
 
-                            const label = [`#${idx + 1}`, timeStr + ' hs', f.nombreFase, catName, botName, distName, sexName]
+                            const label = [`#${idx + 1}`, timeDisplay, f.nombreFase, catName, botName, distName, sexName]
                                 .filter(Boolean)
                                 .join(' - ');
 
@@ -176,13 +169,13 @@ const ResultadosHeader = ({
                         className={`admin-tab-btn ${currentTab === 'startList' ? 'active' : ''}`}
                         onClick={() => setCurrentTab('startList')}
                     >
-                        📋 Start List (Inscritos)
+                        📋 Start List {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : '(Inscritos)'}
                     </button>
                     <button 
                         className={`admin-tab-btn ${currentTab === 'resultados' ? 'active' : ''}`}
                         onClick={() => setCurrentTab('resultados')}
                     >
-                        ⏱️ Resultados y Tiempos
+                        ⏱️ Resultados {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : 'y Tiempos'}
                     </button>
                 </div>
             )}

@@ -310,6 +310,7 @@ return (
             hideTabs={hideTabs}
             cronograma={cronograma}
             onSelectRegata={handleSelectRegata}
+            selectedFaseId={faseSeleccionada?.id}
         />
 
         {loading ? (
@@ -548,7 +549,7 @@ return (
                             return (
                                 <div className="series-preview-section fade-in">
                                     <h3 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1.1rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                        🏁 Series y Sorteo de Carriles
+                                        🏁 {faseSeleccionada ? `#${cronograma.findIndex(c => c.id === faseSeleccionada.id) + 1} - ` : ''} Series y Sorteo de Carriles
                                         {filtroVisualFase !== 'Todas' && (
                                             <span style={{ fontSize: '0.8rem', fontWeight: 400, color: 'var(--color-text-dim)', background: 'rgba(100,160,255,0.1)', border: '1px solid rgba(100,160,255,0.2)', borderRadius: '6px', padding: '2px 10px' }}>
                                                 Mostrando: <strong style={{ color: 'var(--color-primary-light)' }}>{filtroVisualFase}</strong>
