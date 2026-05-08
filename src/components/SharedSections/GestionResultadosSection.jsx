@@ -143,22 +143,21 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                     }));
                 });
 
-            } catch (err) {
-                console.error("Error connecting to live sync:", err);
+                } catch (err) {
+                    console.error("Error connecting to live sync:", err);
+                }
             }
-        } else {
+        };
+
+        setupLiveSync();
+
+        return () => {
+            isMounted = false;
+            // No desconectamos para no romper la campana global
+            // timingSignalRService.disconnect();
             stopLocalTimer();
-        }
-    };
-
-    setupLiveSync();
-
-    return () => {
-        isMounted = false;
-        timingSignalRService.disconnect();
-        stopLocalTimer();
-    };
-}, [faseSeleccionada, viewMode]);
+        };
+    }, [faseSeleccionada, viewMode]);
 
     // Funciones movidas arriba
 

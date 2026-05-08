@@ -5,66 +5,56 @@ class TimingSignalRService {
     constructor() {
         this.connection = null;
         this.currentFaseId = null;
-        this.serverOffset = 0; // Diferencia en ms entre server y cliente
+        this.serverOffset = 0;
+        this.connectionPromise = null;
     }
 
     async connect(faseId = null) {
-        if (faseId && this.currentFaseId === faseId.toString() && this.connection?.state === signalR.HubConnectionState.Connected) {
-            return;
+        // Si ya hay una operación en curso, esperamos
+        if (this.connectionPromise) {
+            await this.connectionPromise;
         }
 
-        // Si ya estamos conectados y solo queremos cambiar de fase (o unirnos a una)
-        if (this.connection?.state === signalR.HubConnectionState.Connected && faseId) {
-            await this.joinRaceGroup(faseId);
-            this.currentFaseId = faseId.toString();
-            return;
-        }
-
-        if (this.connection) {
+        this.connectionPromise = (async () => {
             try {
-                if (this.connection.state !== signalR.HubConnectionState.Disconnected) {
-                    await this.connection.stop();
+                const token = localStorage.getItem('sporttrack_auth_token');
+                const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/timing';
+
+                if (!this.connection) {
+                    this.connection = new signalR.HubConnectionBuilder()
+                        .withUrl(hubUrl, {
+                            accessTokenFactory: () => token,
+                            skipNegotiation: false,
+                            transport: signalR.HttpTransportType.WebSockets
+                        })
+                        .withAutomaticReconnect()
+                        .build();
+                }
+
+                // Iniciar si está desconectado
+                if (this.connection.state === signalR.HubConnectionState.Disconnected) {
+                    await this.connection.start();
+                    console.log("[SignalR] Connected!");
+                    await this.syncClock();
+                }
+
+                // Si pedimos una fase específica y no es la actual, nos unimos
+                if (faseId && this.currentFaseId !== faseId.toString()) {
+                    await this.connection.invoke("JoinRaceGroup", faseId.toString());
+                    this.currentFaseId = faseId.toString();
+                    console.log(`[SignalR] Joined group: race_${faseId}`);
+                } else if (!faseId) {
+                    this.currentFaseId = null;
                 }
             } catch (err) {
-                console.warn("SignalR stop error (non-critical):", err);
+                console.error("[SignalR] Connection Error:", err);
+                // No relanzamos para no romper el flujo de la UI, pero lo logueamos
+            } finally {
+                this.connectionPromise = null;
             }
-            this.connection = null;
-        }
+        })();
 
-        const token = localStorage.getItem('sporttrack_auth_token');
-        const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/timing';
-
-        this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(hubUrl, {
-                accessTokenFactory: () => token,
-                skipNegotiation: false,
-                transport: signalR.HttpTransportType.WebSockets
-            })
-            .withAutomaticReconnect()
-            .configureLogging(signalR.LogLevel.Information)
-            .build();
-
-        try {
-            await this.connection.start();
-            console.log("TimingHub Connected!");
-            
-            // Sincronizar reloj inmediatamente después de conectar
-            await this.syncClock();
-            
-            if (faseId) {
-                await this.joinRaceGroup(faseId);
-                this.currentFaseId = faseId.toString();
-            } else {
-                this.currentFaseId = null;
-            }
-        } catch (err) {
-            if (err.name === 'AbortError') {
-                console.log("SignalR connection aborted");
-            } else {
-                console.error("TimingHub Connection Error: ", err);
-                throw err;
-            }
-        }
+        return this.connectionPromise;
     }
 
     async syncClock() {
@@ -139,11 +129,44 @@ class TimingSignalRService {
 
     onGlobalRaceStarted(callback) {
         if (!this.connection) return;
-        this.connection.off("GlobalRaceStarted");
-        this.connection.on("GlobalRaceStarted", (faseId, serverTime) => {
+        const handler = (faseId, serverTime) => {
             console.log(`Global Event: Race (ID: ${faseId}) started at ${serverTime}`);
             callback({ faseId, serverTime });
-        });
+        };
+        this.connection.off("globalRaceStarted");
+        this.connection.off("globalracestarted");
+        this.connection.on("globalRaceStarted", handler);
+        this.connection.on("globalracestarted", handler);
+    }
+
+    onGlobalRaceInReview(callback) {
+        if (!this.connection) return;
+        const handler = (fase) => {
+            console.log(`Global Event: Race (ID: ${fase.id}) in review`);
+            callback(fase);
+        };
+        this.connection.off("globalRaceInReview");
+        this.connection.off("globalraceinreview");
+        this.connection.on("globalRaceInReview", handler);
+        this.connection.on("globalraceinreview", handler);
+    }
+
+    onGlobalRaceOfficialized(callback) {
+        if (!this.connection) return;
+        const handler = (faseId) => {
+            console.log(`Global Event: Race (ID: ${faseId}) officialized`);
+            callback(faseId);
+        };
+        this.connection.off("globalRaceOfficialized");
+        this.connection.off("globalraceofficialized");
+        this.connection.on("globalRaceOfficialized", handler);
+        this.connection.on("globalraceofficialized", handler);
+    }
+
+    onRaceInReview(callback) {
+        if (!this.connection) return;
+        this.connection.off("RaceInReview");
+        this.connection.on("RaceInReview", callback);
     }
 
     onRaceReset(callback) {

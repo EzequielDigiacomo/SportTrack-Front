@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import EventoService from '../../services/EventoService';
 import { PruebaService } from '../../services/ConfigService';
 import InscripcionService from '../../services/InscripcionService';
@@ -7,10 +8,11 @@ import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
+    const location = useLocation();
     const [eventos, setEventos] = useState([]);
-    const [selectedEvento, setSelectedEvento] = useState(preselectedEventoId || '');
+    const [selectedEvento, setSelectedEvento] = useState(() => localStorage.getItem('results_selected_evento') || preselectedEventoId || '');
     const [pruebas, setPruebas] = useState([]);
-    const [selectedPrueba, setSelectedPrueba] = useState('');
+    const [selectedPrueba, setSelectedPrueba] = useState(() => localStorage.getItem('results_selected_prueba') || '');
     const [currentTab, setCurrentTab] = useState(defaultTab || 'startList');
     const [inscriptos, setInscriptos] = useState([]);
     const [fases, setFases] = useState([]);
@@ -27,23 +29,46 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     // so the useEffect below can apply the intended filtro instead of resetting to 'Todas'.
     const pendingFiltro = useRef(null);
 
+    // Deep-linking via query params
+    useEffect(() => {
+        if (cronograma.length > 0) {
+            const params = new URLSearchParams(location.search);
+            const faseId = params.get('faseId');
+            if (faseId) {
+                const f = cronograma.find(x => String(x.id) === String(faseId));
+                if (f) {
+                    if (String(f.eventoPruebaId) !== String(selectedPrueba)) {
+                        handleSelectRegata(f);
+                    } else {
+                        // Si ya estamos en la prueba correcta, pero queremos cambiar de serie/fase
+                        setFiltroVisualFase(f.nombreFase);
+                    }
+                }
+            }
+        }
+    }, [cronograma, selectedPrueba, location.search]);
+
     useEffect(() => {
         loadEventos();
     }, []);
 
     useEffect(() => {
         if (selectedEvento) {
+            localStorage.setItem('results_selected_evento', selectedEvento);
             loadPruebas(selectedEvento);
             loadCronograma(selectedEvento);
-            setSelectedPrueba('');
+            // No reseteamos selectedPrueba automáticamente si acaba de cargar de localStorage
             setInscriptos([]);
             setFases([]);
             setFiltroVisualFase('Todas');
+        } else {
+            localStorage.removeItem('results_selected_evento');
         }
     }, [selectedEvento]);
 
     useEffect(() => {
         if (selectedPrueba) {
+            localStorage.setItem('results_selected_prueba', selectedPrueba);
             const lockedPruebas = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
             const sealedPruebas = JSON.parse(localStorage.getItem('sealed_pruebas') || '[]');
             setIsLocked(lockedPruebas.includes(selectedPrueba) || sealedPruebas.includes(selectedPrueba));
@@ -56,6 +81,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             }
             loadDatosPrueba(selectedPrueba);
         } else {
+            localStorage.removeItem('results_selected_prueba');
             setFiltroVisualFase('Todas');
             setInscriptos([]);
             setFases([]);

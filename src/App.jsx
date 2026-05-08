@@ -14,9 +14,21 @@ import ProtectedRoute from './components/Common/ProtectedRoute'
 import { useToast } from './context/ToastContext'
 import ToastContainer from './components/Common/ToastContainer'
 import JudgesLayout from './components/Layout/JudgesLayout'
+import NotificationCenter from './components/Common/NotificationCenter'
+import { useAuth } from './context/AuthContext'
 
 function App() {
     const { toasts, removeToast } = useToast()
+    const { user } = useAuth()
+    
+    // Debug: ver el rol real del usuario
+    console.log("[App-Debug] User:", user?.username, "Role:", user?.rol || user?.Rol);
+
+    const isJudgeOrAdmin = user && (
+        user.rol === 'Admin' || user.rol === 'JuezControl' ||
+        user.Rol === 'Admin' || user.Rol === 'JuezControl' ||
+        user.role === 'Admin' || user.role === 'JuezControl'
+    )
 
     return (
         <>
@@ -58,6 +70,7 @@ function App() {
             <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole="Admin"><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
+        <NotificationCenter isAdmin={isJudgeOrAdmin} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         </>
     )

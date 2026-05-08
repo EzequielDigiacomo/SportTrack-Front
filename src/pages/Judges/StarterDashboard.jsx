@@ -43,7 +43,12 @@ const StarterDashboard = () => {
         const loadEventos = async () => {
             const data = await EventoService.getProximos();
             setEventos(data);
-            if (data.length > 0) setSelectedEvento(data[0]);
+            
+            // Solo seleccionar el primero si no hay nada guardado en localStorage
+            const savedEventId = localStorage.getItem('starter_event_id');
+            if (!savedEventId && data.length > 0) {
+                setSelectedEvento(data[0]);
+            }
         };
         loadEventos();
     }, []);
@@ -163,7 +168,7 @@ const StarterDashboard = () => {
 
         return () => {
             isMounted = false;
-            timingSignalRService.disconnect();
+            // timingSignalRService.disconnect();
         };
     }, [selectedFase]);
 

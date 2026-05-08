@@ -55,7 +55,11 @@ const FinisherDashboard = () => {
         const loadEventos = async () => {
             const data = await EventoService.getProximos();
             setEventos(data);
-            if (data.length > 0) setSelectedEvento(data[0]);
+            
+            const savedEventId = localStorage.getItem('finisher_event_id');
+            if (!savedEventId && data.length > 0) {
+                setSelectedEvento(data[0]);
+            }
         };
         loadEventos();
     }, []);
@@ -105,7 +109,7 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         if (!selectedEvento) {
-            timingSignalRService.disconnect();
+            // timingSignalRService.disconnect();
             return;
         }
         
@@ -229,6 +233,8 @@ const FinisherDashboard = () => {
 
         return () => {
             stopLocalTimer();
+            // No desconectamos globalmente para mantener la campana viva
+            // timingSignalRService.disconnect();
         };
     }, [selectedEvento, selectedFase?.id]);
 
@@ -359,8 +365,17 @@ const FinisherDashboard = () => {
                 }));
 
             await ResultadoService.batchUpdate(dataToSave);
-            addToast("Resultados enviados con éxito", "success");
+            
+            // Cambiar el estado de la fase a "Pendiente de Validación"
+            await FaseService.enviarARevision(selectedFase.id);
+            
+            setFases(prev => prev.map(f => 
+                f.id === selectedFase.id ? { ...f, estado: 'Pendiente de Validación' } : f
+            ));
+            
+            addToast("Resultados enviados y fase enviada a revisión", "success");
         } catch (err) {
+            console.error("Error al finalizar carga:", err);
             addToast("Error al guardar resultados", "error");
         } finally {
             setLoading(false);
