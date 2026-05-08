@@ -60,19 +60,37 @@ class TimingSignalRService {
     async syncClock() {
         if (!this.connection) return;
         
-        const start = Date.now();
-        
-        // Escuchamos la respuesta del server time
-        this.connection.on("ReceiveServerTime", (serverTime) => {
-            const end = Date.now();
-            const latency = (end - start) / 2;
-            const serverDate = new Date(serverTime);
-            // Offset = Tiempo Real Server - Tiempo Local Cliente
-            this.serverOffset = (serverDate.getTime() + latency) - end;
-            console.log(`[Sync] Latency: ${latency}ms, Clock Offset: ${this.serverOffset}ms`);
-        });
+        console.log("[Sync] Starting clock synchronization...");
+        const SAMPLES = 5;
+        const offsets = [];
 
-        await this.connection.invoke("GetServerTime");
+        for (let i = 0; i < SAMPLES; i++) {
+            const start = Date.now();
+            try {
+                // Invocamos el método que ahora retorna el valor directamente
+                const serverTimeStr = await this.connection.invoke("GetServerTime");
+                const end = Date.now();
+                
+                const latency = (end - start) / 2;
+                const serverDate = new Date(serverTimeStr);
+                
+                // Offset = Tiempo Real Server - Tiempo Local Cliente
+                const offset = (serverDate.getTime() + latency) - end;
+                offsets.push(offset);
+                
+                // Pequeña espera entre muestras
+                await new Promise(r => setTimeout(r, 100));
+            } catch (err) {
+                console.error("[Sync] Sample error:", err);
+            }
+        }
+
+        if (offsets.length > 0) {
+            // Usamos la mediana para ignorar picos de red
+            offsets.sort((a, b) => a - b);
+            this.serverOffset = offsets[Math.floor(offsets.length / 2)];
+            console.log(`[Sync] Finished. Median Clock Offset: ${this.serverOffset}ms (from ${offsets.length} samples)`);
+        }
     }
 
     // Retorna la hora "del servidor" calculada localmente
@@ -90,7 +108,9 @@ class TimingSignalRService {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             throw new Error("No hay conexión activa con el servidor de tiempos");
         }
-        await this.connection.invoke("RequestStartRace", parseInt(faseId));
+        // Capturamos la hora EXACTA del click (ajustada al servidor)
+        const startTime = this.getSyncedNow();
+        await this.connection.invoke("RequestStartRace", parseInt(faseId), startTime.toISOString());
     }
 
     async requestResetRace(faseId) {
