@@ -67,7 +67,8 @@ const JudgesLayout = ({ children }) => {
     }, []);
 
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
-    const canSeeSidebar = roleStr.includes('admin') || roleStr.includes('juezcontrol') || roleStr.includes('control');
+    const isAdmin = roleStr.includes('admin');
+    const canSeeSidebar = isAdmin || roleStr.includes('juezcontrol') || roleStr.includes('control');
 
     return (
         <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>

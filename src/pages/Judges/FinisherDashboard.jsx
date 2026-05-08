@@ -34,7 +34,8 @@ const getSoloApellido = (nombreCompleto) => {
 const FinisherDashboard = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const isAdmin = user?.rol === 'Admin';
+    const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
+    const isAdmin = roleStr.includes('admin');
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
     const [fases, setFases] = useState([]);
