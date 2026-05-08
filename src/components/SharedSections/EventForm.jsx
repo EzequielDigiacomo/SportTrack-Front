@@ -1,7 +1,13 @@
 import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, clubes = [] }) => {
+const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
+const DISTANCIA_NAMES = {
+    1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m', 6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 
+    10: '5000m', 11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
+};
+
+const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, clubes = [], allCategorias = [], allBotes = [], allDistancias = [] }) => {
     const { user } = useAuth();
     const isAdmin = user?.rol === 'Admin';
     return (
@@ -311,7 +317,99 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 </label>
                             </div>
                         </div>
+                    <div className="form-section full-width">
+                        <h4 style={{ color: 'var(--color-primary)', borderBottom: '1px solid var(--color-primary-light)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>
+                            Configuración de Opciones Habilitadas (Programa)
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
+                            Selecciona las opciones que estarán disponibles al armar el programa de este evento.
+                        </p>
+
+                        <div className="habilitaciones-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+                            {/* DISTANCIAS */}
+                            <div className="habilitacion-group glass-effect" style={{ padding: '1.2rem', borderRadius: '12px' }}>
+                                <h5 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>📏 Distancias</h5>
+                                <div className="checkbox-scroll-list" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {allDistancias.map(d => {
+                                        const ids = initialData.distanciasHabilitadas ? initialData.distanciasHabilitadas.split(',') : [];
+                                        const isChecked = ids.includes(d.id.toString());
+                                        const label = DISTANCIA_NAMES[d.id] || `${d.distanciaRegata}m`;
+                                        return (
+                                            <label key={d.id} className="checkbox-label" style={{ fontSize: '0.9rem' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        let newIds = e.target.checked 
+                                                            ? [...ids, d.id.toString()]
+                                                            : ids.filter(id => id !== d.id.toString());
+                                                        onChange('distanciasHabilitadas', newIds.join(','));
+                                                    }}
+                                                />
+                                                {label}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* CATEGORIAS */}
+                            <div className="habilitacion-group glass-effect" style={{ padding: '1.2rem', borderRadius: '12px' }}>
+                                <h5 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>👥 Categorías</h5>
+                                <div className="checkbox-scroll-list" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {allCategorias
+                                        .filter(c => c.nombre.toLowerCase() !== 'control')
+                                        .map(c => {
+                                            const ids = initialData.categoriasHabilitadas ? initialData.categoriasHabilitadas.split(',') : [];
+                                            const isChecked = ids.includes(c.id.toString());
+                                            return (
+                                                <label key={c.id} className="checkbox-label" style={{ fontSize: '0.9rem' }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            let newIds = e.target.checked 
+                                                                ? [...ids, c.id.toString()]
+                                                                : ids.filter(id => id !== c.id.toString());
+                                                            onChange('categoriasHabilitadas', newIds.join(','));
+                                                        }}
+                                                    />
+                                                    {c.nombre}
+                                                </label>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+
+                            {/* BOTES */}
+                            <div className="habilitacion-group glass-effect" style={{ padding: '1.2rem', borderRadius: '12px' }}>
+                                <h5 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🚣 Botes</h5>
+                                <div className="checkbox-scroll-list" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {allBotes.map(b => {
+                                        const ids = initialData.botesHabilitados ? initialData.botesHabilitados.split(',') : [];
+                                        const isChecked = ids.includes(b.id.toString());
+                                        const label = BOTE_NAMES[b.id] || b.tipo;
+                                        return (
+                                            <label key={b.id} className="checkbox-label" style={{ fontSize: '0.9rem' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        let newIds = e.target.checked 
+                                                            ? [...ids, b.id.toString()]
+                                                            : ids.filter(id => id !== b.id.toString());
+                                                        onChange('botesHabilitados', newIds.join(','));
+                                                    }}
+                                                />
+                                                {label}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </div>
 
                     <div className="form-footer-actions">
                         <button type="button" className="btn-admin-secondary" onClick={onCancel}>Cancelar</button>

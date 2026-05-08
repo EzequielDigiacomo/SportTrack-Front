@@ -16,9 +16,9 @@ const getSoloApellido = (nombreCompleto) => {
 };
 
 const CATEGORIA_NAMES = {
-    1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (14-15 años)', 
-    5: 'Junior (16-17 años)', 6: 'Sub-23 (18-22 años)', 7: 'Senior (18-35 años)', 8: 'Master A (40-45 años)', 
-    9: 'Master B (46-50 años)', 10: 'Master C (50+ años)'
+    1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
+    5: 'Junior (17-18 años)', 6: 'Sub-23 (19-23 años)', 7: 'Senior (24-39 años)', 8: 'Master A (40-49 años)', 
+    9: 'Master B (50-59 años)', 10: 'Master C (60+ años)'
 };
 const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
 const DISTANCIA_NAMES = {

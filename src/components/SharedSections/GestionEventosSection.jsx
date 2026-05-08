@@ -11,7 +11,7 @@ import {
     Trophy,
 } from 'lucide-react';
 import EventoService from '../../services/EventoService';
-import { PruebaService } from '../../services/ConfigService';
+import { PruebaService, CategoriaService, BoteService, DistanciaService } from '../../services/ConfigService';
 import ConfigurarPruebasModal from './ConfigurarPruebasModal';
 import GestionResultadosSection from './GestionResultadosSection';
 import ConfirmDialog from '../Common/ConfirmDialog';
@@ -32,6 +32,9 @@ const GestionEventosSection = () => {
     const [activeSubView, setActiveSubView] = useState(null); // 'startlist', 'resultados'
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [clubes, setClubes] = useState([]);
+    const [allCategorias, setAllCategorias] = useState([]);
+    const [allBotes, setAllBotes] = useState([]);
+    const [allDistancias, setAllDistancias] = useState([]);
 
     const [form, setForm] = useState({
         nombre: '',
@@ -56,6 +59,9 @@ const GestionEventosSection = () => {
         sinReceso: false,
         gapEntrePruebas: 10,
         permitirCombinadas: false,
+        categoriasHabilitadas: '',
+        botesHabilitados: '',
+        distanciasHabilitadas: '',
     });
 
     const { alert: msg, showAlert } = useAlert();
@@ -65,6 +71,7 @@ const GestionEventosSection = () => {
     useEffect(() => {
         loadEventos();
         loadClubes();
+        loadConfigData();
 
         const handlePopState = (e) => {
             if (!e.state) { 
@@ -117,6 +124,21 @@ const GestionEventosSection = () => {
             setClubes(data);
         } catch (e) {
             console.error("Error al cargar clubes", e);
+        }
+    };
+
+    const loadConfigData = async () => {
+        try {
+            const [c, b, d] = await Promise.all([
+                CategoriaService.getAll(),
+                BoteService.getAll(),
+                DistanciaService.getAll()
+            ]);
+            setAllCategorias(c);
+            setAllBotes(b);
+            setAllDistancias(d);
+        } catch (e) {
+            console.error("Error al cargar datos de configuración", e);
         }
     };
 
@@ -184,6 +206,9 @@ const GestionEventosSection = () => {
             sinReceso: evento.sinReceso || false,
             gapEntrePruebas: evento.gapEntrePruebas || 10,
             permitirCombinadas: evento.permitirCombinadas || false,
+            categoriasHabilitadas: evento.categoriasHabilitadas || '',
+            botesHabilitados: evento.botesHabilitados || '',
+            distanciasHabilitadas: evento.distanciasHabilitadas || '',
         });
         setView('editar');
     };
@@ -265,6 +290,9 @@ const GestionEventosSection = () => {
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
                     clubes={clubes}
+                    allCategorias={allCategorias}
+                    allBotes={allBotes}
+                    allDistancias={allDistancias}
                 />
             )}
 
