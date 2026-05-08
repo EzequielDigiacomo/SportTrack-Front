@@ -21,6 +21,7 @@ const NAV_ITEMS = [
     { id: 'clubes', path: '/super/clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: '/super/eventos', icon: <Calendar size={20} />, label: 'Eventos' },
     { id: 'resultados', path: '/super/resultados', icon: <Timer size={20} />, label: 'Resultados' },
+    { id: 'control', path: '/juez-control', icon: <Users size={20} />, label: 'Panel de Control' },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Módulo Jueces', exact: true },
 ];
 
@@ -65,11 +66,12 @@ const JudgesLayout = ({ children }) => {
         };
     }, []);
 
-    const isAdmin = user?.rol === 'Admin';
+    const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
+    const canSeeSidebar = roleStr.includes('admin') || roleStr.includes('juezcontrol') || roleStr.includes('control');
 
     return (
-        <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!isAdmin ? 'no-sidebar' : ''}`}>
-            {isAdmin && (
+        <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>
+            {canSeeSidebar && (
                 <>
                     <div
                         className="sidebar-edge-sensor"
@@ -99,7 +101,11 @@ const JudgesLayout = ({ children }) => {
                         isOpen={isSidebarOpen}
                         user={user}
                         logo={logo}
-                        navItems={NAV_ITEMS}
+                        navItems={NAV_ITEMS.filter(item => {
+                            if (roleStr.includes('admin')) return true;
+                            // Si no es admin, solo puede ver Control y Jueces
+                            return ['control', 'jueces'].includes(item.id);
+                        })}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                         onClose={closeSidebar}

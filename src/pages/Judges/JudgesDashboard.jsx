@@ -7,10 +7,13 @@ import './Judges.css';
 const JudgesDashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const role = user?.rol?.trim().toLowerCase() || '';
-    const isAdmin = role === 'admin';
-    const isStarter = role === 'largador' || isAdmin;
-    const isFinisher = role === 'cronometrista' || isAdmin;
+    const roleStr = user?.rol || user?.Rol || user?.role || '';
+    const roles = roleStr.toLowerCase().split(/[,;]/).map(r => r.trim());
+    
+    const isAdmin = roles.includes('admin');
+    const isStarter = roles.includes('largador') || isAdmin;
+    const isFinisher = roles.includes('cronometrista') || isAdmin;
+    const isControl = roles.includes('juezcontrol') || roles.includes('control') || isAdmin;
 
     return (
         <div className="judges-container glass-effect">
@@ -48,6 +51,17 @@ const JudgesDashboard = () => {
                         <h2>Cronometrista</h2>
                         <p>Toma de tiempos, orden de llegada y cierre de serie.</p>
                         <button className="btn-judge">Entrar como Cronometrista</button>
+                    </div>
+                )}
+
+                {isControl && (
+                    <div className="judge-card control" onClick={() => navigate('/juez-control')}>
+                        <div className="card-icon">
+                            <Users size={48} color="#00d4ff" />
+                        </div>
+                        <h2>Juez de Control</h2>
+                        <p>Gestión de series, progresión de atletas y oficialización de resultados.</p>
+                        <button className="btn-judge" style={{ borderColor: 'rgba(0,212,255,0.3)', color: '#00d4ff' }}>Panel de Control</button>
                     </div>
                 )}
 

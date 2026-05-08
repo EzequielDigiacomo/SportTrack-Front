@@ -41,7 +41,7 @@ const StarterDashboard = () => {
 
     useEffect(() => {
         const loadEventos = async () => {
-            const data = await EventoService.getProximos();
+            const data = await EventoService.getAll();
             setEventos(data);
             
             // Solo seleccionar el primero si no hay nada guardado en localStorage

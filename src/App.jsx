@@ -24,10 +24,11 @@ function App() {
     // Debug: ver el rol real del usuario
     console.log("[App-Debug] User:", user?.username, "Role:", user?.rol || user?.Rol);
 
+    const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isJudgeOrAdmin = user && (
-        user.rol === 'Admin' || user.rol === 'JuezControl' ||
-        user.Rol === 'Admin' || user.Rol === 'JuezControl' ||
-        user.role === 'Admin' || user.role === 'JuezControl'
+        roleStr.includes('admin') || 
+        roleStr.includes('juezcontrol') || 
+        roleStr.includes('control')
     )
 
     return (

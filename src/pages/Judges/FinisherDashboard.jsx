@@ -53,7 +53,7 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         const loadEventos = async () => {
-            const data = await EventoService.getProximos();
+            const data = await EventoService.getAll();
             setEventos(data);
             
             const savedEventId = localStorage.getItem('finisher_event_id');

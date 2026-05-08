@@ -35,14 +35,18 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     }
 
     // Rol incorrecto → home
-    if (requiredRole && user?.rol) {
-        const roles = Array.isArray(requiredRole) ? requiredRole.map(r => r.toLowerCase()) : [requiredRole.toLowerCase()];
-        const userRole = user.rol.trim().toLowerCase();
-        if (!roles.includes(userRole)) {
+    if (requiredRole) {
+        const roleStr = user?.rol || user?.Rol || user?.role || '';
+        const userRoles = roleStr.toLowerCase().split(/[,;]/).map(r => r.trim());
+        const requiredRoles = Array.isArray(requiredRole) ? requiredRole.map(r => r.toLowerCase()) : [requiredRole.toLowerCase()];
+        
+        // El usuario debe tener AL MENOS UNO de los roles requeridos
+        const hasAccess = requiredRoles.some(r => userRoles.includes(r));
+        
+        if (!hasAccess) {
+            console.warn(`[ProtectedRoute] Access denied. Required: ${requiredRoles.join(',')}. User has: ${userRoles.join(',')}`);
             return <Navigate to="/" replace />;
         }
-    } else if (requiredRole && !user?.rol) {
-        return <Navigate to="/" replace />;
     }
 
     return children;
