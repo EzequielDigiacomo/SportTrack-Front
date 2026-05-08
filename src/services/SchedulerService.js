@@ -21,10 +21,18 @@ const SchedulerService = {
             horaFinReceso = "14:00"
         } = config;
 
-        // Helper infalible para obtener minutos totales (ignora Zonas Horarias)
         const getMinutesOfDay = (item) => {
-            const timeStr = String(item.fechaHoraProgramada || item.time || item.fechaHoraOriginal || item.prueba?.fechaHora || "08:00");
-            const match = timeStr.match(/(\d{2}):(\d{2})/);
+            const val = item.fechaHoraProgramada || item.time || item.fechaHoraOriginal || item.prueba?.fechaHora || item.raw?.fechaHora;
+            if (!val) return 480;
+
+            const date = new Date(val);
+            if (!isNaN(date.getTime())) {
+                // Si es una fecha válida (ISO), devolvemos minutos locales
+                return date.getHours() * 60 + date.getMinutes();
+            }
+
+            // Fallback para strings tipo "HH:MM"
+            const match = String(val).match(/(\d{2}):(\d{2})/);
             if (match) return parseInt(match[1]) * 60 + parseInt(match[2]);
             return 480; // 08:00 default
         };

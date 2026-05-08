@@ -44,9 +44,11 @@ const getPruebaInfo = (faseOrPrueba) => {
 };
 
 const getTimeStr = (fase) => {
-    if (fase?.fechaHoraProgramada?.includes('T'))
-        return fase.fechaHoraProgramada.split('T')[1].substring(0, 5);
-    return '--:--';
+    const val = fase?.fechaHoraProgramada;
+    if (!val) return '--:--';
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return '--:--';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const getCrew = (r) => {
