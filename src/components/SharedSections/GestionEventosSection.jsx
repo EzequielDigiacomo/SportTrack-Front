@@ -62,6 +62,8 @@ const GestionEventosSection = () => {
         categoriasHabilitadas: '',
         botesHabilitados: '',
         distanciasHabilitadas: '',
+        controlNombreExtra: '',
+        controlFecha: new Date().toISOString().substring(0, 10),
     });
 
     const { alert: msg, showAlert } = useAlert();
@@ -308,6 +310,19 @@ const GestionEventosSection = () => {
                     </div>
                     <div className="admin-form-card glass-effect" style={{ maxWidth: '600px', margin: '0 auto' }}>
                         <div className="admin-grid-form" style={{ padding: '2rem' }}>
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Nombre del Control (Opcional - ej: Tanda 1, Mañana, etc)</label>
+                                <input 
+                                    type="text" 
+                                    className="admin-input" 
+                                    placeholder="Ej: Tanda Mañana" 
+                                    value={form.controlNombreExtra} 
+                                    onChange={e => handleFieldChange('controlNombreExtra', e.target.value)} 
+                                />
+                                <small style={{ color: '#94a3b8', marginTop: '4px', display: 'block' }}>
+                                    Esto se añadirá al nombre automático para diferenciar los controles.
+                                </small>
+                            </div>
                             <div className="form-group">
                                 <label>Bote / Embarcación</label>
                                 <select className="admin-select" value={form.controlBote} onChange={e => handleFieldChange('controlBote', e.target.value)}>
@@ -339,6 +354,15 @@ const GestionEventosSection = () => {
                                     <option value="3">Mixto</option>
                                 </select>
                             </div>
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Fecha del Control</label>
+                                <input 
+                                    type="date" 
+                                    className="admin-input" 
+                                    value={form.controlFecha} 
+                                    onChange={e => handleFieldChange('controlFecha', e.target.value)} 
+                                />
+                            </div>
                             <div className="form-footer-actions mt-lg">
                                 <button className="btn-admin-secondary" onClick={() => setView('lista')}>Cancelar</button>
                                 <button 
@@ -350,12 +374,13 @@ const GestionEventosSection = () => {
                                             const boteName = form.controlBote === "1" ? "K1" : form.controlBote === "2" ? "K2" : "K4";
                                             const distName = form.controlDist === "6" ? "1000m" : "500m";
                                             const sexName = form.controlSex === "1" ? "Masc" : "Fem";
+                                            const extraName = form.controlNombreExtra ? ` - ${form.controlNombreExtra}` : '';
                                             
                                             // 1. Crear Evento
                                             const evPayload = {
-                                                nombre: `Control ${distName} ${boteName} ${sexName}`,
-                                                fecha: new Date().toISOString().substring(0, 10),
-                                                fechaFin: new Date().toISOString().substring(0, 10),
+                                                nombre: `Control ${distName} ${boteName} ${sexName}${extraName}`,
+                                                fecha: form.controlFecha || new Date().toISOString().substring(0, 10),
+                                                fechaFin: form.controlFecha || new Date().toISOString().substring(0, 10),
                                                 estado: 'Programada',
                                                 inscripcionesHabilitadas: true,
                                                 clubId: form.clubId || null
