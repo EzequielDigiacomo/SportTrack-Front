@@ -69,7 +69,14 @@ const FinisherDashboard = () => {
         if (!selectedEvento) return;
         const loadFases = async () => {
             const data = await FaseService.getByEvento(selectedEvento.id);
-            const sorted = data.sort((a, b) => {
+            const mapped = data.map(f => ({
+                ...f,
+                resultados: f.resultados?.map(r => ({
+                    ...r,
+                    estadoCanto: r.estado === 'Descalificado' ? 'DSQ' : r.estado
+                }))
+            }));
+            const sorted = mapped.sort((a, b) => {
                 const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
                 const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
                 return dateA.localeCompare(dateB);
@@ -155,6 +162,7 @@ const FinisherDashboard = () => {
                         const data = await ResultadoService.getByFase(selectedFase.id);
                         const formattedData = data.map(r => ({
                             ...r,
+                            estadoCanto: r.estado === 'Descalificado' ? 'DSQ' : r.estado,
                             tiempoOficial: r.tiempoOficial,
                             msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
                             status: r.tiempoOficial ? 'finished' : 'pending'
@@ -212,10 +220,19 @@ const FinisherDashboard = () => {
                         ));
                     });
 
-                    timingSignalRService.onResultStatusUpdated((resId, status) => {
+                    timingSignalRService.onGlobalResultStatusUpdated((resId, status) => {
+                        // 1. Actualizar resultados de la fase actual (si aplica)
                         setResultados(prev => prev.map(r => 
                             String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
                         ));
+
+                        // 2. Actualizar también la lista de fases (cronograma)
+                        setFases(prev => prev.map(f => ({
+                            ...f,
+                            resultados: f.resultados?.map(r => 
+                                String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
+                            )
+                        })));
                     });
                 } else {
                     // Limpiar estado si no hay fase
@@ -304,6 +321,38 @@ const FinisherDashboard = () => {
         setIsRaceRunning(false);
         if (timerRef.current) clearInterval(timerRef.current);
     };
+
+    // --- ACCESOS DIRECTOS POR TECLADO ---
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // No disparar si el foco está en un input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // ESPACIO -> DUDA
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (isRaceRunning) recordDoubt();
+                return;
+            }
+
+            // TECLAS 1-9 -> LLEGADA DE CARRIL
+            const key = e.key;
+            if (/^[1-9]$/.test(key)) {
+                const laneNum = parseInt(key);
+                // Solo si la carrera está activa
+                if (isRaceRunning) {
+                    const res = resultados.find(r => r.carril === laneNum);
+                    // Solo si el carril está ocupado y no tiene tiempo/estado previo
+                    if (res && !res.tiempoOficial && (!res.estadoCanto || res.estadoCanto === 'Pendiente')) {
+                        handleRecordFinish(res.id);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isRaceRunning, resultados, startTime, rawTimes]); // Dependencias para acceso a estado fresco
 
     const handleLaneFinish = (laneNum) => {
         const res = resultados.find(r => r.carril === laneNum);

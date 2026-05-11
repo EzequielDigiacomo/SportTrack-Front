@@ -9,7 +9,9 @@ import ResultadosTable from './ResultadosTable';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import { useAlert } from '../../hooks/useAlert';
 import PdfExportService from '../../services/PdfExportService';
+import CsvExportService from '../../services/CsvExportService';
 import timingSignalRService from '../../services/TimingSignalRService';
+import FaseDetailsForm from './FaseDetailsForm';
 import './GestionResultados.css';
 
 const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode }) => {
@@ -27,7 +29,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
         handleGenerarManual,
         handleRecalcularCronograma, handleSelectRegata,
-        loadDatosPrueba, setMessage
+        loadDatosPrueba, setMessage,
+        handleUpdateFaseDetails
     } = useResultados(preselectedEventoId, defaultTab);
 
     const [elapsedTime, setElapsedTime] = useState(0);
@@ -261,6 +264,15 @@ const handleExportPrueba = () => {
 
 const handleExportEvento = () => {
     PdfExportService.exportCronogramaCompleto(cronograma, eventoNombre);
+    setShowPdfMenu(false);
+};
+
+const handleExportCsv = () => {
+    if (filtroVisualFase === 'Todas') {
+        CsvExportService.exportResultadosCsv(fases, eventoNombre, pruebaNombre);
+    } else if (faseSeleccionada) {
+        CsvExportService.exportResultadosCsv([faseSeleccionada], eventoNombre, pruebaNombre);
+    }
     setShowPdfMenu(false);
 };
 
@@ -703,12 +715,29 @@ return (
                                                 >
                                                     🏆 Prueba completa (todo en un PDF)
                                                 </button>
+                                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0.3rem 0' }} />
+                                                <button
+                                                    onClick={handleExportCsv}
+                                                    style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
+                                                    onMouseOver={e => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'}
+                                                    onMouseOut={e => e.currentTarget.style.background = 'none'}
+                                                >
+                                                    📊 Exportar a EXCEL (.csv)
+                                                </button>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             )}
                         </div>
+
+                        {faseSeleccionada && (viewMode === 'tiempos' || viewMode === 'resultados') && (
+                            <FaseDetailsForm 
+                                fase={faseSeleccionada} 
+                                onSave={handleUpdateFaseDetails}
+                                saving={saving}
+                            />
+                        )}
 
                         {faseSeleccionada ? (
                             <div className="resultados-main-card glass-effect p-md">

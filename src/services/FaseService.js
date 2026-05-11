@@ -46,6 +46,10 @@ const FaseService = {
     batchUpdate: async (dto) => {
         const response = await api.post(ENDPOINTS.FASES.BATCH_UPDATE, dto);
         return response.data;
+    },
+    updateDetails: async (id, details) => {
+        const response = await api.put(`${ENDPOINTS.FASES.BASE}/${id}/details`, details);
+        return response.data;
     }
 };
 

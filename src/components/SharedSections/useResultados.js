@@ -510,17 +510,17 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             const [year, month, day] = baseDateStr.split('-').map(Number);
             
             const dtoFinal = dto.map(item => {
-                // Instanciar a las 12:00 para evitar que el cambio de Zona Horaria reste 1 día por accidente
-                const fDate = new Date(year, month - 1, day, 12, 0, 0);
-                fDate.setDate(fDate.getDate() + item.diaOffset);
+                // Generar un objeto Date local para combinar fecha y hora del programa
+                const [h, m] = item.fechaHoraProgramada.split(':');
+                const fDate = new Date(year, month - 1, day, parseInt(h), parseInt(m), 0);
                 
-                const yyyy = fDate.getFullYear();
-                const mm = String(fDate.getMonth() + 1).padStart(2, '0');
-                const dd = String(fDate.getDate()).padStart(2, '0');
+                // Aplicar el offset de días si el cronograma saltó de jornada
+                fDate.setDate(fDate.getDate() + item.diaOffset);
                 
                 return {
                     id: item.id,
-                    fechaHoraProgramada: `${yyyy}-${mm}-${dd}T${item.fechaHoraProgramada}:00`
+                    // Enviamos el ISO string completo (UTC) para que el backend no tenga dudas
+                    fechaHoraProgramada: fDate.toISOString()
                 };
             });
 
@@ -549,6 +549,21 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         setSelectedPrueba(fase.eventoPruebaId);
     };
 
+    const handleUpdateFaseDetails = async (id, details) => {
+        setSaving(true);
+        try {
+            await FaseService.updateDetails(id, details);
+            setMessage("✅ Detalles de la fase (clima/notas) actualizados.");
+            // Actualizar el estado local para que se vea el cambio sin recargar
+            setFases(prev => prev.map(f => f.id === id ? { ...f, ...details } : f));
+        } catch (error) {
+            console.error("Error al actualizar detalles:", error);
+            setMessage("❌ Error al guardar notas climáticas.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return {
         eventos, selectedEvento, setSelectedEvento,
         pruebas, selectedPrueba, setSelectedPrueba,
@@ -562,6 +577,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         handleGenerarManual,
         handleRecalcularCronograma,
         handleSelectRegata, loadCronograma,
-        loadDatosPrueba
+        loadDatosPrueba,
+        handleUpdateFaseDetails
     };
 };

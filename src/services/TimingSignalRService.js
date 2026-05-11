@@ -214,6 +214,12 @@ class TimingSignalRService {
         this.connection.on("ResultStatusUpdated", callback);
     }
 
+    onGlobalResultStatusUpdated(callback) {
+        if (!this.connection) return;
+        this.connection.off("GlobalResultStatusUpdated");
+        this.connection.on("GlobalResultStatusUpdated", callback);
+    }
+
     disconnect() {
         if (this.connection) {
             this.connection.stop();

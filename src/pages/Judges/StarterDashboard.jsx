@@ -59,7 +59,15 @@ const StarterDashboard = () => {
         const loadFases = async () => {
             try {
                 const data = await FaseService.getByEvento(selectedEvento.id);
-                const sorted = data.sort((a, b) => {
+                // Mapear estado del backend a estadoCanto del frontend
+                const mapped = data.map(f => ({
+                    ...f,
+                    resultados: f.resultados?.map(r => ({
+                        ...r,
+                        estadoCanto: r.estado === 'Descalificado' ? 'DSQ' : r.estado
+                    }))
+                }));
+                const sorted = mapped.sort((a, b) => {
                     const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
                     const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
                     return dateA.localeCompare(dateB);
@@ -147,18 +155,27 @@ const StarterDashboard = () => {
                     }
                 });
 
-                timingSignalRService.onResultStatusUpdated((resId, status) => {
-                    if (isMounted) {
-                        setSelectedFase(prev => {
-                            if (!prev || !prev.resultados) return prev;
-                            return {
-                                ...prev,
-                                resultados: prev.resultados.map(r => 
-                                    String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
-                                )
-                            };
-                        });
-                    }
+                timingSignalRService.onGlobalResultStatusUpdated((resId, status) => {
+                    if (!isMounted) return;
+
+                    // 1. Actualizar la fase seleccionada si el resultado le pertenece
+                    setSelectedFase(prev => {
+                        if (!prev || !prev.resultados) return prev;
+                        return {
+                            ...prev,
+                            resultados: prev.resultados.map(r => 
+                                String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
+                            )
+                        };
+                    });
+
+                    // 2. Actualizar también la lista de todas las fases (el cronograma)
+                    setFases(prev => prev.map(f => ({
+                        ...f,
+                        resultados: f.resultados?.map(r => 
+                            String(r.id) === String(resId) ? { ...r, estadoCanto: status } : r
+                        )
+                    })));
                 });
             } catch (err) {
                 if (isMounted) console.error("SignalR Connection Error:", err);
@@ -188,16 +205,30 @@ const StarterDashboard = () => {
 
     const handleStatusChange = async (resultadoId, status) => {
         if (!selectedFase) return;
+        
+        // Guardamos el estado anterior por si hay que revertir
+        const previousResultados = selectedFase.resultados;
+        
         try {
-            await timingSignalRService.updateResultStatus(selectedFase.id, resultadoId, status);
+            // Actualización optimista
             setSelectedFase(prev => ({
                 ...prev,
                 resultados: prev.resultados.map(r => 
                     r.id === resultadoId ? { ...r, estadoCanto: status } : r
                 )
             }));
+
+            await timingSignalRService.updateResultStatus(selectedFase.id, resultadoId, status);
+            addToast(`Estado actualizado a ${status}`, "success");
         } catch (err) {
             console.error("Error updating status:", err);
+            addToast("Error de conexión: No se pudo guardar el cambio", "error");
+            
+            // Revertir en caso de error
+            setSelectedFase(prev => ({
+                ...prev,
+                resultados: previousResultados
+            }));
         }
     };
 
