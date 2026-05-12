@@ -12,8 +12,13 @@ import {
     Terminal,
     ChevronDown,
     ChevronUp,
-    Cloud
+    Cloud,
+    Monitor,
+    Smartphone,
+    Globe as GlobeIcon,
+    Cpu
 } from 'lucide-react';
+import { parseUserAgent } from '../../../utils/deviceUtils';
 import './SoporteSection.css';
 
 const SoporteSection = () => {
@@ -130,6 +135,11 @@ const SoporteSection = () => {
                                                     </span>
                                                 </div>
                                                 <div className="log-meta">
+                                                    <span className="log-device-pill" title={log.userAgent}>
+                                                        {parseUserAgent(log.userAgent).isMobile ? <Smartphone size={14} /> : <Monitor size={14} />}
+                                                        {parseUserAgent(log.userAgent).os}
+                                                    </span>
+                                                    <span className="log-ip-pill"><GlobeIcon size={12} /> {log.ip || '0.0.0.0'}</span>
                                                     <span title="Usuario"><UserIcon size={14} /> {log.usuario}</span>
                                                     <span title="Fecha"><Clock size={14} /> {new Date(log.fecha).toLocaleString()}</span>
                                                     {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -143,7 +153,13 @@ const SoporteSection = () => {
                                                             <label>Acción:</label> <span>{log.accion}</span>
                                                         </div>
                                                         <div className="detail-field">
-                                                            <label>IP:</label> <span>{log.ip}</span>
+                                                            <label>IP del Cliente:</label> <span>{log.ip}</span>
+                                                        </div>
+                                                        <div className="detail-field full-width">
+                                                            <label>Navegador (User Agent):</label> 
+                                                            <div className="ua-box">
+                                                                <pre>{log.userAgent}</pre>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     {isError && detail.StackTrace && (
