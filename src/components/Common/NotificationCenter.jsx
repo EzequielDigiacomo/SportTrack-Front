@@ -76,9 +76,11 @@ const NotificationCenter = ({ isAdmin }) => {
     console.log("[NotifCenter] Rendering for Admin/Judge. Notif count:", notifications.length);
 
     const handleGoToRace = (faseId) => {
-        const isAdminUser = user?.rol === 'Admin' || user?.role === 'Admin' || user?.Rol === 'Admin';
-        const base = isAdminUser ? '/admin/resultados' : '/juez-control';
-        navigate(`${base}?faseId=${faseId}`);
+        const roleStr = String(user?.rol || user?.role || user?.Rol || '').toLowerCase();
+        const isAdminUser = roleStr.includes('admin');
+        const base = isAdminUser ? '/super/resultados' : '/juez-control';
+        console.log(`[NotifCenter] Routing user to: ${base}?faseId=${faseId}`);
+        navigate(`${base}?faseId=${faseId}&tab=resultados`);
         setIsVisible(false);
     };
 

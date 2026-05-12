@@ -147,13 +147,13 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
             setMsg({ type: 'success', text: `¡${botes.length} inscripción(es) realizada(s) con éxito en ${selectedPrueba.prueba.categoria.nombre}!` });
             await loadInscripcionesClub();
             
-            // Limpiar solo las selecciones de ESTA prueba en el mapa
-            setSelectionsMap({
-                ...selectionsMap,
-                [selectedPrueba.id]: []
-            });
+            // Limpiar las selecciones de esta prueba y volver al modo de selección de prueba
+            const newSelectionsMap = { ...selectionsMap };
+            delete newSelectionsMap[selectedPrueba.id];
+            setSelectionsMap(newSelectionsMap);
+            setSelectedPrueba(null);
 
-            // Mantenemos el modal abierto para que siga inscribiendo
+            // Limpiar mensaje después de un tiempo
             setTimeout(() => setMsg(null), 3000);
         } catch (err) {
             setMsg({ type: 'error', text: 'Error al inscribir: ' + err.message });
@@ -498,13 +498,12 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                                     
                                     setMsg({ type: 'success', text: `¡Se confirmaron inscripciones para ${exitos} pruebas correctamente!` });
                                     setSelectionsMap({});
+                                    setSelectedPrueba(null); // Volver al inicio del modal
                                     await loadInscripcionesClub();
                                     setSaving(false);
                                     
-                                    // Cerramos el modal automáticamente después de un breve delay
-                                    setTimeout(() => {
-                                        onClose();
-                                    }, 1500);
+                                    // Limpiar mensaje después de un tiempo
+                                    setTimeout(() => setMsg(null), 3000);
                                 }}
                                 disabled={saving}
                             >

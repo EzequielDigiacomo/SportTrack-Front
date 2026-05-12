@@ -69,6 +69,7 @@ const GestionEventosSection = () => {
     const { alert: msg, showAlert } = useAlert();
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, evento: null });
+    const [validationErrors, setValidationErrors] = useState(null);
 
     useEffect(() => {
         loadEventos();
@@ -159,8 +160,29 @@ const GestionEventosSection = () => {
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
+    const validateForm = () => {
+        const errors = [];
+        if (!form.nombre || !form.nombre.trim()) errors.push("Nombre del Evento");
+        if (!form.fecha) errors.push("Fecha de Inicio");
+        if (!form.fechaFin) errors.push("Fecha de Finalización");
+        if (!form.ubicacion || !form.ubicacion.trim()) errors.push("Ubicación / Pista");
+        
+        if (form.fecha && form.fechaFin && new Date(form.fechaFin) < new Date(form.fecha)) {
+            errors.push("La fecha de fin debe ser posterior o igual a la de inicio");
+        }
+
+        return errors;
+    };
+
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        
+        const errors = validateForm();
+        if (errors.length > 0) {
+            setValidationErrors({ title: "Datos Faltantes o Incorrectos", list: errors });
+            return;
+        }
+
         setSaving(true);
 
         const payload = {
@@ -179,7 +201,11 @@ const GestionEventosSection = () => {
             setView('lista');
             loadEventos();
         } catch (err) {
-            showAlert('error', 'Error al guardar: ' + err.message);
+            // En lugar de toast, mostramos el error del servidor en el modal
+            setValidationErrors({ 
+                title: "Error al Guardar", 
+                list: [err.message || "Ocurrió un error inesperado al procesar la solicitud."] 
+            });
         } finally { setSaving(false); }
     };
 
@@ -367,8 +393,20 @@ const GestionEventosSection = () => {
                                 <button className="btn-admin-secondary" onClick={() => setView('lista')}>Cancelar</button>
                                 <button 
                                     className="btn-admin-primary" 
-                                    disabled={saving || !form.controlBote || !form.controlDist || !form.controlSex}
+                                    disabled={saving}
                                     onClick={async () => {
+                                        // Validación para Control
+                                        const cErrors = [];
+                                        if (!form.controlBote) cErrors.push("Bote / Embarcación");
+                                        if (!form.controlDist) cErrors.push("Distancia");
+                                        if (!form.controlSex) cErrors.push("Rama (Sexo)");
+                                        if (!form.controlFecha) cErrors.push("Fecha del Control");
+
+                                        if (cErrors.length > 0) {
+                                            setValidationErrors({ title: "Faltan Datos para el Control", list: cErrors });
+                                            return;
+                                        }
+
                                         setSaving(true);
                                         try {
                                             const boteName = form.controlBote === "1" ? "K1" : form.controlBote === "2" ? "K2" : "K4";
@@ -379,8 +417,8 @@ const GestionEventosSection = () => {
                                             // 1. Crear Evento
                                             const evPayload = {
                                                 nombre: `Control ${distName} ${boteName} ${sexName}${extraName}`,
-                                                fecha: form.controlFecha || new Date().toISOString().substring(0, 10),
-                                                fechaFin: form.controlFecha || new Date().toISOString().substring(0, 10),
+                                                fecha: form.controlFecha,
+                                                fechaFin: form.controlFecha,
                                                 estado: 'Programada',
                                                 inscripcionesHabilitadas: true,
                                                 clubId: form.clubId || null
@@ -393,7 +431,7 @@ const GestionEventosSection = () => {
                                                 boteId: parseInt(form.controlBote),
                                                 distanciaId: parseInt(form.controlDist),
                                                 sexoId: parseInt(form.controlSex),
-                                                fechaHora: new Date().toISOString()
+                                                fechaHora: new Date(`${form.controlFecha}T08:00:00`).toISOString()
                                             };
                                             await PruebaService.assignToEvento(newEv.id, null, prPayload);
                                             
@@ -401,7 +439,10 @@ const GestionEventosSection = () => {
                                             setView('lista');
                                             loadEventos();
                                         } catch (err) {
-                                            showAlert('error', 'Error: ' + err.message);
+                                            setValidationErrors({ 
+                                                title: "Error al Crear Control", 
+                                                list: [err.message || "Error al conectar con el servidor."] 
+                                            });
                                         } finally { setSaving(false); }
                                     }}
                                 >
@@ -517,6 +558,31 @@ const GestionEventosSection = () => {
                 type="danger"
                 confirmText="Sí, Eliminar"
                 loading={saving}
+            />
+
+            <ConfirmDialog
+                isOpen={!!validationErrors}
+                onClose={() => setValidationErrors(null)}
+                title={validationErrors?.title || "Atención"}
+                message={
+                    <div style={{ textAlign: 'left' }}>
+                        {validationErrors?.list?.length > 1 ? (
+                            <>
+                                <p>Por favor, revisa los siguientes campos obligatorios:</p>
+                                <ul style={{ marginTop: '10px', color: 'var(--color-secondary)', fontWeight: 'bold' }}>
+                                    {validationErrors.list.map((err, i) => (
+                                        <li key={i} style={{ marginBottom: '5px' }}>• {err}</li>
+                                    ))}
+                                </ul>
+                            </>
+                        ) : (
+                            <p style={{ fontWeight: '500' }}>{validationErrors?.list?.[0]}</p>
+                        )}
+                    </div>
+                }
+                type={validationErrors?.title?.includes('Error') ? 'danger' : 'warning'}
+                confirmText="Entendido"
+                cancelText={null}
             />
         </div>
     );

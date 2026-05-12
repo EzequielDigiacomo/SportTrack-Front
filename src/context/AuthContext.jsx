@@ -13,8 +13,9 @@ export const AuthProvider = ({ children }) => {
             try {
                 // Intentamos validar la sesión contra el servidor (usa la Cookie HttpOnly)
                 const userData = await AuthService.validateSession();
-                setUser(userData);
-                localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+                const normalized = normalizeUser(userData);
+                setUser(normalized);
+                localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(normalized));
             } catch (e) {
                 // Si falla (401), limpiamos cualquier rastro local
                 setUser(null);
@@ -27,12 +28,21 @@ export const AuthProvider = ({ children }) => {
         checkSession();
     }, []);
 
+    const normalizeUser = (data) => {
+        if (!data) return null;
+        return {
+            ...data,
+            rol: data.rol || data.Rol || data.role || data.Role || ''
+        };
+    };
+
     const login = (userData, token) => {
-        setUser(userData);
+        const normalized = normalizeUser(userData);
+        setUser(normalized);
         if (token) {
             localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
         }
-        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(normalized));
     };
 
     const logout = async () => {

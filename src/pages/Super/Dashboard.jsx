@@ -9,6 +9,8 @@ import GestionLoginsSection from './sections/GestionLoginsSection';
 import GestionAtletasSection from './sections/GestionAtletasSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
 import ConfiguracionSection from './sections/ConfiguracionSection';
+import SoporteSection from './sections/SoporteSection';
+
 
 import { 
     LayoutDashboard, 
@@ -19,7 +21,8 @@ import {
     Timer, 
     Settings, 
     LogOut,
-    Menu
+    Menu,
+    Terminal as TerminalIcon
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -33,6 +36,7 @@ const NAV_ITEMS = [
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true },
     { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
+    { id: 'soporte', path: 'soporte', icon: <TerminalIcon size={20} />, label: 'Soporte Técnico', isSupport: true },
 ];
 
 const SuperDashboard = () => {
@@ -67,6 +71,14 @@ const SuperDashboard = () => {
     const handleNavClick = () => {
         if (window.innerWidth <= 768) closeSidebar();
     };
+
+    const filteredNavItems = NAV_ITEMS.filter(item => {
+        if (item.isSupport) {
+            return user?.rol === 'SuperAdmin' || user?.username === 'soporte_tecnico' || user?.username === 'admin'; 
+            // Agregué 'admin' temporalmente para que el usuario pueda verlo si lo desea, pero lo ideal es un usuario aparte.
+        }
+        return true;
+    });
 
     useEffect(() => {
         return () => {
@@ -106,7 +118,7 @@ const SuperDashboard = () => {
                 isOpen={isSidebarOpen}
                 user={user}
                 logo={logo}
-                navItems={NAV_ITEMS}
+                navItems={filteredNavItems}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 onClose={closeSidebar}
@@ -124,6 +136,7 @@ const SuperDashboard = () => {
                         <Route path="atletas" element={<GestionAtletasSection />} />
                         <Route path="resultados" element={<GestionResultadosSection />} />
                         <Route path="configuracion" element={<ConfiguracionSection />} />
+                        <Route path="soporte" element={<SoporteSection />} />
                     </Routes>
                 </div>
             </main>

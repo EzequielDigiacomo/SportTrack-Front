@@ -19,7 +19,7 @@ const Login = () => {
         if (isAuthenticated && user?.rol) {
             let path = '/';
             const role = user.rol.trim().toLowerCase();
-            if (role === 'admin') path = '/super';
+            if (role === 'admin' || role === 'superadmin') path = '/super';
             else if (role === 'club') path = '/club';
             else if (role === 'largador') path = '/jueces/largador';
             else if (role === 'cronometrista') path = '/jueces/llegada';
@@ -48,7 +48,7 @@ const Login = () => {
             let targetPath = '/';
             if (data?.rol) {
                 const role = data.rol.trim().toLowerCase();
-                if (role === 'admin') targetPath = '/super';
+                if (role === 'admin' || role === 'superadmin') targetPath = '/super';
                 else if (role === 'club') targetPath = '/club';
                 else if (role === 'largador') targetPath = '/jueces/largador';
                 else if (role === 'cronometrista') targetPath = '/jueces/llegada';

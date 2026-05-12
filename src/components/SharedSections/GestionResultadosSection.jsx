@@ -11,7 +11,7 @@ import { useAlert } from '../../hooks/useAlert';
 import PdfExportService from '../../services/PdfExportService';
 import CsvExportService from '../../services/CsvExportService';
 import timingSignalRService from '../../services/TimingSignalRService';
-import FaseDetailsForm from './FaseDetailsForm';
+// import FaseDetailsForm from './FaseDetailsForm';
 import './GestionResultados.css';
 
 const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode }) => {
@@ -644,13 +644,6 @@ return (
                             </div>
                         </div>
 
-                        {faseSeleccionada && (viewMode === 'tiempos' || viewMode === 'resultados') && (
-                            <FaseDetailsForm 
-                                fase={faseSeleccionada} 
-                                onSave={handleUpdateFaseDetails}
-                                saving={saving}
-                            />
-                        )}
 
                         {faseSeleccionada ? (
                             <div className="resultados-main-card glass-effect p-md">

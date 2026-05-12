@@ -36,7 +36,6 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 type="text" 
                                 value={initialData.nombre} 
                                 onChange={(e) => onChange('nombre', e.target.value)} 
-                                required 
                                 placeholder="Ej: Regata Nacional de Canotaje"
                             />
                         </div>
@@ -47,7 +46,6 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                     type="date" 
                                     value={initialData.fecha} 
                                     onChange={(e) => onChange('fecha', e.target.value)} 
-                                    required 
                                 />
                             </div>
                             <div className="form-group">
@@ -56,7 +54,6 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                     type="date" 
                                     value={initialData.fechaFin} 
                                     onChange={(e) => onChange('fechaFin', e.target.value)} 
-                                    required 
                                 />
                             </div>
                         </div>

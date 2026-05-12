@@ -6,6 +6,10 @@ import './index.css'
 
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import TelemetryService from './services/TelemetryService'
+
+// Inicializar captura de errores global
+TelemetryService.init();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>

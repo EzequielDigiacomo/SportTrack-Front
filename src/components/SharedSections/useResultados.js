@@ -34,16 +34,30 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         if (cronograma.length > 0) {
             const params = new URLSearchParams(location.search);
             const faseId = params.get('faseId');
+            const urlTab = params.get('tab');
+            
+            console.log(`[DeepLink] Triggered. faseId=${faseId}, urlTab=${urlTab}, cronograma=${cronograma.length}`);
+
             if (faseId) {
                 const f = cronograma.find(x => String(x.id) === String(faseId));
                 if (f) {
+                    console.log(`[DeepLink] Found Fase: ${f.nombreFase} (PruebaId: ${f.eventoPruebaId})`);
                     if (String(f.eventoPruebaId) !== String(selectedPrueba)) {
+                        console.log(`[DeepLink] Switching Prueba from ${selectedPrueba} to ${f.eventoPruebaId}`);
                         handleSelectRegata(f);
                     } else {
                         // Si ya estamos en la prueba correcta, pero queremos cambiar de serie/fase
+                        console.log(`[DeepLink] Already in correct Prueba. Changing visual filter to ${f.nombreFase}`);
                         setFiltroVisualFase(f.nombreFase);
                     }
+                } else {
+                    console.warn(`[DeepLink] Fase ${faseId} not found in the current cronograma!`);
                 }
+            }
+
+            if (urlTab) {
+                console.log(`[DeepLink] Switching tab to: ${urlTab}`);
+                setCurrentTab(urlTab);
             }
         }
     }, [cronograma, selectedPrueba, location.search]);

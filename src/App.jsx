@@ -27,6 +27,7 @@ function App() {
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isJudgeOrAdmin = user && (
         roleStr.includes('admin') || 
+        roleStr.includes('superadmin') ||
         roleStr.includes('juezcontrol') || 
         roleStr.includes('control')
     )
@@ -48,28 +49,28 @@ function App() {
 
             {/* Panel Admin/Federativo (Protegido) */}
             <Route path="/super/*" element={
-                <ProtectedRoute requiredRole="Admin">
+                <ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}>
                     <SuperDashboard />
                 </ProtectedRoute>
             } />
             <Route path="/admin/*" element={
-                <ProtectedRoute requiredRole="Admin">
+                <ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}>
                     <SuperDashboard />
                 </ProtectedRoute>
             } />
 
             {/* Panel Juez de Control (Protegido — rol JuezControl o Admin) */}
             <Route path="/juez-control/*" element={
-                <ProtectedRoute requiredRole={['Admin', 'JuezControl']}>
+                <ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'JuezControl']}>
                     <JuezControlDashboard />
                 </ProtectedRoute>
             } />
 
             {/* Módulo de Jueces */}
-            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'Largador', 'Cronometrista']}><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'Largador']}><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole="Admin"><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista']}><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador']}><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
         <NotificationCenter isAdmin={isJudgeOrAdmin} />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
