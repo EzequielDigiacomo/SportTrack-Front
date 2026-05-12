@@ -1,163 +1,550 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SaaSService from '../../../services/SaaSService';
 import { 
     Cloud, 
-    CheckCircle, 
-    XCircle,
-    Edit,
     Plus,
     Users,
-    Shield
+    Shield,
+    Calendar,
+    Check,
+    Settings,
+    ArrowRight,
+    Search,
+    BarChart3,
+    Edit3,
+    X,
+    Trash2,
+    Info,
+    Mail,
+    Phone,
+    MapPin,
+    XCircle,
+    Building2,
+    Power,
+    UserCircle,
+    Lock,
+    Activity,
+    Eye
 } from 'lucide-react';
 import './SaaSManagement.css';
 
 const SaaSManagement = () => {
+    const navigate = useNavigate();
     const [planes, setPlanes] = useState([]);
+    const [clubesStatus, setClubesStatus] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingStatus, setLoadingStatus] = useState(true);
+    const [asignandoPlanId, setAsignandoPlanId] = useState(null);
+    const [selectedFedId, setSelectedFedId] = useState(null);
+    const [filter, setFilter] = useState('');
+    
+    // Modal State
+    const [showModal, setShowModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState({
+        nombre: '',
+        sigla: '',
+        email: '',
+        telefono: '',
+        direccion: '',
+        ubicacion: '',
+        activo: true,
+        adminUsername: '',
+        adminPassword: ''
+    });
+
+    const fetchData = async () => {
+        setLoading(true);
+        setLoadingStatus(true);
+        try {
+            const [planesData, clubesData] = await Promise.all([
+                SaaSService.getPlanes(),
+                SaaSService.getClubesStatus()
+            ]);
+            
+            const planesMapeados = planesData.map(p => {
+                let color = 'var(--color-text-secondary)';
+                if (p.nombre.toLowerCase().includes('estándar')) color = 'var(--color-primary-light)';
+                if (p.nombre.toLowerCase().includes('premium')) color = 'var(--color-accent)';
+                return { ...p, color };
+            });
+            
+            setPlanes(planesMapeados);
+            setClubesStatus(clubesData);
+        } catch (error) {
+            console.error("Error fetching SaaS data:", error);
+        } finally {
+            setLoading(false);
+            setLoadingStatus(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchPlanes = async () => {
-            try {
-                const data = await SaaSService.getPlanes();
-                
-                // Mapear los datos del backend al formato necesario para la UI
-                const planesMapeados = data.map(p => {
-                    let color = 'var(--color-text-secondary)';
-                    if (p.nombre.toLowerCase().includes('estándar')) color = 'var(--color-primary-light)';
-                    if (p.nombre.toLowerCase().includes('premium')) color = 'var(--color-accent)';
-
-                    return {
-                        id: p.id,
-                        nombre: p.nombre,
-                        precio: p.precio === 0 ? 'Gratis' : `$${p.precio} USD / mes`,
-                        federaciones: 0, // Por ahora 0 o mock
-                        caracteristicas: [
-                            { nombre: p.maxAtletas === -1 ? 'Gestión de Atletas Ilimitada' : `Gestión de Atletas (hasta ${p.maxAtletas})`, activo: true },
-                            { nombre: p.maxTorneosActivos === -1 ? 'Torneos Activos Ilimitados' : `Torneos Activos (hasta ${p.maxTorneosActivos})`, activo: true },
-                            { nombre: 'Resultados en Tiempo Real', activo: p.resultadosTiempoReal },
-                            { nombre: 'Exportación a Excel / CSV', activo: p.exportacionExcel },
-                            { nombre: 'Soporte Prioritario', activo: p.soportePrioritario }
-                        ],
-                        color
-                    };
-                });
-                
-                setPlanes(planesMapeados);
-            } catch (error) {
-                console.error("Error fetching SaaS plans:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchPlanes();
+        fetchData();
     }, []);
+
+    const handleAsignarPlan = async (clubId, planId) => {
+        setAsignandoPlanId(clubId);
+        try {
+            await SaaSService.asignarPlan(clubId, planId);
+            await fetchData();
+        } catch (err) {
+            console.error("Error al asignar plan", err);
+        } finally {
+            setAsignandoPlanId(null);
+        }
+    };
+
+    const handleToggleActivo = async (clubId) => {
+        try {
+            await SaaSService.toggleClubActivo(clubId);
+            await fetchData();
+        } catch (err) {
+            console.error("Error al cambiar estado", err);
+        }
+    };
+
+    const handleOpenCreate = () => {
+        setIsEditing(false);
+        setFormData({ 
+            nombre: '', sigla: '', email: '', telefono: '', direccion: '', ubicacion: '', activo: true,
+            adminUsername: '', adminPassword: ''
+        });
+        setShowModal(true);
+    };
+
+    const handleOpenEdit = (fed) => {
+        setIsEditing(true);
+        setFormData({
+            nombre: fed.clubNombre,
+            sigla: fed.sigla || '',
+            email: fed.email || '',
+            telefono: fed.telefono || '',
+            direccion: fed.direccion || '',
+            ubicacion: fed.ubicacion || '',
+            activo: fed.activo,
+            adminUsername: '', // No se edita por aquí por seguridad
+            adminPassword: ''
+        });
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (isEditing) {
+                // Para editar solo enviamos los datos del club
+                const { adminUsername, adminPassword, ...clubData } = formData;
+                await SaaSService.updateFederacion(selectedFedId, clubData);
+            } else {
+                await SaaSService.createFederacion(formData);
+            }
+            setShowModal(false);
+            await fetchData();
+        } catch (err) {
+            console.error("Error saving federation", err);
+            alert("Error al guardar los datos. Verifica que el nombre de usuario no esté duplicado.");
+        }
+    };
+
+    const handleDelete = async () => {
+        if (window.confirm("¿Estás seguro de eliminar esta federación? Se perderán todos sus datos asociados.")) {
+            try {
+                await SaaSService.deleteFederacion(selectedFedId);
+                setSelectedFedId(null);
+                await fetchData();
+            } catch (err) {
+                console.error("Error deleting federation", err);
+            }
+        }
+    };
+
+    const selectedFed = clubesStatus.find(f => f.clubId === selectedFedId);
+
+    const filteredFederaciones = clubesStatus.filter(f => 
+        f.clubNombre.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    const ProgressBar = ({ current, max, label }) => {
+        const percentage = max === -1 ? 5 : Math.min(100, (current / max) * 100);
+        const isFull = max !== -1 && current >= max;
+        const isWarning = max !== -1 && current >= max * 0.9;
+        
+        return (
+            <div className="saas-progress-item">
+                <div className="progress-info">
+                    <span className="label">{label}</span>
+                    <span className="values">{current} / {max === -1 ? '∞' : max}</span>
+                </div>
+                <div className="progress-track">
+                    <div 
+                        className={`progress-fill ${isFull ? 'bg-danger' : isWarning ? 'bg-warning' : 'bg-success'}`}
+                        style={{ width: `${percentage}%` }}
+                    />
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="saas-management fade-in">
+            {/* Header */}
             <div className="section-header-row mb-3">
                 <div className="title-group">
-                    <h2><Cloud size={24} /> Planes y Suscripciones SaaS</h2>
-                    <p className="section-desc">Configura los límites del sistema según el plan de cada federación (Próximamente funcional).</p>
+                    <h2><Cloud size={24} /> Panel de Suscripciones SaaS</h2>
+                    <p className="section-desc">Administración central de federaciones y clubes afiliados.</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn-admin-primary">
-                        <Plus size={16} /> Crear Nuevo Plan
+                    <button className="btn-admin-primary" onClick={handleOpenCreate}>
+                        <Plus size={16} /> Nueva Federación
                     </button>
                 </div>
             </div>
 
-            <div className="saas-plans-grid">
-                {loading ? (
-                    <div className="loader-row" style={{ gridColumn: '1 / -1' }}><div className="loader"></div></div>
-                ) : (
-                    planes.map(plan => (
-                        <div key={plan.id} className="saas-plan-card glass-effect" style={{ borderTop: `4px solid ${plan.color}` }}>
-                            <div className="plan-header">
-                                <h3 style={{ color: plan.color }}>{plan.nombre}</h3>
-                                <div className="plan-price">{plan.precio}</div>
-                            </div>
-                            
-                            <div className="plan-stats">
-                                <span className="stat-badge">
-                                    <Users size={14} /> {plan.federaciones} Federaciones Activas
-                                </span>
+            <div className="saas-main-layout">
+                {/* Left Side: List Table */}
+                <div className={`saas-list-container glass-effect ${selectedFedId ? 'has-selection' : ''}`}>
+                    <div className="list-toolbar">
+                        <div className="search-box-saas glass-effect">
+                            <Search size={18} />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar federación..." 
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="table-responsive">
+                        <table className="saas-admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Federación</th>
+                                    <th>Plan</th>
+                                    <th>Estado</th>
+                                    <th className="text-center">Atletas</th>
+                                    <th className="text-center">Clubes</th>
+                                    <th className="text-center">Acceso</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loadingStatus ? (
+                                    <tr><td colSpan="7"><div className="loader-row"><div className="loader"></div></div></td></tr>
+                                ) : filteredFederaciones.map(fed => {
+                                    const planColor = planes.find(p => p.id === fed.planSaaSId)?.color;
+                                    return (
+                                        <tr 
+                                            key={fed.clubId} 
+                                            className={`${selectedFedId === fed.clubId ? 'is-selected' : ''} ${!fed.planAlDia ? 'row-warning' : ''}`}
+                                            onClick={() => setSelectedFedId(fed.clubId)}
+                                        >
+                                            <td>
+                                                <div className="fed-cell-name">
+                                                    <div className={`status-dot ${fed.activo ? 'active' : 'inactive'}`} />
+                                                    <span>{fed.clubNombre}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="fed-plan-badge" style={{ borderColor: planColor, color: planColor }}>
+                                                    {fed.planNombre}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {fed.planAlDia ? (
+                                                    <span className="badge success">Al día</span>
+                                                ) : (
+                                                    <span className="badge danger">Excedido</span>
+                                                )}
+                                            </td>
+                                            <td className="text-center font-bold">{fed.atletasRegistrados}</td>
+                                            <td className="text-center">
+                                                <span className="club-count-badge">
+                                                    {fed.clubesAfiliadosCount}
+                                                </span>
+                                            </td>
+                                            <td className="text-center">
+                                                <button 
+                                                    className={`btn-quick-toggle ${fed.activo ? 'is-active' : 'is-suspended'}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleActivo(fed.clubId);
+                                                    }}
+                                                    title={fed.activo ? 'Suspender acceso' : 'Habilitar acceso'}
+                                                >
+                                                    <Power size={14} />
+                                                    <span>{fed.activo ? 'Activa' : 'Suspens.'}</span>
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <ArrowRight size={18} className="arrow-icon" />
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Right Side: Detail Panel */}
+                <div className={`saas-detail-panel glass-effect ${selectedFedId ? 'is-visible' : ''}`}>
+                    {selectedFed ? (
+                        <div className="detail-content fade-in">
+                            <div className="detail-header">
+                                <div className="header-top">
+                                    <button className="btn-close-detail" onClick={() => setSelectedFedId(null)}><X size={20} /></button>
+                                    <div className="fed-main-title">
+                                        <h3>{selectedFed.clubNombre}</h3>
+                                        <div className="fed-tags">
+                                            <span className={`tag-status ${selectedFed.activo ? 'active' : 'inactive'}`}>
+                                                {selectedFed.activo ? 'Habilitada' : 'Suspendida'}
+                                            </span>
+                                            <span className="tag-id">ID: #{selectedFed.clubId}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="header-actions-mini">
+                                    <button className="btn-mini-action" onClick={() => handleOpenEdit(selectedFed)}>
+                                        <Edit3 size={14} /> Editar Datos
+                                    </button>
+                                    <button className="btn-mini-action danger" onClick={handleDelete}>
+                                        <Trash2 size={14} /> Eliminar
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="plan-features">
-                                <h4>Características del Plan</h4>
-                                <ul>
-                                    {plan.caracteristicas.map((caract, idx) => (
-                                        <li key={idx} className={caract.activo ? 'feature-active' : 'feature-inactive'}>
-                                            {caract.activo ? <CheckCircle size={16} className="icon-success" /> : <XCircle size={16} className="icon-error" />}
-                                            <span>{caract.nombre}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                            {/* Contact Info */}
+                            <div className="detail-info-grid">
+                                <div className="info-item">
+                                    <Mail size={14} />
+                                    <span>{selectedFed.email || 'Sin email'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <Phone size={14} />
+                                    <span>{selectedFed.telefono || 'Sin teléfono'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <MapPin size={14} />
+                                    <span>{selectedFed.direccion || 'Sin dirección'}</span>
+                                </div>
                             </div>
 
-                            <div className="plan-actions">
-                                <button className="btn-admin-secondary full-width">
-                                    <Edit size={16} /> Configurar Límites
-                                </button>
+                            <div className="detail-stats-cards">
+                                <div className="detail-card">
+                                    <BarChart3 size={20} />
+                                    <div className="card-info">
+                                        <label>Consumo Atletas (Global)</label>
+                                        <ProgressBar 
+                                            current={selectedFed.atletasRegistrados} 
+                                            max={selectedFed.maxAtletas} 
+                                            label="" 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="detail-card">
+                                    <Building2 size={20} />
+                                    <div className="card-info">
+                                        <label>Clubes Afiliados</label>
+                                        <div className="stat-value-large">{selectedFed.clubesAfiliadosCount} <span>Entidades</span></div>
+                                    </div>
+                                </div>
+
+                                <div className="detail-card">
+                                    <Calendar size={20} />
+                                    <div className="card-info">
+                                        <label>Torneos Activos</label>
+                                        <ProgressBar 
+                                            current={selectedFed.torneosActivosCount} 
+                                            max={selectedFed.maxTorneos} 
+                                            label="" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h4><Activity size={16} /> Acciones Rápidas</h4>
+                                <div className="quick-actions-row">
+                                    <button 
+                                        className="btn-action-primary"
+                                        onClick={() => navigate(`/super/federacion/${selectedFed.clubId}`)}
+                                    >
+                                        <Eye size={16} /> Ver Dashboard Federación
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h4><Settings size={16} /> Configuración SaaS</h4>
+                                <div className="admin-controls-vertical">
+                                    <div className="control-field">
+                                        <label>Plan de Suscripción</label>
+                                        <select 
+                                            value={selectedFed.planSaaSId || 1} 
+                                            onChange={(e) => handleAsignarPlan(selectedFed.clubId, parseInt(e.target.value))}
+                                            disabled={asignandoPlanId === selectedFed.clubId}
+                                        >
+                                            {planes.map(p => (
+                                                <option key={p.id} value={p.id}>{p.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="control-field">
+                                        <label>Control de Acceso</label>
+                                        <button 
+                                            className={`btn-toggle-saas full-width ${selectedFed.activo ? 'is-active' : 'is-inactive'}`}
+                                            onClick={() => handleToggleActivo(selectedFed.clubId)}
+                                        >
+                                            {selectedFed.activo ? <Check size={14} /> : <XCircle size={14} />}
+                                            {selectedFed.activo ? 'Suspender Federación' : 'Habilitar Federación'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h4><Calendar size={16} /> Torneos en Curso ({selectedFed.torneosActivosCount})</h4>
+                                <div className="active-tournaments-mini">
+                                    {Array.isArray(selectedFed.torneosActivos) && selectedFed.torneosActivos.length > 0 ? (
+                                        selectedFed.torneosActivos.map(t => (
+                                            <div key={t.id} className="t-row">
+                                                <div className="t-info">
+                                                    <span className="t-name">{t.nombre}</span>
+                                                    <span className="t-date">{new Date(t.fecha).toLocaleDateString()}</span>
+                                                </div>
+                                                <span className={`t-pill ${t.estado.toLowerCase()}`}>{t.estado}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="no-tournaments">No hay torneos activos actualmente.</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    ))
-                )}
+                    ) : (
+                        <div className="detail-empty-state">
+                            <Shield size={48} />
+                            <p>Selecciona una federación para gestionar sus datos y suscripción.</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="saas-federations-section glass-effect mt-4">
-                <div className="section-header-row">
-                    <div className="title-group">
-                        <h3><Shield size={20} /> Asignación de Planes por Federación</h3>
-                        <p className="section-desc">Aquí podrás cambiar el plan activo de cada federación y monitorear su cuota de uso.</p>
+            {/* Federation CRUD Modal */}
+            {showModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content glass-effect fade-in">
+                        <div className="modal-header">
+                            <h3>{isEditing ? 'Editar Federación' : 'Nueva Federación'}</h3>
+                            <button className="btn-close" onClick={() => setShowModal(false)}><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-grid">
+                                <div className="section-title-modal full-width">Información de la Entidad</div>
+                                <div className="form-group">
+                                    <label>Nombre de la Federación</label>
+                                    <input 
+                                        type="text" 
+                                        required 
+                                        value={formData.nombre}
+                                        onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                                        placeholder="Ej: Federación Argentina de Canoas"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Sigla</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.sigla}
+                                        onChange={(e) => setFormData({...formData, sigla: e.target.value})}
+                                        placeholder="Ej: FAC"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Email de Contacto</label>
+                                    <div className="input-with-icon">
+                                        <Mail size={16} />
+                                        <input 
+                                            type="email" 
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                            placeholder="correo@federacion.com"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Teléfono</label>
+                                    <div className="input-with-icon">
+                                        <Phone size={16} />
+                                        <input 
+                                            type="text" 
+                                            value={formData.telefono}
+                                            onChange={(e) => setFormData({...formData, telefono: e.target.value})}
+                                            placeholder="+54 ..."
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group full-width">
+                                    <label>Dirección Física</label>
+                                    <div className="input-with-icon">
+                                        <MapPin size={16} />
+                                        <input 
+                                            type="text" 
+                                            value={formData.direccion}
+                                            onChange={(e) => setFormData({...formData, direccion: e.target.value})}
+                                            placeholder="Calle, Ciudad, Provincia"
+                                        />
+                                    </div>
+                                </div>
+
+                                {!isEditing && (
+                                    <>
+                                        <div className="section-title-modal full-width mt-3">Cuenta de Administrador Inicial</div>
+                                        <div className="form-group">
+                                            <label>Usuario Admin</label>
+                                            <div className="input-with-icon">
+                                                <UserCircle size={16} />
+                                                <input 
+                                                    type="text" 
+                                                    required={!isEditing}
+                                                    value={formData.adminUsername}
+                                                    onChange={(e) => setFormData({...formData, adminUsername: e.target.value})}
+                                                    placeholder="admin_nombre"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Contraseña</label>
+                                            <div className="input-with-icon">
+                                                <Lock size={16} />
+                                                <input 
+                                                    type="password" 
+                                                    required={!isEditing}
+                                                    value={formData.adminPassword}
+                                                    onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
+                                                    placeholder="••••••••"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn-admin-secondary" onClick={() => setShowModal(false)}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="btn-admin-primary">
+                                    {isEditing ? 'Guardar Cambios' : 'Crear Federación y Admin'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                
-                <div className="placeholder-table-container">
-                    <table className="admin-table mt-2" style={{ opacity: 0.6, pointerEvents: 'none' }}>
-                        <thead>
-                            <tr>
-                                <th>Federación</th>
-                                <th>Plan Actual</th>
-                                <th>Uso de Atletas</th>
-                                <th>Torneos Activos</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Federación de Remo</td>
-                                <td><span className="badge" style={{ backgroundColor: 'var(--color-primary-light)' }}>Estándar</span></td>
-                                <td>1,450 / 2,000</td>
-                                <td>2 / 5</td>
-                                <td><span className="badge success">Al día</span></td>
-                                <td><button className="btn-admin-secondary btn-sm">Gestionar</button></td>
-                            </tr>
-                            <tr>
-                                <td>Asociación de Canotaje</td>
-                                <td><span className="badge" style={{ backgroundColor: 'var(--color-text-secondary)' }}>Básico</span></td>
-                                <td>480 / 500 (¡Cerca del límite!)</td>
-                                <td>1 / 1</td>
-                                <td><span className="badge success">Al día</span></td>
-                                <td><button className="btn-admin-secondary btn-sm">Gestionar</button></td>
-                            </tr>
-                            <tr>
-                                <td>Liga Nacional Acuática</td>
-                                <td><span className="badge" style={{ backgroundColor: 'var(--color-accent)' }}>Premium</span></td>
-                                <td>3,200 / ∞</td>
-                                <td>8 / ∞</td>
-                                <td><span className="badge success">Al día</span></td>
-                                <td><button className="btn-admin-secondary btn-sm">Gestionar</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div className="mockup-overlay">
-                        <div className="mockup-badge">Interfaz en preparación</div>
-                    </div>
-                </div>
-            </div>
+            )}
         </div>
     );
 };

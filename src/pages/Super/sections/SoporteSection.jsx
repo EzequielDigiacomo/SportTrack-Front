@@ -70,22 +70,14 @@ const SoporteSection = () => {
         <div className="soporte-section fade-in">
             <div className="soporte-tabs">
                 <button 
-                    className={`soporte-tab ${activeTab === 'logs' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('logs')}
+                    className="soporte-tab active"
                 >
-                    <Terminal size={18} /> Auditoría y Logs
-                </button>
-                <button 
-                    className={`soporte-tab ${activeTab === 'saas' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('saas')}
-                >
-                    <Cloud size={18} /> Gestión SaaS
+                    <Terminal size={18} /> Auditoría y Logs de Error
                 </button>
             </div>
 
-            {activeTab === 'logs' && (
-                <div className="tab-content fade-in">
-                    <div className="section-header-row">
+            <div className="tab-content fade-in">
+                <div className="section-header-row">
                         <div className="title-group">
                             <h2><Terminal size={24} /> Panel de Soporte y Diagnóstico</h2>
                             <p className="section-desc">Monitoreo de errores del sistema y auditoría técnica.</p>
@@ -175,13 +167,6 @@ const SoporteSection = () => {
                         )}
                     </div>
                 </div>
-            )}
-
-            {activeTab === 'saas' && (
-                <div className="tab-content fade-in">
-                    <SaaSManagement />
-                </div>
-            )}
 
             <ConfirmDialog 
                 isOpen={confirmClear}

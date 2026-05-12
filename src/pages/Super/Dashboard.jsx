@@ -10,6 +10,7 @@ import GestionAtletasSection from './sections/GestionAtletasSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
 import ConfiguracionSection from './sections/ConfiguracionSection';
 import SoporteSection from './sections/SoporteSection';
+import SaaSManagement from './sections/SaaSManagement';
 
 
 import { 
@@ -22,7 +23,8 @@ import {
     Settings, 
     LogOut,
     Menu,
-    Terminal as TerminalIcon
+    Terminal as TerminalIcon,
+    Cloud
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -35,8 +37,9 @@ const NAV_ITEMS = [
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true },
+    { id: 'saas', path: 'saas', icon: <Cloud size={20} />, label: 'Suscripciones SaaS', isSupport: true },
     { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
-    { id: 'soporte', path: 'soporte', icon: <TerminalIcon size={20} />, label: 'Soporte Técnico', isSupport: true },
+    { id: 'soporte', path: 'soporte', icon: <TerminalIcon size={20} />, label: 'Auditoría / Logs', isSupport: true },
 ];
 
 const SuperDashboard = () => {
@@ -73,10 +76,14 @@ const SuperDashboard = () => {
     };
 
     const filteredNavItems = NAV_ITEMS.filter(item => {
-        if (item.isSupport) {
-            return user?.rol === 'SuperAdmin' || user?.username === 'soporte_tecnico' || user?.username === 'admin'; 
-            // Agregué 'admin' temporalmente para que el usuario pueda verlo si lo desea, pero lo ideal es un usuario aparte.
+        const role = user?.rol?.trim().toLowerCase();
+        const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
+
+        // Módulos EXCLUSIVOS para SuperAdmin
+        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'configuracion') {
+            return isSuper;
         }
+
         return true;
     });
 
@@ -136,6 +143,8 @@ const SuperDashboard = () => {
                         <Route path="atletas" element={<GestionAtletasSection />} />
                         <Route path="resultados" element={<GestionResultadosSection />} />
                         <Route path="configuracion" element={<ConfiguracionSection />} />
+                        <Route path="saas" element={<SaaSManagement />} />
+                        <Route path="federacion/:id" element={<AdminHome />} />
                         <Route path="soporte" element={<SoporteSection />} />
                     </Routes>
                 </div>
