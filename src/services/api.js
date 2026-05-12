@@ -60,9 +60,6 @@ api.interceptors.response.use(
             localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
             localStorage.removeItem(STORAGE_KEYS.USER_DATA)
             
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login'
-            }
             return Promise.reject(error)
         }
 
