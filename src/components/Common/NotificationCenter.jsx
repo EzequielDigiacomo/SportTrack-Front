@@ -119,9 +119,9 @@ const NotificationCenter = ({ isAdmin }) => {
                                     <Clock size={16} />
                                 </div>
                                 <div className="notif-content">
-                                    <span className="notif-title">Por Validar: {n.nombre}</span>
+                                    <span className="notif-title">{n.title}</span>
                                     <span className="notif-time">
-                                        {n.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {n.time}
                                     </span>
                                 </div>
                                 <div className="notif-action">

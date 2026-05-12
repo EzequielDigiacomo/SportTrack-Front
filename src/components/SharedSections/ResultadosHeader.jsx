@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatTime } from '../../utils/dateUtils';
+import { Trophy, Calendar, Search, List, FileText } from 'lucide-react';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -48,14 +49,19 @@ const ResultadosHeader = ({
     const catColor = CATEGORIA_COLORS[p?.categoria?.id || p?.categoriaId] || { bg: 'transparent', text: 'var(--color-primary)' };
 
     return (
-        <div className="resultados-header-section admin-form-card glass-effect mb-xl" style={{ padding: '2rem 3rem' }}>
-            <div className="admin-grid-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+        <div className="resultados-header-section admin-form-card glass-effect" style={{ padding: '1.5rem 2rem', marginBottom: '2.5rem' }}>
+            <div className="admin-grid-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                
+                {/* Event Selector */}
                 <div className="form-group">
-                    <label>1. Seleccionar Evento</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Calendar size={14} className="text-primary" /> Evento
+                    </label>
                     <select 
                         value={selectedEvento} 
                         onChange={(e) => setSelectedEvento(e.target.value)}
                         className="admin-select"
+                        style={{ borderLeft: '3px solid var(--color-primary)' }}
                     >
                         <option value="">-- Seleccione un Evento --</option>
                         {eventos.map(ev => (
@@ -64,14 +70,17 @@ const ResultadosHeader = ({
                     </select>
                 </div>
 
+                {/* Prueba Selector */}
                 <div className="form-group">
-                    <label>2. Filtrar por Prueba / Categoría</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Search size={14} className="text-secondary" /> Prueba / Categoría
+                    </label>
                     <select 
                         value={selectedPrueba} 
                         onChange={(e) => setSelectedPrueba(e.target.value)}
                         className="admin-select"
                         style={{ 
-                            border: `1px solid ${catColor.text}`,
+                            borderLeft: `3px solid ${catColor.text}`,
                             color: catColor.text
                         }}
                     >
@@ -97,13 +106,16 @@ const ResultadosHeader = ({
                     </select>
                 </div>
 
+                {/* Regata Selector */}
                 <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <label style={{ margin: 0 }}>3. Ir a Regata específica</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <List size={14} className="text-accent" /> Regata Específica
+                        </label>
                         {cronograma.length > 0 && (
                             <button 
-                                className="btn-admin-secondary"
-                                style={{ padding: '2px 8px', fontSize: '11px', height: '24px' }}
+                                className="btn-admin-secondary compact"
+                                style={{ padding: '0 8px', fontSize: '10px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
                                 onClick={() => {
                                     const ev = eventos.find(e => String(e.id) === String(selectedEvento));
                                     import('../../services/PdfExportService').then(m => {
@@ -111,7 +123,7 @@ const ResultadosHeader = ({
                                     });
                                 }}
                             >
-                                📄 PDF
+                                <FileText size={10} style={{ marginRight: '4px' }} /> PDF Start List
                             </button>
                         )}
                     </div>
@@ -122,7 +134,7 @@ const ResultadosHeader = ({
                         }}
                         disabled={!selectedEvento || cronograma.length === 0}
                         className="admin-select"
-                        style={{ border: '1px solid var(--color-primary)', boxShadow: '0 0 10px rgba(100, 180, 255, 0.1)' }}
+                        style={{ borderLeft: '3px solid var(--color-accent)' }}
                         value={selectedFaseId || ''}
                     >
                         <option value="">-- Ver Cronograma Completo --</option>
@@ -155,33 +167,47 @@ const ResultadosHeader = ({
                 </div>
             </div>
 
-            <div style={{ marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--color-text-dim)', display: 'flex', justifyContent: 'space-between' }}>
-                {selectedPrueba && (
-                    <span>Prueba Seleccionada: <strong style={{ color: catColor.text }}>{pruebas.find(p => String(p.id) === String(selectedPrueba))?.nombre}</strong></span>
-                )}
-                {cronograma.length > 0 && (
-                    <span>Total de regatas programadas: <strong>{cronograma.length}</strong></span>
+            {/* Header Status Bar */}
+            <div style={{ 
+                marginTop: '1.2rem', 
+                paddingTop: '1rem',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                fontSize: '0.8rem', 
+                color: 'var(--color-text-dim)', 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
+                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                    {cronograma.length > 0 && (
+                        <div className="status-pill">
+                            <List size={12} style={{ marginRight: '6px' }} />
+                            Total Regatas: <strong style={{ color: 'white', marginLeft: '4px' }}>{cronograma.length}</strong>
+                        </div>
+                    )}
+                </div>
+
+                
+                {selectedPrueba && !hideTabs && (
+                    <div className="admin-tabs-nav-modern">
+                        <button 
+                            className={`tab-link ${currentTab === 'startList' ? 'active' : ''}`}
+                            onClick={() => setCurrentTab('startList')}
+                        >
+                            Start List {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
+                        </button>
+                        <button 
+                            className={`tab-link ${currentTab === 'resultados' ? 'active' : ''}`}
+                            onClick={() => setCurrentTab('resultados')}
+                        >
+                            Resultados {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
+                        </button>
+                    </div>
                 )}
             </div>
-
-            {selectedPrueba && !hideTabs && (
-                <div className="admin-tabs-nav mt-xl">
-                    <button 
-                        className={`admin-tab-btn ${currentTab === 'startList' ? 'active' : ''}`}
-                        onClick={() => setCurrentTab('startList')}
-                    >
-                        📋 Start List {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : '(Inscritos)'}
-                    </button>
-                    <button 
-                        className={`admin-tab-btn ${currentTab === 'resultados' ? 'active' : ''}`}
-                        onClick={() => setCurrentTab('resultados')}
-                    >
-                        ⏱️ Resultados {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : 'y Tiempos'}
-                    </button>
-                </div>
-            )}
         </div>
     );
 };
 
 export default ResultadosHeader;
+

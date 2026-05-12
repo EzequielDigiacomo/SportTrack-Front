@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Flag, List, ArrowLeft } from 'lucide-react';
+import { Play, Flag, List, ArrowLeft, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Judges.css';
 

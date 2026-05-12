@@ -4,11 +4,27 @@
 
 .resultados-filters {
     display: flex;
-    gap: 2rem;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    border-radius: 12px;
+    gap: 1.5rem;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+.flex-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+
+.mb-xl { margin-bottom: 1.5rem; }
+.mb-2xl { margin-bottom: 2.5rem; }
+.mt-xl { margin-top: 1.5rem; }
 
 .filter-group {
     display: flex;
@@ -51,6 +67,200 @@
     isolation: auto !important;
     z-index: 10;
     position: relative;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    min-height: 56px;
+}
+
+.info-badge-modern {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    color: var(--color-text-dim);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-badge-modern strong {
+    color: white;
+}
+
+/* Modern Action Buttons */
+.btn-admin-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 1.2rem;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: 36px;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-primary);
+}
+
+.btn-admin-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-admin-action.primary {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
+}
+
+.btn-admin-action.primary:hover {
+    box-shadow: 0 6px 16px rgba(var(--color-primary-rgb), 0.3);
+}
+
+.btn-admin-action.secondary.active {
+    background: rgba(var(--color-accent-rgb), 0.1);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.btn-admin-action.info {
+    background: rgba(var(--color-primary-rgb), 0.1);
+    color: var(--color-primary-light);
+    border-color: rgba(var(--color-primary-rgb), 0.3);
+}
+
+.btn-admin-action.success {
+    background: rgba(var(--color-success-rgb), 0.1);
+    color: var(--color-success);
+    border-color: rgba(var(--color-success-rgb), 0.3);
+}
+
+.btn-admin-action.accent {
+    background: var(--color-accent);
+    color: var(--color-bg-primary);
+    border: none;
+}
+
+/* PDF Dropdown Menu */
+.pdf-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: var(--z-dropdown);
+    min-width: 240px;
+    background: #1a2333;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 0.5rem;
+    overflow: hidden;
+}
+
+.pdf-dropdown-menu button {
+    width: 100%;
+    text-align: left;
+    padding: 0.7rem 1rem;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.pdf-dropdown-menu button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.pdf-dropdown-menu button.highlight {
+    color: var(--color-primary-light);
+    font-weight: 600;
+}
+
+.pdf-dropdown-menu button.success {
+    color: var(--color-success);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0.4rem 0;
+}
+
+/* Status Pills for Header */
+.status-pill {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Modern Tabs for Header */
+.admin-tabs-nav-modern {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: var(--radius-md);
+}
+
+.tab-link {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.tab-link:hover {
+    color: white;
+}
+
+.tab-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.admin-select.compact {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    height: 38px;
+}
+
+.btn-admin-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-admin-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .grid-instructions {

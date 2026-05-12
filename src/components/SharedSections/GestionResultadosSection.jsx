@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
@@ -40,6 +40,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const { alert, showAlert } = useAlert();
     const [isManualMode, setIsManualMode] = useState(false);
     const [manualPlacements, setManualPlacements] = useState({});
+    const [isNominaCollapsed, setIsNominaCollapsed] = useState(false);
 
     // Lógica de selección de fase (Movida arriba para evitar errores de hoisting)
     const hideTabs = viewMode === 'tiempos' || viewMode === 'startlist';
@@ -332,23 +333,25 @@ return (
                 {/* TAB: START LIST / SIEMBRA */}
                 {currentTab === 'startList' && (
                     <div className="start-list-view fade-in">
-                        <div className="action-bar-premium glass-effect mb-md">
-                            <div className="info-badge">
-                                <strong>{inscriptos.length}</strong> Inscritos en esta prueba
+                        <div className="action-bar-premium glass-effect mb-md" style={{ padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="info-badge-modern">
+                                <List size={14} />
+                                <span><strong>{inscriptos.length}</strong> Inscritos</span>
                             </div>
-                            <div className="flex-row gap-sm">
+                            
+                            <div className="flex-row gap-md">
                                 <button
-                                    className="btn-admin-primary"
+                                    className="btn-admin-action primary"
                                     onClick={handleSortearCarriles}
                                     disabled={saving || isManualMode}
                                 >
-                                    🎲 {fases.length > 0 ? 'Resortear y Regenerar' : 'Generar Heats y Sortear'}
+                                    <RotateCcw size={16} /> {fases.length > 0 ? 'Regenerar Sorteo' : 'Generar Heats'}
                                 </button>
+                                
                                 <button
-                                    className={`btn-admin-secondary ${isManualMode ? 'active' : ''}`}
+                                    className={`btn-admin-action secondary ${isManualMode ? 'active' : ''}`}
                                     onClick={() => {
                                         if (!isManualMode) {
-                                            // Pre-llenar con algo útil si está vacío
                                             const initial = {};
                                             inscriptos.forEach((ins, idx) => {
                                                 initial[ins.id] = { 
@@ -360,177 +363,155 @@ return (
                                         }
                                         setIsManualMode(!isManualMode);
                                     }}
-                                    style={{ 
-                                        borderColor: isManualMode ? '#ffdd00' : 'rgba(255,255,255,0.2)',
-                                        color: isManualMode ? '#ffdd00' : 'white'
-                                    }}
                                 >
-                                    {isManualMode ? '❌ Cancelar Manual' : '🛠️ Organización Manual'}
+                                    {isManualMode ? '❌ Cancelar' : <><RefreshCw size={16} /> Manual</>}
                                 </button>
+                                
                                 {isManualMode && (
                                     <button
-                                        className="btn-admin-primary"
+                                        className="btn-admin-action accent"
                                         onClick={handleApplyManualGeneration}
-                                        style={{ background: '#ffdd00', color: '#121a30' }}
                                     >
-                                        🚀 Aplicar y Generar
+                                        🚀 Aplicar
                                     </button>
                                 )}
+
                                 {fases.length > 0 && (
                                     <div style={{ position: 'relative' }}>
                                         <button
-                                            className="btn-admin-secondary"
+                                            className="btn-admin-action secondary"
                                             onClick={() => setShowPdfMenu(v => !v)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                                         >
-                                            <FileDown size={16} /> Exportar Start List PDF <ChevronDown size={14} />
+                                            <FileDown size={16} /> Exportar PDF <ChevronDown size={14} />
                                         </button>
                                         {showPdfMenu && (
-                                            <div
-                                                style={{
-                                                    position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                                                    zIndex: 9999,
-                                                    minWidth: '260px', borderRadius: '12px', overflow: 'hidden',
-                                                    background: 'rgba(18, 26, 48, 0.98)',
-                                                    border: '1px solid rgba(100, 160, 255, 0.2)',
-                                                    boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
-                                                }}
-                                            >
-                                                <div style={{ padding: '0.4rem 0' }}>
-                                                    <button
-                                                        onClick={handleExportEvento}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#ffdd00', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
-                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(255,221,0,0.1)'}
-                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                    >
-                                                        📅 Cronograma General (Todo el Evento)
-                                                    </button>
-                                                    <button
-                                                        onClick={handleExportPrueba}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
-                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
-                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                    >
-                                                        🏆 Prueba Seleccionada (con Horarios)
-                                                    </button>
-                                                    {etiquetasEtapas.map(etapa => (
-                                                        <button
-                                                            key={etapa}
-                                                            onClick={() => handleExportGrupo(etapa)}
-                                                            style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                            onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
-                                                            onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                        >
-                                                            📋 Solo {etapa}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                            <div className="pdf-dropdown-menu fade-in">
+                                                <button onClick={handleExportEvento}>📅 Cronograma General</button>
+                                                <button onClick={handleExportPrueba}>🏆 Prueba Seleccionada</button>
+                                                {etiquetasEtapas.map(etapa => (
+                                                    <button key={etapa} onClick={() => handleExportGrupo(etapa)}>📋 Solo {etapa}</button>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
                                 )}
+
                                 {fases.length > 0 && (
                                     <button
-                                        className="btn-admin-secondary"
+                                        className="btn-admin-action info"
                                         onClick={handleRecalcularCronograma}
                                         disabled={saving}
-                                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
                                     >
-                                        🧠 Reprogramación Inteligente
+                                        <RefreshCw size={16} /> Reprogramar
                                     </button>
                                 )}
                             </div>
                         </div>
 
                         {inscriptos.length > 0 && (
-                            <div className="inscriptos-seeding-panel glass-effect p-md mb-lg" style={{ borderRadius: 'var(--radius-lg)' }}>
-                                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: 'var(--color-primary-light)' }}>
-                                    Nómina de Inscritos y Siembra
-                                </h3>
-                                <div className="admin-table-wrapper" style={{ maxHeight: '300px', borderRadius: 'var(--radius-md)' }}>
-                                    <table className="admin-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Atleta / Tripulación</th>
-                                                <th>Club</th>
-                                                {isManualMode ? (
-                                                    <>
-                                                        <th style={{ textAlign: 'center' }}>Serie / Heat</th>
-                                                        <th style={{ textAlign: 'center' }}>Carril</th>
-                                                    </>
-                                                ) : (
-                                                    <th style={{ textAlign: 'center' }}>Cabeza de Serie (Carril 5)</th>
-                                                )}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {inscriptos.map(ins => (
-                                                <tr key={ins.id} style={{ background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.05)' : 'transparent' }}>
-                                                    <td>
-                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                            <strong style={{ color: ins.esCabezaDeSerie ? '#ffdd00' : 'inherit', fontSize: '1.1rem' }}>
-                                                                {ins.tripulantes && ins.tripulantes.length > 0 
-                                                                    ? [ins.participanteNombreCompleto, ...ins.tripulantes.map(t => t.participanteNombreCompleto)].join(' - ')
-                                                                    : (ins.participanteNombreCompleto || "Bote de Equipo")
-                                                                }
-                                                            </strong>
-                                                            {ins.tripulantes && ins.tripulantes.length > 0 && (
-                                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: '2px', letterSpacing: '0.5px' }}>
-                                                                    TRIPULACIÓN COMPLETA
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td>{ins.clubNombre || ins.clubSigla || 'Independiente'}</td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        {isManualMode ? (
-                                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                                                                <input 
-                                                                    type="number"
-                                                                    className="admin-input-small"
-                                                                    style={{ width: '60px', textAlign: 'center' }}
-                                                                    value={manualPlacements[ins.id]?.serie || 1}
-                                                                    onChange={(e) => handleManualPlacementChange(ins.id, 'serie', e.target.value)}
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                className="btn-icon-admin"
-                                                                onClick={() => handleToggleSeeding(ins.id)}
-                                                                title={ins.esCabezaDeSerie ? "Quitar Cabeza de Serie" : "Marcar como Cabeza de Serie"}
-                                                                style={{
-                                                                    color: ins.esCabezaDeSerie ? '#ffdd00' : 'var(--color-text-muted)',
-                                                                    background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.1)' : 'rgba(255,255,255,0.05)',
-                                                                    border: ins.esCabezaDeSerie ? '1px solid rgba(255,221,0,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                                                                    padding: '0.4rem',
-                                                                    borderRadius: '50%'
-                                                                }}
-                                                            >
-                                                                <Star size={16} fill={ins.esCabezaDeSerie ? '#ffdd00' : 'none'} />
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                    {isManualMode && (
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <input 
-                                                                type="number"
-                                                                className="admin-input-small"
-                                                                style={{ width: '60px', textAlign: 'center' }}
-                                                                min="1" max="9"
-                                                                value={manualPlacements[ins.id]?.carril || 1}
-                                                                onChange={(e) => handleManualPlacementChange(ins.id, 'carril', e.target.value)}
-                                                            />
-                                                        </td>
-                                                    )}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                            <div className="inscriptos-seeding-panel glass-effect p-md mb-lg" style={{ borderRadius: 'var(--radius-lg)', position: 'relative' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNominaCollapsed ? '0' : '1.5rem' }}>
+                                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary-light)' }}>
+                                        Nómina de Inscritos y Siembra
+                                    </h3>
+                                    <button 
+                                        className="btn-admin-icon" 
+                                        onClick={() => setIsNominaCollapsed(!isNominaCollapsed)}
+                                        title={isNominaCollapsed ? "Expandir" : "Minimizar"}
+                                        style={{ width: '28px', height: '28px', borderRadius: '4px' }}
+                                    >
+                                        {isNominaCollapsed ? <Plus size={14} /> : <Minus size={14} />}
+                                    </button>
                                 </div>
-                                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-dim)', marginTop: '1rem', fontStyle: 'italic' }}>
-                                    * Se debe marcar 1 cabeza de serie por cada 9 atletas para armar los heats correctamente.
-                                    El sistema ubicará automáticamente a los cabezas de serie en el Carril 5 de cada serie.
-                                </p>
+
+                                {!isNominaCollapsed && (
+                                    <div className="fade-in">
+                                        <div className="admin-table-wrapper" style={{ maxHeight: '300px', borderRadius: 'var(--radius-md)' }}>
+                                            <table className="admin-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Atleta / Tripulación</th>
+                                                        <th>Club</th>
+                                                        {isManualMode ? (
+                                                            <>
+                                                                <th style={{ textAlign: 'center' }}>Serie / Heat</th>
+                                                                <th style={{ textAlign: 'center' }}>Carril</th>
+                                                            </>
+                                                        ) : (
+                                                            <th style={{ textAlign: 'center' }}>Cabeza de Serie (Carril 5)</th>
+                                                        )}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {inscriptos.map(ins => (
+                                                        <tr key={ins.id} style={{ background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.05)' : 'transparent' }}>
+                                                            <td>
+                                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                    <strong style={{ color: ins.esCabezaDeSerie ? '#ffdd00' : 'inherit', fontSize: '1.1rem' }}>
+                                                                        {ins.tripulantes && ins.tripulantes.length > 0 
+                                                                            ? [ins.participanteNombreCompleto, ...ins.tripulantes.map(t => t.participanteNombreCompleto)].join(' - ')
+                                                                            : (ins.participanteNombreCompleto || "Bote de Equipo")
+                                                                        }
+                                                                    </strong>
+                                                                    {ins.tripulantes && ins.tripulantes.length > 0 && (
+                                                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: '2px', letterSpacing: '0.5px' }}>
+                                                                            TRIPULACIÓN COMPLETA
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td>{ins.clubNombre || ins.clubSigla || 'Independiente'}</td>
+                                                            <td style={{ textAlign: 'center' }}>
+                                                                {isManualMode ? (
+                                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                                                                        <input 
+                                                                            type="number"
+                                                                            className="admin-input-small"
+                                                                            style={{ width: '60px', textAlign: 'center' }}
+                                                                            value={manualPlacements[ins.id]?.serie || 1}
+                                                                            onChange={(e) => handleManualPlacementChange(ins.id, 'serie', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        className="btn-icon-admin"
+                                                                        onClick={() => handleToggleSeeding(ins.id)}
+                                                                        title={ins.esCabezaDeSerie ? "Quitar Cabeza de Serie" : "Marcar como Cabeza de Serie"}
+                                                                        style={{
+                                                                            color: ins.esCabezaDeSerie ? '#ffdd00' : 'var(--color-text-muted)',
+                                                                            background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.1)' : 'rgba(255,255,255,0.05)',
+                                                                            border: ins.esCabezaDeSerie ? '1px solid rgba(255,221,0,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                                                            padding: '0.4rem',
+                                                                            borderRadius: '50%'
+                                                                        }}
+                                                                    >
+                                                                        <Star size={16} fill={ins.esCabezaDeSerie ? '#ffdd00' : 'none'} />
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                            {isManualMode && (
+                                                                <td style={{ textAlign: 'center' }}>
+                                                                    <input 
+                                                                        type="number"
+                                                                        className="admin-input-small"
+                                                                        style={{ width: '60px', textAlign: 'center' }}
+                                                                        min="1" max="9"
+                                                                        value={manualPlacements[ins.id]?.carril || 1}
+                                                                        onChange={(e) => handleManualPlacementChange(ins.id, 'carril', e.target.value)}
+                                                                    />
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-dim)', marginTop: '1rem', fontStyle: 'italic' }}>
+                                            * Se debe marcar 1 cabeza de serie por cada 9 atletas para armar los heats correctamente.
+                                            El sistema ubicará automáticamente a los cabezas de serie en el Carril 5 de cada serie.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -594,141 +575,73 @@ return (
                 {/* TAB: RESULTADOS */}
                 {currentTab === 'resultados' && (
                     <div className="resultados-view fade-in">
-                        <div className="action-bar-premium glass-effect mb-md">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                                <div className="info-badge">
-                                    <strong>{fases.length}</strong> {fases.length === 1 ? 'Fase' : 'Fases'} generadas
+                        <div className="action-bar-premium glass-effect mb-md" style={{ padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div className="info-badge-modern">
+                                    <Trophy size={14} />
+                                    <span><strong>{fases.length}</strong> {fases.length === 1 ? 'Fase' : 'Fases'}</span>
                                 </div>
                                 {fases.length > 0 && (
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <select
-                                            className="admin-select"
+                                            className="admin-select compact"
                                             value={filtroVisualFase}
                                             onChange={(e) => setFiltroVisualFase(e.target.value)}
-                                            style={{ minWidth: '200px', fontSize: '0.9rem' }}
+                                            style={{ minWidth: '180px' }}
                                         >
                                             <option value="Todas">— Seleccionar Fase —</option>
-                                            {fases
-                                                .map(f => (
-                                                    <option key={f.id} value={f.nombreFase}>
-                                                        {f.nombreFase} {f.estado === 'En Carrera' ? '🔴 EN VIVO' : f.estado === 'Finalizada' || f.estado === 'Pendiente de Validación' ? '✅' : ''} {f.fechaHoraProgramada ? `· ${formatTime(f.fechaHoraProgramada)}` : ''}
-                                                    </option>
-                                                ))}
+                                            {fases.map(f => (
+                                                <option key={f.id} value={f.nombreFase}>
+                                                    {f.nombreFase} {f.estado === 'En Carrera' ? '🔴' : ''}
+                                                </option>
+                                            ))}
                                         </select>
-                                        {viewMode === 'tiempos' && filtroVisualFase !== 'Todas' && (
-                                            <button
-                                                className="btn-icon-admin danger"
-                                                onClick={() => {
-                                                    const f = fases.find(f => f.nombreFase === filtroVisualFase);
-                                                    if (f) handleDeleteFase(f.id);
-                                                }}
-                                                title="Eliminar esta fase seleccionada"
-                                                style={{ padding: '0 1rem' }}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        )}
+                                        
                                         <button
-                                            className="btn-icon-admin"
+                                            className="btn-admin-icon"
                                             onClick={() => loadDatosPrueba(selectedPrueba)}
                                             disabled={loading}
-                                            title="Actualizar resultados de la grilla"
-                                            style={{ 
-                                                padding: '0 1rem', 
-                                                background: 'rgba(96, 165, 250, 0.1)', 
-                                                color: '#60a5fa', 
-                                                border: '1px solid rgba(96, 165, 250, 0.2)' 
-                                            }}
+                                            title="Actualizar"
                                         >
-                                            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+                                            <RefreshCw size={14} className={loading ? 'spin' : ''} />
                                         </button>
                                     </div>
                                 )}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
                                 {fases.length > 0 && (viewMode === 'tiempos' || viewMode === 'resultados') && (
                                     <button
-                                        className="btn-admin-primary"
+                                        className="btn-admin-action success"
                                         onClick={handlePromoverEtapa}
                                         disabled={saving}
-                                        style={{
-                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-                                        }}
-                                        title="Generar la siguiente etapa (Semifinales/Finales) basado en estos resultados"
                                     >
                                         🏆 Promover Etapa
                                     </button>
                                 )}
-                            </div>
 
-                            {/* PDF Export Dropdown */}
-                            {fases.length > 0 && viewMode !== 'tiempos' && (
-                                <div style={{ position: 'relative', zIndex: 9999 }}>
-                                    <button
-                                        className="btn-admin-secondary"
-                                        onClick={() => setShowPdfMenu(v => !v)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                                    >
-                                        <FileDown size={16} /> Exportar PDF <ChevronDown size={14} />
-                                    </button>
-                                    {showPdfMenu && (
-                                        <div
-                                            style={{
-                                                position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                                                zIndex: 9999,
-                                                minWidth: '260px', borderRadius: '12px', overflow: 'hidden',
-                                                background: 'rgba(18, 26, 48, 0.98)',
-                                                border: '1px solid rgba(100, 160, 255, 0.2)',
-                                                boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
-                                            }}
+                                {fases.length > 0 && (
+                                    <div style={{ position: 'relative' }}>
+                                        <button
+                                            className="btn-admin-action secondary"
+                                            onClick={() => setShowPdfMenu(v => !v)}
                                         >
-                                            <div style={{ padding: '0.4rem 0' }}>
-                                                {/* Current fase */}
-                                                {faseSeleccionada && (
-                                                    <button
-                                                        onClick={handleExportFase}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
-                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                    >
-                                                        📄 Solo: <strong>{faseSeleccionada.nombreFase}</strong>
-                                                    </button>
-                                                )}
-                                                {/* Per etapa */}
+                                            <FileDown size={16} /> PDF <ChevronDown size={14} />
+                                        </button>
+                                        {showPdfMenu && (
+                                            <div className="pdf-dropdown-menu fade-in">
+                                                {faseSeleccionada && <button onClick={handleExportFase}>📄 Solo: {faseSeleccionada.nombreFase}</button>}
                                                 {etiquetasEtapas.map(etapa => (
-                                                    <button
-                                                        key={etapa}
-                                                        onClick={() => handleExportGrupo(etapa)}
-                                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                        onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
-                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                    >
-                                                        📋 Todas las {etapa}
-                                                    </button>
+                                                    <button key={etapa} onClick={() => handleExportGrupo(etapa)}>📋 Todas las {etapa}</button>
                                                 ))}
-                                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0.3rem 0' }} />
-                                                {/* Full prueba */}
-                                                <button
-                                                    onClick={handleExportPrueba}
-                                                    style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
-                                                    onMouseOver={e => e.currentTarget.style.background = 'rgba(100,160,255,0.1)'}
-                                                    onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                >
-                                                    🏆 Prueba completa (todo en un PDF)
-                                                </button>
-                                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0.3rem 0' }} />
-                                                <button
-                                                    onClick={handleExportCsv}
-                                                    style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
-                                                    onMouseOver={e => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'}
-                                                    onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                >
-                                                    📊 Exportar a EXCEL (.csv)
-                                                </button>
+                                                <div className="dropdown-divider" />
+                                                <button onClick={handleExportPrueba} className="highlight">🏆 Prueba Completa</button>
+                                                <button onClick={handleExportCsv} className="success">📊 Exportar Excel (.csv)</button>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {faseSeleccionada && (viewMode === 'tiempos' || viewMode === 'resultados') && (
