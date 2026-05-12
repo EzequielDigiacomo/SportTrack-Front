@@ -2,7 +2,7 @@
  * Utility to parse User Agent strings and return device info
  */
 export const parseUserAgent = (ua) => {
-    if (!ua) return { type: 'unknown', name: 'Desconocido', icon: '❓' };
+    if (!ua || ua === "null" || ua === "undefined") return { type: 'unknown', os: 'N/A', browser: 'N/A', isMobile: false, fullName: 'Sin Telemetría' };
 
     const lowerUA = ua.toLowerCase();
     
