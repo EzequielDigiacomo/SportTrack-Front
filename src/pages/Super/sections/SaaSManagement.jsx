@@ -241,31 +241,31 @@ const SaaSManagement = () => {
                                             className={`${selectedFedId === fed.clubId ? 'is-selected' : ''} ${!fed.planAlDia ? 'row-warning' : ''}`}
                                             onClick={() => setSelectedFedId(fed.clubId)}
                                         >
-                                            <td>
+                                            <td data-label="Federación">
                                                 <div className="fed-cell-name">
                                                     <div className={`status-dot ${fed.activo ? 'active' : 'inactive'}`} />
                                                     <span>{fed.clubNombre}</span>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-label="Plan">
                                                 <span className="fed-plan-badge" style={{ borderColor: planColor, color: planColor }}>
                                                     {fed.planNombre}
                                                 </span>
                                             </td>
-                                            <td>
+                                            <td data-label="Estado">
                                                 {fed.planAlDia ? (
                                                     <span className="badge success">Al día</span>
                                                 ) : (
                                                     <span className="badge danger">Excedido</span>
                                                 )}
                                             </td>
-                                            <td className="text-center font-bold">{fed.atletasRegistrados}</td>
-                                            <td className="text-center">
+                                            <td data-label="Atletas" className="text-center font-bold">{fed.atletasRegistrados}</td>
+                                            <td data-label="Clubes" className="text-center">
                                                 <span className="club-count-badge">
                                                     {fed.clubesAfiliadosCount}
                                                 </span>
                                             </td>
-                                            <td className="text-center">
+                                            <td data-label="Acceso" className="text-center">
                                                 <button 
                                                     className={`btn-quick-toggle ${fed.activo ? 'is-active' : 'is-suspended'}`}
                                                     onClick={(e) => {

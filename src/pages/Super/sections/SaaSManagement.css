@@ -436,3 +436,71 @@ tr:hover .arrow-icon {
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }
 .full-width { width: 100%; }
+
+/* ── RESPONSIVE SAAS MANAGEMENT ── */
+@media (max-width: 1024px) {
+    .saas-management {
+        height: auto;
+        overflow: visible;
+    }
+
+    .saas-main-layout {
+        flex-direction: column;
+    }
+
+    .saas-list-container.has-selection {
+        flex: none;
+        width: 100%;
+    }
+
+    .saas-detail-panel {
+        flex: none;
+        width: 100%;
+        margin-top: 1.5rem;
+    }
+
+    .saas-detail-panel.is-visible {
+        display: block;
+        position: relative;
+    }
+}
+
+@media (max-width: 768px) {
+    .saas-admin-table thead {
+        display: none;
+    }
+
+    .saas-admin-table td {
+        display: block;
+        padding: 0.5rem 1rem;
+        border: none;
+    }
+
+    .saas-admin-table td:first-child {
+        padding-top: 1rem;
+        font-weight: 800;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .saas-admin-table td:last-child {
+        padding-bottom: 1rem;
+    }
+
+    .saas-admin-table td::before {
+        content: attr(data-label);
+        float: left;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        width: 100%;
+        margin-bottom: 4px;
+    }
+
+    .features-list-detailed {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-box-saas {
+        max-width: 100%;
+    }
+}
