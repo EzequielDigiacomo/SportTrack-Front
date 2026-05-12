@@ -17,13 +17,10 @@ const NotificationCenter = ({ isAdmin }) => {
 
         const setup = async () => {
             try {
-                console.log("[NotifCenter] Connecting to SignalR...");
                 await timingSignalRService.connect();
-                console.log("[NotifCenter] Connected. Setting up global listeners.");
 
                 // 1. Escuchar regatas que entran en revisión (terminadas por el cronometrista)
                 timingSignalRService.onGlobalRaceInReview((fase) => {
-                    console.log("[NotifCenter] Race in review received:", fase);
                     setNotifications(prev => {
                         // Evitar duplicados
                         if (prev.some(n => n.id === fase.id)) return prev;
@@ -38,7 +35,6 @@ const NotificationCenter = ({ isAdmin }) => {
 
                 // 2. Escuchar regatas que se oficializan (para quitarlas de la lista si estaban)
                 timingSignalRService.onGlobalRaceOfficialized((faseId) => {
-                    console.log("[NotifCenter] Race officialized, removing if present:", faseId);
                     setNotifications(prev => prev.filter(n => String(n.id) !== String(faseId)));
                 });
 
@@ -49,7 +45,6 @@ const NotificationCenter = ({ isAdmin }) => {
                     const currentFaseId = params.get('faseId');
                     
                     if (String(currentFaseId) === String(faseId)) {
-                        console.log("[NotifCenter] User already viewing this race, skipping notification.");
                         return;
                     }
 
@@ -73,13 +68,10 @@ const NotificationCenter = ({ isAdmin }) => {
 
     if (!isAdmin) return null;
 
-    console.log("[NotifCenter] Rendering for Admin/Judge. Notif count:", notifications.length);
-
     const handleGoToRace = (faseId) => {
         const roleStr = String(user?.rol || user?.role || user?.Rol || '').toLowerCase();
         const isAdminUser = roleStr.includes('admin');
         const base = isAdminUser ? '/super/resultados' : '/juez-control';
-        console.log(`[NotifCenter] Routing user to: ${base}?faseId=${faseId}`);
         navigate(`${base}?faseId=${faseId}&tab=resultados`);
         setIsVisible(false);
     };

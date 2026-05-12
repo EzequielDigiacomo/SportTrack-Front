@@ -34,7 +34,6 @@ class TimingSignalRService {
                 // Iniciar si está desconectado
                 if (this.connection.state === signalR.HubConnectionState.Disconnected) {
                     await this.connection.start();
-                    console.log("[SignalR] Connected!");
                     await this.syncClock();
                 }
 
@@ -42,7 +41,6 @@ class TimingSignalRService {
                 if (faseId && this.currentFaseId !== faseId.toString()) {
                     await this.connection.invoke("JoinRaceGroup", faseId.toString());
                     this.currentFaseId = faseId.toString();
-                    console.log(`[SignalR] Joined group: race_${faseId}`);
                 } else if (!faseId) {
                     this.currentFaseId = null;
                 }
@@ -60,7 +58,6 @@ class TimingSignalRService {
     async syncClock() {
         if (!this.connection) return;
         
-        console.log("[Sync] Starting clock synchronization...");
         const SAMPLES = 5;
         const offsets = [];
 
@@ -89,7 +86,6 @@ class TimingSignalRService {
             // Usamos la mediana para ignorar picos de red
             offsets.sort((a, b) => a - b);
             this.serverOffset = offsets[Math.floor(offsets.length / 2)];
-            console.log(`[Sync] Finished. Median Clock Offset: ${this.serverOffset}ms (from ${offsets.length} samples)`);
         }
     }
 
@@ -150,7 +146,6 @@ class TimingSignalRService {
     onGlobalRaceStarted(callback) {
         if (!this.connection) return;
         const handler = (faseId, serverTime) => {
-            console.log(`Global Event: Race (ID: ${faseId}) started at ${serverTime}`);
             callback({ faseId, serverTime });
         };
         this.connection.off("globalRaceStarted");
@@ -162,7 +157,6 @@ class TimingSignalRService {
     onGlobalRaceInReview(callback) {
         if (!this.connection) return;
         const handler = (fase) => {
-            console.log(`Global Event: Race (ID: ${fase.id}) in review`);
             callback(fase);
         };
         this.connection.off("globalRaceInReview");
@@ -174,7 +168,6 @@ class TimingSignalRService {
     onGlobalRaceOfficialized(callback) {
         if (!this.connection) return;
         const handler = (faseId) => {
-            console.log(`Global Event: Race (ID: ${faseId}) officialized`);
             callback(faseId);
         };
         this.connection.off("globalRaceOfficialized");

@@ -1,0 +1,199 @@
+.plan-details-page {
+    padding: 8rem 0 6rem;
+    min-height: 100vh;
+    background: var(--color-bg-primary);
+}
+
+.btn-back-home {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-text-secondary);
+    padding: 10px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-bottom: 3rem;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.btn-back-home:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateX(-5px);
+}
+
+.plan-detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    margin-bottom: 4rem;
+}
+
+.plan-detail-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.plan-detail-icon.bronze { background: linear-gradient(135deg, #CD7F32, #A0522D); }
+.plan-detail-icon.silver { background: linear-gradient(135deg, #C0C0C0, #808080); }
+.plan-detail-icon.gold { background: linear-gradient(135deg, #FFD700, #DAA520); }
+
+.badge-category {
+    background: rgba(0, 150, 255, 0.1);
+    color: var(--color-primary-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.plan-detail-title h1 {
+    font-size: 3rem;
+    margin: 10px 0;
+    font-weight: 800;
+}
+
+.hero-subtitle {
+    font-size: 1.2rem;
+    color: var(--color-text-secondary);
+    max-width: 600px;
+}
+
+.plan-detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2.5rem;
+}
+
+.plan-main-info {
+    padding: 3rem;
+    border-radius: 24px;
+}
+
+.plan-main-info h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+}
+
+.long-description {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--color-text-dim);
+    margin-bottom: 2.5rem;
+}
+
+.features-list-detailed {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.feature-item-detail {
+    display: flex;
+    gap: 15px;
+}
+
+.feature-dot {
+    width: 28px;
+    height: 28px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.feature-text strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.feature-text p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin: 0;
+}
+
+.plan-cta-sidebar {
+    padding: 2.5rem;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    height: fit-content;
+    position: sticky;
+    top: 100px;
+}
+
+.sidebar-header h3 {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+}
+
+.sidebar-header p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.sidebar-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.s-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.btn-plan-cta {
+    padding: 18px;
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-plan-cta:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.2);
+}
+
+.btn-plan-cta.bronze { background: linear-gradient(135deg, #CD7F32, #A0522D); }
+.btn-plan-cta.silver { background: var(--gradient-primary); }
+.btn-plan-cta.gold { background: linear-gradient(135deg, #FFD700, #DAA520); }
+
+.sidebar-footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 992px) {
+    .plan-detail-grid { grid-template-columns: 1fr; }
+    .features-list-detailed { grid-template-columns: 1fr; }
+    .plan-detail-hero { flex-direction: column; text-align: center; gap: 1.5rem; }
+    .hero-subtitle { margin: 0 auto; }
+}

@@ -16,13 +16,12 @@ import ToastContainer from './components/Common/ToastContainer'
 import JudgesLayout from './components/Layout/JudgesLayout'
 import NotificationCenter from './components/Common/NotificationCenter'
 import { useAuth } from './context/AuthContext'
+import PlanDetails from './pages/Home/PlanDetails'
 
 function App() {
     const { toasts, removeToast } = useToast()
     const { user } = useAuth()
     
-    // Debug: ver el rol real del usuario
-    console.log("[App-Debug] User:", user?.username, "Role:", user?.rol || user?.Rol);
 
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isJudgeOrAdmin = user && (
@@ -38,6 +37,7 @@ function App() {
             {/* Rutas públicas */}
             <Route path="/login" element={<MainLayout><Login /></MainLayout>} />
             <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+            <Route path="/planes/:id" element={<MainLayout><PlanDetails /></MainLayout>} />
             <Route path="/resultados/:id" element={<MainLayout><LiveResults /></MainLayout>} />
 
             {/* Panel de Clubs (Protegido) */}

@@ -5,6 +5,7 @@ import EventoService from '../../services/EventoService'
 import logo from '../../assets/logo-sporttrack.png'
 import './Home.css'
 import Skeleton from '../../components/Common/Skeleton'
+import { Check, X, Zap, Award, Activity, Smartphone, Share2, FileSpreadsheet, Timer, Globe, Shield } from 'lucide-react'
 
 function Home() {
     const { isAuthenticated, user } = useAuth()
@@ -21,8 +22,8 @@ function Home() {
                 setUltimoEvento(finalizados[finalizados.length - 1])
             }
         })
-        .catch(() => { })
-        .finally(() => setLoading(false))
+            .catch(() => { })
+            .finally(() => setLoading(false))
     }, [])
 
     const handleClubAccess = () => {
@@ -54,24 +55,24 @@ function Home() {
             <section className="features-section container">
                 <div className="features-grid">
                     <div className="feature-card glass-effect">
-                        <div className="feature-icon premium-icon-timer"></div>
+                        <div className="feature-icon-wrapper"><Activity size={32} /></div>
                         <h3>Tiempo Real</h3>
-                        <p>Los tiempos se actualizan en pantalla al instante gracias a tecnología WebSocket</p>
+                        <p>Sincronización instantánea de tiempos mediante tecnología WebSocket y SignalR.</p>
                     </div>
                     <div className="feature-card glass-effect">
-                        <div className="feature-icon premium-icon-stats"></div>
-                        <h3>Todas las Categorías</h3>
-                        <p>K1, K2, K4, C1, C2 en categorías Sub-10 hasta Mayores y distancias 200m a 5000m</p>
+                        <div className="feature-icon-wrapper"><Timer size={32} /></div>
+                        <h3>Cronometraje Pro</h3>
+                        <p>Soporte para todas las categorías (K1, K2, K4, C1, C2) y distancias oficiales.</p>
                     </div>
                     <div className="feature-card glass-effect">
-                        <div className="feature-icon premium-icon-global"></div>
-                        <h3>Acceso Libre</h3>
-                        <p>Cualquier persona puede ver los resultados desde cualquier dispositivo con solo un link</p>
+                        <div className="feature-icon-wrapper"><Globe size={32} /></div>
+                        <h3>Acceso Global</h3>
+                        <p>Resultados abiertos al público sin necesidad de registro desde cualquier dispositivo.</p>
                     </div>
                     <div className="feature-card glass-effect">
-                        <div className="feature-icon premium-icon-club"></div>
-                        <h3>Gestión de Clubes</h3>
-                        <p>Los clubes inscriben a sus atletas y siguen su desempeño desde un panel privado</p>
+                        <div className="feature-icon-wrapper"><Shield size={32} /></div>
+                        <h3>Seguridad SaaS</h3>
+                        <p>Gestión privada de clubes y atletas con backups automáticos y alta disponibilidad.</p>
                     </div>
                 </div>
             </section>
@@ -104,6 +105,75 @@ function Home() {
                 </section>
             )}
 
+            {/* ── PLANES DE SUSCRIPCIÓN ── */}
+            <section className="pricing-section container" id="planes">
+                <div className="section-header">
+                    <h2 className="gradient-text">Planes de Suscripción</h2>
+                    <p>Elegí el nivel de tecnología para tu federación</p>
+                </div>
+
+                <div className="pricing-grid">
+                    {/* PLAN BRONCE */}
+                    <div className="pricing-card glass-effect">
+                        <div className="pricing-header">
+                            <div className="plan-icon bronze"><Award size={32} /></div>
+                            <h3>Plan Bronce</h3>
+                            <div className="plan-price">Digitalización</div>
+                        </div>
+                        <ul className="plan-features">
+                            <li><Check size={18} className="icon-check" /> 1000 Atletas</li>
+                            <li><Check size={18} className="icon-check" /> 15 Clubes Afiliados</li>
+                            <li><Check size={18} className="icon-check" /> Carga Manual de Resultados</li>
+                            <li><Check size={18} className="icon-check" /> Reportes en PDF</li>
+                            <li><Check size={18} className="icon-check" /> Resultados Live</li>
+                            <li className="disabled"><X size={18} /> Dashboards de Jueces</li>
+                            <li className="disabled"><X size={18} /> App Móvil</li>
+                        </ul>
+                        <Link to="/planes/bronce" className="btn-plan-secondary">Saber más</Link>
+                    </div>
+
+                    {/* PLAN PLATA */}
+                    <div className="pricing-card glass-effect featured">
+                        <div className="plan-badge">MÁS POPULAR</div>
+                        <div className="pricing-header">
+                            <div className="plan-icon silver"><Smartphone size={32} /></div>
+                            <h3>Plan Plata</h3>
+                            <div className="plan-price">Gestión Activa</div>
+                        </div>
+                        <ul className="plan-features">
+                            <li><Check size={18} className="icon-check" /> 4,000 Atletas</li>
+                            <li><Check size={18} className="icon-check" /> 40 Clubes Afiliados</li>
+                            <li><Check size={18} className="icon-check" /> **Dashboards para Jueces**</li>
+                            <li><Check size={18} className="icon-check" /> **App Móvil (Public)**</li>
+                            <li><Check size={18} className="icon-check" /> Live Results (Web)</li>
+                            <li className="disabled"><X size={18} /> SignalR Sync (Real-Time)</li>
+                            <li className="disabled"><X size={18} /> Auditoría Total</li>
+
+                        </ul>
+                        <Link to="/planes/plata" className="btn-plan-primary">Comenzar Ahora</Link>
+                    </div>
+
+                    {/* PLAN ORO */}
+                    <div className="pricing-card glass-effect">
+                        <div className="pricing-header">
+                            <div className="plan-icon gold"><Zap size={32} /></div>
+                            <h3>Plan Oro</h3>
+                            <div className="plan-price">Tecnología Real-Time</div>
+                        </div>
+                        <ul className="plan-features">
+                            <li><Check size={18} className="icon-check" /> **Atletas Ilimitados**</li>
+                            <li><Check size={18} className="icon-check" /> **Clubes Ilimitados**</li>
+                            <li><Check size={18} className="icon-check" /> **SignalR Full Sync**</li>
+                            <li><Check size={18} className="icon-check" /> App Móvil Full (Admin)</li>
+                            <li><Check size={18} className="icon-check" /> Exportación Excel/CSV</li>
+                            <li><Check size={18} className="icon-check" /> Auditoría de Tiempos</li>
+                            <li><Check size={18} className="icon-check" /> Soporte 24/7</li>
+                        </ul>
+                        <Link to="/planes/oro" className="btn-plan-secondary">Contactar Ventas</Link>
+                    </div>
+                </div>
+            </section>
+
             {/* ── CTA CLUBES ── */}
             <section className="cta-section">
                 <div className="cta-glow" />
@@ -128,14 +198,14 @@ function Home() {
                             Llevando el canotaje al siguiente nivel con tecnología de vanguardia y resultados en tiempo real.
                         </p>
                         <div className="footer-developer">
-                            Desarrollado por <span className="digitech-brand">EzTechsolution</span>
+                            Desarrollado por <span className="digitech-brand">El Capote</span>
                         </div>
                     </div>
 
                     <div className="footer-contact">
                         <h4>Contacto</h4>
                         <a href="mailto:contacto@digitech.com" className="footer-link-premium">📧 contacto@digitech.com</a>
-                        <a href="https://wa.me/549123456789" className="footer-link-premium">📱 WhatsApp Soporte</a>
+                        <a href="https://wa.me/5493412280901" className="footer-link-premium">📱 WhatsApp Soporte</a>
                     </div>
 
                     <div className="footer-nav">
