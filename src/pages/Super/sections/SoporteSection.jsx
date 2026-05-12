@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SupportService from '../../../services/SupportService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import SaaSManagement from './SaaSManagement';
 import { 
     AlertCircle, 
     Trash2, 
@@ -10,11 +11,13 @@ import {
     User as UserIcon,
     Terminal,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Cloud
 } from 'lucide-react';
 import './SoporteSection.css';
 
 const SoporteSection = () => {
+    const [activeTab, setActiveTab] = useState('logs'); // 'logs' | 'saas'
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedLog, setExpandedLog] = useState(null);
@@ -34,8 +37,10 @@ const SoporteSection = () => {
     };
 
     useEffect(() => {
-        loadLogs();
-    }, []);
+        if (activeTab === 'logs') {
+            loadLogs();
+        }
+    }, [activeTab]);
 
     const handleClearLogs = async () => {
         try {
@@ -63,95 +68,120 @@ const SoporteSection = () => {
 
     return (
         <div className="soporte-section fade-in">
-            <div className="section-header-row">
-                <div className="title-group">
-                    <h2><Terminal size={24} /> Panel de Soporte y Diagnóstico</h2>
-                    <p className="section-desc">Monitoreo de errores del sistema y auditoría técnica.</p>
-                </div>
-                <div className="header-actions">
-                    <button className="btn-admin-secondary" onClick={loadLogs} disabled={loading}>
-                        <RefreshCcw size={16} className={loading ? 'spin' : ''} /> Actualizar
-                    </button>
-                    <button className="btn-admin-danger" onClick={() => setConfirmClear(true)}>
-                        <Trash2 size={16} /> Limpiar Errores
-                    </button>
-                </div>
+            <div className="soporte-tabs">
+                <button 
+                    className={`soporte-tab ${activeTab === 'logs' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('logs')}
+                >
+                    <Terminal size={18} /> Auditoría y Logs
+                </button>
+                <button 
+                    className={`soporte-tab ${activeTab === 'saas' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('saas')}
+                >
+                    <Cloud size={18} /> Gestión SaaS
+                </button>
             </div>
 
-            <div className="logs-filter-bar glass-effect">
-                <Search size={18} className="search-icon" />
-                <input 
-                    type="text" 
-                    placeholder="Filtrar por módulo, error o acción..." 
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                />
-            </div>
-
-            <div className="logs-container">
-                {loading ? (
-                    <div className="loader-row"><div className="loader"></div></div>
-                ) : filteredLogs.length === 0 ? (
-                    <div className="empty-state glass-effect">
-                        <AlertCircle size={48} />
-                        <p>No se encontraron registros de error o auditoría.</p>
+            {activeTab === 'logs' && (
+                <div className="tab-content fade-in">
+                    <div className="section-header-row">
+                        <div className="title-group">
+                            <h2><Terminal size={24} /> Panel de Soporte y Diagnóstico</h2>
+                            <p className="section-desc">Monitoreo de errores del sistema y auditoría técnica.</p>
+                        </div>
+                        <div className="header-actions">
+                            <button className="btn-admin-secondary" onClick={loadLogs} disabled={loading}>
+                                <RefreshCcw size={16} className={loading ? 'spin' : ''} /> Actualizar
+                            </button>
+                            <button className="btn-admin-danger" onClick={() => setConfirmClear(true)}>
+                                <Trash2 size={16} /> Limpiar Errores
+                            </button>
+                        </div>
                     </div>
-                ) : (
-                    <div className="logs-list">
-                        {filteredLogs.map(log => {
-                            const isError = log.accion === 'ERROR_FATAL';
-                            const detail = parseDetail(log.detalle);
-                            const isExpanded = expandedLog === log.id;
 
-                            return (
-                                <div key={log.id} className={`log-item glass-effect ${isError ? 'is-error' : ''} ${isExpanded ? 'is-expanded' : ''}`}>
-                                    <div className="log-summary" onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
-                                        <div className="log-badge">
-                                            {isError ? '🚨 ERROR' : '📝 INFO'}
-                                        </div>
-                                        <div className="log-main-info">
-                                            <span className="log-modulo">{log.modulo}</span>
-                                            <span className="log-message">
-                                                {isError ? (detail.Error || log.detalle) : log.accion}
-                                            </span>
-                                        </div>
-                                        <div className="log-meta">
-                                            <span title="Usuario"><UserIcon size={14} /> {log.usuario}</span>
-                                            <span title="Fecha"><Clock size={14} /> {new Date(log.fecha).toLocaleString()}</span>
-                                            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                                        </div>
-                                    </div>
-                                    
-                                    {isExpanded && (
-                                        <div className="log-details fade-in">
-                                            <div className="details-grid">
-                                                <div className="detail-field">
-                                                    <label>Acción:</label> <span>{log.accion}</span>
+                    <div className="logs-filter-bar glass-effect">
+                        <Search size={18} className="search-icon" />
+                        <input 
+                            type="text" 
+                            placeholder="Filtrar por módulo, error o acción..." 
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="logs-container">
+                        {loading ? (
+                            <div className="loader-row"><div className="loader"></div></div>
+                        ) : filteredLogs.length === 0 ? (
+                            <div className="empty-state glass-effect">
+                                <AlertCircle size={48} />
+                                <p>No se encontraron registros de error o auditoría.</p>
+                            </div>
+                        ) : (
+                            <div className="logs-list">
+                                {filteredLogs.map(log => {
+                                    const isError = log.accion === 'ERROR_FATAL';
+                                    const detail = parseDetail(log.detalle);
+                                    const isExpanded = expandedLog === log.id;
+
+                                    return (
+                                        <div key={log.id} className={`log-item glass-effect ${isError ? 'is-error' : ''} ${isExpanded ? 'is-expanded' : ''}`}>
+                                            <div className="log-summary" onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
+                                                <div className="log-badge">
+                                                    {isError ? '🚨 ERROR' : '📝 INFO'}
                                                 </div>
-                                                <div className="detail-field">
-                                                    <label>IP:</label> <span>{log.ip}</span>
+                                                <div className="log-main-info">
+                                                    <span className="log-modulo">{log.modulo}</span>
+                                                    <span className="log-message">
+                                                        {isError ? (detail.Error || log.detalle) : log.accion}
+                                                    </span>
+                                                </div>
+                                                <div className="log-meta">
+                                                    <span title="Usuario"><UserIcon size={14} /> {log.usuario}</span>
+                                                    <span title="Fecha"><Clock size={14} /> {new Date(log.fecha).toLocaleString()}</span>
+                                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                                 </div>
                                             </div>
-                                            {isError && detail.StackTrace && (
-                                                <div className="stack-trace">
-                                                    <label>Stack Trace:</label>
-                                                    <pre>{detail.StackTrace}</pre>
-                                                </div>
-                                            )}
-                                            {!isError && (
-                                                <div className="raw-detail">
-                                                    <label>Detalle:</label>
-                                                    <pre>{typeof detail === 'object' ? JSON.stringify(detail, null, 2) : detail}</pre>
+                                            
+                                            {isExpanded && (
+                                                <div className="log-details fade-in">
+                                                    <div className="details-grid">
+                                                        <div className="detail-field">
+                                                            <label>Acción:</label> <span>{log.accion}</span>
+                                                        </div>
+                                                        <div className="detail-field">
+                                                            <label>IP:</label> <span>{log.ip}</span>
+                                                        </div>
+                                                    </div>
+                                                    {isError && detail.StackTrace && (
+                                                        <div className="stack-trace">
+                                                            <label>Stack Trace:</label>
+                                                            <pre>{detail.StackTrace}</pre>
+                                                        </div>
+                                                    )}
+                                                    {!isError && (
+                                                        <div className="raw-detail">
+                                                            <label>Detalle:</label>
+                                                            <pre>{typeof detail === 'object' ? JSON.stringify(detail, null, 2) : detail}</pre>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
+
+            {activeTab === 'saas' && (
+                <div className="tab-content fade-in">
+                    <SaaSManagement />
+                </div>
+            )}
 
             <ConfirmDialog 
                 isOpen={confirmClear}
@@ -167,3 +197,4 @@ const SoporteSection = () => {
 };
 
 export default SoporteSection;
+
