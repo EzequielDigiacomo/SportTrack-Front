@@ -24,10 +24,11 @@ const GestionClubesSection = () => {
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
     const [parentModal, setParentModal] = useState({ show: false, club: null, parentId: '' });
+    const [showOrphans, setShowOrphans] = useState(false);
 
     const federaciones = clubes.filter(c => !c.parentClubId); // Para el selector del modal
 
-    useEffect(() => { loadClubes(); }, []);
+    useEffect(() => { loadClubes(); }, [showOrphans]);
 
     const loadClubes = async () => {
         try {
@@ -38,13 +39,17 @@ const GestionClubesSection = () => {
             // Si hay fedId (estamos "dentro" de una federación)
             if (fedId) {
                 const filtrados = todos.filter(
-                    c => String(c.parentClubId) === String(fedId) || String(c.id) === String(fedId)
+                    c => String(c.parentClubId) === String(fedId)
                 );
                 setClubes(filtrados);
             } 
-            // Si es SuperAdmin y no hay fedId, muestra TODO el ecosistema
+            // Si es SuperAdmin y no hay fedId
             else if (isSuper) {
-                setClubes(todos);
+                // Si showOrphans es true, mostramos TODO. Si es false, solo los que TIENEN padre.
+                const filtrados = showOrphans 
+                    ? todos 
+                    : todos.filter(c => c.parentClubId !== null);
+                setClubes(filtrados);
             }
             // Para un Admin normal sin fedId en URL, mostramos su propia jerarquía
             else if (user?.clubId) {
@@ -144,11 +149,23 @@ const GestionClubesSection = () => {
                         </p>
                     </div>
                 </div>
-                {view === 'lista' && (
-                    <button className="btn-admin-primary" onClick={handleOpenCrear}>
-                        <Plus size={20} /> {fedId ? 'Nuevo Club Afiliado' : 'Nuevo Club'}
-                    </button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {user?.rol === 'SuperAdmin' && !fedId && view === 'lista' && (
+                        <label className="flex-row gap-xs" style={{ cursor: 'pointer', fontSize: '0.9rem', color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '20px' }}>
+                            <input 
+                                type="checkbox" 
+                                checked={showOrphans} 
+                                onChange={e => setShowOrphans(e.target.checked)}
+                            />
+                            Ver instituciones sin federación
+                        </label>
+                    )}
+                    {view === 'lista' && (
+                        <button className="btn-admin-primary" onClick={handleOpenCrear}>
+                            <Plus size={20} /> {fedId ? 'Nuevo Club Afiliado' : 'Nuevo Club'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {view === 'lista' ? (
