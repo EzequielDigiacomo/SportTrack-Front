@@ -155,7 +155,12 @@ const GestionAtletasSection = () => {
             const searchLower = searchTerm.toLowerCase();
             const searchableText = `${atleta.nombre} ${atleta.apellido} ${atleta.dni} ${atleta.email || ''} ${atleta.categoriaNombre || ''}`.toLowerCase();
             const nameMatch = searchableText.includes(searchLower);
-            const clubMatch = !selectedClub || atleta.clubNombre === selectedClub;
+            let clubMatch;
+            if (selectedClub === '__SIN_CLUB__') {
+                clubMatch = !atleta.clubNombre || atleta.clubId === null || atleta.clubId === 0;
+            } else {
+                clubMatch = !selectedClub || atleta.clubNombre === selectedClub;
+            }
             return nameMatch && clubMatch;
         })
         .sort((a, b) => {
@@ -215,6 +220,7 @@ const GestionAtletasSection = () => {
                             onChange={(e) => setSelectedClub(e.target.value)}
                         >
                             <option value="">Todos los Clubes</option>
+                            <option value="__SIN_CLUB__">⚠️ Sin Club asignado</option>
                             {clubes.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
                         </select>
                     </div>

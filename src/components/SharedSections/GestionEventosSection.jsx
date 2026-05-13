@@ -24,7 +24,8 @@ import './AdminSections.css';
 const GestionEventosSection = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const isAdmin = user?.rol === 'Admin';
+    const role = user?.rol?.trim();
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin' || user?.username === 'soporte_tecnico';
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'dashboard'
