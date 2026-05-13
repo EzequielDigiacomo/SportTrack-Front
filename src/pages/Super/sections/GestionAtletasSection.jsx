@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { UserPlus, ArrowLeft, Filter } from 'lucide-react';
+import { UserPlus, ArrowLeft, Filter, Link2, X } from 'lucide-react';
 import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
@@ -37,6 +37,7 @@ const GestionAtletasSection = () => {
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
+    const [assignModal, setAssignModal] = useState({ show: false, atleta: null, clubId: '' });
 
     const [searchTerm, setSearchTerm] = useState('');
     // Si venimos desde un club específico, lo pre-filtramos por nombre
@@ -150,6 +151,31 @@ const GestionAtletasSection = () => {
         }
     };
 
+    const handleAssignClub = async () => {
+        if (!assignModal.clubId || !assignModal.atleta) return;
+        setSaving(true);
+        try {
+            const atleta = assignModal.atleta;
+            await AtletaService.update(atleta.id, {
+                nombre: atleta.nombre,
+                apellido: atleta.apellido,
+                dni: atleta.dni,
+                email: atleta.email || '',
+                fechaNacimiento: atleta.fechaNacimiento,
+                sexoId: atleta.sexoId,
+                clubId: parseInt(assignModal.clubId),
+                pais: atleta.pais || 'Ecuador'
+            });
+            showAlert('success', `${atleta.nombre} ${atleta.apellido} asignado correctamente.`);
+            setAssignModal({ show: false, atleta: null, clubId: '' });
+            loadData();
+        } catch (err) {
+            showAlert('error', 'Error al asignar: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const filteredAtletas = atletas
         .filter(atleta => {
             const searchLower = searchTerm.toLowerCase();
@@ -239,6 +265,7 @@ const GestionAtletasSection = () => {
                             atletas={displayedAtletas}
                             onEdit={handleOpenEditar}
                             onDelete={handleDelete}
+                            onAssignClub={(atleta) => setAssignModal({ show: true, atleta, clubId: '' })}
                             sortConfig={sortConfig}
                             requestSort={requestSort}
                         />
@@ -274,6 +301,65 @@ const GestionAtletasSection = () => {
                 confirmText="Sí, Eliminar"
                 loading={saving}
             />
+
+            {/* MODAL ASIGNAR CLUB */}
+            {assignModal.show && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 1000, backdropFilter: 'blur(4px)'
+                }}>
+                    <div className="glass-effect" style={{
+                        background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '420px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <Link2 size={20} style={{ color: 'var(--color-accent-orange)' }} />
+                                <h3 style={{ margin: 0 }}>Asignar Club</h3>
+                            </div>
+                            <button onClick={() => setAssignModal({ show: false, atleta: null, clubId: '' })}
+                                style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                            Atleta: <strong style={{ color: 'var(--color-text)' }}>
+                                {assignModal.atleta?.nombre} {assignModal.atleta?.apellido}
+                            </strong>
+                        </p>
+                        <div className="form-group">
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+                                Seleccionar Club
+                            </label>
+                            <select
+                                className="admin-select"
+                                value={assignModal.clubId}
+                                onChange={e => setAssignModal(prev => ({ ...prev, clubId: e.target.value }))}
+                                style={{ width: '100%' }}
+                            >
+                                <option value="">-- Elegir un club --</option>
+                                {clubes.filter(c => c.parentClubId).map(c => (
+                                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button className="btn-admin-secondary"
+                                onClick={() => setAssignModal({ show: false, atleta: null, clubId: '' })}>
+                                Cancelar
+                            </button>
+                            <button className="btn-admin-primary"
+                                disabled={!assignModal.clubId || saving}
+                                onClick={handleAssignClub}
+                                style={{ background: 'var(--color-accent-orange)', borderColor: 'var(--color-accent-orange)' }}>
+                                {saving ? 'Guardando...' : 'Asignar Club'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

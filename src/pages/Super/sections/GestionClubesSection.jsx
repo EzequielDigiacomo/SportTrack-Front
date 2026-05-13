@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Building2 } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
 import ClubGrid from './ClubGrid';
 import ClubForm from './ClubForm';
 import { useAlert } from '../../../hooks/useAlert';
+import { useAuth } from '../../../context/AuthContext';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionClubesSection = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const fedId = new URLSearchParams(location.search).get('fedId');
+    const { user } = useAuth();
+    // fedId desde URL (SuperAdmin viendo una fed) o ClubId del propio Admin
+    const fedId = new URLSearchParams(location.search).get('fedId') || user?.clubId;
 
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -42,7 +45,8 @@ const GestionClubesSection = () => {
     };
 
     const handleOpenCrear = () => {
-        setForm({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
+        // Al crear, seteamos parentClubId automáticamente con la federación actual
+        setForm({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '', parentClubId: fedId ? parseInt(fedId) : null });
         setView('crear');
     };
 
@@ -64,8 +68,10 @@ const GestionClubesSection = () => {
                 await api.put(`${ENDPOINTS.CLUBES}/${selectedClub.id}`, form);
                 showAlert('success', 'Club actualizado');
             } else {
-                await api.post(ENDPOINTS.CLUBES, form);
-                showAlert('success', 'Club registrado');
+                // Aseguramos que parentClubId se envíe correctamente
+                const payload = { ...form, parentClubId: fedId ? parseInt(fedId) : null };
+                await api.post(ENDPOINTS.CLUBES, payload);
+                showAlert('success', 'Club registrado correctamente en la federación.');
             }
             setView('lista');
             loadClubes();
@@ -101,7 +107,7 @@ const GestionClubesSection = () => {
                 </div>
                 {view === 'lista' && (
                     <button className="btn-admin-primary" onClick={handleOpenCrear}>
-                        <Plus size={20} /> Nuevo Club
+                        <Plus size={20} /> {fedId ? 'Nuevo Club Afiliado' : 'Nuevo Club'}
                     </button>
                 )}
             </div>
