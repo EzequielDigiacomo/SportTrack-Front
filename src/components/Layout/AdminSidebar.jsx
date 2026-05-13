@@ -35,9 +35,9 @@ const AdminSidebar = ({
                     <p className="user-name">{user?.username}</p>
                     <div className="user-plan-status">
                         <p className="user-role" style={{ 
-                            color: user?.plan?.nombre === 'Oro' ? '#FFD700' : 
-                                   user?.plan?.nombre === 'Plata' ? '#E0E0E0' : 
-                                   user?.plan?.nombre === 'Bronce' ? '#CD7F32' : 'var(--color-primary-light)',
+                            color: user?.plan?.nombre?.toLowerCase() === 'oro' ? '#FFD700' : 
+                                   user?.plan?.nombre?.toLowerCase() === 'plata' ? '#E0E0E0' : 
+                                   user?.plan?.nombre?.toLowerCase() === 'bronce' ? '#CD7F32' : 'var(--color-primary-light)',
                             fontWeight: 'bold',
                             fontSize: '0.75rem',
                             display: 'flex',

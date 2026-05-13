@@ -65,8 +65,10 @@ const SaaSManagement = () => {
             
             const planesMapeados = planesData.map(p => {
                 let color = 'var(--color-text-secondary)';
-                if (p.nombre.toLowerCase().includes('estándar')) color = 'var(--color-primary-light)';
-                if (p.nombre.toLowerCase().includes('premium')) color = 'var(--color-accent)';
+                const nombre = p.nombre.toLowerCase();
+                if (nombre.includes('oro')) color = '#FFD700';
+                if (nombre.includes('plata')) color = '#E0E0E0';
+                if (nombre.includes('bronce')) color = '#CD7F32';
                 return { ...p, color };
             });
             
@@ -248,11 +250,23 @@ const SaaSManagement = () => {
                                                 </div>
                                             </td>
                                             <td data-label="Plan">
-                                                <span className="fed-plan-badge" style={{ borderColor: planColor, color: planColor }}>
+                                                <span className="fed-plan-badge" style={{ 
+                                                    borderColor: planColor, 
+                                                    color: planColor,
+                                                    backgroundColor: 'rgba(255,255,255,0.03)',
+                                                    boxShadow: planColor ? `0 0 10px ${planColor}33` : 'none',
+                                                    padding: '4px 12px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: '900',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '1px',
+                                                    border: '1px solid'
+                                                }}>
                                                     {fed.planNombre}
                                                 </span>
                                             </td>
-                                            <td data-label="Estado">
+                                            <td data-label="Estado" style={{ whiteSpace: 'nowrap', minWidth: '100px' }}>
                                                 {fed.planAlDia ? (
                                                     <span className="badge success">Al día</span>
                                                 ) : (
@@ -273,9 +287,25 @@ const SaaSManagement = () => {
                                                         handleToggleActivo(fed.clubId);
                                                     }}
                                                     title={fed.activo ? 'Suspender acceso' : 'Habilitar acceso'}
+                                                    style={{
+                                                        backgroundColor: fed.activo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                        color: fed.activo ? '#10B981' : '#EF4444',
+                                                        border: `1px solid ${fed.activo ? '#10B98166' : '#EF444466'}`,
+                                                        borderRadius: '6px',
+                                                        padding: '4px 10px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease',
+                                                        width: '90px',
+                                                        justifyContent: 'center'
+                                                    }}
                                                 >
-                                                    <Power size={14} />
-                                                    <span>{fed.activo ? 'Activa' : 'Suspens.'}</span>
+                                                    <Power size={12} />
+                                                    <span>{fed.activo ? 'ACTIVA' : 'SUSPENS.'}</span>
                                                 </button>
                                             </td>
                                             <td>
@@ -396,11 +426,29 @@ const SaaSManagement = () => {
                                     <div className="control-field">
                                         <label>Control de Acceso</label>
                                         <button 
-                                            className={`btn-toggle-saas full-width ${selectedFed.activo ? 'is-active' : 'is-inactive'}`}
+                                            className={`btn-toggle-saas-premium ${selectedFed.activo ? 'is-active' : 'is-inactive'}`}
                                             onClick={() => handleToggleActivo(selectedFed.clubId)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                borderRadius: '10px',
+                                                border: '1px solid',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '10px',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.85rem',
+                                                transition: 'all 0.3s ease',
+                                                backgroundColor: selectedFed.activo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                color: selectedFed.activo ? '#10B981' : '#EF4444',
+                                                borderColor: selectedFed.activo ? '#10B98166' : '#EF444466',
+                                                boxShadow: selectedFed.activo ? '0 0 15px rgba(16, 185, 129, 0.1)' : 'none'
+                                            }}
                                         >
-                                            {selectedFed.activo ? <Check size={14} /> : <XCircle size={14} />}
-                                            {selectedFed.activo ? 'Suspender Federación' : 'Habilitar Federación'}
+                                            {selectedFed.activo ? <Check size={18} /> : <XCircle size={18} />}
+                                            {selectedFed.activo ? 'SUSPENDER ACCESO' : 'HABILITAR FEDERACIÓN'}
                                         </button>
                                     </div>
                                 </div>

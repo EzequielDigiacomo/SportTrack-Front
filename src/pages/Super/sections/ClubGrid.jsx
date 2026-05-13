@@ -65,7 +65,18 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                                 <td>{c.cantidadAtletas || 0}</td>
                                 <td>
                                     {c.planNombre ? (
-                                        <span className={`badge ${c.planNombre === 'Oro' ? 'badge-ecu-yellow' : c.planNombre === 'Plata' ? 'badge-ecu-blue' : ''}`} style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                                        <span className="badge" style={{ 
+                                            border: '1px solid',
+                                            padding: '4px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            backgroundColor: 'rgba(255,255,255,0.05)',
+                                            color: c.planNombre.toLowerCase() === 'oro' ? '#FFD700' : 
+                                                   c.planNombre.toLowerCase() === 'plata' ? '#E0E0E0' : 
+                                                   c.planNombre.toLowerCase() === 'bronce' ? '#CD7F32' : 'var(--color-text-dim)',
+                                            borderColor: 'currentColor'
+                                        }}>
                                             {c.planNombre}
                                         </span>
                                     ) : '—'}

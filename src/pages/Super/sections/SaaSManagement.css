@@ -57,27 +57,31 @@
 
 .saas-admin-table th {
     text-align: left;
-    padding: 1rem;
-    font-size: 0.8rem;
+    padding: 1.25rem 1rem;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    color: var(--color-text-muted);
-    background: rgba(0, 0, 0, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .saas-admin-table td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    vertical-align: middle;
+    transition: all 0.2s ease;
 }
 
 .saas-admin-table tr:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .saas-admin-table tr.is-selected {
-    background: rgba(var(--color-primary-rgb), 0.1);
-    border-left: 3px solid var(--color-primary-light);
+    background: rgba(0, 150, 255, 0.1) !important;
+    border-left: 4px solid #0096ff;
 }
 
 .fed-cell-name {
@@ -431,8 +435,28 @@ tr:hover .arrow-icon {
 .no-tournaments { font-size: 0.85rem; color: var(--color-text-muted); font-style: italic; }
 
 /* Utils */
-.badge.danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef444444; }
-.badge.success { background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid #22c55e44; }
+.badge.success { 
+    background: rgba(16, 185, 129, 0.15); 
+    color: #10B981; 
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+}
+
+.badge.danger { 
+    background: rgba(239, 68, 68, 0.15); 
+    color: #EF4444; 
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }
 .full-width { width: 100%; }

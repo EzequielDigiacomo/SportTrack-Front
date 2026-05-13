@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, ListFilter, ClipboardList, Lock, Unlock } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import InscripcionAtletaModal from './InscripcionAtletaModal';
+import { useAuth } from '../../../context/AuthContext';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
 const EventosSection = () => {
+    const { user } = useAuth();
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedEvento, setSelectedEvento] = useState(null);
@@ -28,7 +30,8 @@ const EventosSection = () => {
     const loadEventos = async () => {
         try {
             const data = await EventoService.getProximos();
-            setEventos(data);
+            const filtered = user?.rol === 'SuperAdmin' ? data : data.filter(e => !e.nombre.toLowerCase().includes('control'));
+            setEventos(filtered);
         } catch (error) {
             console.error('Error cargando eventos:', error);
         } finally {

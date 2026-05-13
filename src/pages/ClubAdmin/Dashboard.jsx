@@ -50,9 +50,8 @@ const ClubDashboard = () => {
                     activityItems = [...athleteActivity];
                 }
                 
-                // 4. Obtener eventos próximos (Filtrando controles para clubes)
                 const allProximos = await EventoService.getProximos();
-                const proximos = user.rol === 'Admin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
+                const proximos = user.rol === 'SuperAdmin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
                 setStats(prev => ({ ...prev, events: proximos.length }));
                 
                 if (proximos.length > 0) {
@@ -79,7 +78,12 @@ const ClubDashboard = () => {
 
     return (
         <div className="dashboard-page container">
-            <div className="dashboard-header-inline" style={{ alignItems: 'center' }}>
+            <div className="dashboard-header-inline" style={{ 
+                alignItems: 'center',
+                borderLeft: user?.plan ? `6px solid ${user.plan.nombre.toLowerCase() === 'oro' ? '#FFD700' : user.plan.nombre.toLowerCase() === 'plata' ? '#E0E0E0' : '#CD7F32'}` : 'none',
+                paddingLeft: user?.plan ? '1.5rem' : '0',
+                transition: 'all 0.3s ease'
+            }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                     {!isRoot && (
                         <button 
@@ -98,25 +102,26 @@ const ClubDashboard = () => {
                         </button>
                     )}
                     <div>
-                        <h1 className="gradient-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h1 className="gradient-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                             {user?.rol === 'Admin' ? 'Panel de la Federación' : 'Panel del Club'} {clubName ? `"${clubName}"` : ''}
                             {user?.plan && (
                                 <span style={{ 
-                                    fontSize: '0.75rem', 
-                                    padding: '3px 10px', 
-                                    borderRadius: '12px',
+                                    fontSize: '0.7rem', 
+                                    padding: '4px 12px', 
+                                    borderRadius: '20px',
                                     border: '1px solid',
-                                    color: user.plan.nombre === 'Oro' ? '#FFD700' : user.plan.nombre === 'Plata' ? '#E0E0E0' : '#CD7F32',
-                                    backgroundColor: 'rgba(255,255,255,0.05)',
-                                    fontWeight: 'bold',
+                                    color: user.plan.nombre.toLowerCase() === 'oro' ? '#FFD700' : user.plan.nombre.toLowerCase() === 'plata' ? '#E0E0E0' : '#CD7F32',
+                                    backgroundColor: 'rgba(255,255,255,0.03)',
+                                    boxShadow: `0 0 15px ${user.plan.nombre.toLowerCase() === 'oro' ? 'rgba(255, 215, 0, 0.2)' : user.plan.nombre.toLowerCase() === 'plata' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(205, 127, 50, 0.15)'}`,
+                                    fontWeight: '900',
                                     textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
+                                    letterSpacing: '1px'
                                 }}>
                                     {user.plan.nombre}
                                 </span>
                             )}
                         </h1>
-                        <p className="dashboard-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Bienvenido a tu centro de mando</p>
+                        <p className="dashboard-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Gestión integral de suscripción y operaciones</p>
                     </div>
                 </div>
             </div>

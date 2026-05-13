@@ -54,10 +54,11 @@ const AdminHome = () => {
                     }
                 } else {
                     // Admin normal: cargar sus propios datos
-                    const [eventosData, clubesData] = await Promise.all([
+                    const [eventosRaw, clubesData] = await Promise.all([
                         EventoService.getAll(),
                         ClubService.getAll()
                     ]);
+                    const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
                     const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
                     const totalAtletas = clubesData.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
                     setStats({

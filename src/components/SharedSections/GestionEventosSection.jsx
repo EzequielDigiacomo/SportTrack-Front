@@ -25,7 +25,8 @@ const GestionEventosSection = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const role = user?.rol?.trim();
-    const isAdmin = role === 'Admin' || role === 'SuperAdmin' || user?.username === 'soporte_tecnico';
+    const isSuperAdmin = role?.toLowerCase() === 'superadmin' || user?.username === 'soporte_tecnico';
+    const isAdmin = role === 'Admin' || isSuperAdmin;
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'dashboard'
@@ -113,7 +114,7 @@ const GestionEventosSection = () => {
         setLoading(true);
         try {
             const data = await EventoService.getAll();
-            const filtered = isAdmin ? data : data.filter(e => !e.nombre.toLowerCase().includes('control'));
+            const filtered = isSuperAdmin ? data : data.filter(e => !e.nombre.toLowerCase().includes('control'));
             setEventos(filtered);
         } catch (e) {
             showAlert('error', 'Error al cargar eventos');
@@ -284,7 +285,7 @@ const GestionEventosSection = () => {
                             <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', margin: 0 }}>Gestión de Eventos</h1>
                         </div>
                         <div style={{ display: 'flex', gap: '0.8rem' }}>
-                            {isAdmin && (
+                            {isSuperAdmin && (
                                 <button className="btn-admin-secondary" style={{ border: '1px solid var(--color-primary)', color: 'var(--color-primary)' }} onClick={() => setView('crearControl')}>
                                     <Plus size={20} /> Nuevo Control
                                 </button>
