@@ -1,7 +1,7 @@
 import React from 'react';
 import { Save } from 'lucide-react';
 
-const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing }) => {
+const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, isSuperAdmin, planes }) => {
     return (
         <div className="club-form-container fade-in">
             <div className="admin-form-card glass-effect">
@@ -33,6 +33,22 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                 />
                             </div>
                         </div>
+                        {isSuperAdmin && (
+                            <div className="form-group" style={{ marginTop: '1rem' }}>
+                                <label>Plan SaaS contratado</label>
+                                <select 
+                                    className="admin-select"
+                                    name="planSaaSId"
+                                    value={initialData.planSaaSId || ''}
+                                    onChange={(e) => onChange('planSaaSId', e.target.value)}
+                                >
+                                    <option value="">-- Seleccionar Plan --</option>
+                                    {planes.map(p => (
+                                        <option key={p.id} value={p.id}>{p.nombre} ({p.maxAtletas === -1 ? 'Ilimitado' : p.maxAtletas + ' atletas'})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     <div className="form-section">

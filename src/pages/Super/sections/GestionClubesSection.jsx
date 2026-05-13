@@ -25,10 +25,23 @@ const GestionClubesSection = () => {
     const { alert: msg, showAlert } = useAlert();
     const [parentModal, setParentModal] = useState({ show: false, club: null, parentId: '' });
     const [showOrphans, setShowOrphans] = useState(false);
+    const [planes, setPlanes] = useState([]);
 
     const federaciones = clubes.filter(c => !c.parentClubId); // Para el selector del modal
 
-    useEffect(() => { loadClubes(); }, [showOrphans]);
+    useEffect(() => { 
+        loadClubes(); 
+        if (user?.rol === 'SuperAdmin') loadPlanes();
+    }, [showOrphans]);
+
+    const loadPlanes = async () => {
+        try {
+            const res = await api.get(ENDPOINTS.SAAS.PLANES);
+            setPlanes(res.data);
+        } catch (e) {
+            console.error("Error loading plans:", e);
+        }
+    };
 
     const loadClubes = async () => {
         try {
@@ -185,6 +198,8 @@ const GestionClubesSection = () => {
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
+                    isSuperAdmin={user?.rol === 'SuperAdmin'}
+                    planes={planes}
                 />
             )}
 

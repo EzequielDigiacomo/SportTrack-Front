@@ -13,6 +13,7 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                             <h4 className="flex-row gap-xs">
                                 {c.nombre} 
                                 <span className="badge badge-ecu-yellow">{c.sigla || '—'}</span>
+                                {c.planNombre && <span className="badge badge-ecu-blue" style={{ fontSize: '0.6rem' }}>{c.planNombre}</span>}
                             </h4>
                             <p className="text-muted text-sm">📧 {c.email || 'Sin email'}</p>
                             {c.ubicacion && <p className="text-muted text-xs">📍 {c.ubicacion}</p>}
@@ -42,6 +43,7 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                             <th>Email</th>
                             <th>Ubicación</th>
                             <th style={{ width: '100px' }}>Atletas</th>
+                            <th>Plan</th>
                             <th style={{ width: '120px' }}>Acciones</th>
                         </tr>
                     </thead>
@@ -61,6 +63,13 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                                 <td>{c.email || '—'}</td>
                                 <td>{c.ubicacion || '—'}</td>
                                 <td>{c.cantidadAtletas || 0}</td>
+                                <td>
+                                    {c.planNombre ? (
+                                        <span className={`badge ${c.planNombre === 'Oro' ? 'badge-ecu-yellow' : c.planNombre === 'Plata' ? 'badge-ecu-blue' : ''}`} style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                                            {c.planNombre}
+                                        </span>
+                                    ) : '—'}
+                                </td>
                                 <td className="actions-cell">
                                     {!c.parentClubId && onAssignParent && (
                                         <button 

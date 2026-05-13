@@ -50,6 +50,15 @@ export const ENDPOINTS = {
     BOTES: '/botes',
     CATEGORIAS: '/categorias',
     DISTANCIAS: '/distancias',
+
+    // SaaS
+    SAAS: {
+        PLANES: '/saas/planes',
+        ASIGNAR_PLAN: '/saas/asignar-plan',
+        STATUS: '/saas/clubes-status',
+        TOGGLE_ACTIVO: (id) => `/saas/clubes/${id}/toggle-activo`,
+        METRICS: '/saas/global-metrics',
+    }
 }
 
 // Application Constants

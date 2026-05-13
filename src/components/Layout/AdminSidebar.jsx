@@ -33,9 +33,28 @@ const AdminSidebar = ({
                 <div className="user-avatar">{user?.username?.[0]?.toUpperCase() || 'A'}</div>
                 <div className="user-info-text">
                     <p className="user-name">{user?.username}</p>
-                    <p className="user-role">Administrador</p>
+                    <p className="user-role">{user?.rol === 'SuperAdmin' ? 'Super Administrador' : 'Administrador'}</p>
                 </div>
             </div>
+
+            {/* Solo mostramos el plan si es Admin de Federación o SuperAdmin */}
+            {(user?.rol === 'Admin' || user?.rol === 'SuperAdmin') && user?.plan && (
+                <div className="sidebar-plan-info" style={{ padding: '0 1.5rem', marginBottom: '1.5rem' }}>
+                    <div className={`plan-tag ${user.plan.nombre.toLowerCase()}`} style={{
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        textTransform: 'uppercase',
+                        background: user.plan.nombre === 'Oro' ? 'rgba(255, 215, 0, 0.15)' : user.plan.nombre === 'Plata' ? 'rgba(192, 192, 192, 0.15)' : 'rgba(205, 127, 50, 0.15)',
+                        color: user.plan.nombre === 'Oro' ? '#FFD700' : user.plan.nombre === 'Plata' ? '#E0E0E0' : '#CD7F32',
+                        border: '1px solid currentColor'
+                    }}>
+                        Plan {user.plan.nombre}
+                    </div>
+                </div>
+            )}
 
             <nav className="sidebar-nav">
                 {navItems.map(item => (
