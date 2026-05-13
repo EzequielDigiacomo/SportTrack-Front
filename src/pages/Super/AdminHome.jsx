@@ -162,21 +162,29 @@ const AdminHome = () => {
     }
 
     // --- VISTA ADMIN (FEDERACIÓN) ---
+    // Si el SuperAdmin está viendo una fed específica, agregamos el fedId como query param
+    const navTo = (path) => {
+        if (isViewingSpecificFed) {
+            navigate(`${path}?fedId=${id}`);
+        } else {
+            navigate(path);
+        }
+    };
+
     const fedCards = [
         { 
             id: '/super/eventos', icon: <Calendar size={32} />, title: 'Eventos', color: 'var(--color-primary)',
             desc: (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-                    <span style={{ fontSize: '1rem' }}>Creados: <strong style={{ color: 'var(--color-primary-light)', fontSize: '1.4rem' }}>{stats.eventos}</strong></span>
-                    <span style={{ fontSize: '1rem' }}>Sin competir: <strong style={{ color: 'var(--color-accent)', fontSize: '1.4rem' }}>{stats.programados}</strong></span>
+                    <span style={{ fontSize: '1rem' }}>Torneos Activos: <strong style={{ color: 'var(--color-primary-light)', fontSize: '1.4rem' }}>{stats.eventos}</strong></span>
                 </div>
             ) 
         },
         { 
-            id: '/super/clubes', icon: <Building2 size={32} />, title: 'Mis Clubes', color: 'var(--color-secondary)',
+            id: '/super/clubes', icon: <Building2 size={32} />, title: 'Clubes Afiliados', color: 'var(--color-secondary)',
             desc: (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-                    <span style={{ fontSize: '1rem' }}>Total: <strong style={{ color: 'var(--color-secondary-light)', fontSize: '1.4rem' }}>{stats.clubes}</strong></span>
+                    <span style={{ fontSize: '1rem' }}>Clubes: <strong style={{ color: 'var(--color-secondary-light)', fontSize: '1.4rem' }}>{stats.clubes}</strong></span>
                     <span style={{ fontSize: '1rem' }}>Atletas: <strong style={{ color: '#10B981', fontSize: '1.4rem' }}>{stats.atletas}</strong></span>
                 </div>
             ) 
@@ -215,7 +223,7 @@ const AdminHome = () => {
             </div>
             <div className="admin-home-grid">
                 {fedCards.map(c => (
-                    <div key={c.id} className="admin-home-card glass-effect" onClick={() => navigate(c.id)}>
+                    <div key={c.id} className="admin-home-card glass-effect" onClick={() => navTo(c.id)}>
                         <div className="admin-home-card-icon" style={{ color: c.color }}>{c.icon}</div>
                         <h3>{c.title}</h3>
                         <div className="card-desc" style={{ color: 'var(--color-text-secondary)' }}>{c.desc}</div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, ArrowLeft } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
@@ -10,9 +10,12 @@ import '../../../components/SharedSections/AdminSections.css';
 
 const GestionClubesSection = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const fedId = new URLSearchParams(location.search).get('fedId');
+
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
+    const [view, setView] = useState('lista');
     const [selectedClub, setSelectedClub] = useState(null);
     const [form, setForm] = useState({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
     const [saving, setSaving] = useState(false);
@@ -23,7 +26,17 @@ const GestionClubesSection = () => {
     const loadClubes = async () => {
         try {
             const res = await api.get(ENDPOINTS.CLUBES);
-            setClubes(res.data);
+            // Si hay fedId, filtramos solo los clubes de esa federación (sub-clubes con parentClubId)
+            // También incluimos la federación misma para referencia
+            const todos = res.data;
+            if (fedId) {
+                const filtrados = todos.filter(
+                    c => String(c.parentClubId) === String(fedId)
+                );
+                setClubes(filtrados);
+            } else {
+                setClubes(todos);
+            }
         } catch (e) { showAlert('error', 'Error al cargar clubes'); }
         finally { setLoading(false); }
     };
@@ -75,8 +88,15 @@ const GestionClubesSection = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="gradient-text" style={{ margin: 0 }}>Clubes Federados</h1>
-                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Gestión de instituciones habilitadas para competir.</p>
+                        <h1 className="gradient-text" style={{ margin: 0 }}>
+                            {fedId ? 'Clubes de la Federación' : 'Clubes Federados'}
+                        </h1>
+                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>
+                            {fedId 
+                                ? `Mostrando solo los clubes afiliados a esta federación.`
+                                : 'Gestión de instituciones habilitadas para competir.'
+                            }
+                        </p>
                     </div>
                 </div>
                 {view === 'lista' && (
