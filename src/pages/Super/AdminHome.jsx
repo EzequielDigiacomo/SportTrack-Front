@@ -24,6 +24,7 @@ const AdminHome = () => {
     const { user } = useAuth();
     const [stats, setStats] = useState({ eventos: 0, programados: 0, clubes: 0, atletas: 0 });
     const [globalStats, setGlobalStats] = useState(null);
+    const [fedName, setFedName] = useState('');
     const [loading, setLoading] = useState(true);
 
     const role = user?.rol?.trim().toLowerCase();
@@ -38,11 +39,21 @@ const AdminHome = () => {
                     // Cargar métricas globales para SuperAdmin
                     const data = await SaaSService.getGlobalMetrics();
                     setGlobalStats(data);
+                } else if (isSuper && id) {
+                    // SuperAdmin viendo una federación específica → usar datos de SaaS
+                    const clubesStatus = await SaaSService.getClubesStatus();
+                    const fed = clubesStatus.find(f => String(f.clubId) === String(id));
+                    if (fed) {
+                        setFedName(fed.clubNombre);
+                        setStats({
+                            eventos: fed.torneosActivosCount || 0,
+                            programados: 0,
+                            clubes: fed.clubesAfiliadosCount || 0,
+                            atletas: fed.atletasRegistrados || 0
+                        });
+                    }
                 } else {
-                    // Cargar estadísticas normales (para Admin o vista específica de SuperAdmin)
-                    // NOTA: El backend ya debería filtrar automáticamente si no somos SuperAdmin
-                    // Si somos SuperAdmin viendo una específica, el backend debería recibir el ID? 
-                    // Por ahora usamos la lógica de filtrado jerárquico que pusimos en el backend.
+                    // Admin normal: cargar sus propios datos
                     const [eventosData, clubesData] = await Promise.all([
                         EventoService.getAll(),
                         ClubService.getAll()
@@ -64,6 +75,7 @@ const AdminHome = () => {
         };
         loadData();
     }, [isSuper, id]);
+
 
     if (loading) return <div className="loader-container"><div className="loader"></div></div>;
 
@@ -177,8 +189,29 @@ const AdminHome = () => {
     return (
         <div className="admin-home fade-in">
             <div className="admin-home-header">
-                <h1 className="gradient-text">Panel de Federación</h1>
-                <p className="admin-home-subtitle">Gestiona tus clubes, atletas y eventos deportivos.</p>
+                {isViewingSpecificFed && (
+                    <button 
+                        onClick={() => navigate('/super/saas')}
+                        style={{ 
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'var(--color-text-secondary)', borderRadius: '8px',
+                            padding: '6px 12px', cursor: 'pointer', fontSize: '0.85rem',
+                            marginBottom: '1rem'
+                        }}
+                    >
+                        <ArrowLeft size={16} /> Volver a Suscripciones
+                    </button>
+                )}
+                <h1 className="gradient-text">
+                    {isViewingSpecificFed ? (fedName || `Federación #${id}`) : 'Panel de Federación'}
+                </h1>
+                <p className="admin-home-subtitle">
+                    {isViewingSpecificFed 
+                        ? `Vista de administración para esta federación.` 
+                        : 'Gestiona tus clubes, atletas y eventos deportivos.'
+                    }
+                </p>
             </div>
             <div className="admin-home-grid">
                 {fedCards.map(c => (
