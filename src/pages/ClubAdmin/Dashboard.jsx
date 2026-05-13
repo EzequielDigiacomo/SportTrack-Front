@@ -98,8 +98,23 @@ const ClubDashboard = () => {
                         </button>
                     )}
                     <div>
-                        <h1 className="gradient-text" style={{ margin: 0 }}>
-                            Panel del Club {clubName ? `"${clubName}"` : ''}
+                        <h1 className="gradient-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            {user?.rol === 'Admin' ? 'Panel de la Federación' : 'Panel del Club'} {clubName ? `"${clubName}"` : ''}
+                            {user?.plan && (
+                                <span style={{ 
+                                    fontSize: '0.75rem', 
+                                    padding: '3px 10px', 
+                                    borderRadius: '12px',
+                                    border: '1px solid',
+                                    color: user.plan.nombre === 'Oro' ? '#FFD700' : user.plan.nombre === 'Plata' ? '#E0E0E0' : '#CD7F32',
+                                    backgroundColor: 'rgba(255,255,255,0.05)',
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    {user.plan.nombre}
+                                </span>
+                            )}
                         </h1>
                         <p className="dashboard-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Bienvenido a tu centro de mando</p>
                     </div>
