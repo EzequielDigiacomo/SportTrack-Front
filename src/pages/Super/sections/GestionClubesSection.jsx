@@ -29,19 +29,36 @@ const GestionClubesSection = () => {
     const loadClubes = async () => {
         try {
             const res = await api.get(ENDPOINTS.CLUBES);
-            // Si hay fedId, filtramos solo los clubes de esa federación (sub-clubes con parentClubId)
-            // También incluimos la federación misma para referencia
             const todos = res.data;
+            const isSuper = user?.rol === 'SuperAdmin';
+
+            // Si hay fedId (estamos "dentro" de una federación)
             if (fedId) {
                 const filtrados = todos.filter(
-                    c => String(c.parentClubId) === String(fedId)
+                    c => String(c.parentClubId) === String(fedId) || String(c.id) === String(fedId)
                 );
                 setClubes(filtrados);
-            } else {
+            } 
+            // Si es SuperAdmin y no hay fedId, muestra TODO el ecosistema
+            else if (isSuper) {
                 setClubes(todos);
             }
-        } catch (e) { showAlert('error', 'Error al cargar clubes'); }
-        finally { setLoading(false); }
+            // Para un Admin normal sin fedId en URL, mostramos su propia jerarquía
+            else if (user?.clubId) {
+                const filtrados = todos.filter(
+                    c => String(c.parentClubId) === String(user.clubId) || String(c.id) === String(user.clubId)
+                );
+                setClubes(filtrados);
+            }
+            else {
+                setClubes(todos);
+            }
+        } catch (e) { 
+            console.error("Error loading clubs:", e);
+            showAlert('error', 'Error al cargar clubes'); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const handleOpenCrear = () => {
