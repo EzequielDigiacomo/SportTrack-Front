@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, ArrowLeft, Building2 } from 'lucide-react';
+import { Plus, ArrowLeft, Building2, Link2, X } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
 import ClubGrid from './ClubGrid';
@@ -23,6 +23,9 @@ const GestionClubesSection = () => {
     const [form, setForm] = useState({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
+    const [parentModal, setParentModal] = useState({ show: false, club: null, parentId: '' });
+
+    const federaciones = clubes.filter(c => !c.parentClubId); // Para el selector del modal
 
     useEffect(() => { loadClubes(); }, []);
 
@@ -75,6 +78,25 @@ const GestionClubesSection = () => {
 
     const handleFieldChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAssignParent = async () => {
+        if (!parentModal.parentId || !parentModal.club) return;
+        setSaving(true);
+        try {
+            const club = parentModal.club;
+            await api.put(`${ENDPOINTS.CLUBES}/${club.id}`, {
+                ...club,
+                parentClubId: parseInt(parentModal.parentId)
+            });
+            showAlert('success', `Club "${club.nombre}" vinculado correctamente.`);
+            setParentModal({ show: false, club: null, parentId: '' });
+            loadClubes();
+        } catch (err) {
+            showAlert('error', 'Error al vincular: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -135,6 +157,7 @@ const GestionClubesSection = () => {
                         clubes={clubes} 
                         onEdit={handleOpenEditar} 
                         onViewAtletas={(c) => navigate(`/super/atletas?clubId=${c.id}&clubNombre=${encodeURIComponent(c.nombre)}`)}
+                        onAssignParent={(club) => setParentModal({ show: true, club, parentId: '' })}
                     />
                 )
             ) : (
@@ -146,6 +169,63 @@ const GestionClubesSection = () => {
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
                 />
+            )}
+
+            {/* MODAL VINCULAR A FEDERACIÓN */}
+            {parentModal.show && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 1000, backdropFilter: 'blur(4px)'
+                }}>
+                    <div className="glass-effect" style={{
+                        background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '420px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <Link2 size={20} style={{ color: 'var(--color-accent-orange)' }} />
+                                <h3 style={{ margin: 0 }}>Vincular a Federación</h3>
+                            </div>
+                            <button onClick={() => setParentModal({ show: false, club: null, parentId: '' })}
+                                style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                            Mover el club <strong style={{ color: 'var(--color-text)' }}>{parentModal.club?.nombre}</strong> a una federación madre.
+                        </p>
+                        <div className="form-group">
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+                                Seleccionar Federación
+                            </label>
+                            <select
+                                className="admin-select"
+                                value={parentModal.parentId}
+                                onChange={e => setParentModal(prev => ({ ...prev, parentId: e.target.value }))}
+                                style={{ width: '100%' }}
+                            >
+                                <option value="">-- Elegir Federación --</option>
+                                {federaciones.map(f => (
+                                    <option key={f.id} value={f.id}>{f.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button className="btn-admin-secondary"
+                                onClick={() => setParentModal({ show: false, club: null, parentId: '' })}>
+                                Cancelar
+                            </button>
+                            <button className="btn-admin-primary"
+                                disabled={!parentModal.parentId || saving}
+                                onClick={handleAssignParent}
+                                style={{ background: 'var(--color-accent-orange)', borderColor: 'var(--color-accent-orange)' }}>
+                                {saving ? 'Vinculando...' : 'Confirmar Vínculo'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

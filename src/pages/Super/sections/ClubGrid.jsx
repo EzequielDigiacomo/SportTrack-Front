@@ -1,7 +1,7 @@
 import React from 'react';
-import { Edit2, Users } from 'lucide-react';
+import { Edit2, Users, Link2 } from 'lucide-react';
 
-const ClubGrid = ({ clubes, onEdit, onViewAtletas }) => {
+const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
     return (
         <div className="club-grid-container fade-in">
             {/* Mobile View */}
@@ -19,6 +19,11 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas }) => {
                             <p className="text-muted text-xs">👥 {c.cantidadAtletas || 0} Atletas</p>
                         </div>
                         <div className="card-actions-row">
+                            {!c.parentClubId && onAssignParent && (
+                                <button className="btn-icon-view" onClick={() => onAssignParent(c)} title="Vincular a Federación" style={{ background: 'rgba(251,146,60,0.15)', borderColor: 'var(--color-accent-orange)', color: 'var(--color-accent-orange)' }}>
+                                    <Link2 size={16} />
+                                </button>
+                            )}
                             <button className="btn-icon-edit" onClick={() => onEdit(c)} title="Editar"><Edit2 size={16} /></button>
                             <button className="btn-icon-view" onClick={() => onViewAtletas(c)} title="Ver Atletas"><Users size={16} /></button>
                         </div>
@@ -57,6 +62,16 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas }) => {
                                 <td>{c.ubicacion || '—'}</td>
                                 <td>{c.cantidadAtletas || 0}</td>
                                 <td className="actions-cell">
+                                    {!c.parentClubId && onAssignParent && (
+                                        <button 
+                                            className="btn-icon-view" 
+                                            onClick={() => onAssignParent(c)} 
+                                            title="Vincular a Federación"
+                                            style={{ background: 'rgba(251,146,60,0.15)', borderColor: 'var(--color-accent-orange)', color: 'var(--color-accent-orange)' }}
+                                        >
+                                            <Link2 size={16} />
+                                        </button>
+                                    )}
                                     <button className="btn-icon-edit" onClick={() => onEdit(c)} title="Editar"><Edit2 size={16} /></button>
                                     <button className="btn-icon-view" onClick={() => onViewAtletas(c)} title="Ver Atletas"><Users size={16} /></button>
                                 </td>
