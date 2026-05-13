@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserPlus, ArrowLeft, Filter } from 'lucide-react';
 import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
@@ -12,10 +12,15 @@ import '../../../components/SharedSections/AdminSections.css';
 
 const GestionAtletasSection = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const clubIdFromUrl = params.get('clubId');
+    const clubNombreFromUrl = params.get('clubNombre') ? decodeURIComponent(params.get('clubNombre')) : '';
+
     const [atletas, setAtletas] = useState([]);
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('lista'); // 'lista' | 'crear' | 'editar'
+    const [view, setView] = useState('lista');
     const [selectedAtleta, setSelectedAtleta] = useState(null);
     
     const [form, setForm] = useState({
@@ -34,7 +39,8 @@ const GestionAtletasSection = () => {
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedClub, setSelectedClub] = useState('');
+    // Si venimos desde un club específico, lo pre-filtramos por nombre
+    const [selectedClub, setSelectedClub] = useState(clubNombreFromUrl || '');
     const [sortConfig, setSortConfig] = useState({ key: 'apellido', direction: 'asc' });
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -181,8 +187,15 @@ const GestionAtletasSection = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 style={{ margin: 0 }}>Nómina de Atletas</h1>
-                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Gestión global de atletas y sus representatividades de club.</p>
+                        <h1 style={{ margin: 0 }}>
+                            {clubNombreFromUrl ? `Atletas — ${clubNombreFromUrl}` : 'Nómina de Atletas'}
+                        </h1>
+                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>
+                            {clubNombreFromUrl 
+                                ? `Mostrando atletas del club seleccionado.`
+                                : 'Gestión global de atletas y sus representatividades de club.'
+                            }
+                        </p>
                     </div>
                 </div>
                 {view === 'lista' && (

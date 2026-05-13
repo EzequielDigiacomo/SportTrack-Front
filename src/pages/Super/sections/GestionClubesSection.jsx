@@ -111,7 +111,7 @@ const GestionClubesSection = () => {
                     <ClubGrid 
                         clubes={clubes} 
                         onEdit={handleOpenEditar} 
-                        onViewAtletas={(c) => console.log('Ver atletas de', c.nombre)} 
+                        onViewAtletas={(c) => navigate(`/super/atletas?clubId=${c.id}&clubNombre=${encodeURIComponent(c.nombre)}`)}
                     />
                 )
             ) : (
