@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { Save, Eye, EyeOff, User } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
 
 const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, isEditing }) => {
+    const { user } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const planNombre = user?.plan?.nombre?.toLowerCase() || 'bronce';
+    const isBronce = planNombre === 'bronce';
 
     const isJuezRole = ROLES_JUEZ.includes(initialData.rol);
     
@@ -28,9 +33,15 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                                         required
                                     >
                                         <option value="Club">Club (Representante)</option>
-                                        <option value="Largador">Juez: Largador</option>
-                                        <option value="Cronometrista">Juez: Cronometrista</option>
-                                        <option value="JuezControl">Juez de Control</option>
+                                        <option value="Largador" disabled={isBronce}>
+                                            Juez: Largador {isBronce && '🔒 (Solo Plata/Oro)'}
+                                        </option>
+                                        <option value="Cronometrista" disabled={isBronce}>
+                                            Juez: Cronometrista {isBronce && '🔒 (Solo Plata/Oro)'}
+                                        </option>
+                                        <option value="JuezControl" disabled={isBronce}>
+                                            Juez de Control {isBronce && '🔒 (Solo Plata/Oro)'}
+                                        </option>
                                         <option value="Admin">Administrador (Acceso Total)</option>
                                     </select>
                                 </div>

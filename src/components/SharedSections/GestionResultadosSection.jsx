@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
@@ -16,7 +17,13 @@ import './GestionResultados.css';
 
 const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode }) => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [showPdfMenu, setShowPdfMenu] = useState(false);
+    
+    const planNombre = user?.plan?.nombre?.toLowerCase() || 'bronce';
+    const isBronce = planNombre === 'bronce';
+    const role = user?.rol?.trim();
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin' || user?.username === 'soporte_tecnico';
     const {
         eventos, selectedEvento, setSelectedEvento,
         pruebas, selectedPrueba, setSelectedPrueba,
@@ -79,6 +86,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         let isMounted = true;
 
         const setupLiveSync = async () => {
+            if (isBronce) return; // EL PLAN BRONCE NO TIENE SYNC EN VIVO
+            
             // Sincronizar si la regata está activa o terminando
             if (faseSeleccionada.estado === 'En Carrera' ||
                 faseSeleccionada.estado === 'Pendiente de Validación' ||
@@ -610,7 +619,7 @@ return (
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                                {fases.length > 0 && (viewMode === 'tiempos' || viewMode === 'resultados') && (
+                                {fases.length > 0 && (isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && (
                                     <button
                                         className="btn-admin-action success"
                                         onClick={handlePromoverEtapa}
@@ -685,14 +694,19 @@ return (
                                     fase={faseSeleccionada}
                                     tiemposLocales={tiemposLocales}
                                     onResultChange={handleResultChange}
-                                    isLocked={viewMode === 'tiempos' ? false : (viewMode === 'resultados' ? false : isLocked)}
+                                    isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') ? false : isLocked}
                                     isSuccess={saveSuccess}
                                 />
-
-                                {(viewMode === 'tiempos' || viewMode === 'resultados') && (
+                                
+                                {(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && (
                                     <div className="form-footer-actions mt-md" style={{ justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', gap: '0.8rem' }}>
-                                            {viewMode === 'tiempos' && (
+                                        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                                            {isBronce && (
+                                                <span style={{ fontSize: '0.75rem', color: '#CD7F32', fontWeight: 'bold', background: 'rgba(205,127,50,0.1)', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(205,127,50,0.2)' }}>
+                                                    PLAN BRONCE: CARGA MANUAL HABILITADA
+                                                </span>
+                                            )}
+                                            {viewMode === 'tiempos' && !isBronce && (
                                                 <button
                                                     className="btn-admin-secondary"
                                                     onClick={handleSimulateResults}

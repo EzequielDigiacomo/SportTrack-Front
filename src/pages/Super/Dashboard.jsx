@@ -78,10 +78,16 @@ const SuperDashboard = () => {
     const filteredNavItems = NAV_ITEMS.filter(item => {
         const role = user?.rol?.trim().toLowerCase();
         const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
+        const isBronce = user?.plan?.nombre?.toLowerCase() === 'bronce';
 
         // Módulos EXCLUSIVOS para SuperAdmin
         if (item.id === 'saas' || item.id === 'soporte' || item.id === 'configuracion') {
             return isSuper;
+        }
+
+        // Módulos DESACTIVADOS para Plan Bronce
+        if (item.id === 'jueces' && isBronce) {
+            return false;
         }
 
         return true;

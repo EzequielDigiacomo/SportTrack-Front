@@ -103,8 +103,9 @@ const JudgesLayout = ({ children }) => {
                         user={user}
                         logo={logo}
                         navItems={NAV_ITEMS.filter(item => {
+                            const isBronce = user?.plan?.nombre?.toLowerCase() === 'bronce';
+                            if (isBronce && ['control', 'jueces'].includes(item.id)) return false;
                             if (roleStr.includes('admin')) return true;
-                            // Si no es admin, solo puede ver Control y Jueces
                             return ['control', 'jueces'].includes(item.id);
                         })}
                         onMouseEnter={handleMouseEnter}
