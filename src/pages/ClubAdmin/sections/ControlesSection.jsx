@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Calendar, MapPin, Search, ListFilter, ClipboardList, Lock, Unlock, Timer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Activity, Calendar, MapPin, Search, ListFilter, ClipboardList, Lock, Unlock, Timer, ArrowLeft } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import { useAuth } from '../../../context/AuthContext';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
 const ControlesSection = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [controles, setControles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -16,7 +18,10 @@ const ControlesSection = () => {
 
     const loadControles = async () => {
         try {
-            const data = await EventoService.getAll();
+            const queryParams = new URLSearchParams(window.location.search);
+            const fedId = queryParams.get('fedId');
+            
+            const data = await EventoService.getAll(fedId);
             // Filtramos solo los que SON controles
             const onlyControles = data.filter(e => e.nombre.toLowerCase().includes('control'));
             setControles(onlyControles);
@@ -40,7 +45,15 @@ const ControlesSection = () => {
 
     return (
         <div className="section-container fade-in">
-            <div className="section-header">
+            <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <button 
+                    className="btn-admin-secondary" 
+                    onClick={() => navigate(-1)}
+                    title="Volver"
+                    style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
+                >
+                    <ArrowLeft size={20} />
+                </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div className="icon-box" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '10px', borderRadius: '12px' }}>
                         <Timer size={32} />

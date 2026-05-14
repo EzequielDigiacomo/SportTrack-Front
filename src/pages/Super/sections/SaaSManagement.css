@@ -462,6 +462,10 @@ tr:hover .arrow-icon {
 .full-width { width: 100%; }
 
 /* ── RESPONSIVE SAAS MANAGEMENT ── */
+
+.saas-mobile-list { display: none; }
+.saas-desktop-table { display: block; }
+
 @media (max-width: 1024px) {
     .saas-management {
         height: auto;
@@ -470,6 +474,7 @@ tr:hover .arrow-icon {
 
     .saas-main-layout {
         flex-direction: column;
+        gap: 1rem;
     }
 
     .saas-list-container.has-selection {
@@ -480,7 +485,7 @@ tr:hover .arrow-icon {
     .saas-detail-panel {
         flex: none;
         width: 100%;
-        margin-top: 1.5rem;
+        margin-top: 0.5rem;
     }
 
     .saas-detail-panel.is-visible {
@@ -490,41 +495,15 @@ tr:hover .arrow-icon {
 }
 
 @media (max-width: 768px) {
-    .saas-admin-table thead {
-        display: none;
-    }
-
-    .saas-admin-table td {
-        display: block;
-        padding: 0.5rem 1rem;
-        border: none;
-    }
-
-    .saas-admin-table td:first-child {
-        padding-top: 1rem;
-        font-weight: 800;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .saas-admin-table td:last-child {
-        padding-bottom: 1rem;
-    }
-
-    .saas-admin-table td::before {
-        content: attr(data-label);
-        float: left;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        color: var(--color-text-muted);
-        width: 100%;
-        margin-bottom: 4px;
-    }
-
-    .features-list-detailed {
-        grid-template-columns: 1fr;
-    }
+    .saas-mobile-list { display: block; width: 100%; }
+    .saas-desktop-table { display: none !important; }
     
     .search-box-saas {
         max-width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .saas-main-layout {
+        min-height: auto;
     }
 }

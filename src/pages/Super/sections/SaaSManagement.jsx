@@ -205,8 +205,67 @@ const SaaSManagement = () => {
             </div>
 
             <div className="saas-main-layout">
-                {/* Left Side: List Table */}
-                <div className={`saas-list-container glass-effect ${selectedFedId ? 'has-selection' : ''}`}>
+                {/* Mobile View */}
+                <div className="saas-mobile-list">
+                    {loadingStatus ? (
+                        <div className="loader-row"><div className="loader"></div></div>
+                    ) : filteredFederaciones.map(fed => {
+                        const planColor = planes.find(p => p.id === fed.planSaaSId)?.color;
+                        return (
+                            <div 
+                                key={fed.clubId} 
+                                className={`admin-native-card glass-effect mb-sm ${selectedFedId === fed.clubId ? 'is-selected' : ''}`}
+                                onClick={() => setSelectedFedId(fed.clubId)}
+                            >
+                                <div className="card-accent-bar" style={{ background: planColor || 'var(--color-primary)' }} />
+                                <div className="card-content">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <h4>{fed.clubNombre}</h4>
+                                        <ArrowRight size={16} className="text-muted" />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                        <span className="badge" style={{ 
+                                            borderColor: planColor, color: planColor, border: '1px solid',
+                                            fontSize: '0.65rem', fontWeight: '900', padding: '2px 10px', borderRadius: '20px'
+                                        }}>
+                                            {fed.planNombre}
+                                        </span>
+                                        {fed.planAlDia ? (
+                                            <span className="badge success">Al día</span>
+                                        ) : (
+                                            <span className="badge danger">Excedido</span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        <p style={{ margin: 0 }}><Users size={14} className="text-primary" /> <strong>{fed.atletasRegistrados}</strong> Atletas</p>
+                                        <p style={{ margin: 0 }}><Building2 size={14} className="text-secondary" /> <strong>{fed.clubesAfiliadosCount}</strong> Clubes</p>
+                                    </div>
+                                </div>
+                                <div className="card-actions-row">
+                                    <button 
+                                        className={`btn-quick-toggle ${fed.activo ? 'is-active' : 'is-suspended'}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleActivo(fed.clubId);
+                                        }}
+                                        style={{
+                                            backgroundColor: fed.activo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                            color: fed.activo ? '#10B981' : '#EF4444',
+                                            border: `1px solid ${fed.activo ? '#10B98166' : '#EF444466'}`,
+                                            borderRadius: '6px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '700'
+                                        }}
+                                    >
+                                        <Power size={14} style={{ marginRight: '6px' }} />
+                                        {fed.activo ? 'ACTIVA' : 'SUSPENDIDA'}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Desktop View Table */}
+                <div className={`saas-list-container saas-desktop-table glass-effect ${selectedFedId ? 'has-selection' : ''}`}>
                     <div className="list-toolbar">
                         <div className="search-box-saas glass-effect">
                             <Search size={18} />

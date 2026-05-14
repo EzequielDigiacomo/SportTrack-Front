@@ -11,6 +11,7 @@ import GestionResultadosSection from '../../components/SharedSections/GestionRes
 import ConfiguracionSection from './sections/ConfiguracionSection';
 import SoporteSection from './sections/SoporteSection';
 import SaaSManagement from './sections/SaaSManagement';
+import ControlesSection from '../ClubAdmin/sections/ControlesSection';
 
 
 import { 
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
     { id: 'atletas', path: 'atletas', icon: <Users size={20} />, label: 'Atletas' },
     { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
+    { id: 'controles', path: 'controles', icon: <Timer size={20} />, label: 'Controles Técnicos' },
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true },
@@ -144,6 +146,7 @@ const SuperDashboard = () => {
                     <Routes>
                         <Route index element={<AdminHome />} />
                         <Route path="eventos/*" element={<GestionEventosSection />} />
+                        <Route path="controles" element={<ControlesSection />} />
                         <Route path="clubes" element={<GestionClubesSection />} />
                         <Route path="logins" element={<GestionLoginsSection />} />
                         <Route path="atletas" element={<GestionAtletasSection />} />

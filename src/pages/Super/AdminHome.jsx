@@ -287,6 +287,7 @@ const AdminHome = () => {
         },
         { id: '/super/logins', icon: <Key size={32} />, title: 'Logins & Usuarios', desc: <span style={{ fontSize: '1rem' }}>Accesos para mis clubes</span>, color: '#10B981' },
         { id: '/super/atletas', icon: <Users size={32} />, title: 'Atletas', desc: <span style={{ fontSize: '1rem' }}>Nómina de mi federación</span>, color: 'var(--color-accent)' },
+        { id: '/super/controles', icon: <Timer size={32} />, title: 'Controles Técnicos', desc: <span style={{ fontSize: '1rem' }}>Registros técnicos internos</span>, color: '#f59e0b' },
         { id: '/super/resultados', icon: <Timer size={32} />, title: 'Resultados', desc: <span style={{ fontSize: '1rem' }}>Cronometraje y validación</span>, color: 'var(--color-accent-orange)' },
     ];
 

@@ -2,13 +2,15 @@ import api from './api';
 import { ENDPOINTS } from '../utils/constants';
 
 const EventoService = {
-    getAll: async () => {
-        const response = await api.get(ENDPOINTS.EVENTOS.BASE);
+    getAll: async (clubId = null) => {
+        const url = clubId ? `${ENDPOINTS.EVENTOS.BASE}?clubId=${clubId}` : ENDPOINTS.EVENTOS.BASE;
+        const response = await api.get(url);
         return response.data;
     },
 
-    getProximos: async () => {
-        const response = await api.get(ENDPOINTS.EVENTOS.PROXIMOS);
+    getProximos: async (clubId = null) => {
+        const url = clubId ? `${ENDPOINTS.EVENTOS.PROXIMOS}?clubId=${clubId}` : ENDPOINTS.EVENTOS.PROXIMOS;
+        const response = await api.get(url);
         return response.data;
     },
 

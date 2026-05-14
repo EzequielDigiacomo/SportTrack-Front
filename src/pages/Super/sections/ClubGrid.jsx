@@ -1,5 +1,4 @@
-import React from 'react';
-import { Edit2, Users, Link2 } from 'lucide-react';
+import { Edit2, Users, Link2, Mail, MapPin } from 'lucide-react';
 
 const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
     return (
@@ -10,14 +9,16 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                     <div key={c.id} className="admin-native-card glass-effect mb-sm">
                         <div className="card-accent-bar ecu-blue" />
                         <div className="card-content">
-                            <h4 className="flex-row gap-xs">
+                            <h4>
                                 {c.nombre} 
-                                <span className="badge badge-ecu-yellow">{c.sigla || '—'}</span>
-                                {c.planNombre && <span className="badge badge-ecu-blue" style={{ fontSize: '0.6rem' }}>{c.planNombre}</span>}
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    <span className="badge badge-ecu-yellow">{c.sigla || '—'}</span>
+                                    {c.planNombre && <span className="badge badge-ecu-blue" style={{ fontSize: '0.6rem' }}>{c.planNombre}</span>}
+                                </div>
                             </h4>
-                            <p className="text-muted text-sm">📧 {c.email || 'Sin email'}</p>
-                            {c.ubicacion && <p className="text-muted text-xs">📍 {c.ubicacion}</p>}
-                            <p className="text-muted text-xs">👥 {c.cantidadAtletas || 0} Atletas</p>
+                            <p><Mail size={14} className="text-primary" /> {c.email || 'Sin email'}</p>
+                            <p><MapPin size={14} className="text-secondary" /> {c.ubicacion || 'Sin ubicación'}</p>
+                            <p><Users size={14} className="text-accent" /> {c.cantidadAtletas || 0} Atletas registrados</p>
                         </div>
                         <div className="card-actions-row">
                             {!c.parentClubId && onAssignParent && (

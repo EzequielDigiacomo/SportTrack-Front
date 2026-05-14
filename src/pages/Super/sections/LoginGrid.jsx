@@ -1,5 +1,4 @@
-import React from 'react';
-import { Key, Power, PowerOff } from 'lucide-react';
+import { Key, Power, PowerOff, User, Mail, Phone, Building2 } from 'lucide-react';
 
 const ROL_LABEL = {
     'Admin':         { label: 'Admin',          color: '#ef4444' },
@@ -59,20 +58,23 @@ const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
                     <div key={u.id} className="admin-native-card glass-effect mb-sm" style={{ opacity: u.activo === false ? 0.6 : 1 }}>
                         <div className="card-accent-bar ecu-yellow" />
                         <div className="card-content">
-                            <h4 className="flex-row gap-xs" style={{ flexWrap: 'wrap' }}>
+                            <h4>
                                 {u.username}
-                                <RolBadge rol={u.rol} />
-                                <EstadoBadge activo={u.activo} />
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    <RolBadge rol={u.rol} />
+                                    <EstadoBadge activo={u.activo} />
+                                </div>
                             </h4>
+                            
                             {(u.nombre || u.apellido) && (
-                                <p style={{ margin: '2px 0', fontWeight: 600, color: '#e2e8f0', fontSize: '0.9rem' }}>
-                                    👤 {[u.nombre, u.apellido].filter(Boolean).join(' ')}
-                                    {u.dni && <span style={{ color: '#64748b', fontSize: '0.8rem', marginLeft: '0.5rem' }}>· DNI {u.dni}</span>}
+                                <p style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                    <User size={14} className="text-primary" /> {[u.nombre, u.apellido].filter(Boolean).join(' ')}
+                                    {u.dni && <span style={{ color: '#64748b', fontSize: '0.75rem', marginLeft: '0.5rem' }}>· DNI {u.dni}</span>}
                                 </p>
                             )}
-                            <p className="text-muted text-sm">📧 {u.email || 'Sin email'}</p>
-                            {u.clubNombre && <p className="text-muted text-xs">🏟️ {u.clubNombre}</p>}
-                            {u.telefono && <p className="text-muted text-xs">📞 {u.telefono}</p>}
+                            <p><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
+                            {u.clubNombre && <p><Building2 size={14} className="text-accent" /> {u.clubNombre}</p>}
+                            {u.telefono && <p><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
                         </div>
                         <div className="card-actions-row">
                             <button className="btn-icon-view" onClick={() => onEditPassword(u)} title="Cambiar Contraseña">
