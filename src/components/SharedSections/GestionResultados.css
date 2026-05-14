@@ -93,15 +93,16 @@
 .btn-admin-action {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 0 1.2rem;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 1rem;
     border-radius: var(--radius-md);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-base);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    height: 36px;
+    height: 38px;
     white-space: nowrap;
     background: rgba(255, 255, 255, 0.05);
     color: var(--color-text-primary);
@@ -551,15 +552,45 @@
 
 /* ── RESPONSIVE RESULTADOS GRID (MOBILE) ── */
 @media (max-width: 768px) {
+    .action-bar-premium {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        height: auto !important;
+        gap: 12px !important;
+        padding: 12px !important;
+    }
+
+    .action-bar-premium > div {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+
+    /* Stack buttons below the selector */
+    .action-bar-premium > div:last-child {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .action-bar-premium .btn-admin-action {
+        width: 100% !important;
+        font-size: 0.75rem !important;
+    }
+
     .form-footer-actions {
         flex-direction: column !important;
         align-items: stretch !important;
-        gap: 15px !important;
+        gap: 12px !important;
+        padding: 15px !important;
+        background: rgba(0,0,0,0.2);
+        border-radius: 12px;
     }
 
     .form-footer-actions > div {
         flex-direction: column !important;
-        gap: 10px !important;
+        gap: 8px !important;
         width: 100% !important;
     }
 
@@ -568,6 +599,7 @@
         width: 100% !important;
         justify-content: center !important;
         padding: 12px !important;
+        font-size: 0.9rem !important;
     }
 
     .resultados-table-wrapper .admin-table thead {
@@ -576,14 +608,15 @@
 
     .resultados-table-wrapper .admin-table tr {
         display: grid !important;
-        grid-template-columns: 60px 1fr 100px !important;
+        grid-template-columns: 50px 1fr !important;
         grid-template-areas: 
-            "pos atleta atleta"
-            "carril club tiempo" !important;
-        gap: 12px 8px !important;
-        padding: 15px !important;
+            "atleta atleta"
+            "pos club"
+            "carril tiempo" !important;
+        gap: 12px 10px !important;
+        padding: 14px !important;
         background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 12px !important;
         margin-bottom: 12px !important;
         align-items: center !important;
@@ -605,27 +638,30 @@
     }
     .col-carril { 
         grid-area: carril; 
-        font-size: 1.2rem;
+        font-size: 1rem;
         color: var(--color-primary-light);
         display: flex !important;
-        justify-content: flex-start;
-        font-weight: 900;
+        align-items: center;
+        font-weight: 800;
     }
     .col-carril::before {
-        content: 'C:';
-        font-size: 0.7rem;
-        margin-right: 4px;
-        opacity: 0.6;
+        content: 'CARRIL:';
+        font-size: 0.65rem;
+        margin-right: 6px;
+        color: var(--color-text-dim);
     }
     .col-atleta { 
         grid-area: atleta; 
         text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 2px !important;
     }
     .col-club { 
         grid-area: club; 
         display: flex !important;
         align-items: center;
-        gap: 8px;
+        justify-content: flex-end;
     }
     .col-tiempo { 
         grid-area: tiempo; 
@@ -635,51 +671,44 @@
 
     .atleta-info-wrapper {
         display: flex;
-        flex-direction: column;
-        gap: 2px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
     }
 
     .atleta-names {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
         font-weight: 700;
-        color: white;
-        white-space: normal;
-        word-break: break-word;
+        color: var(--color-primary-light);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .col-tiempo input {
-        width: 100% !important;
-        max-width: 110px;
-        font-size: 0.95rem !important;
-        height: 38px !important;
-        background: rgba(0,0,0,0.3) !important;
+        width: 110px !important;
+        font-size: 0.9rem !important;
+        height: 34px !important;
+        background: rgba(0,0,0,0.4) !important;
+        font-weight: 700;
     }
     
     .col-pos input {
-        width: 50px !important;
-        height: 38px !important;
-        font-size: 1.1rem !important;
+        width: 45px !important;
+        height: 34px !important;
+        font-size: 1rem !important;
+        background: rgba(255,255,255,0.05) !important;
     }
 
     .official-badge {
-        margin-left: 0;
-        width: fit-content;
-        margin-top: 4px;
+        margin-left: 8px;
+        font-size: 0.6rem;
+        padding: 1px 4px;
     }
 
-    /* Narrow screen adjustments */
-    @media (max-width: 400px) {
-        .resultados-table-wrapper .admin-table tr {
-            grid-template-columns: 1fr 1fr !important;
-            grid-template-areas: 
-                "atleta atleta"
-                "pos carril"
-                "club tiempo" !important;
-            gap: 15px 10px !important;
-        }
-        
-        .col-carril {
-            justify-content: flex-end;
-        }
+    .chip {
+        font-size: 0.7rem !important;
+        padding: 2px 6px !important;
     }
 }

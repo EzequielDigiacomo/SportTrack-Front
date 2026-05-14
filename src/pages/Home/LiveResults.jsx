@@ -49,6 +49,21 @@ const formatDate = (isoString) => {
     return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 };
 
+const replaceKayakNames = (name) => {
+    if (!name) return "";
+    return name.replace(/Kayak Individual/gi, "K1")
+               .replace(/Kayak Doble/gi, "K2")
+               .replace(/Kayak Cuádruple/gi, "K4")
+               .replace(/Canoa Individual/gi, "C1")
+               .replace(/Canoa Doble/gi, "C2");
+};
+
+const getSexName = (p) => {
+    if (!p) return 'Mixto';
+    // Prioritize deeper nested objects if they exist
+    return p.prueba?.sexo?.nombre || p.prueba?.sexoNombre || p.sexoNombre || 'Mixto';
+};
+
 const LiveResults = () => {
     const { id } = useParams();
     const [evento, setEvento] = useState(null);
@@ -61,6 +76,8 @@ const LiveResults = () => {
     const [lastUpdated, setLastUpdated] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showPdfMenu, setShowPdfMenu] = useState(false);
+    const [pruebaNumbersMap, setPruebaNumbersMap] = useState({});
+    const [faseNumberMap, setFaseNumberMap] = useState({});
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -69,6 +86,34 @@ const LiveResults = () => {
                 setEvento(ev);
                 const prs = await PruebaService.getByEvento(id);
                 setPruebas(prs);
+
+                // Fetch all phases to get global sequential race numbers (#1, #2, #3...)
+                const allFasesData = await FaseService.getByEvento(id);
+                
+                // Sort by date/time to ensure #1 is the first race of the event
+                const sortedAllFases = [...allFasesData].sort((a, b) => {
+                    const timeA = new Date(a.fechaHoraProgramada || a.FechaHoraProgramada).getTime();
+                    const timeB = new Date(b.fechaHoraProgramada || b.FechaHoraProgramada).getTime();
+                    return timeA - timeB;
+                });
+
+                const sidebarMapping = {};
+                const globalFaseNumberMap = {};
+                
+                sortedAllFases.forEach((f, idx) => {
+                    const raceNum = idx + 1;
+                    const pid = f.eventoPruebaId || f.EventoPruebaId;
+                    const fid = f.id || f.Id;
+                    
+                    if (!sidebarMapping[pid]) sidebarMapping[pid] = [];
+                    sidebarMapping[pid].push(raceNum);
+                    
+                    globalFaseNumberMap[fid] = raceNum;
+                });
+                
+                setPruebaNumbersMap(sidebarMapping);
+                setFaseNumberMap(globalFaseNumberMap);
+
                 if (prs.length > 0) setSelectedPrueba(prs[0]);
             } catch (e) {
                 console.error(e);
@@ -76,6 +121,7 @@ const LiveResults = () => {
                 setLoading(false);
             }
         };
+
         loadInitial();
     }, [id]);
 
@@ -109,11 +155,8 @@ const LiveResults = () => {
                     const final = data.find(f => (f.nombreFase || f.NombreFase || '').toUpperCase().includes('FINAL'));
                     setSelectedFase(final || data[0]);
                 }
-
-                setError(null);
             } catch (err) {
                 console.error("Error al cargar resultados:", err);
-                setError("No se pudieron cargar los resultados de esta regata.");
             } finally {
                 setLoading(false);
             }
@@ -188,7 +231,7 @@ const LiveResults = () => {
                 selectedPrueba.prueba?.categoria?.nombre,
                 selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.bote?.nombre,
                 selectedPrueba.prueba?.distancia?.descripcion || selectedPrueba.prueba?.distancia?.metros + 'm',
-                selectedPrueba.prueba?.sexo?.nombre,
+                getSexName(selectedPrueba),
             ].filter(Boolean).join(' - ');
 
             // Enrich each fase with the resultados from local state (real-time)
@@ -243,7 +286,8 @@ const LiveResults = () => {
     if (!evento) return <div className="results-error">Evento no encontrado</div>;
 
     const filteredPruebas = pruebas.filter(p => {
-        const name = `${p.prueba?.categoria?.nombre} ${p.prueba?.bote?.tipo} ${p.prueba?.distancia?.descripcion}`.toLowerCase();
+        const rawName = `${p.prueba?.categoria?.nombre} ${p.prueba?.bote?.tipo} ${p.prueba?.distancia?.descripcion} ${getSexName(p)}`;
+        const name = replaceKayakNames(rawName).toLowerCase();
         return name.includes(searchTerm.toLowerCase());
     });
 
@@ -356,8 +400,13 @@ const LiveResults = () => {
                                     {p.cantidadInscritos > 0 && <span className="p-badge">{p.cantidadInscritos} botes</span>}
                                 </div>
                                 <span className="p-name">
-                                    {p.prueba?.categoria?.nombre} {p.prueba?.bote?.tipo} {p.prueba?.distancia?.descripcion}
+                                    {replaceKayakNames(`${p.prueba?.categoria?.nombre} ${p.prueba?.bote?.tipo} ${p.prueba?.distancia?.descripcion} - ${getSexName(p)}`)}
                                 </span>
+                                {pruebaNumbersMap[p.id] && (
+                                    <div className="p-race-range" style={{ fontSize: '0.7rem', color: 'var(--color-primary-light)', marginTop: '4px', fontWeight: 'bold' }}>
+                                        Pruebas: {pruebaNumbersMap[p.id].sort((a,b) => a-b).map(n => `#${n}`).join(', ')}
+                                    </div>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -370,10 +419,10 @@ const LiveResults = () => {
                             <div className="results-content-header">
                                 <div className="title-area">
                                     <h2>
-                                        {selectedPrueba.prueba?.categoria?.nombre} {selectedPrueba.prueba?.bote?.tipo} {selectedPrueba.prueba?.distancia?.descripcion}
+                                        {replaceKayakNames(`${selectedPrueba.prueba?.categoria?.nombre} ${selectedPrueba.prueba?.bote?.tipo} ${selectedPrueba.prueba?.distancia?.descripcion}`)}
                                     </h2>
                                     <div className="gender-tag">
-                                        {selectedPrueba.prueba?.sexo?.nombre || 'Mixto'}
+                                        {getSexName(selectedPrueba)}
                                     </div>
                                 </div>
                                 <div className="status-indicator" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -447,10 +496,14 @@ const LiveResults = () => {
                                                             color: 'white',
                                                             cursor: 'pointer',
                                                             fontSize: '0.9rem',
-                                                            transition: 'all 0.2s'
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px'
                                                         }}
                                                         onClick={() => setSelectedFase(f)}
                                                     >
+                                                        <span style={{ opacity: 0.6, fontSize: '0.8rem', fontWeight: 'bold' }}>#{faseNumberMap[f.id] || f.numeroPrueba || f.NumeroPrueba || f.id}</span>
                                                         {f.nombreFase || f.NombreFase || `Fase ${f.numeroFase || f.NumeroFase}`}
                                                     </button>
                                                 ))}
