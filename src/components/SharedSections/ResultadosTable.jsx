@@ -112,7 +112,7 @@ const ResultadosTable = ({
                         
                         return (
                             <tr key={res.id} className={rowClass}>
-                                <td>
+                                <td className="col-pos">
                                     {!isSpecialStatus && (
                                         <input 
                                             type="number"
@@ -124,18 +124,24 @@ const ResultadosTable = ({
                                         />
                                     )}
                                 </td>
-                                <td className="text-center" style={{ fontWeight: 'bold' }}>
+                                <td className="col-carril text-center" style={{ fontWeight: 'bold' }}>
                                     {res.carril || '-'}
                                 </td>
-                                <td>
-                                    {res.tripulantes && res.tripulantes.length > 0 
-                                        ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                        : getSoloApellido(res.participanteNombre)
-                                    }
-                                    {isOfficial && <span className="official-badge">Oficial</span>}
+                                <td className="col-atleta">
+                                    <div className="atleta-info-wrapper">
+                                        <span className="atleta-names">
+                                            {res.tripulantes && res.tripulantes.length > 0 
+                                                ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
+                                                : getSoloApellido(res.participanteNombre)
+                                            }
+                                        </span>
+                                        {isOfficial && <span className="official-badge">Oficial</span>}
+                                    </div>
                                 </td>
-                                <td><span className="chip chip-ecu-blue">{res.clubSigla}</span></td>
-                                <td>
+                                <td className="col-club">
+                                    <span className="chip chip-ecu-blue">{res.clubSigla}</span>
+                                </td>
+                                <td className="col-tiempo">
                                     {isSpecialStatus ? (
                                         <span className={`status-badge-judge ${status.toLowerCase()}`}>{status}</span>
                                     ) : (
