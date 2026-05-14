@@ -29,7 +29,7 @@ const EventosSection = () => {
 
     const loadEventos = async () => {
         try {
-            const data = await EventoService.getProximos();
+            const data = await EventoService.getAll();
             const filtered = user?.rol === 'SuperAdmin' ? data : data.filter(e => !e.nombre.toLowerCase().includes('control'));
             setEventos(filtered);
         } catch (error) {
@@ -59,8 +59,8 @@ const EventosSection = () => {
     return (
         <div className="section-container fade-in">
             <div className="section-header">
-                <h2>Próximos Eventos</h2>
-                <p className="subtitle">Explora las próximas competencias e inscribe a tus atletas</p>
+                <h2>Eventos de la Federación</h2>
+                <p className="subtitle">Explora las competencias e inscribe a tus atletas</p>
             </div>
 
             {loading ? (
