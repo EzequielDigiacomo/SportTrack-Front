@@ -551,22 +551,41 @@
 
 /* ── RESPONSIVE RESULTADOS GRID (MOBILE) ── */
 @media (max-width: 768px) {
+    .form-footer-actions {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 15px !important;
+    }
+
+    .form-footer-actions > div {
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .form-footer-actions .btn-admin-primary,
+    .form-footer-actions .btn-admin-secondary {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 12px !important;
+    }
+
     .resultados-table-wrapper .admin-table thead {
         display: none;
     }
 
     .resultados-table-wrapper .admin-table tr {
         display: grid !important;
-        grid-template-columns: 50px 40px 1fr !important;
+        grid-template-columns: 60px 1fr 100px !important;
         grid-template-areas: 
-            "pos carril atleta"
-            "club club tiempo" !important;
-        gap: 10px !important;
-        padding: 12px !important;
+            "pos atleta atleta"
+            "carril club tiempo" !important;
+        gap: 12px 8px !important;
+        padding: 15px !important;
         background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
         border-radius: 12px !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 12px !important;
         align-items: center !important;
     }
 
@@ -581,13 +600,22 @@
 
     .col-pos { 
         grid-area: pos; 
+        display: flex !important;
+        align-items: center;
     }
     .col-carril { 
         grid-area: carril; 
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         color: var(--color-primary-light);
         display: flex !important;
-        justify-content: center;
+        justify-content: flex-start;
+        font-weight: 900;
+    }
+    .col-carril::before {
+        content: 'C:';
+        font-size: 0.7rem;
+        margin-right: 4px;
+        opacity: 0.6;
     }
     .col-atleta { 
         grid-area: atleta; 
@@ -612,27 +640,46 @@
     }
 
     .atleta-names {
-        font-size: 0.95rem;
+        font-size: 1.05rem;
         font-weight: 700;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 180px;
+        color: white;
+        white-space: normal;
+        word-break: break-word;
     }
 
     .col-tiempo input {
-        width: 100px !important;
-        font-size: 0.9rem !important;
+        width: 100% !important;
+        max-width: 110px;
+        font-size: 0.95rem !important;
+        height: 38px !important;
+        background: rgba(0,0,0,0.3) !important;
     }
     
     .col-pos input {
-        width: 42px !important;
-        height: 32px !important;
+        width: 50px !important;
+        height: 38px !important;
+        font-size: 1.1rem !important;
     }
 
     .official-badge {
         margin-left: 0;
         width: fit-content;
-        margin-top: 2px;
+        margin-top: 4px;
+    }
+
+    /* Narrow screen adjustments */
+    @media (max-width: 400px) {
+        .resultados-table-wrapper .admin-table tr {
+            grid-template-columns: 1fr 1fr !important;
+            grid-template-areas: 
+                "atleta atleta"
+                "pos carril"
+                "club tiempo" !important;
+            gap: 15px 10px !important;
+        }
+        
+        .col-carril {
+            justify-content: flex-end;
+        }
     }
 }
