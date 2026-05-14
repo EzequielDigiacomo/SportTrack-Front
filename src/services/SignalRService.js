@@ -21,13 +21,13 @@ class SignalRService {
         // Si la conexión existe pero no está conectada (ej: se cayó), 
         // no la recreamos, simplemente intentamos start() si está en estado 'Disconnected'
         if (!this.connection) {
-            const token = localStorage.getItem('sporttrack_auth_token');
             // Usamos la URL absoluta si es posible, o la del proxy
             const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/results';
 
             this.connection = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl, {
-                    accessTokenFactory: () => token
+                    // El navegador enviará la cookie X-Access-Token automáticamente
+                    withCredentials: true
                 })
                 .withAutomaticReconnect()
                 .build();

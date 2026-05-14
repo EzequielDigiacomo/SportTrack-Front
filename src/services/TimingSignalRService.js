@@ -17,13 +17,11 @@ class TimingSignalRService {
 
         this.connectionPromise = (async () => {
             try {
-                const token = localStorage.getItem('sporttrack_auth_token');
-                const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/timing';
-
                 if (!this.connection) {
                     this.connection = new signalR.HubConnectionBuilder()
                         .withUrl(hubUrl, {
-                            accessTokenFactory: () => token,
+                            // El navegador enviará la cookie X-Access-Token automáticamente
+                            withCredentials: true,
                             skipNegotiation: false,
                             transport: signalR.HttpTransportType.WebSockets
                         })

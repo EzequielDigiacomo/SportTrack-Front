@@ -37,19 +37,17 @@ const SchedulerService = {
             return 480; // 08:00 default
         };
 
-        // 1. ORDENAMIENTO REGLAMENTARIO (Primero todas las Heats, luego Semis, luego Finales)
+        // 1. ORDENAMIENTO CRONOLÓGICO (Permite entreverar Eliminatorias con Semis/Finales)
         const sorted = [...items].sort((a, b) => {
-            // Prioridad 1: Orden de la Etapa (1: Eliminatorias, 2: Semis, 3: Finales)
-            // Si es una Prueba sin fases aún, asumimos que es etapa 1 (Eliminatoria)
-            const orderA = a.etapa?.orden || a.etapaOrden || 1;
-            const orderB = b.etapa?.orden || b.etapaOrden || 1;
-            
-            if (orderA !== orderB) return orderA - orderB;
-
-            // Prioridad 2: Hora original del programa
+            // Prioridad 1: Hora original del programa (Permite intercalar)
             const minA = getMinutesOfDay(a);
             const minB = getMinutesOfDay(b);
             if (minA !== minB) return minA - minB;
+
+            // Prioridad 2: Orden de la Etapa (1: Eliminatorias, 2: Semis, 3: Finales) para desempatar si caen en la misma hora
+            const orderA = a.etapa?.orden || a.etapaOrden || 1;
+            const orderB = b.etapa?.orden || b.etapaOrden || 1;
+            if (orderA !== orderB) return orderA - orderB;
 
             // Prioridad 3: Número de fase (Serie 1, Serie 2...)
             return (a.numeroFase || 0) - (b.numeroFase || 0);
@@ -94,18 +92,6 @@ const SchedulerService = {
             } else {
                 // Empaquetamiento secuencial estricto. Se ignora la hora de la BD para evitar "saltos" por placeholder
                 minutosCalculados = cursorMinutos;
-
-                // Salto de Bloque Global: De Heats a Semis, o Semis a Finales
-                const prevItem = sorted[i - 1];
-                const prevOrder = prevItem.etapa?.orden || prevItem.etapaOrden || 1;
-                const currOrder = item.etapa?.orden || item.etapaOrden || 1;
-
-                if (prevOrder < currOrder) {
-                    // El usuario indicó que el salto de la última Heat a la primer Semi es de 40 min
-                    const prevGap = (prevItem.gapSugerido > 0 ? prevItem.gapSugerido : (gapBaseMs / 60000));
-                    // Rebobinamos el gap estándar y sumamos el salto global de etapa (40 mins)
-                    minutosCalculados = (cursorMinutos - prevGap) + 40;
-                }
             }
 
             // --- Multi-day Check (Corte de fin de jornada) ---
