@@ -814,22 +814,24 @@
 @media (max-width: 768px) {
     .detail-cell { display: none; }
     .activity-time-icon { display: none; }
-    .time-cell { font-size: 0.75rem; padding-right: 4px !important; }
-    .user-cell { padding-left: 4px !important; padding-right: 4px !important; }
-    .user-pill { padding: 2px 6px; font-size: 0.7rem; }
+    .time-cell { font-size: 0.72rem; padding-right: 2px !important; }
+    .user-cell { padding-left: 2px !important; padding-right: 2px !important; }
+    .user-pill { padding: 2px 4px; font-size: 0.68rem; }
     .user-pill svg { display: none; }
-    .module-badge { font-size: 0.6rem; padding: 2px 4px; letter-spacing: 0; }
-    .action-text { font-size: 0.7rem; }
-    .activity-table th { font-size: 0.65rem; padding: 0 4px 8px; letter-spacing: 0.5px; }
-    .activity-row td { padding: 10px 4px; }
-    .activity-table-wrapper { margin: 0; }
+    .module-badge { font-size: 0.58rem; padding: 2px 3px; letter-spacing: 0; }
+    .action-text { font-size: 0.68rem; }
+    .activity-table th { font-size: 0.6rem; padding: 0 2px 8px; letter-spacing: 0; }
+    .activity-row td { padding: 10px 2px; }
+    .activity-table-wrapper { margin: 0; overflow-x: hidden; }
+    .recent-activity-container { padding: 0.8rem; }
     
-    .module-badge { min-width: 45px; text-align: center; display: inline-block; }
+    .module-badge { min-width: 38px; text-align: center; display: inline-block; }
 }
 
 @media (max-width: 480px) {
-    .module-badge { font-size: 0.55rem; width: 35px; overflow: hidden; text-overflow: ellipsis; }
-    .time-text { font-size: 0.7rem; }
+    .module-badge { font-size: 0.52rem; width: 32px; }
+    .time-text { font-size: 0.65rem; }
+    .action-text { font-size: 0.62rem; }
 }
 
 /* UTILS PARA RESPONSIVE */

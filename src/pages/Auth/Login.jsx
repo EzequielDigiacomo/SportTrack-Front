@@ -58,7 +58,16 @@ const Login = () => {
             navigate(targetPath, { replace: true });
             
         } catch (err) {
-            setError(err.message || 'Usuario o contraseña incorrectos');
+            const serverMsg = err.response?.data?.message;
+            if (serverMsg) {
+                setError(serverMsg);
+            } else if (err.response?.status === 401) {
+                setError('Usuario o contraseña incorrectos');
+            } else if (err.response?.status === 403) {
+                setError('Acceso denegado o cuenta suspendida');
+            } else {
+                setError('No se pudo conectar con el servidor.');
+            }
         } finally {
             setLoading(false);
         }

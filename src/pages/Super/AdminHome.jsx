@@ -183,7 +183,7 @@ const AdminHome = () => {
                                     <th>Usuario</th>
                                     <th>Módulo</th>
                                     <th>Acción</th>
-                                    <th>Detalles</th>
+                                    <th className="detail-cell">Detalles</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -221,7 +221,17 @@ const AdminHome = () => {
                                                 </span>
                                             </td>
                                             <td className="action-cell">
-                                                <span className="action-text">{log.accion}</span>
+                                                <span className="action-text">
+                                                    <span className="hide-mobile">{log.accion}</span>
+                                                    <span className="show-mobile-inline">
+                                                        {log.accion === 'LOGIN_SUCCESS' ? 'LGN_OK' : 
+                                                         log.accion === 'LOGIN_BLOCKED' ? 'LGN_BLOK' : 
+                                                         log.accion === 'ERROR_FATAL' ? 'ERR_FATAL' : 
+                                                         log.accion === 'CREATE_ATHLETE' ? 'NEW_ATL' : 
+                                                         log.accion === 'UPDATE_ATHLETE' ? 'UPD_ATL' : 
+                                                         log.accion?.replace('ATHLETE', 'ATL').replace('SUCCESS', 'OK')}
+                                                    </span>
+                                                </span>
                                             </td>
                                             <td className="detail-cell">
                                                 <div className="detail-content" title={log.detalle}>
