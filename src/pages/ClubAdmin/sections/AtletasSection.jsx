@@ -54,7 +54,7 @@ const AtletasSection = () => {
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
 
     const [currentPage, setCurrentPage] = useState(1);
-    const rowsPerPage = 5;
+    const rowsPerPage = 9;
 
     useEffect(() => {
         loadAtletas();

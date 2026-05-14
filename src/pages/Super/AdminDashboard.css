@@ -452,8 +452,9 @@
         overflow-x: hidden;
     }
     .admin-content-wrapper {
-        padding: 0 var(--spacing-sm);
+        padding: 0 var(--spacing-lg);
         width: 100%;
+        box-sizing: border-box;
     }
     .sidebar-trigger-favicon {
         pointer-events: auto;
@@ -694,4 +695,148 @@
     .admin-home-header h1 {
         font-size: 1.5rem;
     }
+}
+
+/* ── RECENT ACTIVITY (SuperAdmin Global) ── */
+.recent-activity-container {
+    padding: 1.5rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(10, 12, 20, 0.4);
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+}
+
+.activity-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.activity-table-wrapper {
+    overflow-x: auto;
+    margin: 0 -0.5rem;
+}
+
+.activity-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.activity-table th {
+    text-align: left;
+    padding: 0 12px 8px;
+    font-size: 0.75rem;
+    color: var(--color-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 700;
+}
+
+.activity-row {
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.2s ease;
+}
+
+.activity-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: scale(1.002);
+}
+
+.activity-row td {
+    padding: 14px 12px;
+    font-size: 0.88rem;
+    border-top: 1px solid rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.activity-row td:first-child { border-radius: 12px 0 0 12px; border-left: 1px solid rgba(255,255,255,0.02); }
+.activity-row td:last-child { border-radius: 0 12px 12px 0; border-right: 1px solid rgba(255,255,255,0.02); }
+
+.time-cell { 
+    color: var(--color-text-secondary); 
+    font-variant-numeric: tabular-nums; 
+    white-space: nowrap;
+}
+
+.user-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0, 150, 255, 0.1);
+    color: var(--color-primary-light);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid rgba(0, 150, 255, 0.15);
+}
+
+.module-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.module-badge.auth { background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.2); }
+.module-badge.atletas { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.2); }
+.module-badge.eventos { background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.2); }
+.module-badge.clubes { background: rgba(139, 92, 246, 0.15); color: #A78BFA; border: 1px solid rgba(139, 92, 246, 0.2); }
+.module-badge.saas { background: rgba(236, 72, 153, 0.15); color: #F472B6; border: 1px solid rgba(236, 72, 153, 0.2); }
+.module-badge.general { background: rgba(156, 163, 175, 0.15); color: #D1D5DB; border: 1px solid rgba(156, 163, 175, 0.2); }
+
+.action-text { 
+    font-weight: 700; 
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+}
+
+.detail-content {
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+    .detail-cell { display: none; }
+    .activity-time-icon { display: none; }
+    .time-cell { font-size: 0.75rem; padding-right: 4px !important; }
+    .user-cell { padding-left: 4px !important; padding-right: 4px !important; }
+    .user-pill { padding: 2px 6px; font-size: 0.7rem; }
+    .user-pill svg { display: none; }
+    .module-badge { font-size: 0.6rem; padding: 2px 4px; letter-spacing: 0; }
+    .action-text { font-size: 0.7rem; }
+    .activity-table th { font-size: 0.65rem; padding: 0 4px 8px; letter-spacing: 0.5px; }
+    .activity-row td { padding: 10px 4px; }
+    .activity-table-wrapper { margin: 0; }
+    
+    .module-badge { min-width: 45px; text-align: center; display: inline-block; }
+}
+
+@media (max-width: 480px) {
+    .module-badge { font-size: 0.55rem; width: 35px; overflow: hidden; text-overflow: ellipsis; }
+    .time-text { font-size: 0.7rem; }
+}
+
+/* UTILS PARA RESPONSIVE */
+.show-mobile, .show-mobile-inline { display: none !important; }
+
+@media (max-width: 768px) {
+    .hide-mobile { display: none !important; }
+    .show-mobile { display: block !important; }
+    .show-mobile-inline { display: inline-block !important; }
 }

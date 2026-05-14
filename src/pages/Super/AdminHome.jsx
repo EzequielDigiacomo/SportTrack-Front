@@ -17,6 +17,8 @@ import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import ClubService from '../../services/ClubService';
 import SaaSService from '../../services/SaaSService';
+import SupportService from '../../services/SupportService';
+import { History, Clock, FileText, AlertCircle, User } from 'lucide-react';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -26,6 +28,7 @@ const AdminHome = () => {
     const [globalStats, setGlobalStats] = useState(null);
     const [fedName, setFedName] = useState('');
     const [loading, setLoading] = useState(true);
+    const [recentLogs, setRecentLogs] = useState([]);
 
     const role = user?.rol?.trim().toLowerCase();
     const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
@@ -37,8 +40,12 @@ const AdminHome = () => {
             try {
                 if (isSuper && !id) {
                     // Cargar métricas globales para SuperAdmin
-                    const data = await SaaSService.getGlobalMetrics();
+                    const [data, logs] = await Promise.all([
+                        SaaSService.getGlobalMetrics(),
+                        SupportService.getLogs({ limit: 8 })
+                    ]);
                     setGlobalStats(data);
+                    setRecentLogs(logs);
                 } else if (isSuper && id) {
                     // SuperAdmin viendo una federación específica → usar datos de SaaS
                     const clubesStatus = await SaaSService.getClubesStatus();
@@ -156,6 +163,84 @@ const AdminHome = () => {
                             ))}
                         </div>
                         <button className="btn-view-all" onClick={() => navigate('/super/saas')}>Gestionar Federaciones</button>
+                    </div>
+                </div>
+
+                <div className="recent-activity-container glass-effect mt-4">
+                    <div className="activity-header">
+                        <div className="flex items-center gap-2">
+                            <History size={22} className="text-blue-400" />
+                            <h4>Últimos Movimientos</h4>
+                        </div>
+                        <p className="text-secondary text-sm">Monitoreo de actividad de administradores y clubes</p>
+                    </div>
+
+                    <div className="activity-table-wrapper">
+                        <table className="activity-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Usuario</th>
+                                    <th>Módulo</th>
+                                    <th>Acción</th>
+                                    <th>Detalles</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recentLogs.length > 0 ? (
+                                    recentLogs.map((log) => (
+                                        <tr key={log.id} className="activity-row">
+                                            <td className="time-cell">
+                                                <Clock size={14} className="activity-time-icon mr-1 opacity-60" />
+                                                <span className="time-text">
+                                                    {new Date(log.fecha).toLocaleString('es-AR', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            </td>
+                                            <td className="user-cell">
+                                                <div className="user-pill">
+                                                    <User size={12} className="mr-1" />
+                                                    {log.usuario}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`module-badge ${log.modulo?.toLowerCase()}`}>
+                                                    <span className="hide-mobile">{log.modulo}</span>
+                                                    <span className="show-mobile-inline">
+                                                        {log.modulo === 'Atletas' ? 'ATL' : 
+                                                         log.modulo === 'Eventos' ? 'EVE' : 
+                                                         log.modulo === 'Clubes' ? 'CLU' : 
+                                                         log.modulo === 'Auth' ? 'AUT' : 
+                                                         log.modulo === 'SaaS' ? 'SAS' : 
+                                                         log.modulo?.substring(0, 3).toUpperCase()}
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td className="action-cell">
+                                                <span className="action-text">{log.accion}</span>
+                                            </td>
+                                            <td className="detail-cell">
+                                                <div className="detail-content" title={log.detalle}>
+                                                    {log.detalle?.length > 60 
+                                                        ? log.detalle.substring(0, 60) + '...' 
+                                                        : log.detalle}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-8 opacity-50">
+                                            No hay movimientos recientes registrados.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
