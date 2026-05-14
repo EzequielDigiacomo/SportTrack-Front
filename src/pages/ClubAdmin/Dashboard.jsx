@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AtletaService from '../../services/AtletaService';
 import EventoService from '../../services/EventoService';
 import ClubService from '../../services/ClubService';
 import AtletasSection from './sections/AtletasSection';
 import EventosSection from './sections/EventosSection';
+import ControlesSection from './sections/ControlesSection';
 import PerfilClubSection from './sections/PerfilClubSection';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
+import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer } from 'lucide-react';
 import './Dashboard.css';
 
 const ClubDashboard = () => {
@@ -52,7 +53,13 @@ const ClubDashboard = () => {
                 
                 const allProximos = await EventoService.getProximos();
                 const proximos = user.rol === 'SuperAdmin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
-                setStats(prev => ({ ...prev, events: proximos.length }));
+                const controles = allProximos.filter(e => e.nombre.toLowerCase().includes('control'));
+                
+                setStats(prev => ({ 
+                    ...prev, 
+                    events: proximos.length,
+                    controles: controles.length
+                }));
                 
                 if (proximos.length > 0) {
                     const eventActivity = proximos.slice(0, 2).map(e => ({
@@ -128,9 +135,10 @@ const ClubDashboard = () => {
 
             <div className="dashboard-content-area">
                 <Routes>
-                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} />} />
+                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} user={user} />} />
                     <Route path="atletas" element={<AtletasSection />} />
                     <Route path="eventos" element={<EventosSection />} />
+                    <Route path="controles" element={<ControlesSection />} />
                     <Route path="perfil" element={<PerfilClubSection />} />
                     <Route path="organizar/*" element={<GestionEventosSection />} />
                     <Route path="resultados" element={<GestionResultadosSection />} />
@@ -166,6 +174,14 @@ const DashboardMenu = ({ navigate, stats, recentActivity }) => (
                 <h3>Resultados</h3>
                 <p className="card-label">Carga de tiempos y Start List</p>
             </div>
+
+            {user?.rol === 'Admin' && (
+                <div className="dashboard-card glass-effect clickable" onClick={() => navigate('controles')} style={{ borderTop: '2px solid #f59e0b' }}>
+                    <div className="card-icon" style={{ color: '#f59e0b' }}><Timer size={40} /></div>
+                    <h3>Controles Técnicos</h3>
+                    <p className="card-label">Panel de registros internos ({stats.controles || 0})</p>
+                </div>
+            )}
         </div>
 
         <div className="recent-activity-panel glass-effect">
