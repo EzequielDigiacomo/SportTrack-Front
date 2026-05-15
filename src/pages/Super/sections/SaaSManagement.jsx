@@ -52,6 +52,7 @@ const SaaSManagement = () => {
         ubicacion: '',
         activo: true,
         adminUsername: '',
+        adminEmail: '',
         adminPassword: ''
     });
     const [showPassword, setShowPassword] = useState(false);
@@ -113,7 +114,7 @@ const SaaSManagement = () => {
         setIsEditing(false);
         setFormData({ 
             nombre: '', sigla: '', email: '', telefono: '', direccion: '', ubicacion: '', activo: true,
-            adminUsername: '', adminPassword: ''
+            adminUsername: '', adminEmail: '', adminPassword: ''
         });
         setShowPassword(false);
         setShowModal(true);
@@ -626,6 +627,19 @@ const SaaSManagement = () => {
                                                     value={formData.adminUsername}
                                                     onChange={(e) => setFormData({...formData, adminUsername: e.target.value})}
                                                     placeholder="admin_nombre"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Email del Administrador</label>
+                                            <div className="input-with-icon">
+                                                <Mail size={16} />
+                                                <input 
+                                                    type="email" 
+                                                    required={!isEditing}
+                                                    value={formData.adminEmail}
+                                                    onChange={(e) => setFormData({...formData, adminEmail: e.target.value})}
+                                                    placeholder="admin@ejemplo.com"
                                                 />
                                             </div>
                                         </div>
