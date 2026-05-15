@@ -149,7 +149,8 @@ const SaaSManagement = () => {
             await fetchData();
         } catch (err) {
             console.error("Error saving federation", err);
-            alert("Error al guardar los datos. Verifica que el nombre de usuario no esté duplicado.");
+            const errorMsg = err.response?.data?.message || "Error desconocido al guardar la federación.";
+            alert(errorMsg);
         }
     };
 
