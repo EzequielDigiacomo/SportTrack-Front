@@ -126,6 +126,96 @@
     }
 }
 
+/* ── JUDGES MOBILE HEADER ── */
+.judges-mobile-header {
+    display: none; /* Default hidden, shown in mobile */
+}
+
+@media (max-width: 1000px) {
+    .admin-layout.no-sidebar {
+        flex-direction: column;
+    }
+    
+    .judges-mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: rgba(10, 12, 20, 0.8);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-judges-back, .btn-judges-logout {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-judges-back:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+    }
+
+    .btn-judges-back:active {
+        transform: scale(0.95);
+    }
+
+    .btn-judges-logout {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-judges-logout:hover {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+        transform: scale(1.05);
+    }
+
+    .header-left-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .judges-mobile-brand {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .mobile-role-name {
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: white;
+        line-height: 1.1;
+        letter-spacing: -0.3px;
+    }
+
+    .mobile-user-name {
+        font-size: 0.75rem;
+        color: var(--color-primary-light);
+        opacity: 0.8;
+        font-weight: 500;
+    }
+    
+    /* Compensación para que el contenido no quede debajo del header pegajoso si fuera fixed */
+}
+
 /* Finisher Dashboard Specifics */
 .finisher-dashboard {
     display: flex;

@@ -309,16 +309,6 @@ const StarterDashboard = () => {
                 {selectedFase ? (
                     <div className="race-control glass-effect">
                         <header className="race-header">
-                            {!isAdmin && (
-                                <div className="header-actions-left" style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem' }}>
-                                    <button className="btn-admin-secondary" onClick={() => navigate('/jueces')} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>
-                                        <ArrowLeft size={20} />
-                                    </button>
-                                    <button className="btn-admin-danger" onClick={logout} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', cursor: 'pointer' }}>
-                                        <LogOut size={20} />
-                                    </button>
-                                </div>
-                            )}
                             <div className="header-left-actions">
                                 <div className="badge-live">MODO LARGADOR</div>
                                 {(() => {

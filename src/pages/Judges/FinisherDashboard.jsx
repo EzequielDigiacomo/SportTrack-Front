@@ -479,16 +479,6 @@ const FinisherDashboard = () => {
             
             <header className="finisher-header glass-effect">
                 <div className="header-info">
-                    {!isAdmin && (
-                        <div className="header-actions-left" style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem' }}>
-                            <button className="btn-admin-secondary" onClick={() => navigate('/jueces')} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }}>
-                                <ArrowLeft size={20} />
-                            </button>
-                            <button className="btn-admin-danger" onClick={logout} style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                                <LogOut size={20} />
-                            </button>
-                        </div>
-                    )}
                     <div className="badge-live blue">MODO CRONOMETRISTA</div>
                     {selectedFase ? (() => {
                         const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;

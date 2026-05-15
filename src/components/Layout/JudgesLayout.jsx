@@ -68,11 +68,20 @@ const JudgesLayout = ({ children }) => {
 
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isAdmin = roleStr.includes('admin');
-    const canSeeSidebar = isAdmin || roleStr.includes('juezcontrol') || roleStr.includes('control');
+    // canSeeSidebar solo para admins reales. Jueces (incluyendo Control) usan el nav simplificado.
+    const canSeeSidebar = isAdmin;
+
+    const getRoleName = () => {
+        const path = location.pathname;
+        if (path.includes('largador')) return 'Largador';
+        if (path.includes('llegada')) return 'Cronometrista';
+        if (path.includes('juez-control')) return 'Juez de Control';
+        return 'Módulo Jueces';
+    };
 
     return (
         <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>
-            {canSeeSidebar && (
+            {canSeeSidebar ? (
                 <>
                     <div
                         className="sidebar-edge-sensor"
@@ -115,6 +124,32 @@ const JudgesLayout = ({ children }) => {
                         onNavClick={handleNavClick}
                     />
                 </>
+            ) : (
+                /* Header exclusivo para móviles (Largador/Cronometrista) */
+                /* Juez de Control usa su propio header restaurado */
+                !location.pathname.startsWith('/juez-control') && (
+                    <header className="judges-mobile-header glass-effect">
+                        <div className="header-left-group">
+                            <button 
+                                className="btn-judges-back" 
+                                onClick={() => {
+                                    if (location.pathname === '/jueces') navigate('/');
+                                    else navigate('/jueces');
+                                }}
+                            >
+                                <ArrowLeft size={24} />
+                            </button>
+                            <div className="judges-mobile-brand">
+                                <span className="mobile-role-name">{getRoleName()}</span>
+                                <span className="mobile-user-name">@{user?.username || 'user'}</span>
+                            </div>
+                        </div>
+                        
+                        <button className="btn-judges-logout" onClick={handleLogout}>
+                            <LogOut size={24} />
+                        </button>
+                    </header>
+                )
             )}
 
             <main className="admin-main" style={!isAdmin ? { marginLeft: 0, width: '100%' } : {}}>
