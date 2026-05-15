@@ -40,12 +40,16 @@ const AdminHome = () => {
             try {
                 if (isSuper && !id) {
                     // Cargar métricas globales para SuperAdmin
-                    const [data, logs] = await Promise.all([
-                        SaaSService.getGlobalMetrics(),
-                        SupportService.getLogs({ limit: 8 })
-                    ]);
+                    const data = await SaaSService.getGlobalMetrics();
                     setGlobalStats(data);
-                    setRecentLogs(logs);
+                    
+                    try {
+                        const logs = await SupportService.getLogs({ limit: 8 });
+                        setRecentLogs(logs);
+                    } catch (logErr) {
+                        console.error("Error cargando logs (no crítico):", logErr);
+                        setRecentLogs([]);
+                    }
                 } else if (isSuper && id) {
                     // SuperAdmin viendo una federación específica → usar datos de SaaS
                     const clubesStatus = await SaaSService.getClubesStatus();
