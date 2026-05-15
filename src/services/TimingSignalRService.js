@@ -22,10 +22,9 @@ class TimingSignalRService {
                 if (!this.connection) {
                     this.connection = new signalR.HubConnectionBuilder()
                         .withUrl(hubUrl, {
-                            // El navegador enviará la cookie X-Access-Token automáticamente
-                            withCredentials: true,
-                            skipNegotiation: false,
-                            transport: signalR.HttpTransportType.WebSockets
+                            // Enviamos el token manualmente para evitar bloqueos de cookies en móviles
+                            accessTokenFactory: () => localStorage.getItem('sporttrack_auth_token'),
+                            skipNegotiation: false
                         })
                         .configureLogging(signalR.LogLevel.Warning)
                         .withAutomaticReconnect()

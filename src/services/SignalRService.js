@@ -26,8 +26,8 @@ class SignalRService {
 
             this.connection = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl, {
-                    // El navegador enviará la cookie X-Access-Token automáticamente
-                    withCredentials: true
+                    // Enviamos el token manualmente para evitar bloqueos de cookies en móviles
+                    accessTokenFactory: () => localStorage.getItem('sporttrack_auth_token')
                 })
                 .configureLogging(signalR.LogLevel.Warning)
                 .withAutomaticReconnect()
