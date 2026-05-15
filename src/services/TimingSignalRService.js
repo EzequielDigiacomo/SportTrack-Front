@@ -27,6 +27,7 @@ class TimingSignalRService {
                             skipNegotiation: false,
                             transport: signalR.HttpTransportType.WebSockets
                         })
+                        .configureLogging(signalR.LogLevel.Warning)
                         .withAutomaticReconnect()
                         .build();
                 }

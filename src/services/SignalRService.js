@@ -29,6 +29,7 @@ class SignalRService {
                     // El navegador enviará la cookie X-Access-Token automáticamente
                     withCredentials: true
                 })
+                .configureLogging(signalR.LogLevel.Warning)
                 .withAutomaticReconnect()
                 .build();
         }
@@ -38,7 +39,6 @@ class SignalRService {
             try {
                 if (this.connection.state === signalR.HubConnectionState.Disconnected) {
                     await this.connection.start();
-                    console.log("SignalR Connected!");
                 }
             } catch (err) {
                 console.error("SignalR Connection Error: ", err);
@@ -71,7 +71,6 @@ class SignalRService {
 
             await this.connection.invoke("JoinEventGroup", eventId.toString());
             this.currentGroupId = eventId.toString();
-            console.log(`Joined SignalR group for event-prueba: ${eventId}`);
         } catch (e) {
             console.error("Error in joinEventGroup:", e);
         }

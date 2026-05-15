@@ -96,8 +96,6 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                     await timingSignalRService.connect(faseSeleccionada.id);
                 if (!isMounted) return;
 
-                console.log(`Connected to live sync for phase: ${faseSeleccionada.nombreFase}`);
-
                 // 1. Sincronizar el temporizador si ya inició
                 if (faseSeleccionada.fechaHoraInicioReal) {
                     const start = new Date(faseSeleccionada.fechaHoraInicioReal + (faseSeleccionada.fechaHoraInicioReal.endsWith('Z') ? '' : 'Z'));
@@ -114,7 +112,6 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 3. RECIBIR TIEMPOS EN VIVO (CARRIL POR CARRIL)
                 timingSignalRService.onTimeReceived((resId, timeStr, ms) => {
-                    console.log(`Time received for result ${resId}: ${timeStr}`);
                     setTiemposLocales(prev => ({
                         ...prev,
                         [resId]: { ...prev[resId], tiempoOficial: timeStr }
@@ -123,7 +120,6 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 4. Fin de carrera
                 timingSignalRService.onRaceFinished(() => {
-                    console.log("Race finished signal received");
                     stopLocalTimer();
                     // Refrescar para obtener posiciones finales si las hay
                     loadDatosPrueba(selectedPrueba);
@@ -141,7 +137,6 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                 // 6. En revisión
                 timingSignalRService.onRaceInReview((id) => {
                     if (id.toString() === faseSeleccionada.id.toString()) {
-                        console.log("Race in review signal received");
                         stopLocalTimer();
                         loadDatosPrueba(selectedPrueba);
                     }
@@ -149,7 +144,6 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 7. Status Update (DNS/DNF/DSQ)
                 timingSignalRService.onResultStatusUpdated((resId, status) => {
-                    console.log(`Status update for ${resId}: ${status}`);
                     setTiemposLocales(prev => ({
                         ...prev,
                         [resId]: { ...prev[resId], estadoCanto: status }

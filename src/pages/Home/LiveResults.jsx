@@ -198,7 +198,6 @@ const LiveResults = () => {
                 });
 
                 signalRServiceInstance.connection.on("RecibirEstructura", () => {
-                    console.log("Competition structure changed. Reloading data...");
                     loadData();
                 });
             } catch (err) {

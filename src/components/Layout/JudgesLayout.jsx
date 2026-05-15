@@ -10,7 +10,8 @@ import {
     Timer,
     LogOut,
     ArrowLeft,
-    Menu
+    Menu,
+    ShieldCheck
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import '../../pages/Super/AdminDashboard.css';
@@ -125,31 +126,36 @@ const JudgesLayout = ({ children }) => {
                     />
                 </>
             ) : (
-                /* Header exclusivo para móviles (Largador/Cronometrista) */
-                /* Juez de Control usa su propio header restaurado */
-                !location.pathname.startsWith('/juez-control') && (
-                    <header className="judges-mobile-header glass-effect">
-                        <div className="header-left-group">
-                            <button 
-                                className="btn-judges-back" 
-                                onClick={() => {
-                                    if (location.pathname === '/jueces') navigate('/');
-                                    else navigate('/jueces');
-                                }}
-                            >
-                                <ArrowLeft size={24} />
-                            </button>
-                            <div className="judges-mobile-brand">
-                                <span className="mobile-role-name">{getRoleName()}</span>
-                                <span className="mobile-user-name">@{user?.username || 'user'}</span>
+                /* Header estandarizado para móviles/jueces sin sidebar */
+                <header className="judges-top-header glass-effect">
+                    <div className="header-left-group">
+                        <button 
+                            className="btn-judges-back" 
+                            onClick={() => {
+                                if (location.pathname === '/jueces' || location.pathname.startsWith('/juez-control')) navigate('/');
+                                else navigate('/jueces');
+                            }}
+                        >
+                            <ArrowLeft size={24} />
+                        </button>
+                        <div className="judges-header-brand-group">
+                            <ShieldCheck size={20} className="header-shield-icon" />
+                            <div className="judges-mobile-brand-text">
+                                <span className="mobile-system-name">SportTrack</span>
+                                <span className="mobile-role-label">{getRoleName()}</span>
                             </div>
                         </div>
-                        
-                        <button className="btn-judges-logout" onClick={handleLogout}>
-                            <LogOut size={24} />
+                    </div>
+                    
+                    <div className="header-right-group">
+                        <div className="mobile-user-pill">
+                            <span>@{user?.username || 'user'}</span>
+                        </div>
+                        <button className="btn-judges-logout-new" onClick={handleLogout} title="Cerrar Sesión">
+                            <LogOut size={22} />
                         </button>
-                    </header>
-                )
+                    </div>
+                </header>
             )}
 
             <main className="admin-main" style={!isAdmin ? { marginLeft: 0, width: '100%' } : {}}>

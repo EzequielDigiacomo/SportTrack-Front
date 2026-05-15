@@ -36,27 +36,19 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             const faseId = params.get('faseId');
             const urlTab = params.get('tab');
             
-            console.log(`[DeepLink] Triggered. faseId=${faseId}, urlTab=${urlTab}, cronograma=${cronograma.length}`);
-
             if (faseId) {
                 const f = cronograma.find(x => String(x.id) === String(faseId));
                 if (f) {
-                    console.log(`[DeepLink] Found Fase: ${f.nombreFase} (PruebaId: ${f.eventoPruebaId})`);
                     if (String(f.eventoPruebaId) !== String(selectedPrueba)) {
-                        console.log(`[DeepLink] Switching Prueba from ${selectedPrueba} to ${f.eventoPruebaId}`);
                         handleSelectRegata(f);
                     } else {
                         // Si ya estamos en la prueba correcta, pero queremos cambiar de serie/fase
-                        console.log(`[DeepLink] Already in correct Prueba. Changing visual filter to ${f.nombreFase}`);
                         setFiltroVisualFase(f.nombreFase);
                     }
-                } else {
-                    console.warn(`[DeepLink] Fase ${faseId} not found in the current cronograma!`);
                 }
             }
 
             if (urlTab) {
-                console.log(`[DeepLink] Switching tab to: ${urlTab}`);
                 setCurrentTab(urlTab);
             }
         }
@@ -118,7 +110,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             const data = await PruebaService.getByEvento(eventoId);
             setPruebas((data || []).sort((a,b) => new Date(a.fechaHora) - new Date(b.fechaHora)));
         } catch (error) {
-            console.error(error);
+            // Error silently handled
         }
     };
 
@@ -136,7 +128,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             });
             setCronograma(sorted);
         } catch (error) {
-            console.error("Error al cargar cronograma:", error);
+            // Error silently handled
         }
     };
 
@@ -330,7 +322,6 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     };
 
     const handleSaveTiempos = async () => {
-        window.alert("Iniciando proceso de guardado..."); // Diagnóstico forzado
         setSaving(true);
         setMessage('⏳ Iniciando guardado...');
         try {
@@ -415,8 +406,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             await loadDatosPrueba(selectedPrueba);
             setMessage(esFinal ? '🔒 PRUEBA SELLADA: Resultados finales oficiales guardados.' : '✅ Tiempos guardados correctamente.');
         } catch (err) {
-            console.error('Error crítico en handleSaveTiempos:', err);
-            setMessage('❌ Error interno al procesar: ' + err.message);
+            setMessage('❌ Error interno al procesar.');
         } finally {
             setSaving(false);
         }
@@ -465,7 +455,6 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 ins.id === inscId ? { ...ins, esCabezaDeSerie: !ins.esCabezaDeSerie } : ins
             ));
         } catch (error) {
-            console.error("Error al toggle seeding:", error);
             setMessage("❌ Error de servidor al cambiar sembrado.");
         }
     };
@@ -544,7 +533,6 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             loadDatosPrueba(selectedPrueba);
             loadCronograma();
         } catch (error) {
-            console.error("Error al recalcular:", error);
             setMessage("❌ Error al aplicar el cronograma inteligente.");
         } finally {
             setSaving(false);

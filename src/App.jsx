@@ -62,7 +62,9 @@ function App() {
             {/* Panel Juez de Control (Protegido — rol JuezControl o Admin) */}
             <Route path="/juez-control/*" element={
                 <ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'JuezControl']}>
-                    <JuezControlDashboard />
+                    <JudgesLayout>
+                        <JuezControlDashboard />
+                    </JudgesLayout>
                 </ProtectedRoute>
             } />
 

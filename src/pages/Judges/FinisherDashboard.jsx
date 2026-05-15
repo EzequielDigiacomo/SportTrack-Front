@@ -128,8 +128,6 @@ const FinisherDashboard = () => {
 
                 // 2. LISTENERS GLOBALES (Siempre activos mientras estemos en el dashboard)
                 timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
-                    console.log("[SignalR] Global Race Started:", faseId);
-                    
                     // Actualizar la lista de fases local para que el "estado" cambie visualmente en el cronograma
                     setFases(prev => {
                         const newFases = prev.map(f => 
@@ -154,8 +152,6 @@ const FinisherDashboard = () => {
 
                 // 3. LÓGICA ESPECÍFICA DE LA FASE SELECCIONADA
                 if (selectedFase) {
-                    console.log("[SignalR] Monitoring Phase:", selectedFase.id);
-
                     // Sincronización proactiva: Si la fase dice "Programada" localmente,
                     // verificamos si ya empezó en el servidor al cargarla.
                     const loadFaseContext = async () => {
@@ -183,7 +179,6 @@ const FinisherDashboard = () => {
                     await loadFaseContext();
 
                     timingSignalRService.onRaceStarted((id, sTime) => {
-                        console.log("[SignalR] Phase Started:", id);
                         setFases(prev => {
                             const newFases = prev.map(f => 
                                 String(f.id) === String(id) ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: sTime } : f
@@ -202,13 +197,11 @@ const FinisherDashboard = () => {
                     });
 
                     timingSignalRService.onRaceFinished(() => {
-                        console.log("[SignalR] Phase Finished");
                         stopLocalTimer();
                         // Opcional: recargar fases para ver el check de terminada
                     });
 
                     timingSignalRService.onRaceReset((id) => {
-                        console.log("[SignalR] Phase Reset:", id);
                         if (String(id) === String(selectedFase.id)) {
                             stopLocalTimer();
                             setElapsedTime(0);
@@ -267,7 +260,6 @@ const FinisherDashboard = () => {
 
             // Si la cantidad de tiempos crudos (dudas) cubre a todos los pendientes → parar
             if (stillPending <= rawTimes.length) {
-                console.log(`Auto-stop: ${stillPending} pendiente(s), ${rawTimes.length} duda(s) capturada(s).`);
                 stopLocalTimer();
             }
         }
