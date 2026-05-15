@@ -30,6 +30,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     onChange={(e) => onChange('sigla', e.target.value)} 
                                     maxLength="10"
                                     placeholder="Eje: CFD, CNS..."
+                                    required
                                 />
                             </div>
                         </div>
@@ -41,6 +42,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     name="planSaaSId"
                                     value={initialData.planSaaSId || ''}
                                     onChange={(e) => onChange('planSaaSId', e.target.value)}
+                                    required
                                 >
                                     <option value="">-- Seleccionar Plan --</option>
                                     {planes.map(p => (
@@ -62,6 +64,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     name="email"
                                     value={initialData.email} 
                                     onChange={(e) => onChange('email', e.target.value)} 
+                                    required
                                 />
                             </div>
                             <div className="form-group">
@@ -72,6 +75,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     name="telefono"
                                     value={initialData.telefono} 
                                     onChange={(e) => onChange('telefono', e.target.value)} 
+                                    required
                                 />
                             </div>
                         </div>
@@ -84,6 +88,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                 value={initialData.ubicacion} 
                                 onChange={(e) => onChange('ubicacion', e.target.value)} 
                                 placeholder="Ciudad, Provincia..."
+                                required
                             />
                         </div>
                     </div>

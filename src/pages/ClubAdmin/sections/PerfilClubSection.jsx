@@ -100,6 +100,7 @@ const PerfilClubSection = () => {
                                 value={form.sigla} 
                                 onChange={handleChange} 
                                 placeholder="Ej: CRR" 
+                                required
                             />
                         </div>
                     </div>
@@ -113,6 +114,7 @@ const PerfilClubSection = () => {
                                 value={form.email} 
                                 onChange={handleChange} 
                                 placeholder="contacto@club.com" 
+                                required
                             />
                         </div>
                         <div className="form-group">
@@ -123,6 +125,7 @@ const PerfilClubSection = () => {
                                 value={form.telefono} 
                                 onChange={handleChange} 
                                 placeholder="+54 9 11 ..." 
+                                required
                             />
                         </div>
                     </div>
@@ -136,6 +139,7 @@ const PerfilClubSection = () => {
                                 value={form.direccion} 
                                 onChange={handleChange} 
                                 placeholder="Calle 123, Ciudad..." 
+                                required
                             />
                         </div>
                         <div className="form-group">
@@ -146,6 +150,7 @@ const PerfilClubSection = () => {
                                 value={form.ubicacion} 
                                 onChange={handleChange} 
                                 placeholder="Ej: Buenos Aires, Argentina" 
+                                required
                             />
                         </div>
                     </div>

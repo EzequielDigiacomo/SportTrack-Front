@@ -128,6 +128,7 @@ const AtletaForm = ({
                                 name="pais"
                                 value={initialData.pais || 'Ecuador'} 
                                 onChange={(e) => onChange('pais', e.target.value)} 
+                                required
                             />
                         </div>
                     </div>

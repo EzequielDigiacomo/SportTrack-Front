@@ -571,6 +571,7 @@ const SaaSManagement = () => {
                                     <label>Sigla</label>
                                     <input 
                                         type="text" 
+                                        required
                                         value={formData.sigla}
                                         onChange={(e) => setFormData({...formData, sigla: e.target.value})}
                                         placeholder="Ej: FAC"
@@ -595,6 +596,7 @@ const SaaSManagement = () => {
                                         <Phone size={16} />
                                         <input 
                                             type="text" 
+                                            required
                                             value={formData.telefono}
                                             onChange={(e) => setFormData({...formData, telefono: e.target.value})}
                                             placeholder="+54 ..."
@@ -607,6 +609,7 @@ const SaaSManagement = () => {
                                         <MapPin size={16} />
                                         <input 
                                             type="text" 
+                                            required
                                             value={formData.direccion}
                                             onChange={(e) => setFormData({...formData, direccion: e.target.value})}
                                             placeholder="Calle, Ciudad, Provincia"

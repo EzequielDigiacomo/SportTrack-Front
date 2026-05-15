@@ -183,6 +183,7 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                                                 value={initialData.dni || ''}
                                                 onChange={(e) => onChange('dni', e.target.value)}
                                                 placeholder="ej: 30123456"
+                                                required
                                             />
                                         </div>
                                         <div className="form-group">
@@ -194,6 +195,7 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                                                 value={initialData.telefono || ''}
                                                 onChange={(e) => onChange('telefono', e.target.value)}
                                                 placeholder="ej: +54 11 1234-5678"
+                                                required
                                             />
                                         </div>
                                     </div>
