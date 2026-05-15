@@ -17,6 +17,8 @@ class TimingSignalRService {
 
         this.connectionPromise = (async () => {
             try {
+                const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/timing';
+
                 if (!this.connection) {
                     this.connection = new signalR.HubConnectionBuilder()
                         .withUrl(hubUrl, {
