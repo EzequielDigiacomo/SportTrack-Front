@@ -456,6 +456,33 @@ tr:hover .arrow-icon {
     width: 100%; 
 }
 
+.password-input-modal {
+    padding-right: 44px !important;
+}
+
+.password-toggle-btn-modal {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-primary-light);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    z-index: 5;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.password-toggle-btn-modal:hover {
+    opacity: 1;
+    color: white;
+}
+
 .modal-footer {
     display: flex;
     justify-content: flex-end;

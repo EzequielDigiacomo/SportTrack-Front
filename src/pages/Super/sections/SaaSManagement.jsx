@@ -580,6 +580,7 @@ const SaaSManagement = () => {
                                         <Mail size={16} />
                                         <input 
                                             type="email" 
+                                            required
                                             value={formData.email}
                                             onChange={(e) => setFormData({...formData, email: e.target.value})}
                                             placeholder="correo@federacion.com"
@@ -629,7 +630,7 @@ const SaaSManagement = () => {
                                         </div>
                                         <div className="form-group">
                                             <label>Contraseña</label>
-                                            <div className="input-with-icon" style={{ position: 'relative' }}>
+                                            <div className="input-with-icon">
                                                 <Lock size={16} />
                                                 <input 
                                                     type={showPassword ? "text" : "password"} 
@@ -637,27 +638,12 @@ const SaaSManagement = () => {
                                                     value={formData.adminPassword}
                                                     onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
                                                     placeholder="••••••••"
-                                                    style={{ paddingRight: '40px' }}
+                                                    className="password-input-modal"
                                                 />
                                                 <button 
                                                     type="button"
                                                     className="password-toggle-btn-modal"
                                                     onClick={() => setShowPassword(!showPassword)}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        right: '10px',
-                                                        top: '50%',
-                                                        transform: 'translateY(-50%)',
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        color: 'var(--color-text-secondary)',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        padding: '4px',
-                                                        zIndex: 2
-                                                    }}
                                                 >
                                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                                 </button>
