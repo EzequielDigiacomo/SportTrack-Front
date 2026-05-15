@@ -39,14 +39,19 @@ export const AuthProvider = ({ children }) => {
     const login = (userData, token) => {
         const normalized = normalizeUser(userData);
         setUser(normalized);
-        // El token ya no se guarda en localStorage por seguridad (usamos HttpOnly Cookies)
+        
+        // Guardamos tanto el usuario como el token para compatibilidad total (especialmente móviles)
         localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(normalized));
+        if (token) {
+            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+        }
     };
 
     const logout = async () => {
-        // Limpiamos el estado local INMEDIATAMENTE para evitar flashes de contenido protegido
+        // Limpiamos el estado local INMEDIATAMENTE
         setUser(null);
         localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
 
         try {
             await AuthService.logout();

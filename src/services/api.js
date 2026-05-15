@@ -13,6 +13,10 @@ const api = axios.create({
 // Interceptor de solicitud - El navegador enviará las cookies automáticamente
 api.interceptors.request.use(
     (config) => {
+        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
     },
     (error) => {
