@@ -25,7 +25,8 @@ import {
     UserCircle,
     Lock,
     Activity,
-    Eye
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import './SaaSManagement.css';
 
@@ -53,6 +54,7 @@ const SaaSManagement = () => {
         adminUsername: '',
         adminPassword: ''
     });
+    const [showPassword, setShowPassword] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -113,6 +115,7 @@ const SaaSManagement = () => {
             nombre: '', sigla: '', email: '', telefono: '', direccion: '', ubicacion: '', activo: true,
             adminUsername: '', adminPassword: ''
         });
+        setShowPassword(false);
         setShowModal(true);
     };
 
@@ -626,15 +629,38 @@ const SaaSManagement = () => {
                                         </div>
                                         <div className="form-group">
                                             <label>Contraseña</label>
-                                            <div className="input-with-icon">
+                                            <div className="input-with-icon" style={{ position: 'relative' }}>
                                                 <Lock size={16} />
                                                 <input 
-                                                    type="password" 
+                                                    type={showPassword ? "text" : "password"} 
                                                     required={!isEditing}
                                                     value={formData.adminPassword}
                                                     onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
                                                     placeholder="••••••••"
+                                                    style={{ paddingRight: '40px' }}
                                                 />
+                                                <button 
+                                                    type="button"
+                                                    className="password-toggle-btn-modal"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        right: '10px',
+                                                        top: '50%',
+                                                        transform: 'translateY(-50%)',
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: 'var(--color-text-secondary)',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        padding: '4px',
+                                                        zIndex: 2
+                                                    }}
+                                                >
+                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                </button>
                                             </div>
                                         </div>
                                     </>
