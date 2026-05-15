@@ -64,10 +64,10 @@ const GestionClubesSection = () => {
                     : todos.filter(c => c.parentClubId !== null);
                 setClubes(filtrados);
             }
-            // Para un Admin normal sin fedId en URL, mostramos su propia jerarquía
+            // Para un Admin normal sin fedId en URL, mostramos su propia jerarquía (excluyendo a la federación misma)
             else if (user?.clubId) {
                 const filtrados = todos.filter(
-                    c => String(c.parentClubId) === String(user.clubId) || String(c.id) === String(user.clubId)
+                    c => String(c.parentClubId) === String(user.clubId)
                 );
                 setClubes(filtrados);
             }

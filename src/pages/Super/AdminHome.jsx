@@ -71,11 +71,12 @@ const AdminHome = () => {
                     ]);
                     const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
                     const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
-                    const totalAtletas = clubesData.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
+                    const subClubes = clubesData.filter(c => c.id !== user.clubId);
+                    const totalAtletas = subClubes.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
                     setStats({
                         eventos: eventosData.length,
                         programados: eventosProgramados,
-                        clubes: clubesData.length,
+                        clubes: subClubes.length,
                         atletas: totalAtletas
                     });
                 }

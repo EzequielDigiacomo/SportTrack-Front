@@ -46,9 +46,9 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                                     </select>
                                 </div>
 
-                                {initialData.rol === 'Club' && (
+                                {user?.rol === 'SuperAdmin' && (
                                     <div className="form-group fade-in">
-                                        <label>Club Correspondiente *</label>
+                                        <label>Club / Federación Correspondiente *</label>
                                         <select 
                                             className="admin-select"
                                             name="clubId"

@@ -7,6 +7,7 @@ import { ENDPOINTS } from '../../../utils/constants';
 import LoginGrid from './LoginGrid';
 import LoginForm from './LoginForm';
 import { useAlert } from '../../../hooks/useAlert';
+import { useAuth } from '../../../context/AuthContext';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionLoginsSection = () => {
@@ -19,6 +20,7 @@ const GestionLoginsSection = () => {
     const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
+    const { user } = useAuth();
 
     useEffect(() => { 
         loadData(); 
@@ -75,9 +77,16 @@ const GestionLoginsSection = () => {
                 await AuthService.updatePassword(selectedUser.id, form.newPassword);
                 showAlert('success', 'Contraseña actualizada correctamente');
             } else {
+                let finalClubId = null;
+                if (user?.rol === 'Admin') {
+                    finalClubId = user.clubId;
+                } else {
+                    finalClubId = form.clubId ? parseInt(form.clubId) : null;
+                }
+
                 await AuthService.register({
                     ...form,
-                    clubId: (form.rol === 'Club') ? (form.clubId ? parseInt(form.clubId) : null) : null
+                    clubId: finalClubId
                 });
                 showAlert('success', 'Usuario creado exitosamente');
             }
