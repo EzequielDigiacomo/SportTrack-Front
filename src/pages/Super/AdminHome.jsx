@@ -135,7 +135,7 @@ const AdminHome = () => {
                     </div>
                 </div>
 
-                <div className="dashboard-content-row mt-4">
+                <div className="dashboard-content-row">
                     <div className="growth-chart-container glass-effect flex-2">
                         <div className="chart-header">
                             <h4>Crecimiento de la Red</h4>
@@ -171,7 +171,7 @@ const AdminHome = () => {
                     </div>
                 </div>
 
-                <div className="recent-activity-container glass-effect mt-4">
+                <div className="recent-activity-container glass-effect">
                     <div className="activity-header">
                         <div className="flex items-center gap-2">
                             <History size={22} className="text-blue-400" />

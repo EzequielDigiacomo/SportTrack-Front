@@ -5,7 +5,7 @@ import EventoService from '../../services/EventoService'
 import logo from '../../assets/logo-sporttrack.png'
 import './Home.css'
 import Skeleton from '../../components/Common/Skeleton'
-import { Check, X, Zap, Award, Activity, Smartphone, Share2, FileSpreadsheet, Timer, Globe, Shield } from 'lucide-react'
+import { Check, X, Zap, Award, Activity, Smartphone, Share2, FileSpreadsheet, Timer, Globe, Shield, Flag, Calendar, MapPin, Mail } from 'lucide-react'
 
 function Home() {
     const { isAuthenticated, user } = useAuth()
@@ -80,7 +80,7 @@ function Home() {
             {/* ── ÚLTIMO EVENTO ── */}
             {(loading || ultimoEvento) && (
                 <section className="ultimo-evento-section container" id="eventos">
-                    <div className="section-label">🏁 Último Evento Finalizado</div>
+                    <div className="section-label"><Flag size={18} style={{ marginRight: '8px' }} /> Último Evento Finalizado</div>
                     {loading ? (
                         <div className="ultimo-evento-card glass-effect" style={{ padding: '2rem' }}>
                             <div className="evento-info">
@@ -94,8 +94,8 @@ function Home() {
                         <div className="ultimo-evento-card glass-effect">
                             <div className="evento-info">
                                 <h2>{ultimoEvento.nombre}</h2>
-                                <p className="evento-meta">📅 {new Date(ultimoEvento.fecha).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                <p className="evento-meta">📍 {ultimoEvento.ubicacion}</p>
+                                <p className="evento-meta"><Calendar size={14} style={{ marginRight: '6px' }} /> {new Date(ultimoEvento.fecha).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                <p className="evento-meta"><MapPin size={14} style={{ marginRight: '6px' }} /> {ultimoEvento.ubicacion}</p>
                             </div>
                             <Link to={`/resultados/${ultimoEvento.id}`} className="btn-ver-resultados">
                                 Ver Resultados Completos →
@@ -204,8 +204,8 @@ function Home() {
 
                     <div className="footer-contact">
                         <h4>Contacto</h4>
-                        <a href="mailto:contacto@digitech.com" className="footer-link-premium">📧 contacto@digitech.com</a>
-                        <a href="https://wa.me/5493412280901" className="footer-link-premium">📱 WhatsApp Soporte</a>
+                        <a href="mailto:contacto@digitech.com" className="footer-link-premium"><Mail size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> contacto@digitech.com</a>
+                        <a href="https://wa.me/5493412280901" className="footer-link-premium"><Smartphone size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> WhatsApp Soporte</a>
                     </div>
 
                     <div className="footer-nav">

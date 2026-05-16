@@ -7,6 +7,7 @@ import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { useToast } from '../../context/ToastContext';
+import ThemeToggle from '../../components/Common/ThemeToggle';
 import './Judges.css';
 
 const getSoloApellido = (nombreCompleto) => {
@@ -248,8 +249,9 @@ const StarterDashboard = () => {
     return (
         <div className="starter-dashboard fade-in">
             <aside className={`starter-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0 }}><Clock size={18} /> Próximas Pruebas</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
+                    <h3 style={{ margin: 0, flex: 1 }}><Clock size={18} /> Próximas Pruebas</h3>
+                    <ThemeToggle />
                     <button 
                         className="btn-collapse"
                         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}

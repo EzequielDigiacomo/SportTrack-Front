@@ -84,7 +84,7 @@ const ResultadosTable = ({
 
     return (
         <div className={`resultados-table-wrapper fade-in ${isSuccess ? 'grid-success-flash' : ''}`}>
-            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+            <h3 style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
                 Fase: <span style={{ color: 'var(--color-primary-light)' }}>{fase.nombreFase}</span>
             </h3>
             <table className="admin-table">

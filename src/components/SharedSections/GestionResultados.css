@@ -8,8 +8,8 @@
     padding: 1.2rem;
     margin-bottom: 1.5rem;
     border-radius: var(--radius-lg);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-surface-hover);
 }
 
 .flex-row {
@@ -42,9 +42,9 @@
 .filter-group select {
     padding: 0.8rem;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-surface-hover);
+    color: var(--color-text-primary);
     font-size: 1rem;
     outline: none;
     transition: all 0.3s ease;
@@ -68,8 +68,8 @@
     z-index: 10;
     position: relative;
     border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-surface-hover);
+    background: var(--color-bg-secondary);
     min-height: 56px;
 }
 
@@ -282,7 +282,7 @@
 .resultados-table th {
     text-align: left;
     padding: 1rem;
-    color: var(--color-text-dim);
+    color: var(--color-text-primary);
     font-weight: 500;
     text-transform: uppercase;
     font-size: 0.8rem;
@@ -290,7 +290,7 @@
 }
 
 .resultados-table tbody tr {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--color-bg-secondary);
     transition: transform 0.2s ease, background 0.2s ease;
 }
 
@@ -360,10 +360,10 @@
 .resultado-input {
     width: 100%;
     padding: 0.6rem;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-surface-hover);
     border-radius: 4px;
-    color: white;
+    color: var(--color-text-primary);
     font-family: 'JetBrains Mono', monospace;
     text-align: center;
     transition: all 0.2s ease;
@@ -400,15 +400,15 @@
 }
 
 .resultados-message.success {
-    background: rgba(46, 213, 115, 0.1);
-    color: #2ed573;
-    border: 1px solid rgba(46, 213, 115, 0.2);
+    background: rgba(var(--color-success-rgb), 0.1);
+    color: var(--color-success);
+    border: 1px solid rgba(var(--color-success-rgb), 0.2);
 }
 
 .resultados-message.error {
-    background: rgba(255, 71, 87, 0.1);
-    color: #ff4757;
-    border: 1px solid rgba(255, 71, 87, 0.2);
+    background: rgba(var(--color-error-rgb), 0.1);
+    color: var(--color-error);
+    border: 1px solid rgba(var(--color-error-rgb), 0.2);
 }
 
 @keyframes slideIn {
@@ -432,7 +432,7 @@
     display: flex;
     gap: var(--spacing-sm);
     margin-bottom: var(--spacing-md);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid var(--color-surface-hover);
     padding-bottom: var(--spacing-xs);
 }
 
@@ -471,13 +471,13 @@
 
 /* Official Results styles */
 .row-official {
-    background: rgba(46, 213, 115, 0.05) !important;
+    background: rgba(var(--color-success-rgb), 0.08) !important;
 }
 
 .input-official {
-    border-color: rgba(46, 213, 115, 0.3) !important;
-    background: rgba(46, 213, 115, 0.1) !important;
-    color: #2ed573 !important;
+    border-color: rgba(var(--color-success-rgb), 0.3) !important;
+    background: rgba(var(--color-success-rgb), 0.1) !important;
+    color: var(--color-success) !important;
     font-weight: 800;
 }
 
@@ -529,10 +529,10 @@
     text-align: center;
 }
 
-.status-badge-judge.dns { background: #4b5563; color: #f3f4f6; }
-.status-badge-judge.dnf { background: #d97706; color: #fef3c7; }
-.status-badge-judge.dsq { background: #dc2626; color: #fee2e2; }
-.status-badge-judge.descalificado { background: #dc2626; color: #fee2e2; }
+.status-badge-judge.dns { background: #1f2937; color: #f3f4f6; }
+.status-badge-judge.dnf { background: #92400e; color: #fef3c7; }
+.status-badge-judge.dsq { background: #991b1b; color: #fee2e2; }
+.status-badge-judge.descalificado { background: #991b1b; color: #fee2e2; }
 
 .row-with-status {
     background: rgba(255, 255, 255, 0.02) !important;
@@ -542,8 +542,8 @@
 .official-badge {
     margin-left: 0.8rem;
     padding: 2px 6px;
-    background: #10b981;
-    color: white;
+    background: var(--color-success);
+    color: var(--color-on-primary);
     font-size: 0.65rem;
     border-radius: 4px;
     font-weight: 800;

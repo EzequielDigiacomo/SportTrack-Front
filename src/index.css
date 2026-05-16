@@ -37,6 +37,7 @@
   --color-text-primary: hsl(0, 0%, 95%);
   --color-text-secondary: hsl(0, 0%, 75%);
   --color-text-muted: hsl(0, 0%, 55%);
+  --color-text-dim: hsl(0, 0%, 45%);
   
   /* Semantic Colors */
   --color-success: hsl(140, 60%, 50%);
@@ -75,24 +76,100 @@
   --font-mono: 'Fira Code', 'Courier New', monospace;
   
   /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-base: 250ms ease-in-out;
-  --transition-slow: 350ms ease-in-out;
+  --transition-fast: 150ms ease;
+  --transition-base: 300ms ease;
+  --transition-slow: 500ms ease;
   
   /* Z-Index Scale */
+
+
   --z-dropdown: 1000;
-  --z-sticky: 1020;
-  --z-fixed: 1030;
-  --z-modal-backdrop: 1040;
-  --z-modal: 1050;
-  --z-popover: 1060;
-  --z-tooltip: 1070;
+  --z-sticky: 1100;
+  --z-modal: 1200;
+  --z-popover: 1300;
+  --z-tooltip: 1400;
+
+  /* Default Dark Mode */
+  --color-bg-primary: #0a0c12;
+  --color-bg-secondary: #1a1e2e;
+  --color-bg-tertiary: #161b22;
+  --color-surface: #1a1e2e;
+  --color-surface-hover: #21262d;
+  --color-border: #30363d;
+  
+  --color-text-primary: #f0f6fc;
+  --color-text-secondary: #8b949e;
+  --color-text-muted: #6e7681;
+  --color-text-dim: #484f58;
+  --color-on-primary: #f0f6fc;
+  
+  --color-accent: #eab308;
+  --color-accent-rgb: 234, 179, 8;
+  --color-accent-light: #fbbf24;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px rgba(0, 112, 243, 0.3);
+
+  --color-primary: #0070f3;
+  --color-primary-rgb: 0, 112, 243;
+  --color-primary-light: #3291ff;
+  --color-error: #ff4d4d;
+  --color-error-rgb: 255, 77, 77;
+  --color-success: #10b981;
+  --color-success-rgb: 16, 185, 129;
+  --color-warning: #f5a623;
+  --color-warning-rgb: 245, 166, 35;
+  
+  --gradient-primary: linear-gradient(135deg, #0070f3 0%, #00aaff 100%);
+  --gradient-surface: linear-gradient(135deg, #1a1e2e 0%, #161b22 100%);
+}
+
+[data-theme='light'] {
+  /* Neutral Colors - Light Mode (Maximum Contrast) */
+  --color-bg-primary: hsl(220, 10%, 82%);
+  --color-bg-secondary: hsl(220, 10%, 74%);
+  --color-bg-tertiary: hsl(220, 10%, 66%);
+  --color-surface: hsl(220, 10%, 88%);
+  --color-surface-hover: hsl(220, 10%, 60%);
+  --color-border: hsl(220, 20%, 35%); /* Very dark border */
+  
+  /* Text Colors - Pure High Contrast */
+  --color-text-primary: #000000;
+  --color-text-secondary: #0a0f1a;
+  --color-text-muted: #111827;
+  --color-text-dim: #1f2937;
+  --color-on-primary: #ffffff; /* Pure white for text on dark backgrounds */
+
+  /* Functional Colors - Deep & Dark for Light Mode */
+  --color-primary: #0f172a;
+  --color-primary-rgb: 15, 23, 42;
+  --color-success: #064e3b;
+  --color-success-rgb: 6, 78, 59;
+  --color-error: #7f1d1d;
+  --color-error-rgb: 127, 29, 29;
+  --color-warning: #78350f;
+  --color-warning-rgb: 120, 53, 15;
+  --color-accent: #713f12;
+  --color-accent-rgb: 113, 63, 18;
+  
+  /* Shadows - Very strong for definition */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px rgba(0, 0, 0, 0.3);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+  --gradient-surface: linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg-secondary) 100%);
 }
 
 /* Base Styles */
 html {
   font-size: 14px;
   scroll-behavior: smooth;
+  transition: background-color var(--transition-base), color var(--transition-base);
 }
 
 body {
@@ -103,7 +180,15 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+[data-theme='dark'] body {
   color-scheme: dark;
+}
+
+[data-theme='light'] body {
+  color-scheme: light;
 }
 
 select {
@@ -184,6 +269,11 @@ a:hover {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
+}
+
+[data-theme='light'] .glass-effect {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border);
 }
 
 /* Animations */
@@ -270,3 +360,59 @@ a:hover {
   background: var(--color-primary);
   color: white;
 }
+
+/* ── Light Mode High Contrast Overrides ── */
+[data-theme='light'] .estado-badge,
+[data-theme='light'] .inscripciones-tag,
+[data-theme='light'] .status-pill,
+[data-theme='light'] .club-badge,
+[data-theme='light'] .sigla-tag,
+[data-theme='light'] .info-badge-modern {
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+}
+
+/* Darken standard badges in light mode */
+[data-theme='light'] .estado-badge {
+    background: rgba(0, 0, 0, 0.1) !important;
+    color: #111827 !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme='light'] .inscripciones-tag.open {
+    color: #064e3b !important;
+    background: rgba(6, 78, 59, 0.1) !important;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+[data-theme='light'] .inscripciones-tag.closed {
+    color: #374151 !important;
+}
+
+/* Icon Buttons with deeper colors */
+[data-theme='light'] .btn-icon-view {
+    background: rgba(113, 63, 18, 0.15) !important;
+    color: #713f12 !important;
+    border: 1px solid rgba(113, 63, 18, 0.3) !important;
+}
+
+[data-theme='light'] .btn-icon-edit {
+    background: rgba(30, 58, 138, 0.15) !important;
+    color: #1e3a8a !important;
+    border: 1px solid rgba(30, 58, 138, 0.3) !important;
+}
+
+[data-theme='light'] .btn-icon-delete {
+    background: rgba(127, 29, 29, 0.15) !important;
+    color: #7f1d1d !important;
+    border: 1px solid rgba(127, 29, 29, 0.3) !important;
+}
+
+/* Row transparency fix */
+[data-theme='light'] .admin-table tr:hover td,
+[data-theme='light'] .resultados-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+}
+
+

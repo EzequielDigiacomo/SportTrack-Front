@@ -12,13 +12,13 @@
     display: flex;
     flex-direction: column;
     padding: var(--spacing-lg);
-    border-right: 1px solid rgba(255,255,255,0.05);
+    border-right: 1px solid var(--color-surface-hover);
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
     z-index: 100;
-    background: rgba(10, 12, 20, 0.95);
+    background: var(--color-bg-secondary);
     backdrop-filter: blur(20px);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -100,7 +100,7 @@
     gap: var(--spacing-md);
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
-    background: rgba(255,255,255,0.03);
+    background: var(--color-bg-tertiary);
     margin-bottom: var(--spacing-xl);
 }
 
@@ -162,8 +162,8 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-md);
-    background: rgba(10, 12, 20, 0.6);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-surface-hover);
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -212,8 +212,8 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-md);
-    background: rgba(10, 12, 20, 0.6);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-surface-hover);
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: all 0.2s;
@@ -262,7 +262,7 @@
 }
 
 .nav-item:hover {
-    background: rgba(255,255,255,0.05);
+    background: var(--color-surface-hover);
     color: var(--color-text-primary);
     transform: translateX(4px);
 }
@@ -311,7 +311,7 @@
 /* HOME DE ADMIN */
 .admin-home-header {
     margin-bottom: var(--spacing-2xl);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--color-surface-hover);
     padding-bottom: var(--spacing-lg);
 }
 
@@ -465,10 +465,10 @@
         display: flex;
     }
 
-    /* Solucionar solapamiento: que no sean fixed, sino que se queden arriba */
+    /* Mantener triggers fijos para fácil acceso */
     .sidebar-trigger-favicon, .top-right-actions {
-        position: absolute !important;
-        top: 15px;
+        position: fixed !important;
+        top: 20px;
     }
 }
 
@@ -489,6 +489,8 @@
     position: relative;
     overflow: hidden;
     transition: transform 0.3s ease;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
 }
 
 .stat-card-premium:hover {
@@ -538,6 +540,7 @@
 .dashboard-content-row {
     display: flex;
     gap: 1.5rem;
+    margin-top: 1rem;
 }
 
 .flex-2 { flex: 2; }
@@ -546,6 +549,8 @@
 .growth-chart-container, .top-entities-list {
     padding: 1.5rem;
     border-radius: 20px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
 }
 
 .chart-header {
@@ -620,13 +625,14 @@
     gap: 1rem;
     padding: 10px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-bg-tertiary);
 }
 
 .entity-rank {
     width: 28px;
     height: 28px;
     background: var(--color-primary);
+    color: var(--color-on-primary) !important;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -644,15 +650,17 @@
 .btn-view-all {
     width: 100%;
     margin-top: 1.5rem;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    color: white;
+    padding: 12px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    color: var(--color-text-primary);
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .btn-view-all:hover { background: var(--color-primary); border-color: var(--color-primary); }
@@ -701,8 +709,9 @@
 .recent-activity-container {
     padding: 1.5rem;
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(10, 12, 20, 0.4);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    margin-top: 3rem;
 }
 
 .activity-header {

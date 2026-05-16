@@ -6,6 +6,7 @@ import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import signalRServiceInstance from '../../services/SignalRService';
 import PdfExportService from '../../services/PdfExportService';
+import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search } from 'lucide-react';
 import './LiveResults.css';
 
 // Convierte "mm:ss.ms" o "hh:mm:ss.ms" a milisegundos
@@ -297,7 +298,7 @@ const LiveResults = () => {
             <header className="results-header container">
                 <div className="top-nav">
                     <Link to="/" className="back-link">
-                        <span className="icon">←</span> Ver todos los eventos
+                        <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Ver todos los eventos
                     </Link>
                     {lastUpdated && (
                         <div className="sync-status">
@@ -332,9 +333,9 @@ const LiveResults = () => {
                         })()}
                         <h1>{evento.nombre}</h1>
                         <div className="event-meta">
-                            <span>📍 {evento.ubicacion}</span>
+                            <span><MapPin size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> {evento.ubicacion}</span>
                             <span className="sep">•</span>
-                            <span>📅 {new Date(evento.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</span>
+                            <span><Calendar size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> {new Date(evento.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</span>
                         </div>
                     </div>
                 </div>
@@ -344,7 +345,10 @@ const LiveResults = () => {
                 {/* Selector de Pruebas */}
                 <aside className="pruebas-sidebar glass-effect">
                     <div className="sidebar-header">
-                        <h3>Cronograma</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <h3 style={{ margin: 0 }}>Cronograma</h3>
+                            <ThemeToggle />
+                        </div>
                         <div className="search-box">
                             <input 
                                 type="text" 
@@ -379,7 +383,7 @@ const LiveResults = () => {
                                                 dotColor = '#ef4444';
                                             }
                                             
-                                            if (isMedal) return <span style={{ fontSize: '0.9rem', marginRight: '2px' }}>🥇</span>;
+                                            if (isMedal) return <Trophy size={14} style={{ color: '#eab308', marginRight: '4px' }} />;
 
                                             return dotColor !== 'transparent' && (
                                                 <span 
@@ -430,7 +434,7 @@ const LiveResults = () => {
                                             className="btn-pdf-main" 
                                             onClick={() => setShowPdfMenu(!showPdfMenu)}
                                         >
-                                            📥 Descargar PDF
+                                            <Download size={16} style={{ marginRight: '8px' }} /> Descargar PDF
                                         </button>
                                         
                                         {showPdfMenu && (
@@ -518,8 +522,8 @@ const LiveResults = () => {
                                         <h3 style={{ margin: 0, color: 'var(--color-primary)' }}>
                                             {selectedFase.nombreFase || selectedFase.NombreFase}
                                         </h3>
-                                        <div className="fase-time" style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '600' }}>
-                                            ⏰ Programada: {formatTime(selectedFase.fechaHoraProgramada || selectedFase.FechaHoraProgramada)} hs
+                                        <div className="fase-time" style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Clock size={14} /> Programada: {formatTime(selectedFase.fechaHoraProgramada || selectedFase.FechaHoraProgramada)} hs
                                         </div>
                                     </div>
                                     <table className="results-table">
@@ -558,7 +562,7 @@ const LiveResults = () => {
                                                         <tr key={r.id || r.Id || i} className={`pos-row pos-${pos}`}>
                                                             <td className="pos-cell">
                                                                 <div className="pos-number">
-                                                                    {pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos || '-'}
+                                                                    {pos === 1 ? <Trophy size={16} style={{ color: '#eab308' }} /> : pos === 2 ? <Trophy size={16} style={{ color: '#94a3b8' }} /> : pos === 3 ? <Trophy size={16} style={{ color: '#cd7f32' }} /> : pos || '-'}
                                                                 </div>
                                                             </td>
                                                             <td className="carril-cell">{r.carril || r.Carril || '-'}</td>

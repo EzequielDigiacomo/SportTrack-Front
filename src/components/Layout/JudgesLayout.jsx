@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from './AdminSidebar';
+import ThemeToggle from '../Common/ThemeToggle';
 import {
     LayoutDashboard,
     Calendar,
@@ -148,6 +149,7 @@ const JudgesLayout = ({ children }) => {
                     </div>
                     
                     <div className="header-right-group">
+                        <ThemeToggle />
                         <div className="mobile-user-pill">
                             <span>@{user?.username || 'user'}</span>
                         </div>

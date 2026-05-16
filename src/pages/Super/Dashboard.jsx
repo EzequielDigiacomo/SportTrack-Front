@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from '../../components/Layout/AdminSidebar';
+import ThemeToggle from '../../components/Common/ThemeToggle';
 import AdminHome from './AdminHome';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
 import GestionClubesSection from './sections/GestionClubesSection';
@@ -47,25 +48,31 @@ const NAV_ITEMS = [
 const SuperDashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const role = user?.rol?.trim().toLowerCase();
+    const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
+    const [isSidebarOpen, setIsSidebarOpen] = useState(isSuper); // Siempre abierto por defecto para SuperAdmin
     const timeoutRef = useRef(null);
     const inactivityRef = useRef(null);
 
     const closeSidebar = () => setIsSidebarOpen(false);
 
     const resetInactivity = () => {
-        if (inactivityRef.current) clearTimeout(inactivityRef.current);
-        inactivityRef.current = setTimeout(closeSidebar, 5000);
+        // Removiendo auto-cierre por inactividad a pedido del usuario
     };
 
     const handleMouseEnter = () => {
+        if (isSuper) return; // Si es super, ya está fijo
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setIsSidebarOpen(true);
         resetInactivity();
     };
 
     const handleMouseLeave = () => {
-        timeoutRef.current = setTimeout(() => setIsSidebarOpen(false), 800);
+        if (isSuper) return; // Si es super, se queda fijo
+        // En desktop se cierra al salir, en mobile es manual
+        if (window.innerWidth > 768) {
+            timeoutRef.current = setTimeout(() => setIsSidebarOpen(false), 800);
+        }
     };
 
     const handleLogout = async () => {
@@ -105,19 +112,23 @@ const SuperDashboard = () => {
     return (
         <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
             {/* Edge Sensor for Sidebar */}
-            <div 
-                className="sidebar-edge-sensor" 
-                onMouseEnter={handleMouseEnter}
-                onClick={handleMouseEnter}
-            />
+            {!isSuper && (
+                <div 
+                    className="sidebar-edge-sensor" 
+                    onMouseEnter={handleMouseEnter}
+                    onClick={handleMouseEnter}
+                />
+            )}
 
-            <button 
-                className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
-                onClick={() => setIsSidebarOpen(true)}
-                title="Abrir menú"
-            >
-                <Menu size={24} color="var(--color-primary-light)" />
-            </button>
+            {!isSuper && (
+                <button 
+                    className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
+                    onClick={() => setIsSidebarOpen(true)}
+                    title="Abrir menú"
+                >
+                    <Menu size={24} color="var(--color-primary-light)" />
+                </button>
+            )}
 
             {/* Quick Actions (Top Right) */}
             <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>

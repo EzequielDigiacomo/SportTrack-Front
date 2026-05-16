@@ -24,7 +24,7 @@
 }
 
 .saas-list-container.has-selection {
-    flex: 0.6;
+    flex: 0.68;
 }
 
 .list-toolbar {
@@ -58,12 +58,13 @@
 .saas-admin-table th {
     text-align: left;
     padding: 1.25rem 1rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 800;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .saas-admin-table td {
@@ -102,11 +103,32 @@
 
 .fed-plan-badge {
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 900;
     text-transform: uppercase;
-    padding: 2px 8px;
-    border: 1px solid;
-    border-radius: 4px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Plan Specific Colors for Light/Dark Mode (High Contrast) */
+.fed-plan-badge[data-plan*="oro"] {
+    background: #fbbf24 !important;
+    color: #000000 !important;
+    border-color: #b45309 !important;
+}
+
+.fed-plan-badge[data-plan*="bronce"] {
+    background: #ea580c !important;
+    color: #ffffff !important;
+    border-color: #9a3412 !important;
+}
+
+.fed-plan-badge[data-plan*="plata"] {
+    background: #94a3b8 !important;
+    color: #000000 !important;
+    border-color: #475569 !important;
 }
 
 .club-count-badge {
@@ -169,7 +191,7 @@ tr:hover .arrow-icon {
 
 /* Detail Panel */
 .saas-detail-panel {
-    flex: 0.4;
+    flex: 0.32;
     border-radius: 12px;
     overflow-y: auto;
     display: none;
@@ -187,8 +209,10 @@ tr:hover .arrow-icon {
 
 .header-top {
     display: flex;
-    gap: 1rem;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    text-align: center;
 }
 
 .btn-close-detail {
@@ -205,30 +229,32 @@ tr:hover .arrow-icon {
 }
 
 .fed-main-title h3 { margin: 0; font-size: 1.4rem; line-height: 1.2; }
-.fed-tags { display: flex; gap: 8px; margin-top: 4px; }
+.fed-tags { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
 
-.tag-status { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
-.tag-status.active { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-.tag-status.inactive { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.tag-status { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; }
+.tag-status.active { background: #dcfce7; color: #15803d; border: 1px solid #15803d; }
+.tag-status.inactive { background: #fee2e2; color: #b91c1c; border: 1px solid #b91c1c; }
 
-.tag-id { font-size: 0.7rem; color: var(--color-text-muted); }
+.tag-id { font-size: 0.75rem; color: #000000; font-weight: 800; }
 
 .header-actions-mini {
     display: flex;
-    gap: 10px;
-    margin-top: 1.25rem;
+    gap: 12px;
+    margin-top: 1.5rem;
+    justify-content: center;
 }
 
 .btn-mini-action {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    background: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: #000000;
     cursor: pointer;
 }
 
@@ -236,11 +262,11 @@ tr:hover .arrow-icon {
 .btn-mini-action.danger:hover { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
 
 .detail-info-grid {
-    padding: 1rem 1.5rem;
-    display: flex;
-    flex-wrap: wrap;
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 1rem;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .info-item {
@@ -248,7 +274,8 @@ tr:hover .arrow-icon {
     align-items: center;
     gap: 8px;
     font-size: 0.85rem;
-    color: var(--color-text-muted);
+    color: #000000;
+    font-weight: 600;
 }
 
 .detail-stats-cards {
@@ -259,17 +286,18 @@ tr:hover .arrow-icon {
 }
 
 .detail-card {
-    background: rgba(255, 255, 255, 0.03);
-    padding: 1rem;
-    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.08);
+    padding: 1.25rem;
+    border-radius: 12px;
     display: flex;
-    gap: 1.25rem;
+    gap: 1.5rem;
     align-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    width: 100%;
 }
 
 .card-info { flex: 1; }
-.card-info label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; display: block; }
+.card-info label { font-size: 0.75rem; color: #000000; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; display: block; }
 
 .stat-value-large {
     font-size: 1.5rem;
@@ -312,8 +340,8 @@ tr:hover .arrow-icon {
 
 .control-field label {
     font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--color-text-dim);
+    font-weight: 800;
+    color: #000000;
     text-transform: uppercase;
     letter-spacing: 0.8px;
 }
@@ -321,12 +349,12 @@ tr:hover .arrow-icon {
 .control-field select {
     width: 100%;
     padding: 0.85rem 1.25rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid #475569;
     border-radius: 12px;
-    color: white;
+    color: #000000;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
     outline: none;
@@ -390,11 +418,12 @@ tr:hover .arrow-icon {
 .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); }
 
 .form-group input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid #475569;
     padding: 10px 12px;
     border-radius: 8px;
-    color: white;
+    color: #000000;
+    font-weight: 600;
 }
 
 .section-title-modal {

@@ -12,7 +12,7 @@
     align-items: center;
     margin-bottom: var(--spacing-md);
     padding-bottom: var(--spacing-sm);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--color-surface-hover);
 }
 
 .admin-section-header h2,
@@ -51,9 +51,9 @@
 }
 
 .btn-admin-secondary {
-    background: rgba(255,255,255,0.05);
+    background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid var(--color-surface-hover);
     padding: 0.6rem 1.2rem;
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -70,9 +70,9 @@
 }
 
 .btn-admin-danger {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: rgba(var(--color-error-rgb), 0.1);
+    color: var(--color-error);
+    border: 1px solid rgba(var(--color-error-rgb), 0.2);
     padding: 0.6rem 1.2rem;
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -90,8 +90,8 @@
 }
 
 .btn-icon-admin {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-surface-hover);
     color: var(--color-text-secondary);
     padding: 0.4rem;
     border-radius: var(--radius-sm);
@@ -108,8 +108,8 @@
 }
 
 .btn-icon-admin.danger {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.2);
+    color: var(--color-error);
+    border-color: rgba(var(--color-error-rgb), 0.2);
 }
 
 .btn-icon-admin.danger:hover {
@@ -122,8 +122,8 @@
     border-radius: var(--radius-lg);
     overflow-y: auto;
     max-height: calc(100vh - 300px);
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-surface-hover);
 }
 
 .admin-table-wrapper::-webkit-scrollbar {
@@ -134,7 +134,7 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    background: #1a1e2e; /* Fondo sólido para que no se transparente al scrollear */
+    background: var(--color-bg-secondary);
 }
 
 .admin-table {
@@ -145,18 +145,18 @@
 .admin-table th {
     padding: var(--spacing-md) var(--spacing-lg);
     text-align: left;
-    color: var(--color-text-muted);
+    color: var(--color-text-primary);
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: rgba(255,255,255,0.02);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    letter-spacing: 0.8px;
+    background: var(--color-bg-tertiary);
+    border-bottom: 2px solid var(--color-border);
 }
 
 .admin-table td {
     padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--color-surface-hover);
     color: var(--color-text-primary);
     font-size: 0.95rem;
 }
@@ -184,9 +184,9 @@
    ACTION BUTTONS (COLORFUL)
    ────────────────────────────────────────────────────────────────────────── */
 .btn-icon-edit {
-    background: rgba(0, 107, 182, 0.1);
-    border: 1px solid rgba(0, 107, 182, 0.2);
-    color: #3498db;
+    background: rgba(var(--color-primary-rgb), 0.1);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+    color: var(--color-primary);
     padding: 0.45rem 0.6rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -204,9 +204,9 @@
 }
 
 .btn-icon-view {
-    background: rgba(255, 221, 0, 0.1);
-    border: 1px solid rgba(255, 221, 0, 0.2);
-    color: #ffdd00;
+    background: rgba(var(--color-accent-rgb), 0.1);
+    border: 1px solid rgba(var(--color-accent-rgb), 0.2);
+    color: var(--color-accent);
     padding: 0.45rem 0.6rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -224,9 +224,9 @@
 }
 
 .btn-icon-delete {
-    background: rgba(239, 51, 64, 0.1);
-    border: 1px solid rgba(239, 51, 64, 0.2);
-    color: #ef3340;
+    background: rgba(var(--color-error-rgb), 0.1);
+    border: 1px solid rgba(var(--color-error-rgb), 0.2);
+    color: var(--color-error);
     padding: 0.45rem 0.6rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -254,8 +254,7 @@
 }
 
 .btn-icon-admin:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    color: var(--color-on-primary);
 }
 
 /* BADGES */
@@ -275,11 +274,12 @@
 .inscripciones-tag.closed { color: var(--color-text-muted); }
 
 .sigla-tag {
-    background: rgba(255,255,255,0.05);
+    background: rgba(var(--color-primary-rgb), 0.1);
     padding: 0.2rem 0.6rem;
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     font-family: var(--font-mono);
+    color: var(--color-primary);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -289,7 +289,8 @@
     padding: 0.75rem 1rem;
     border-radius: var(--radius-md);
     margin-bottom: var(--spacing-sm);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-surface-hover);
+    background: var(--color-bg-secondary);
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
@@ -313,7 +314,7 @@
     color: var(--color-primary-light);
     margin-bottom: 0;
     padding-bottom: 0.3rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--color-surface-hover);
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -343,10 +344,10 @@
 .admin-select {
     width: 100%;
     padding: 0.5rem 0.6rem !important;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-surface-hover);
     border-radius: var(--radius-md);
-    color: white;
+    color: var(--color-text-primary);
     font-size: 0.9rem;
     transition: all var(--transition-base);
 }
@@ -459,8 +460,8 @@ form:invalid button[type="submit"] {
 .form-field select,
 .form-field textarea {
     padding: 0.7rem 0.9rem;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-surface-hover);
     border-radius: var(--radius-md);
     color: var(--color-text-primary);
     font-size: 0.95rem;
@@ -533,20 +534,20 @@ form:invalid button[type="submit"] {
 
 .chip-ecu-yellow {
     background: rgba(255, 221, 0, 0.1) !important;
-    color: #ffdd00 !important;
+    color: var(--color-accent) !important;
     border: 1px solid rgba(255, 221, 0, 0.3) !important;
 }
 
 .chip-ecu-blue {
-    background: rgba(0, 107, 182, 0.1) !important;
-    color: #3498db !important; /* Un poco más claro para legibilidad */
-    border: 1px solid rgba(0, 107, 182, 0.3) !important;
+    background: rgba(var(--color-primary-rgb), 0.1) !important;
+    color: var(--color-primary) !important;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.3) !important;
 }
 
 .chip-ecu-red {
-    background: rgba(239, 51, 64, 0.1) !important;
-    color: #ef3340 !important;
-    border: 1px solid rgba(239, 51, 64, 0.3) !important;
+    background: rgba(var(--color-error-rgb), 0.1) !important;
+    color: var(--color-error) !important;
+    border: 1px solid rgba(var(--color-error-rgb), 0.3) !important;
 }
 
 .chip.inactive {
@@ -592,7 +593,8 @@ form:invalid button[type="submit"] {
     padding: 2rem;
     border-radius: 12px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid var(--color-surface-hover);
+    background: var(--color-bg-secondary);
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -616,7 +618,7 @@ form:invalid button[type="submit"] {
 
 .dashboard-card h3 {
     margin: 0;
-    color: white;
+    color: var(--color-text-primary);
 }
 
 .card-label {
@@ -696,7 +698,7 @@ form:invalid button[type="submit"] {
     width: 18px;
     height: 18px;
     border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
+    border-top-color: var(--color-on-primary);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
 }

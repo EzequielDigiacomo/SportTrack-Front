@@ -37,12 +37,12 @@ const EstadoBadge = ({ activo }) => (
         alignItems: 'center',
         gap: '4px',
         fontSize: '0.68rem',
-        fontWeight: 600,
-        padding: '2px 7px',
+        fontWeight: 800,
+        padding: '3px 8px',
         borderRadius: '10px',
-        background: activo !== false ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-        color: activo !== false ? '#22c55e' : '#ef4444',
-        border: `1px solid ${activo !== false ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+        background: activo !== false ? '#dcfce7' : '#fee2e2',
+        color: activo !== false ? '#15803d' : '#b91c1c',
+        border: `1px solid ${activo !== false ? '#15803d' : '#b91c1c'}`,
     }}>
         <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
         {activo !== false ? 'Activa' : 'Inactiva'}
@@ -67,14 +67,14 @@ const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
                             </h4>
                             
                             {(u.nombre || u.apellido) && (
-                                <p style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                <p style={{ fontWeight: 800, color: '#000000' }}>
                                     <User size={14} className="text-primary" /> {[u.nombre, u.apellido].filter(Boolean).join(' ')}
-                                    {u.dni && <span style={{ color: '#64748b', fontSize: '0.75rem', marginLeft: '0.5rem' }}>· DNI {u.dni}</span>}
+                                    {u.dni && <span style={{ color: '#000000', fontSize: '0.75rem', marginLeft: '0.5rem' }}>· DNI {u.dni}</span>}
                                 </p>
                             )}
-                            <p><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
-                            {u.clubNombre && <p><Building2 size={14} className="text-accent" /> {u.clubNombre}</p>}
-                            {u.telefono && <p><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
+                            <p style={{ color: '#000000' }}><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
+                            {u.clubNombre && <p style={{ color: '#000000' }}><Building2 size={14} className="text-accent" /> {u.clubNombre}</p>}
+                            {u.telefono && <p style={{ color: '#000000' }}><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
                         </div>
                         <div className="card-actions-row">
                             <button className="btn-icon-view" onClick={() => onEditPassword(u)} title="Cambiar Contraseña">
@@ -126,18 +126,18 @@ const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
                                 </td>
                                 <td>
                                     {(u.nombre || u.apellido)
-                                        ? <span style={{ color: '#e2e8f0' }}>{[u.nombre, u.apellido].filter(Boolean).join(' ')}</span>
-                                        : <span style={{ color: '#475569' }}>—</span>
+                                        ? <span style={{ color: '#000000', fontWeight: '800' }}>{[u.nombre, u.apellido].filter(Boolean).join(' ')}</span>
+                                        : <span style={{ color: '#94a3b8' }}>—</span>
                                     }
                                     {u.dni && (
-                                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>DNI: {u.dni}</span>
+                                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}>DNI: {u.dni}</span>
                                     )}
                                 </td>
                                 <td>{u.email || '—'}</td>
                                 <td><RolBadge rol={u.rol} /></td>
-                                <td>
+                                <td style={{ color: '#000000' }}>
                                     {u.clubNombre || '—'}
-                                    {u.telefono && <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>📞 {u.telefono}</span>}
+                                    {u.telefono && <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
                                 </td>
                                 <td className="actions-cell" style={{ textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>

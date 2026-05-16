@@ -447,10 +447,10 @@ return (
                                                 </thead>
                                                 <tbody>
                                                     {inscriptos.map(ins => (
-                                                        <tr key={ins.id} style={{ background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.05)' : 'transparent' }}>
+                                                        <tr key={ins.id} style={{ background: ins.esCabezaDeSerie ? 'rgba(var(--color-accent-rgb), 0.1)' : 'transparent', borderBottom: '1px solid var(--color-border)' }}>
                                                             <td>
                                                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                    <strong style={{ color: ins.esCabezaDeSerie ? '#ffdd00' : 'inherit', fontSize: '1.1rem' }}>
+                                                                    <strong style={{ color: ins.esCabezaDeSerie ? 'var(--color-accent)' : 'inherit', fontSize: '1.1rem' }}>
                                                                         {ins.tripulantes && ins.tripulantes.length > 0 
                                                                             ? [ins.participanteNombreCompleto, ...ins.tripulantes.map(t => t.participanteNombreCompleto)].join(' - ')
                                                                             : (ins.participanteNombreCompleto || "Bote de Equipo")
@@ -481,14 +481,14 @@ return (
                                                                         onClick={() => handleToggleSeeding(ins.id)}
                                                                         title={ins.esCabezaDeSerie ? "Quitar Cabeza de Serie" : "Marcar como Cabeza de Serie"}
                                                                         style={{
-                                                                            color: ins.esCabezaDeSerie ? '#ffdd00' : 'var(--color-text-muted)',
-                                                                            background: ins.esCabezaDeSerie ? 'rgba(255,221,0,0.1)' : 'rgba(255,255,255,0.05)',
-                                                                            border: ins.esCabezaDeSerie ? '1px solid rgba(255,221,0,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                                                            color: ins.esCabezaDeSerie ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                                                                            background: ins.esCabezaDeSerie ? 'rgba(var(--color-accent-rgb), 0.1)' : 'var(--color-bg-tertiary)',
+                                                                            border: ins.esCabezaDeSerie ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
                                                                             padding: '0.4rem',
                                                                             borderRadius: '50%'
                                                                         }}
                                                                     >
-                                                                        <Star size={16} fill={ins.esCabezaDeSerie ? '#ffdd00' : 'none'} />
+                                                                        <Star size={16} fill={ins.esCabezaDeSerie ? 'var(--color-accent)' : 'none'} />
                                                                     </button>
                                                                 )}
                                                             </td>
@@ -519,8 +519,6 @@ return (
                         )}
 
                         {(() => {
-                            // Dropdown 3 → filtroVisualFase = specific fase name → show only that fase
-                            // Dropdown 2 → filtroVisualFase = 'Todas' → show all fases of the prueba
                             const fasesParaStartList = filtroVisualFase !== 'Todas'
                                 ? fases.filter(f => f.nombreFase === filtroVisualFase)
                                 : fases;
@@ -704,7 +702,7 @@ return (
                                                 <button
                                                     className="btn-admin-secondary"
                                                     onClick={handleSimulateResults}
-                                                    style={{ borderColor: 'rgba(255,221,0,0.3)', color: '#ffdd00' }}
+                                                    style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}
                                                     title="Genera tiempos aleatorios para testear (sobreescribe los actuales)"
                                                 >
                                                     ⚡ Simular Tiempos

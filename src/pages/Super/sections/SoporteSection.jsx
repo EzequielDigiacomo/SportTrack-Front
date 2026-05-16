@@ -16,7 +16,8 @@ import {
     Monitor,
     Smartphone,
     Globe as GlobeIcon,
-    Cpu
+    Cpu,
+    Info
 } from 'lucide-react';
 import { parseUserAgent } from '../../../utils/deviceUtils';
 import './SoporteSection.css';
@@ -125,8 +126,8 @@ const SoporteSection = () => {
                                     return (
                                         <div key={log.id} className={`log-item glass-effect ${isError ? 'is-error' : ''} ${isExpanded ? 'is-expanded' : ''}`}>
                                             <div className="log-summary" onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
-                                                <div className="log-badge">
-                                                    {isError ? '🚨 ERROR' : '📝 INFO'}
+                                                <div className="log-badge" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    {isError ? <><AlertCircle size={14} /> ERROR</> : <><Info size={14} /> INFO</>}
                                                 </div>
                                                 <div className="log-main-info">
                                                     <span className="log-modulo">{log.modulo}</span>

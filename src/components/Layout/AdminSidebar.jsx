@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LogOut, X } from 'lucide-react';
+import ThemeToggle from '../Common/ThemeToggle';
 
 const AdminSidebar = ({ 
     isOpen, 
@@ -24,9 +25,12 @@ const AdminSidebar = ({
                     <img src={logo} alt="Logo" className="brand-logo-img" />
                     <span className="brand-name gradient-text">SportTrack</span>
                 </div>
-                <button className="sidebar-close-btn" onClick={onClose} aria-label="Cerrar menú">
-                    <X size={20} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ThemeToggle />
+                    <button className="sidebar-close-btn" onClick={onClose} aria-label="Cerrar menú">
+                        <X size={20} />
+                    </button>
+                </div>
             </div>
 
             <div className="sidebar-user">

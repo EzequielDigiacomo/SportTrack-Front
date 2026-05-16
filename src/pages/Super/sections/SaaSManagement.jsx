@@ -229,10 +229,7 @@ const SaaSManagement = () => {
                                         <ArrowRight size={16} className="text-muted" />
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                                        <span className="badge" style={{ 
-                                            borderColor: planColor, color: planColor, border: '1px solid',
-                                            fontSize: '0.65rem', fontWeight: '900', padding: '2px 10px', borderRadius: '20px'
-                                        }}>
+                                        <span className="fed-plan-badge" data-plan={fed.planNombre?.toLowerCase()}>
                                             {fed.planNombre}
                                         </span>
                                         {fed.planAlDia ? (
@@ -314,19 +311,7 @@ const SaaSManagement = () => {
                                                 </div>
                                             </td>
                                             <td data-label="Plan">
-                                                <span className="fed-plan-badge" style={{ 
-                                                    borderColor: planColor, 
-                                                    color: planColor,
-                                                    backgroundColor: 'rgba(255,255,255,0.03)',
-                                                    boxShadow: planColor ? `0 0 10px ${planColor}33` : 'none',
-                                                    padding: '4px 12px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '0.65rem',
-                                                    fontWeight: '900',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '1px',
-                                                    border: '1px solid'
-                                                }}>
+                                                <span className="fed-plan-badge" data-plan={fed.planNombre?.toLowerCase()}>
                                                     {fed.planNombre}
                                                 </span>
                                             </td>

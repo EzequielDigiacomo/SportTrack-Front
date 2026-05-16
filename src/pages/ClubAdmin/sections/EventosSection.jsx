@@ -85,8 +85,8 @@ const EventosSection = () => {
                                     <div className="evento-native-info" onClick={() => handleOpenInscripcion(ev)}>
                                         <span className="evento-native-name">{ev.nombre}</span>
                                         <span className="evento-native-meta">
-                                            📅 {new Date(ev.fecha).toLocaleDateString('es-AR')}
-                                            {ev.ubicacion && <> · 📍 {ev.ubicacion}</>}
+                                            <Calendar size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {new Date(ev.fecha).toLocaleDateString('es-AR')}
+                                            {ev.ubicacion && <> · <MapPin size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {ev.ubicacion}</>}
                                         </span>
                                         <span className="evento-native-badges">
                                             {estadoBadge(ev.estado)}
