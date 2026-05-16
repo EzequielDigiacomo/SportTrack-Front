@@ -120,7 +120,7 @@ function Home() {
                             <li><Check size={18} className="icon-check" /> 15 Clubes Afiliados</li>
                             <li><Check size={18} className="icon-check" /> Carga Manual de Resultados</li>
                             <li><Check size={18} className="icon-check" /> Reportes en PDF</li>
-                            <li><Check size={18} className="icon-check" /> Resultados Live</li>
+                            <li><Check size={18} className="icon-check" /> Live Results (Web)</li>
                             <li className="disabled"><X size={18} /> Dashboards de Jueces</li>
                             <li className="disabled"><X size={18} /> App Móvil</li>
                         </ul>
@@ -138,8 +138,8 @@ function Home() {
                         <ul className="plan-features">
                             <li><Check size={18} className="icon-check" /> 4,000 Atletas</li>
                             <li><Check size={18} className="icon-check" /> 40 Clubes Afiliados</li>
-                            <li><Check size={18} className="icon-check" /> **Dashboards para Jueces**</li>
-                            <li><Check size={18} className="icon-check" /> **App Móvil (Public)**</li>
+                            <li><Check size={18} className="icon-check" /> Dashboards para Jueces</li>
+                            <li><Check size={18} className="icon-check" /> App Móvil (Public)</li>
                             <li><Check size={18} className="icon-check" /> Live Results (Web)</li>
                             <li className="disabled"><X size={18} /> SignalR Sync (Real-Time)</li>
                             <li className="disabled"><X size={18} /> Auditoría Total</li>
@@ -156,9 +156,9 @@ function Home() {
                             <div className="plan-price">Tecnología Real-Time</div>
                         </div>
                         <ul className="plan-features">
-                            <li><Check size={18} className="icon-check" /> **Atletas Ilimitados**</li>
-                            <li><Check size={18} className="icon-check" /> **Clubes Ilimitados**</li>
-                            <li><Check size={18} className="icon-check" /> **SignalR Full Sync**</li>
+                            <li><Check size={18} className="icon-check" /> Atletas Ilimitados</li>
+                            <li><Check size={18} className="icon-check" /> Clubes Ilimitados</li>
+                            <li><Check size={18} className="icon-check" /> SignalR Full Sync</li>
                             <li><Check size={18} className="icon-check" /> App Móvil Full (Admin)</li>
                             <li><Check size={18} className="icon-check" /> Exportación Excel/CSV</li>
                             <li><Check size={18} className="icon-check" /> Auditoría de Tiempos</li>
