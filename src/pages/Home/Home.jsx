@@ -5,7 +5,8 @@ import EventoService from '../../services/EventoService'
 import logo from '../../assets/logo-sporttrack.png'
 import './Home.css'
 import Skeleton from '../../components/Common/Skeleton'
-import { Check, X, Zap, Award, Activity, Smartphone, Share2, FileSpreadsheet, Timer, Globe, Shield, Flag, Calendar, MapPin, Mail } from 'lucide-react'
+import { Check, X, Zap, Award, Activity, Smartphone, Share2, FileSpreadsheet, Timer, Globe as GlobeIcon, Shield, Flag, Calendar, MapPin, Mail } from 'lucide-react'
+import WorldGlobe from '../../components/Common/WorldGlobe'
 
 function Home() {
     const { isAuthenticated, user } = useAuth()
@@ -37,17 +38,22 @@ function Home() {
             {/* ── HERO ── */}
             <section className="hero">
                 <div className="hero-bg-glow" />
-                <div className="container hero-content">
-                    <div className="hero-badge">Sistema Oficial de la Federación Ecuatoriana de Canotaje</div>
-                    <h1 className="hero-title">
-                        Resultados en <span className="gradient-text">Tiempo Real</span>
-                        <br />para Competencias de Canotaje
-                    </h1>
-                    <p className="hero-subtitle">
-                        SportTrack gestiona eventos, inscripciones y cronometraje de regatas de velocidad (sprint).
-                        Resultados disponibles para el público al instante, sin necesidad de registro.
-                    </p>
-                    <div className="hero-actions-placeholder" />
+                <div className="container hero-content-grid">
+                    <div className="hero-text">
+                        <div className="hero-badge">Sistema de Gestión de Competencias Deportivas</div>
+                        <h1 className="hero-title">
+                            Resultados en <span className="gradient-text">Tiempo Real</span>
+                            <br />para Competencias de Canotaje
+                        </h1>
+                        <p className="hero-subtitle">
+                            SportTrack gestiona eventos, inscripciones y cronometraje de regatas de velocidad (sprint).
+                            Resultados disponibles para el público al instante, sin necesidad de registro.
+                        </p>
+                    </div>
+
+                    <div className="hero-visual">
+                        <WorldGlobe />
+                    </div>
                 </div>
             </section>
 
@@ -65,7 +71,7 @@ function Home() {
                         <p>Soporte para todas las categorías (K1, K2, K4, C1, C2) y distancias oficiales.</p>
                     </div>
                     <div className="feature-card glass-effect">
-                        <div className="feature-icon-wrapper"><Globe size={32} /></div>
+                        <div className="feature-icon-wrapper"><GlobeIcon size={32} /></div>
                         <h3>Acceso Global</h3>
                         <p>Resultados abiertos al público sin necesidad de registro desde cualquier dispositivo.</p>
                     </div>
@@ -78,30 +84,19 @@ function Home() {
             </section>
 
             {/* ── ÚLTIMO EVENTO ── */}
-            {(loading || ultimoEvento) && (
+            {!loading && ultimoEvento && (
                 <section className="ultimo-evento-section container" id="eventos">
                     <div className="section-label"><Flag size={18} style={{ marginRight: '8px' }} /> Último Evento Finalizado</div>
-                    {loading ? (
-                        <div className="ultimo-evento-card glass-effect" style={{ padding: '2rem' }}>
-                            <div className="evento-info">
-                                <Skeleton width="250px" height="32px" variant="rounded" className="mb-md" />
-                                <Skeleton width="180px" height="20px" variant="rounded" className="mb-sm" />
-                                <Skeleton width="150px" height="20px" variant="rounded" />
-                            </div>
-                            <Skeleton width="180px" height="45px" variant="rounded" />
+                    <div className="ultimo-evento-card glass-effect">
+                        <div className="evento-info">
+                            <h2>{ultimoEvento.nombre}</h2>
+                            <p className="evento-meta"><Calendar size={14} style={{ marginRight: '6px' }} /> {new Date(ultimoEvento.fecha).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p className="evento-meta"><MapPin size={14} style={{ marginRight: '6px' }} /> {ultimoEvento.ubicacion}</p>
                         </div>
-                    ) : (
-                        <div className="ultimo-evento-card glass-effect">
-                            <div className="evento-info">
-                                <h2>{ultimoEvento.nombre}</h2>
-                                <p className="evento-meta"><Calendar size={14} style={{ marginRight: '6px' }} /> {new Date(ultimoEvento.fecha).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                <p className="evento-meta"><MapPin size={14} style={{ marginRight: '6px' }} /> {ultimoEvento.ubicacion}</p>
-                            </div>
-                            <Link to={`/resultados/${ultimoEvento.id}`} className="btn-ver-resultados">
-                                Ver Resultados Completos →
-                            </Link>
-                        </div>
-                    )}
+                        <Link to={`/resultados/${ultimoEvento.id}`} className="btn-ver-resultados">
+                            Ver Resultados Completos →
+                        </Link>
+                    </div>
                 </section>
             )}
 

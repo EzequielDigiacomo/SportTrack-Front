@@ -17,11 +17,15 @@ import JudgesLayout from './components/Layout/JudgesLayout'
 import NotificationCenter from './components/Common/NotificationCenter'
 import { useAuth } from './context/AuthContext'
 import PlanDetails from './pages/Home/PlanDetails'
+import { useLocation } from 'react-router-dom'
 
 function App() {
     const { toasts, removeToast } = useToast()
     const { user } = useAuth()
     
+
+    const location = useLocation();
+    const isHomePage = location.pathname === '/';
 
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isJudgeOrAdmin = user && (
@@ -74,7 +78,7 @@ function App() {
             <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
-        <NotificationCenter isAdmin={isJudgeOrAdmin} />
+        {!isHomePage && <NotificationCenter isAdmin={isJudgeOrAdmin} />}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         </>
     )

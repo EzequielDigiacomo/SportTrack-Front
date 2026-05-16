@@ -1,0 +1,38 @@
+.globe-container {
+    width: 600px;
+    height: 600px;
+
+    position: relative;
+    /* Optional shadow behind the whole map to make it pop */
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 
+  The overlay shadow helps give the SVG sphere 
+  an extra 3D lighting effect on top of the gradient. 
+*/
+.globe-overlay-shadow {
+    position: absolute;
+    inset: 15%;
+    /* Match the visual scale of the globe */
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, transparent 20%, rgba(0, 0, 0, 0.16) 75%, rgba(0, 0, 0, 0.5) 100%);
+    pointer-events: none;
+    box-shadow: inset 10px 10px 30px rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 1024px) {
+    .globe-container {
+        width: 300px;
+        height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .globe-container {
+        margin: 2rem auto;
+    }
+}
