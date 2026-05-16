@@ -30,8 +30,13 @@ const AuthService = {
     },
 
     logout: async () => {
-        // En JWT el logout es local (borrar tokens), el servidor no necesita un endpoint.
-        return Promise.resolve({ message: 'Sesión cerrada localmente' });
+        try {
+            const response = await api.post('/auth/logout');
+            return response.data;
+        } catch (error) {
+            console.error("Error on backend logout", error);
+            return { message: 'Sesión cerrada localmente (fallo servidor)' };
+        }
     },
 
     validateSession: async () => {

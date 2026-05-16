@@ -10,8 +10,8 @@ function Navbar() {
     const navigate = useNavigate()
     const { isAuthenticated, logout, user } = useAuth()
 
-    const handleLogout = () => {
-        logout()
+    const handleLogout = async () => {
+        await logout()
         navigate('/login')
     }
 
@@ -38,7 +38,7 @@ function Navbar() {
                                 onClick={() => {
                                     if (!user?.rol) { navigate('/'); return; }
                                     const role = user.rol.trim().toLowerCase();
-                                    if (role === 'admin') navigate('/super');
+                                    if (role === 'superadmin' || role === 'admin') navigate('/super');
                                     else if (role === 'club') navigate('/club');
                                     else if (role === 'largador' || role === 'cronometrista') navigate('/jueces');
                                     else navigate('/');
