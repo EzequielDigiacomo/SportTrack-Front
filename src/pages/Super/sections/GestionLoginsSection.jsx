@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, ArrowLeft } from 'lucide-react';
 import AuthService from '../../../services/AuthService';
 import api from '../../../services/api';
@@ -12,6 +12,10 @@ import '../../../components/SharedSections/AdminSections.css';
 
 const GestionLoginsSection = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const fedIdFromUrl = params.get('fedId');
+
     const [usuarios, setUsuarios] = useState([]);
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -112,6 +116,24 @@ const GestionLoginsSection = () => {
         }
     };
 
+    // Filtrado de usuarios según la federación seleccionada en la URL (si viene del dashboard de una federación específica)
+    const filteredUsuarios = usuarios.filter(u => {
+        if (!fedIdFromUrl) return true;
+        const targetFedId = parseInt(fedIdFromUrl);
+        if (u.clubId) {
+            const userClub = clubes.find(c => c.id === u.clubId);
+            return userClub && (userClub.id === targetFedId || userClub.parentClubId === targetFedId);
+        }
+        return false;
+    });
+
+    // Filtrado de clubes para la creación de credenciales dentro del ámbito de esta federación
+    const filteredClubes = clubes.filter(c => {
+        if (!fedIdFromUrl) return true;
+        const targetFedId = parseInt(fedIdFromUrl);
+        return c.id === targetFedId || c.parentClubId === targetFedId;
+    });
+
     return (
         <div className="admin-section-container fade-in">
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
@@ -141,7 +163,7 @@ const GestionLoginsSection = () => {
             {view === 'lista' ? (
                 loading ? <div className="loader-container"><div className="loader"></div></div> : (
                     <LoginGrid 
-                        usuarios={usuarios} 
+                        usuarios={filteredUsuarios} 
                         onEditPassword={handleOpenEditar}
                         onToggleActivo={handleToggleActivo}
                     />
@@ -149,7 +171,7 @@ const GestionLoginsSection = () => {
             ) : (
                 <LoginForm 
                     initialData={form}
-                    clubes={clubes}
+                    clubes={filteredClubes}
                     saving={saving}
                     isEditing={view === 'editar'}
                     onCancel={() => setView('lista')}

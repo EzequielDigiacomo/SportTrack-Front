@@ -114,6 +114,56 @@ const SaaSManagement = () => {
         }
     };
 
+    const handleUpdateInlineField = async (clubId, fieldName, value) => {
+        const fed = clubesStatus.find(f => f.clubId === clubId);
+        if (!fed) return;
+
+        const updatedFed = {
+            ...fed,
+            [fieldName]: value
+        };
+
+        if (fieldName === 'frecuenciaPago' || fieldName === 'fechaAltaPlan') {
+            const freq = fieldName === 'frecuenciaPago' ? value : fed.frecuenciaPago;
+            const alta = fieldName === 'fechaAltaPlan' ? value : fed.fechaAltaPlan;
+
+            if (alta) {
+                const altaDate = new Date(alta);
+                if (!isNaN(altaDate.getTime())) {
+                    const vencDate = new Date(altaDate);
+                    if (freq === 'Anual') {
+                        vencDate.setFullYear(vencDate.getFullYear() + 1);
+                    } else {
+                        vencDate.setMonth(vencDate.getMonth() + 1);
+                    }
+                    updatedFed.fechaVencimientoPlan = vencDate.toISOString().split('T')[0];
+                }
+            }
+        }
+
+        const clubData = {
+            nombre: updatedFed.clubNombre,
+            sigla: updatedFed.sigla || '',
+            email: updatedFed.email || '',
+            telefono: updatedFed.telefono || '',
+            direccion: updatedFed.direccion || '',
+            ubicacion: updatedFed.ubicacion || '',
+            activo: updatedFed.activo,
+            frecuenciaPago: updatedFed.frecuenciaPago || 'Mensual',
+            fechaAltaPlan: updatedFed.fechaAltaPlan ? updatedFed.fechaAltaPlan.split('T')[0] : null,
+            fechaVencimientoPlan: updatedFed.fechaVencimientoPlan ? updatedFed.fechaVencimientoPlan.split('T')[0] : null,
+            bloqueadoPorFaltaDePago: updatedFed.bloqueadoPorFaltaDePago || false
+        };
+
+        try {
+            await SaaSService.updateFederacion(clubId, clubData);
+            await fetchData();
+        } catch (err) {
+            console.error("Error updating inline field", err);
+            alert("Error al actualizar la configuración SaaS de la federación.");
+        }
+    };
+
     const handleOpenCreate = () => {
         setIsEditing(false);
         setFormData({ 
@@ -143,6 +193,33 @@ const SaaSManagement = () => {
             adminPassword: ''
         });
         setShowModal(true);
+    };
+
+    const handleModalSaaSChange = (field, value) => {
+        let updatedFields = {
+            ...formData,
+            [field]: value
+        };
+
+        if (field === 'frecuenciaPago' || field === 'fechaAltaPlan') {
+            const freq = field === 'frecuenciaPago' ? value : formData.frecuenciaPago;
+            const alta = field === 'fechaAltaPlan' ? value : formData.fechaAltaPlan;
+
+            if (alta) {
+                const altaDate = new Date(alta);
+                if (!isNaN(altaDate.getTime())) {
+                    const vencDate = new Date(altaDate);
+                    if (freq === 'Anual') {
+                        vencDate.setFullYear(vencDate.getFullYear() + 1);
+                    } else {
+                        vencDate.setMonth(vencDate.getMonth() + 1);
+                    }
+                    updatedFields.fechaVencimientoPlan = vencDate.toISOString().split('T')[0];
+                }
+            }
+        }
+
+        setFormData(updatedFields);
     };
 
     const handleSubmit = async (e) => {
@@ -410,8 +487,7 @@ const SaaSManagement = () => {
                     {selectedFed ? (
                         <div className="detail-content fade-in">
                             <div className="detail-header">
-                                <div className="header-top">
-                                    <button className="btn-close-detail" onClick={() => setSelectedFedId(null)}><X size={20} /></button>
+                                <div className="detail-header-row">
                                     <div className="fed-main-title">
                                         <h3>{selectedFed.clubNombre} {selectedFed.sigla && `(${selectedFed.sigla})`}</h3>
                                         <div className="fed-tags">
@@ -421,6 +497,7 @@ const SaaSManagement = () => {
                                             <span className="tag-id">ID: #{selectedFed.clubId}</span>
                                         </div>
                                     </div>
+                                    <button className="btn-close-detail" onClick={() => setSelectedFedId(null)}><X size={20} /></button>
                                 </div>
                                 <div className="header-actions-mini">
                                     <button className="btn-mini-action" onClick={() => handleOpenEdit(selectedFed)}>
@@ -509,37 +586,45 @@ const SaaSManagement = () => {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                    <div className="control-field">
                                         <label>Frecuencia de Pago</label>
-                                        <div style={{ fontWeight: '600', color: 'var(--color-text)', padding: '6px 0' }}>
-                                            {selectedFed.frecuenciaPago || 'Mensual'}
-                                        </div>
+                                        <select 
+                                            value={selectedFed.frecuenciaPago || 'Mensual'} 
+                                            onChange={(e) => handleUpdateInlineField(selectedFed.clubId, 'frecuenciaPago', e.target.value)}
+                                        >
+                                            <option value="Mensual">Mensual</option>
+                                            <option value="Anual">Anual</option>
+                                        </select>
                                     </div>
-                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                    <div className="control-field">
                                         <label>Inicio de Suscripción</label>
-                                        <div style={{ fontWeight: '600', color: 'var(--color-text)', padding: '6px 0' }}>
-                                            {selectedFed.fechaAltaPlan ? new Date(selectedFed.fechaAltaPlan).toLocaleDateString() : 'Sin fecha'}
-                                        </div>
+                                        <input 
+                                            type="date"
+                                            value={selectedFed.fechaAltaPlan ? selectedFed.fechaAltaPlan.split('T')[0] : ''}
+                                            onChange={(e) => handleUpdateInlineField(selectedFed.clubId, 'fechaAltaPlan', e.target.value)}
+                                        />
                                     </div>
-                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                    <div className="control-field">
                                         <label>Vencimiento de Suscripción</label>
-                                        <div style={{ 
-                                            fontWeight: '600', 
-                                            padding: '6px 0',
-                                            color: selectedFed.fechaVencimientoPlan && new Date(selectedFed.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-text)' 
-                                        }}>
-                                            {selectedFed.fechaVencimientoPlan ? new Date(selectedFed.fechaVencimientoPlan).toLocaleDateString() : 'Sin fecha'}
-                                        </div>
+                                        <input 
+                                            type="date"
+                                            value={selectedFed.fechaVencimientoPlan ? selectedFed.fechaVencimientoPlan.split('T')[0] : ''}
+                                            onChange={(e) => handleUpdateInlineField(selectedFed.clubId, 'fechaVencimientoPlan', e.target.value)}
+                                        />
                                     </div>
-                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                    <div className="control-field">
                                         <label>Estado de Pago / Acceso</label>
-                                        <div style={{ 
-                                            fontWeight: '700', 
-                                            padding: '6px 0',
-                                            color: selectedFed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981' 
-                                        }}>
-                                            {selectedFed.bloqueadoPorFaltaDePago ? '🛑 Suspendido por Falta de Pago' : '✅ Habilitado (Al día)'}
-                                        </div>
+                                        <select 
+                                            value={selectedFed.bloqueadoPorFaltaDePago ? 'Bloqueado' : 'AlDia'} 
+                                            onChange={(e) => handleUpdateInlineField(selectedFed.clubId, 'bloqueadoPorFaltaDePago', e.target.value === 'Bloqueado')}
+                                            style={{
+                                                color: selectedFed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            <option value="AlDia" style={{ color: '#10B981' }}>✅ Habilitado (Al día)</option>
+                                            <option value="Bloqueado" style={{ color: '#EF4444' }}>🛑 Suspendido por Falta de Pago</option>
+                                        </select>
                                     </div>
                                     <div className="control-field">
                                         <label>Control de Acceso</label>
@@ -603,7 +688,7 @@ const SaaSManagement = () => {
             {/* Federation CRUD Modal */}
             {showModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content glass-effect fade-in">
+                    <div className="modal-content fade-in">
                         <div className="modal-header">
                             <h3>{isEditing ? 'Editar Federación' : 'Nueva Federación'}</h3>
                             <button className="btn-close" onClick={() => setShowModal(false)}><X size={20} /></button>
@@ -678,7 +763,7 @@ const SaaSManagement = () => {
                                         className="admin-select"
                                         name="frecuenciaPago"
                                         value={formData.frecuenciaPago}
-                                        onChange={(e) => setFormData({...formData, frecuenciaPago: e.target.value})}
+                                        onChange={(e) => handleModalSaaSChange('frecuenciaPago', e.target.value)}
                                     >
                                         <option value="Mensual">Mensual</option>
                                         <option value="Anual">Anual</option>
@@ -692,7 +777,7 @@ const SaaSManagement = () => {
                                             type="date" 
                                             name="fechaAltaPlan"
                                             value={formData.fechaAltaPlan}
-                                            onChange={(e) => setFormData({...formData, fechaAltaPlan: e.target.value})}
+                                            onChange={(e) => handleModalSaaSChange('fechaAltaPlan', e.target.value)}
                                         />
                                     </div>
                                 </div>

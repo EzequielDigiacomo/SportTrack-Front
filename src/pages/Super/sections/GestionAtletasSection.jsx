@@ -16,6 +16,7 @@ const GestionAtletasSection = () => {
     const params = new URLSearchParams(location.search);
     const clubIdFromUrl = params.get('clubId');
     const clubNombreFromUrl = params.get('clubNombre') ? decodeURIComponent(params.get('clubNombre')) : '';
+    const fedIdFromUrl = params.get('fedId');
 
     const [atletas, setAtletas] = useState([]);
     const [clubes, setClubes] = useState([]);
@@ -187,7 +188,21 @@ const GestionAtletasSection = () => {
             } else {
                 clubMatch = !selectedClub || atleta.clubNombre === selectedClub;
             }
-            return nameMatch && clubMatch;
+
+            // Scoping por federación
+            let fedMatch = true;
+            if (fedIdFromUrl) {
+                const targetFedId = parseInt(fedIdFromUrl);
+                if (atleta.clubId) {
+                    const athleteClub = clubes.find(c => c.id === atleta.clubId);
+                    fedMatch = athleteClub && (athleteClub.id === targetFedId || athleteClub.parentClubId === targetFedId);
+                } else {
+                    // Atletas sin club (siempre visibles para poder ser asignados a clubes de esta federación)
+                    fedMatch = true;
+                }
+            }
+
+            return nameMatch && clubMatch && fedMatch;
         })
         .sort((a, b) => {
             let aVal = a[sortConfig.key] || '';
@@ -247,7 +262,10 @@ const GestionAtletasSection = () => {
                         >
                             <option value="">Todos los Clubes</option>
                             <option value="__SIN_CLUB__">⚠️ Sin Club asignado</option>
-                            {clubes.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                            {clubes
+                                .filter(c => !fedIdFromUrl || c.id === parseInt(fedIdFromUrl) || c.parentClubId === parseInt(fedIdFromUrl))
+                                .map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)
+                            }
                         </select>
                     </div>
                     <SearchBox 
@@ -340,9 +358,12 @@ const GestionAtletasSection = () => {
                                 style={{ width: '100%' }}
                             >
                                 <option value="">-- Elegir un club --</option>
-                                {clubes.filter(c => c.parentClubId).map(c => (
-                                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                                ))}
+                                {clubes
+                                    .filter(c => c.parentClubId && (!fedIdFromUrl || c.parentClubId === parseInt(fedIdFromUrl)))
+                                    .map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                                    ))
+                                }
                             </select>
                         </div>
                         <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
