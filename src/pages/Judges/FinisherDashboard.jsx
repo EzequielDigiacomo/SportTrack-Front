@@ -453,6 +453,7 @@ const FinisherDashboard = () => {
     const pendientes = resultados.filter(r => !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente'));
 
     return (
+        <>
         <div className={`finisher-dashboard ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             {globalAlert && (
                 <div className="global-race-alert-overlay">
@@ -724,6 +725,7 @@ const FinisherDashboard = () => {
                 type={confirmDialog.type || 'warning'}
             />
         )}
+        </>
     );
 };
 
