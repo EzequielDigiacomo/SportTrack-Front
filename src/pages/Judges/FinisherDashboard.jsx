@@ -23,6 +23,7 @@ const DISTANCIA_NAMES = {
     10: '5000m', 11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
 };
 import { useToast } from '../../context/ToastContext';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
 
 const getSoloApellido = (nombreCompleto) => {
@@ -50,6 +51,7 @@ const FinisherDashboard = () => {
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -688,7 +690,21 @@ const FinisherDashboard = () => {
                     )}
 
                     <footer className="finisher-actions">
-                        <button className="btn-reset" onClick={() => { if(window.confirm('¿Reiniciar reloj?')) { setElapsedTime(0); stopLocalTimer(); setRawTimes([]); setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null }))); } }} disabled={!selectedFase}>
+                        <button className="btn-reset" onClick={() => {
+                            setConfirmDialog({
+                                isOpen: true,
+                                title: 'Reiniciar Reloj',
+                                message: '¿Reiniciar el reloj y los tiempos capturados de esta carrera?',
+                                type: 'warning',
+                                onConfirm: () => {
+                                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                    setElapsedTime(0);
+                                    stopLocalTimer();
+                                    setRawTimes([]);
+                                    setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null })));
+                                }
+                            });
+                        }} disabled={!selectedFase}>
                             <RefreshCw size={18} /> Reiniciar
                         </button>
                         <button className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
@@ -698,6 +714,16 @@ const FinisherDashboard = () => {
                 </main>
             </div>
         </div>
+        {confirmDialog.isOpen && (
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmDialog.onConfirm}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                type={confirmDialog.type || 'warning'}
+            />
+        )}
     );
 };
 

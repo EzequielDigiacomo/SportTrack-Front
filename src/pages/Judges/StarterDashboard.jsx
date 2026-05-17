@@ -7,6 +7,7 @@ import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { useToast } from '../../context/ToastContext';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
 
 const getSoloApellido = (nombreCompleto) => {
@@ -39,6 +40,7 @@ const StarterDashboard = () => {
     const { addToast } = useToast();
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -234,15 +236,23 @@ const StarterDashboard = () => {
 
     const handleResetRace = async () => {
         if (!selectedFase) return;
-        if (!window.confirm("⚠️ ¿Confirmar partida en falso?")) return;
-        try {
-            setLoading(true);
-            await timingSignalRService.requestResetRace(selectedFase.id);
-        } catch (err) {
-            console.error("Error resetting race:", err);
-        } finally {
-            setLoading(false);
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Partida en Falso',
+            message: '⚠️ ¿Confirmar partida en falso? Esto reiniciará el estado de la carrera.',
+            type: 'warning',
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    setLoading(true);
+                    await timingSignalRService.requestResetRace(selectedFase.id);
+                } catch (err) {
+                    console.error("Error resetting race:", err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
     };
 
     return (
@@ -419,6 +429,16 @@ const StarterDashboard = () => {
                     <div className="empty-msg">Seleccione una carrera del cronograma</div>
                 )}
             </main>
+            {confirmDialog.isOpen && (
+                <ConfirmDialog
+                    isOpen={confirmDialog.isOpen}
+                    onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmDialog.onConfirm}
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    type={confirmDialog.type || 'warning'}
+                />
+            )}
         </div>
     );
 };
