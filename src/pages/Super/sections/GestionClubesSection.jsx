@@ -84,13 +84,38 @@ const GestionClubesSection = () => {
 
     const handleOpenCrear = () => {
         // Al crear, seteamos parentClubId automáticamente con la federación actual
-        setForm({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '', parentClubId: fedId ? parseInt(fedId) : null });
+        setForm({ 
+            nombre: '', 
+            sigla: '', 
+            email: '', 
+            telefono: '', 
+            ubicacion: '', 
+            parentClubId: fedId ? parseInt(fedId) : null,
+            planSaaSId: '',
+            frecuenciaPago: 'Mensual',
+            fechaAltaPlan: '',
+            fechaVencimientoPlan: '',
+            bloqueadoPorFaltaDePago: false
+        });
         setView('crear');
     };
 
     const handleOpenEditar = (club) => {
         setSelectedClub(club);
-        setForm({ ...club });
+        
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            return dateStr.split('T')[0];
+        };
+
+        setForm({ 
+            ...club,
+            fechaAltaPlan: formatDate(club.fechaAltaPlan),
+            fechaVencimientoPlan: formatDate(club.fechaVencimientoPlan),
+            bloqueadoPorFaltaDePago: club.bloqueadoPorFaltaDePago || false,
+            frecuenciaPago: club.frecuenciaPago || 'Mensual',
+            planSaaSId: club.planSaaSId || ''
+        });
         setView('editar');
     };
 

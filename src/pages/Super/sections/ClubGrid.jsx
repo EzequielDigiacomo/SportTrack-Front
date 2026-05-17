@@ -11,11 +11,26 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                         <div className="card-content">
                             <h4>
                                 {c.nombre} 
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                     <span className="badge badge-ecu-yellow">{c.sigla || '—'}</span>
                                     {c.planNombre && <span className="badge badge-ecu-blue" style={{ fontSize: '0.6rem' }}>{c.planNombre}</span>}
+                                    {!c.parentClubId && (
+                                        <span className="badge" style={{ 
+                                            fontSize: '0.6rem',
+                                            backgroundColor: c.bloqueadoPorFaltaDePago ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                            color: c.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981',
+                                            border: `1px solid ${c.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981'}`
+                                        }}>
+                                            {c.bloqueadoPorFaltaDePago ? 'Bloqueado 🛑' : (c.frecuenciaPago || 'Mensual')}
+                                        </span>
+                                    )}
                                 </div>
                             </h4>
+                            {!c.parentClubId && c.fechaVencimientoPlan && (
+                                <p style={{ fontSize: '0.75rem', marginTop: '-4px', color: new Date(c.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-text-secondary)' }}>
+                                    📅 Vence: {new Date(c.fechaVencimientoPlan).toLocaleDateString()}
+                                </p>
+                            )}
                             <p><Mail size={14} className="text-primary" /> {c.email || 'Sin email'}</p>
                             <p><MapPin size={14} className="text-secondary" /> {c.ubicacion || 'Sin ubicación'}</p>
                             <p><Users size={14} className="text-accent" /> {c.cantidadAtletas || 0} Atletas registrados</p>
@@ -45,6 +60,7 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                             <th>Ubicación</th>
                             <th style={{ width: '100px' }}>Atletas</th>
                             <th>Plan</th>
+                            <th>Suscripción / Vence</th>
                             <th style={{ width: '120px' }}>Acciones</th>
                         </tr>
                     </thead>
@@ -81,6 +97,37 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                                             {c.planNombre}
                                         </span>
                                     ) : '—'}
+                                </td>
+                                <td>
+                                    {!c.parentClubId ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <span className="badge" style={{
+                                                padding: '2px 8px',
+                                                fontSize: '0.65rem',
+                                                backgroundColor: c.bloqueadoPorFaltaDePago ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                color: c.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981',
+                                                border: `1px solid ${c.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981'}`,
+                                                borderRadius: '4px',
+                                                width: 'fit-content',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {c.bloqueadoPorFaltaDePago ? 'Bloqueado 🛑' : (c.frecuenciaPago || 'Mensual')}
+                                            </span>
+                                            {c.fechaVencimientoPlan ? (
+                                                <span style={{ 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: '500',
+                                                    color: new Date(c.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-text-secondary)' 
+                                                }}>
+                                                    Vence: {new Date(c.fechaVencimientoPlan).toLocaleDateString()}
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>Sin fecha</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span style={{ color: 'var(--color-text-dim)' }}>—</span>
+                                    )}
                                 </td>
                                 <td className="actions-cell">
                                     {!c.parentClubId && onAssignParent && (

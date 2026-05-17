@@ -46,10 +46,35 @@ const AdminSidebar = ({
                             fontSize: '0.75rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '4px'
+                            gap: '4px',
+                            margin: 0
                         }}>
                             {user?.rol === 'SuperAdmin' ? 'Super Administrador' : `Administrador ${user?.plan?.nombre || ''}`}
                         </p>
+                        {user?.rol === 'Admin' && user?.fechaVencimientoPlan && (
+                            <div style={{
+                                marginTop: '8px',
+                                padding: '6px 10px',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '8px',
+                                fontSize: '0.7rem',
+                                width: '100%',
+                                boxSizing: 'border-box'
+                            }}>
+                                <span style={{ display: 'block', color: 'var(--color-text-secondary)', fontWeight: '500', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Plan {user?.frecuenciaPago || 'Mensual'}
+                                </span>
+                                <span style={{ 
+                                    display: 'block', 
+                                    fontWeight: 'bold',
+                                    color: new Date(user.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-primary-light)',
+                                    marginTop: '2px'
+                                }}>
+                                    Vence: {new Date(user.fechaVencimientoPlan).toLocaleDateString()}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
