@@ -296,13 +296,14 @@ const SaaSManagement = () => {
                                     <th>Estado</th>
                                     <th className="text-center">Atletas</th>
                                     <th className="text-center">Clubes</th>
+                                    <th>Suscripción / Vence</th>
                                     <th className="text-center">Acceso</th>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loadingStatus ? (
-                                    <tr><td colSpan="7"><div className="loader-row"><div className="loader"></div></div></td></tr>
+                                    <tr><td colSpan="8"><div className="loader-row"><div className="loader"></div></div></td></tr>
                                 ) : filteredFederaciones.map(fed => {
                                     const planColor = planes.find(p => p.id === fed.planSaaSId)?.color;
                                     return (
@@ -334,6 +335,33 @@ const SaaSManagement = () => {
                                                 <span className="club-count-badge">
                                                     {fed.clubesAfiliadosCount}
                                                 </span>
+                                            </td>
+                                            <td data-label="Suscripción / Vence">
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <span className="badge" style={{
+                                                        padding: '2px 8px',
+                                                        fontSize: '0.65rem',
+                                                        backgroundColor: fed.bloqueadoPorFaltaDePago ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                        color: fed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981',
+                                                        border: `1px solid ${fed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981'}`,
+                                                        borderRadius: '4px',
+                                                        width: 'fit-content',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        {fed.bloqueadoPorFaltaDePago ? 'Bloqueado 🛑' : (fed.frecuenciaPago || 'Mensual')}
+                                                    </span>
+                                                    {fed.fechaVencimientoPlan ? (
+                                                        <span style={{ 
+                                                            fontSize: '0.75rem', 
+                                                            fontWeight: '500',
+                                                            color: new Date(fed.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-text-secondary)' 
+                                                        }}>
+                                                            Vence: {new Date(fed.fechaVencimientoPlan).toLocaleDateString()}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>Sin fecha</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td data-label="Acceso" className="text-center">
                                                 <button 
@@ -478,6 +506,32 @@ const SaaSManagement = () => {
                                                 <option key={p.id} value={p.id}>{p.nombre}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                        <label>Frecuencia de Pago</label>
+                                        <div style={{ fontWeight: '600', color: 'var(--color-text)', padding: '6px 0' }}>
+                                            {selectedFed.frecuenciaPago || 'Mensual'}
+                                        </div>
+                                    </div>
+                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                        <label>Vencimiento de Suscripción</label>
+                                        <div style={{ 
+                                            fontWeight: '600', 
+                                            padding: '6px 0',
+                                            color: selectedFed.fechaVencimientoPlan && new Date(selectedFed.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-text)' 
+                                        }}>
+                                            {selectedFed.fechaVencimientoPlan ? new Date(selectedFed.fechaVencimientoPlan).toLocaleDateString() : 'Sin fecha'}
+                                        </div>
+                                    </div>
+                                    <div className="control-field" style={{ marginTop: '12px' }}>
+                                        <label>Estado de Pago / Acceso</label>
+                                        <div style={{ 
+                                            fontWeight: '700', 
+                                            padding: '6px 0',
+                                            color: selectedFed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981' 
+                                        }}>
+                                            {selectedFed.bloqueadoPorFaltaDePago ? '🛑 Suspendido por Falta de Pago' : '✅ Habilitado (Al día)'}
+                                        </div>
                                     </div>
                                     <div className="control-field">
                                         <label>Control de Acceso</label>
