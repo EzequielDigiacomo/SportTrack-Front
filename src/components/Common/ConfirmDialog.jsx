@@ -23,10 +23,12 @@ const ConfirmDialog = ({
     confirmText = 'Confirmar',
     cancelText = 'Cancelar',
     type = 'warning',
-    loading = false
+    loading = false,
+    icon = null
 }) => {
     
     const getIcon = () => {
+        if (icon) return icon;
         switch (type) {
             case 'danger': return <Trash2 size={32} />;
             case 'warning': return <AlertCircle size={32} />;

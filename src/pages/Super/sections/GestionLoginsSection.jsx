@@ -4,6 +4,7 @@ import { Plus, ArrowLeft } from 'lucide-react';
 import AuthService from '../../../services/AuthService';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
+import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import LoginGrid from './LoginGrid';
 import LoginForm from './LoginForm';
 import { useAlert } from '../../../hooks/useAlert';
@@ -25,6 +26,15 @@ const GestionLoginsSection = () => {
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
     const { user } = useAuth();
+    
+    // Confirm Dialog State
+    const [confirmDialog, setConfirmDialog] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'warning',
+        onConfirm: null
+    });
 
     useEffect(() => { 
         loadData(); 
@@ -105,15 +115,23 @@ const GestionLoginsSection = () => {
 
     const handleToggleActivo = async (user) => {
         const accion = user.activo ? 'deshabilitar' : 'habilitar';
-        if (!window.confirm(`¿Confirmar ${accion} la cuenta de "${user.username}"?`)) return;
-        try {
-            await AuthService.toggleActivo(user.id);
-            // Actualizar estado local optimistamente
-            setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, activo: !u.activo } : u));
-            showAlert('success', `Cuenta "${user.username}" ${user.activo ? 'deshabilitada' : 'habilitada'} correctamente.`);
-        } catch (err) {
-            showAlert('error', 'Error al cambiar el estado: ' + (err.response?.data?.message || err.message));
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: user.activo ? 'Deshabilitar Cuenta' : 'Habilitar Cuenta',
+            message: `¿Confirmar ${accion} la cuenta de "${user.username}"?`,
+            type: user.activo ? 'warning' : 'info',
+            onConfirm: async () => {
+                try {
+                    await AuthService.toggleActivo(user.id);
+                    // Actualizar estado local optimistamente
+                    setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, activo: !u.activo } : u));
+                    showAlert('success', `Cuenta "${user.username}" ${user.activo ? 'deshabilitada' : 'habilitada'} correctamente.`);
+                } catch (err) {
+                    showAlert('error', 'Error al cambiar el estado: ' + (err.response?.data?.message || err.message));
+                }
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     // Filtrado de usuarios según la federación seleccionada en la URL (si viene del dashboard de una federación específica)
@@ -177,6 +195,17 @@ const GestionLoginsSection = () => {
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
+                />
+            )}
+
+            {confirmDialog.isOpen && (
+                <ConfirmDialog
+                    isOpen={confirmDialog.isOpen}
+                    onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmDialog.onConfirm}
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    type={confirmDialog.type}
                 />
             )}
         </div>

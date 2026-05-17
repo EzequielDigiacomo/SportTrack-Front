@@ -29,6 +29,9 @@ const AdminHome = () => {
     const [fedName, setFedName] = useState('');
     const [loading, setLoading] = useState(true);
     const [recentLogs, setRecentLogs] = useState([]);
+    const [fedEvents, setFedEvents] = useState([]);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedDay, setSelectedDay] = useState(null);
 
     const role = user?.rol?.trim().toLowerCase();
     const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
@@ -40,19 +43,33 @@ const AdminHome = () => {
             try {
                 if (isSuper && !id) {
                     // Cargar métricas globales para SuperAdmin
-                    const data = await SaaSService.getGlobalMetrics();
-                    setGlobalStats(data);
-                    
-                    try {
-                        const logs = await SupportService.getLogs({ limit: 8 });
-                        setRecentLogs(logs);
-                    } catch (logErr) {
-                        console.error("Error cargando logs (no crítico):", logErr);
-                        setRecentLogs([]);
-                    }
+                    const [metricsData, logs, events, saasInfo, allClubs] = await Promise.all([
+                        SaaSService.getGlobalMetrics().catch(() => ({})),
+                        SupportService.getLogs({ limit: 8 }).catch(() => []),
+                        EventoService.getAll().catch(() => []),
+                        SaaSService.getClubesStatus().catch(() => []),
+                        ClubService.getAll().catch(() => [])
+                    ]);
+                    setGlobalStats({
+                        ...metricsData,
+                        uncompletedEvents: events.filter(e => e.estado !== 'Finalizado'),
+                        saasExpirations: saasInfo.filter(s => s.fechaVencimientoPlan),
+                        allClubs
+                    });
+                    setRecentLogs(logs);
                 } else if (isSuper && id) {
                     // SuperAdmin viendo una federación específica → usar datos de SaaS
-                    const clubesStatus = await SaaSService.getClubesStatus();
+                    const [clubesStatus, events, allClubs] = await Promise.all([
+                        SaaSService.getClubesStatus().catch(() => []),
+                        EventoService.getAll().catch(() => []),
+                        ClubService.getAll().catch(() => [])
+                    ]);
+                    
+                    setGlobalStats(prev => ({
+                        ...prev,
+                        allClubs: allClubs
+                    }));
+
                     const fed = clubesStatus.find(f => String(f.clubId) === String(id));
                     if (fed) {
                         setFedName(fed.clubNombre);
@@ -63,12 +80,34 @@ const AdminHome = () => {
                             atletas: fed.atletasRegistrados || 0
                         });
                     }
+
+                    const targetFedId = Number(id);
+                    const myEvents = events.filter(e => {
+                        const club = allClubs.find(c => c.id === e.clubId);
+                        const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
+                        return parentFedId === targetFedId && e.estado !== 'Finalizado';
+                    });
+                    setFedEvents(myEvents);
                 } else {
                     // Admin normal: cargar sus propios datos
                     const [eventosRaw, clubesData] = await Promise.all([
                         EventoService.getAll(),
                         ClubService.getAll()
                     ]);
+                    
+                    setGlobalStats(prev => ({
+                        ...prev,
+                        allClubs: clubesData
+                    }));
+
+                    const targetFedId = Number(user.clubId);
+                    const myEvents = eventosRaw.filter(e => {
+                        const club = clubesData.find(c => c.id === e.clubId);
+                        const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
+                        return parentFedId === targetFedId && e.estado !== 'Finalizado';
+                    });
+                    setFedEvents(myEvents);
+
                     const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
                     const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
                     const subClubes = clubesData.filter(c => c.id !== user.clubId);
@@ -90,10 +129,132 @@ const AdminHome = () => {
     }, [isSuper, id]);
 
 
+    // --- PALETAS DE COLORES PARA FEDERACIONES (Para SuperAdmin) ---
+    const FEDERATION_PALETTES = [
+        {
+            name: 'Orange',
+            primary: '#f97316',
+            primaryRgb: '249, 115, 22',
+            lightBg: 'rgba(249, 115, 22, 0.06)',
+            border: 'rgba(249, 115, 22, 0.3)',
+            hover: 'rgba(249, 115, 22, 0.12)',
+            text: '#ea580c'
+        },
+        {
+            name: 'Red',
+            primary: '#ef4444',
+            primaryRgb: '239, 68, 68',
+            lightBg: 'rgba(239, 68, 68, 0.06)',
+            border: 'rgba(239, 68, 68, 0.3)',
+            hover: 'rgba(239, 68, 68, 0.12)',
+            text: '#dc2626'
+        },
+        {
+            name: 'Blue',
+            primary: '#3b82f6',
+            primaryRgb: '59, 130, 246',
+            lightBg: 'rgba(59, 130, 246, 0.06)',
+            border: 'rgba(59, 130, 246, 0.3)',
+            hover: 'rgba(59, 130, 246, 0.12)',
+            text: '#2563eb'
+        },
+        {
+            name: 'Green',
+            primary: '#22c55e',
+            primaryRgb: '34, 197, 94',
+            lightBg: 'rgba(34, 197, 94, 0.06)',
+            border: 'rgba(34, 197, 94, 0.3)',
+            hover: 'rgba(34, 197, 94, 0.12)',
+            text: '#16a34a'
+        },
+        {
+            name: 'Purple',
+            primary: '#a855f7',
+            primaryRgb: '168, 85, 247',
+            lightBg: 'rgba(168, 85, 247, 0.06)',
+            border: 'rgba(168, 85, 247, 0.3)',
+            hover: 'rgba(168, 85, 247, 0.12)',
+            text: '#9333ea'
+        },
+        {
+            name: 'Teal',
+            primary: '#06b6d4',
+            primaryRgb: '6, 182, 212',
+            lightBg: 'rgba(6, 182, 212, 0.06)',
+            border: 'rgba(6, 182, 212, 0.3)',
+            hover: 'rgba(6, 182, 212, 0.12)',
+            text: '#0891b2'
+        },
+        {
+            name: 'Pink',
+            primary: '#ec4899',
+            primaryRgb: '236, 72, 153',
+            lightBg: 'rgba(236, 72, 153, 0.06)',
+            border: 'rgba(236, 72, 153, 0.3)',
+            hover: 'rgba(236, 72, 153, 0.12)',
+            text: '#db2777'
+        },
+        {
+            name: 'Amber',
+            primary: '#f59e0b',
+            primaryRgb: '245, 158, 11',
+            lightBg: 'rgba(245, 158, 11, 0.06)',
+            border: 'rgba(245, 158, 11, 0.3)',
+            hover: 'rgba(245, 158, 11, 0.12)',
+            text: '#d97706'
+        }
+    ];
+
+    const federationColorMap = React.useMemo(() => {
+        const map = {};
+        if (!globalStats?.allClubs) return map;
+        
+        // Filtrar todos los clubes raíz (federaciones)
+        const rootClubs = globalStats.allClubs
+            .filter(c => !c.parentClubId)
+            .sort((a, b) => a.id - b.id); // Ordenar por ID de forma consistente
+        
+        rootClubs.forEach((club, idx) => {
+            map[club.id] = FEDERATION_PALETTES[idx % FEDERATION_PALETTES.length];
+        });
+        
+        return map;
+    }, [globalStats?.allClubs]);
+
+    const getFederationPalette = (fedId) => {
+        if (!fedId) return FEDERATION_PALETTES[0];
+        return federationColorMap[fedId] || FEDERATION_PALETTES[0];
+    };
+
+    const getFederationIdForClub = (clubId) => {
+        if (!globalStats?.allClubs) return clubId;
+        const club = globalStats.allClubs.find(c => c.id === clubId);
+        if (!club) return clubId;
+        return club.parentClubId || club.id;
+    };
+
+    const getFederationIdByName = (nombre) => {
+        if (!globalStats?.allClubs) return null;
+        const club = globalStats.allClubs.find(c => c.nombre.toLowerCase().trim() === nombre.toLowerCase().trim() && !c.parentClubId);
+        return club ? club.id : null;
+    };
+
     if (loading) return <div className="loader-container"><div className="loader"></div></div>;
 
     // --- VISTA SUPERADMIN (GLOBAL) ---
     if (isSuper && !id && globalStats) {
+        const currentYear = new Date().getFullYear();
+        const totalDays = new Date(currentYear, selectedMonth + 1, 0).getDate();
+        const startOffset = new Date(currentYear, selectedMonth, 1).getDay();
+
+        const dayCells = [];
+        for (let i = 0; i < startOffset; i++) {
+            dayCells.push(null);
+        }
+        for (let d = 1; d <= totalDays; d++) {
+            dayCells.push(d);
+        }
+
         return (
             <div className="admin-home fade-in">
                 <div className="admin-home-header">
@@ -135,39 +296,330 @@ const AdminHome = () => {
                     </div>
                 </div>
 
-                <div className="dashboard-content-row">
-                    <div className="growth-chart-container glass-effect flex-2">
-                        <div className="chart-header">
-                            <h4>Crecimiento de la Red</h4>
-                            <span className="badge-pill">Histórico 2024</span>
+                <div className="dashboard-content-row" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="annual-calendar-container glass-effect" style={{ padding: '1.5rem', borderRadius: '20px', minHeight: '420px', display: 'flex', flexDirection: 'column', width: '100%' }}>
+                        <div className="chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Calendar size={18} style={{ color: 'var(--color-accent-orange)' }} /> Planificador Anual de Operaciones
+                                </h4>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', margin: '0.2rem 0 0 0' }}>Monitoreo de vencimientos SaaS y eventos deportivos en tiempo real</p>
+                            </div>
+                            <span className="badge-pill" style={{ background: 'rgba(var(--color-accent-orange-rgb), 0.15)', color: 'var(--color-accent-orange)', fontWeight: 800 }}>Año {new Date().getFullYear()}</span>
                         </div>
-                        <div className="mock-chart-visual">
-                            {globalStats.crecimientoMensual.map((item, idx) => (
-                                <div key={idx} className="chart-bar-item">
-                                    <div className="bar-fill" style={{ height: `${(item.cantidad / 30) * 100}%` }}>
-                                        <span className="bar-tooltip">{item.cantidad}</span>
+
+                        {/* Selector de Meses Horizontal */}
+                        <div className="months-pills-row" style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.6rem', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', scrollbarWidth: 'none' }}>
+                            {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((name, idx) => {
+                                const currentYear = new Date().getFullYear();
+                                const monthExpirations = (globalStats.saasExpirations || []).filter(item => {
+                                    const d = new Date(item.fechaVencimientoPlan);
+                                    return d.getMonth() === idx && d.getFullYear() === currentYear;
+                                });
+                                const monthEvents = (globalStats.uncompletedEvents || []).filter(item => {
+                                    const d = new Date(item.fecha);
+                                    return d.getMonth() === idx && d.getFullYear() === currentYear;
+                                });
+
+                                const isSelected = selectedMonth === idx;
+                                const hasActivity = monthExpirations.length > 0 || monthEvents.length > 0;
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            setSelectedMonth(idx);
+                                            setSelectedDay(null);
+                                        }}
+                                        style={{
+                                            background: isSelected 
+                                                ? 'linear-gradient(135deg, var(--color-accent-orange), #f97316)' 
+                                                : 'rgba(255,255,255,0.02)',
+                                            border: isSelected 
+                                                ? '1px solid var(--color-accent-orange)' 
+                                                : '1px solid var(--color-border)',
+                                            color: isSelected ? '#ffffff' : 'var(--color-text)',
+                                            borderRadius: '20px',
+                                            padding: '6px 14px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            whiteSpace: 'nowrap',
+                                            fontWeight: isSelected ? 800 : 600,
+                                            fontSize: '0.8rem',
+                                            transition: 'all 0.2s',
+                                            boxShadow: isSelected ? '0 4px 12px rgba(249,115,22,0.2)' : 'none'
+                                        }}
+                                    >
+                                        <span>{name}</span>
+                                        {hasActivity && (
+                                            <div style={{ display: 'flex', gap: '2px' }}>
+                                                {monthExpirations.length > 0 && (
+                                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isSelected ? '#ffffff' : '#f97316' }} />
+                                                )}
+                                                {monthEvents.length > 0 && (
+                                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isSelected ? '#ffffff' : '#3b82f6' }} />
+                                                )}
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        
+                        <div className="calendar-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', flex: 1 }}>
+                            {/* Calendario Mensual de Días */}
+                            {(() => {
+                                const currentYear = new Date().getFullYear();
+                                const mExps = (globalStats.saasExpirations || []).filter(item => {
+                                    const d = new Date(item.fechaVencimientoPlan);
+                                    return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                });
+                                const mEvts = (globalStats.uncompletedEvents || []).filter(item => {
+                                    const d = new Date(item.fecha);
+                                    return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                });
+
+                                return (
+                                    <div className="calendar-days-grid-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1.3 }}>
+                                        {/* Cabecera L-D */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontWeight: 800, fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+                                            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(wd => (
+                                                <div key={wd} style={{ paddingBottom: '0.2rem' }}>{wd}</div>
+                                            ))}
+                                        </div>
+                                        {/* Celdas de Días */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                                            {dayCells.map((day, idx) => {
+                                                if (day === null) {
+                                                    return <div key={`empty-${idx}`} style={{ aspectRatio: '1' }} />;
+                                                }
+
+                                                // Calcular actividades para este día específico
+                                                const dayExps = mExps.filter(e => new Date(e.fechaVencimientoPlan).getDate() === day);
+                                                const dayEvts = mEvts.filter(e => new Date(e.fecha).getDate() === day);
+                                                const hasExps = dayExps.length > 0;
+                                                const hasEvts = dayEvts.length > 0;
+
+                                                // Reunir los IDs de las federaciones involucradas hoy
+                                                const fedIdsOnDay = new Set();
+                                                dayExps.forEach(e => { if (e.clubId) fedIdsOnDay.add(e.clubId); });
+                                                dayEvts.forEach(e => {
+                                                    const parentFedId = getFederationIdForClub(e.clubId);
+                                                    if (parentFedId) fedIdsOnDay.add(parentFedId);
+                                                });
+                                                
+                                                const uniqueFeds = Array.from(fedIdsOnDay);
+
+                                                const isDaySelected = selectedDay === day;
+                                                
+                                                let cellBg = 'rgba(255,255,255,0.01)';
+                                                let borderStyle = '1px solid var(--color-border)';
+                                                let textColor = 'var(--color-text)';
+                                                
+                                                if (isDaySelected) {
+                                                    cellBg = 'linear-gradient(135deg, var(--color-accent-orange), #f97316)';
+                                                    borderStyle = '1px solid var(--color-accent-orange)';
+                                                    textColor = '#ffffff';
+                                                } else if (uniqueFeds.length === 1) {
+                                                    const palette = getFederationPalette(uniqueFeds[0]);
+                                                    cellBg = palette.lightBg;
+                                                    borderStyle = `2px solid ${palette.border}`;
+                                                    textColor = palette.text;
+                                                } else if (uniqueFeds.length > 1) {
+                                                    cellBg = 'rgba(168, 85, 247, 0.08)';
+                                                    borderStyle = '2px solid rgba(168, 85, 247, 0.5)';
+                                                    textColor = '#a855f7';
+                                                }
+
+                                                const dayTitle = [
+                                                    hasExps ? `Vencimientos (${dayExps.length}): ${dayExps.map(e => e.clubNombre).join(', ')}` : null,
+                                                    hasEvts ? `Eventos (${dayEvts.length}): ${dayEvts.map(e => e.nombre).join(', ')}` : null
+                                                ].filter(Boolean).join(' | ');
+
+                                                return (
+                                                    <button
+                                                        key={`day-${day}`}
+                                                        onClick={() => setSelectedDay(isDaySelected ? null : day)}
+                                                        title={dayTitle || `Día ${day}`}
+                                                        style={{
+                                                            aspectRatio: '1',
+                                                            background: cellBg,
+                                                            border: borderStyle,
+                                                            color: textColor,
+                                                            borderRadius: '50%',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            position: 'relative',
+                                                            fontWeight: (hasExps || hasEvts || isDaySelected) ? 800 : 500,
+                                                            fontSize: '0.85rem',
+                                                            transition: 'all 0.2s',
+                                                            boxShadow: isDaySelected ? '0 4px 12px rgba(249,115,22,0.3)' : 'none'
+                                                        }}
+                                                        className="day-cell"
+                                                    >
+                                                        <span>{day}</span>
+                                                        {!isDaySelected && uniqueFeds.length > 0 && (
+                                                            <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '4px' }}>
+                                                                {uniqueFeds.map(fedId => {
+                                                                    const palette = getFederationPalette(fedId);
+                                                                    return (
+                                                                        <span 
+                                                                            key={fedId} 
+                                                                            style={{ 
+                                                                                width: '5px', 
+                                                                                height: '5px', 
+                                                                                borderRadius: '50%', 
+                                                                                backgroundColor: palette.primary 
+                                                                            }} 
+                                                                        />
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                    <span className="bar-label">{item.mes}</span>
+                                );
+                            })()}
+
+                            {/* Detalle del Mes/Día Seleccionado */}
+                            <div className="selected-month-details" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '1rem', maxHeight: '310px', overflowY: 'auto', flex: 1 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.4rem' }}>
+                                    <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>
+                                        {selectedDay !== null 
+                                            ? `Agenda del día ${selectedDay}` 
+                                            : `Agenda de ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][selectedMonth]}`
+                                        }
+                                    </h5>
+                                    {selectedDay !== null && (
+                                        <button 
+                                            onClick={() => setSelectedDay(null)}
+                                            style={{ background: 'none', border: 'none', color: 'var(--color-accent-orange)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, padding: 0 }}
+                                        >
+                                            Ver todo el mes
+                                        </button>
+                                    )}
                                 </div>
-                            ))}
+
+                                {(() => {
+                                    const currentYear = new Date().getFullYear();
+                                    let mExps = (globalStats.saasExpirations || []).filter(item => {
+                                        const d = new Date(item.fechaVencimientoPlan);
+                                        return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                    });
+                                    let mEvts = (globalStats.uncompletedEvents || []).filter(item => {
+                                        const d = new Date(item.fecha);
+                                        return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                    });
+
+                                    if (selectedDay !== null) {
+                                        mExps = mExps.filter(item => new Date(item.fechaVencimientoPlan).getDate() === selectedDay);
+                                        mEvts = mEvts.filter(item => new Date(item.fecha).getDate() === selectedDay);
+                                    }
+
+                                    if (mExps.length === 0 && mEvts.length === 0) {
+                                        return (
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)', gap: '0.5rem', padding: '2rem 0' }}>
+                                                <Calendar size={32} style={{ opacity: 0.3 }} />
+                                                <span style={{ fontSize: '0.8rem' }}>
+                                                    {selectedDay !== null ? `Sin actividades para el día ${selectedDay}` : 'Sin actividades planificadas'}
+                                                </span>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                            {/* Sección Vencimientos */}
+                                            {mExps.length > 0 && (
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>⚠️ Vencimientos SaaS ({mExps.length})</span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                        {mExps.map((exp, idx) => {
+                                                            const dateObj = new Date(exp.fechaVencimientoPlan);
+                                                            const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                                            const palette = getFederationPalette(exp.clubId);
+                                                            return (
+                                                                <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <div>
+                                                                        <strong style={{ color: 'var(--color-text)' }}>{exp.clubNombre}</strong>
+                                                                        <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                                                                            Plan {exp.planNombre || 'Activo'} ({exp.frecuenciaPago || 'Mensual'})
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Sección Eventos */}
+                                            {mEvts.length > 0 && (
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>🏆 Eventos Activos ({mEvts.length})</span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                        {mEvts.map((evt, idx) => {
+                                                            const dateObj = new Date(evt.fecha);
+                                                            const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                                            const parentFedId = getFederationIdForClub(evt.clubId);
+                                                            const palette = getFederationPalette(parentFedId);
+                                                            return (
+                                                                <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <div>
+                                                                        <strong style={{ color: 'var(--color-text)' }}>{evt.nombre}</strong>
+                                                                        <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                                                                            Org: {evt.clubNombre || 'Federación'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                                                        <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
+                                                                        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: evt.estado === 'EnProgreso' ? '#22c55e' : palette.text }}>
+                                                                            {evt.estado === 'EnProgreso' ? 'En Curso' : 'Programado'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="top-entities-list glass-effect flex-1">
-                        <h4>Top Federaciones</h4>
-                        <div className="entities-list">
-                            {globalStats.topFederaciones.map((fed, idx) => (
-                                <div key={idx} className="entity-row">
-                                    <div className="entity-rank">{idx + 1}</div>
-                                    <div className="entity-name">
-                                        <strong>{fed.nombre}</strong>
-                                        <span>{fed.clubesCount} Clubes</span>
-                                    </div>
-                                    <ShieldCheck size={18} className="icon-verify" />
-                                </div>
-                            ))}
+                    <div className="top-entities-list glass-effect" style={{ width: '100%', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+                            <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Top Federaciones</h4>
+                            <button className="btn-view-all" style={{ margin: 0, padding: '6px 14px', fontSize: '0.8rem' }} onClick={() => navigate('/super/saas')}>Gestionar Federaciones</button>
                         </div>
-                        <button className="btn-view-all" onClick={() => navigate('/super/saas')}>Gestionar Federaciones</button>
+                        <div className="entities-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                            {globalStats.topFederaciones.map((fed, idx) => {
+                                const fedId = getFederationIdByName(fed.nombre);
+                                const palette = getFederationPalette(fedId);
+                                return (
+                                    <div key={idx} className="entity-row" style={{ margin: 0, borderLeft: `4px solid ${palette.primary}`, background: palette.lightBg }}>
+                                        <div className="entity-rank" style={{ background: palette.primary, color: '#ffffff' }}>{idx + 1}</div>
+                                        <div className="entity-name">
+                                            <strong style={{ color: 'var(--color-text)' }}>{fed.nombre}</strong>
+                                            <span style={{ color: 'var(--color-text-secondary)' }}>{fed.clubesCount} Clubes</span>
+                                        </div>
+                                        <ShieldCheck size={18} style={{ color: palette.primary }} />
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -323,6 +775,212 @@ const AdminHome = () => {
                     }
                 </p>
             </div>
+            {/* Planificador Anual Interactivo (Brandeado con los colores de la Federación) */}
+            {(() => {
+                const targetFedId = isViewingSpecificFed ? Number(id) : Number(user.clubId);
+                const palette = getFederationPalette(targetFedId);
+
+                const currentYear = new Date().getFullYear();
+                const totalDays = new Date(currentYear, selectedMonth + 1, 0).getDate();
+                const startOffset = new Date(currentYear, selectedMonth, 1).getDay();
+
+                const dayCells = [];
+                for (let i = 0; i < startOffset; i++) {
+                    dayCells.push(null);
+                }
+                for (let i = 1; i <= totalDays; i++) {
+                    dayCells.push(i);
+                }
+
+                const mEvts = fedEvents.filter(item => {
+                    const d = new Date(item.fecha);
+                    return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                });
+
+                return (
+                    <div className="dashboard-content-row" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem', marginBottom: '2rem', width: '100%' }}>
+                        <div className="calendar-card glass-effect" style={{ width: '100%', padding: '1.5rem', borderRadius: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Calendar size={20} style={{ color: palette.primary }} />
+                                        Planificador Operativo de Torneos
+                                    </h4>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>
+                                        Monitoreo y agenda de competiciones oficiales de tu federación
+                                    </p>
+                                </div>
+                                
+                                {/* Meses en Tab Sliders */}
+                                <div className="months-pills-row" style={{ display: 'flex', gap: '4px', overflowX: 'auto', padding: '4px', background: 'var(--color-bg-primary)', borderRadius: '10px', maxWidth: '100%' }}>
+                                    {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((mName, idx) => (
+                                        <button
+                                            key={mName}
+                                            onClick={() => {
+                                                setSelectedMonth(idx);
+                                                setSelectedDay(null);
+                                            }}
+                                            style={{
+                                                border: 'none',
+                                                background: selectedMonth === idx ? palette.primary : 'none',
+                                                color: selectedMonth === idx ? '#fff' : 'var(--color-text-secondary)',
+                                                padding: '4px 10px',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontWeight: selectedMonth === idx ? 800 : 500,
+                                                fontSize: '0.75rem',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {mName}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="calendar-agenda-split" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                {/* Grilla Calendario */}
+                                <div className="calendar-days-grid-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1.3 }}>
+                                    {/* Cabecera L-D */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontWeight: 800, fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+                                        {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(wd => (
+                                            <div key={wd} style={{ paddingBottom: '0.2rem' }}>{wd}</div>
+                                        ))}
+                                    </div>
+                                    {/* Celdas de Días */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                                        {dayCells.map((day, idx) => {
+                                            if (day === null) {
+                                                return <div key={`empty-${idx}`} style={{ aspectRatio: '1' }} />;
+                                            }
+
+                                            // Calcular eventos para este día
+                                            const dayEvts = mEvts.filter(e => new Date(e.fecha).getDate() === day);
+                                            const hasEvts = dayEvts.length > 0;
+                                            const isDaySelected = selectedDay === day;
+                                            
+                                            let cellBg = 'rgba(255,255,255,0.01)';
+                                            let borderStyle = '1px solid var(--color-border)';
+                                            let textColor = 'var(--color-text)';
+                                            
+                                            if (isDaySelected) {
+                                                cellBg = `linear-gradient(135deg, ${palette.primary}, ${palette.text})`;
+                                                borderStyle = `1px solid ${palette.primary}`;
+                                                textColor = '#ffffff';
+                                            } else if (hasEvts) {
+                                                cellBg = palette.lightBg;
+                                                borderStyle = `2px solid ${palette.border}`;
+                                                textColor = palette.text;
+                                            }
+
+                                            const dayTitle = hasEvts 
+                                                ? `Eventos (${dayEvts.length}): ${dayEvts.map(e => e.nombre).join(', ')}` 
+                                                : `Día ${day}`;
+
+                                            return (
+                                                <button
+                                                    key={`day-${day}`}
+                                                    onClick={() => setSelectedDay(isDaySelected ? null : day)}
+                                                    title={dayTitle}
+                                                    style={{
+                                                        aspectRatio: '1',
+                                                        background: cellBg,
+                                                        border: borderStyle,
+                                                        color: textColor,
+                                                        borderRadius: '50%',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        position: 'relative',
+                                                        fontWeight: (hasEvts || isDaySelected) ? 800 : 500,
+                                                        fontSize: '0.85rem',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: isDaySelected ? `0 4px 12px ${palette.hover}` : 'none'
+                                                    }}
+                                                    className="day-cell"
+                                                >
+                                                    <span>{day}</span>
+                                                    {!isDaySelected && hasEvts && (
+                                                        <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '4px' }}>
+                                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: palette.primary }} />
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Detalle del Mes/Día Seleccionado */}
+                                <div className="selected-month-details" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '1rem', maxHeight: '310px', overflowY: 'auto', flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.4rem' }}>
+                                        <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>
+                                            {selectedDay !== null 
+                                                ? `Eventos del día ${selectedDay}` 
+                                                : `Eventos de ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][selectedMonth]}`
+                                            }
+                                        </h5>
+                                        {selectedDay !== null && (
+                                            <button 
+                                                onClick={() => setSelectedDay(null)}
+                                                style={{ background: 'none', border: 'none', color: palette.primary, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, padding: 0 }}
+                                            >
+                                                Ver todo el mes
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {(() => {
+                                        let dayFilteredEvts = mEvts;
+                                        if (selectedDay !== null) {
+                                            dayFilteredEvts = mEvts.filter(item => new Date(item.fecha).getDate() === selectedDay);
+                                        }
+
+                                        if (dayFilteredEvts.length === 0) {
+                                            return (
+                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)', gap: '0.5rem', padding: '2rem 0' }}>
+                                                    <Calendar size={32} style={{ opacity: 0.3 }} />
+                                                    <span style={{ fontSize: '0.8rem' }}>
+                                                        {selectedDay !== null ? `Sin torneos para el día ${selectedDay}` : 'Sin torneos planificados'}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                                {dayFilteredEvts.map((evt, idx) => {
+                                                    const dateObj = new Date(evt.fecha);
+                                                    const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                                    return (
+                                                        <div key={idx} style={{ padding: '0.6rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div>
+                                                                <strong style={{ color: 'var(--color-text)' }}>{evt.nombre}</strong>
+                                                                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
+                                                                    Lugar: {evt.lugar || 'Por definir'} | Club: {evt.clubNombre || 'Federación'}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                                                <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
+                                                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: evt.estado === 'EnProgreso' ? '#22c55e' : palette.text }}>
+                                                                    {evt.estado === 'EnProgreso' ? 'En Curso' : 'Programado'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             <div className="admin-home-grid">
                 {fedCards.map(c => (
                     <div key={c.id} className="admin-home-card glass-effect" onClick={() => navTo(c.id)}>

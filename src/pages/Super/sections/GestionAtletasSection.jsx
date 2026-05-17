@@ -32,7 +32,7 @@ const GestionAtletasSection = () => {
         fechaNacimiento: '',
         sexoId: 1,
         clubId: '',
-        pais: 'Ecuador'
+        pais: ''
     });
 
     const [saving, setSaving] = useState(false);
@@ -88,7 +88,7 @@ const GestionAtletasSection = () => {
             fechaNacimiento: '',
             sexoId: 1,
             clubId: '',
-            pais: 'Ecuador'
+            pais: ''
         });
         setView('crear');
     };
@@ -103,7 +103,7 @@ const GestionAtletasSection = () => {
             fechaNacimiento: atleta.fechaNacimiento ? atleta.fechaNacimiento.substring(0, 10) : '',
             sexoId: atleta.sexoId || 1,
             clubId: atleta.clubId || '',
-            pais: atleta.pais || 'Ecuador'
+            pais: atleta.pais || ''
         });
         setView('editar');
     };
@@ -165,7 +165,7 @@ const GestionAtletasSection = () => {
                 fechaNacimiento: atleta.fechaNacimiento,
                 sexoId: atleta.sexoId,
                 clubId: parseInt(assignModal.clubId),
-                pais: atleta.pais || 'Ecuador'
+                pais: atleta.pais || ''
             });
             showAlert('success', `${atleta.nombre} ${atleta.apellido} asignado correctamente.`);
             setAssignModal({ show: false, atleta: null, clubId: '' });

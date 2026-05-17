@@ -45,7 +45,7 @@ const ControlesSection = () => {
 
     return (
         <div className="section-container fade-in">
-            <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '20px' }}>
                 <button 
                     className="btn-admin-secondary" 
                     onClick={() => navigate(-1)}

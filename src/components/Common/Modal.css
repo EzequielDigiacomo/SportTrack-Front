@@ -24,7 +24,7 @@
     position: relative;
 }
 
-/* Bordes tricolores sutiles */
+/* Borde superior de marca sutil */
 .modal-container::before {
     content: '';
     position: absolute;
@@ -32,10 +32,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(to right,
-            var(--color-accent) 33%,
-            var(--color-primary) 33%, var(--color-primary) 66%,
-            var(--color-secondary) 66%);
+    background: linear-gradient(to right, var(--color-primary), var(--color-primary-light));
     z-index: 10;
 }
 

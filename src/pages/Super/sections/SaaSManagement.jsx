@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SaaSService from '../../../services/SaaSService';
+import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import { useToast } from '../../../context/ToastContext';
 import { 
     Cloud, 
     Plus,
@@ -32,6 +34,7 @@ import './SaaSManagement.css';
 
 const SaaSManagement = () => {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [planes, setPlanes] = useState([]);
     const [clubesStatus, setClubesStatus] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +42,15 @@ const SaaSManagement = () => {
     const [asignandoPlanId, setAsignandoPlanId] = useState(null);
     const [selectedFedId, setSelectedFedId] = useState(null);
     const [filter, setFilter] = useState('');
+    
+    // Confirm Dialog State
+    const [confirmDialog, setConfirmDialog] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'warning',
+        onConfirm: null
+    });
     
     // Modal State
     const [showModal, setShowModal] = useState(false);
@@ -158,10 +170,70 @@ const SaaSManagement = () => {
         try {
             await SaaSService.updateFederacion(clubId, clubData);
             await fetchData();
+            addToast("Configuración SaaS de la federación actualizada con éxito", "success");
         } catch (err) {
             console.error("Error updating inline field", err);
-            alert("Error al actualizar la configuración SaaS de la federación.");
+            addToast("Error al actualizar la configuración SaaS de la federación.", "error");
         }
+    };
+    
+    const handleRenovarPlan = async (clubId) => {
+        const fed = clubesStatus.find(f => f.clubId === clubId);
+        if (!fed) return;
+
+        // 1. Determine baseline date: if expired (or no date), start from today. If future, extend current expiration.
+        let baseDate = new Date();
+        if (fed.fechaVencimientoPlan) {
+            const currentVenc = new Date(fed.fechaVencimientoPlan);
+            if (!isNaN(currentVenc.getTime()) && currentVenc > baseDate) {
+                baseDate = currentVenc;
+            }
+        }
+
+        // 2. Add period based on frequency
+        const freq = fed.frecuenciaPago || 'Mensual';
+        const nextDate = new Date(baseDate);
+        if (freq === 'Anual') {
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+        } else {
+            nextDate.setMonth(nextDate.getMonth() + 1);
+        }
+
+        const newVencimiento = nextDate.toISOString().split('T')[0];
+
+        // 3. Prepare updated data
+        const clubData = {
+            nombre: fed.clubNombre,
+            sigla: fed.sigla || '',
+            email: fed.email || '',
+            telefono: fed.telefono || '',
+            direccion: fed.direccion || '',
+            ubicacion: fed.ubicacion || '',
+            activo: true, // Re-habilitar acceso
+            frecuenciaPago: freq,
+            fechaAltaPlan: new Date().toISOString().split('T')[0], // La fecha de pago es hoy
+            fechaVencimientoPlan: newVencimiento,
+            bloqueadoPorFaltaDePago: false // Desbloqueado por pago al día
+        };
+
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Confirmar Renovación',
+            message: `¿Confirmar renovación del Plan ${fed.planNombre} (${freq})?\nNuevo vencimiento estimado: ${new Date(newVencimiento).toLocaleDateString()}`,
+            type: 'success',
+            icon: <Calendar size={32} />,
+            onConfirm: async () => {
+                try {
+                    await SaaSService.updateFederacion(clubId, clubData);
+                    await fetchData();
+                    addToast(`Plan ${fed.planNombre} renovado con éxito`, "success");
+                } catch (err) {
+                    console.error("Error al renovar plan:", err);
+                    addToast("Error al renovar el plan.", "error");
+                }
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     const handleOpenCreate = () => {
@@ -229,28 +301,39 @@ const SaaSManagement = () => {
                 // Para editar solo enviamos los datos del club
                 const { adminUsername, adminPassword, ...clubData } = formData;
                 await SaaSService.updateFederacion(selectedFedId, clubData);
+                addToast("Federación actualizada con éxito", "success");
             } else {
                 await SaaSService.createFederacion(formData);
+                addToast("Federación creada con éxito junto a su cuenta administradora", "success");
             }
             setShowModal(false);
             await fetchData();
         } catch (err) {
             console.error("Error saving federation", err);
             const errorMsg = err.response?.data?.message || "Error desconocido al guardar la federación.";
-            alert(errorMsg);
+            addToast(errorMsg, "error");
         }
     };
 
     const handleDelete = async () => {
-        if (window.confirm("¿Estás seguro de eliminar esta federación? Se perderán todos sus datos asociados.")) {
-            try {
-                await SaaSService.deleteFederacion(selectedFedId);
-                setSelectedFedId(null);
-                await fetchData();
-            } catch (err) {
-                console.error("Error deleting federation", err);
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Eliminar Federación',
+            message: '¿Estás seguro de eliminar esta federación? Se perderán permanentemente todos sus clubes, atletas y datos asociados. Esta acción no se puede deshacer.',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await SaaSService.deleteFederacion(selectedFedId);
+                    setSelectedFedId(null);
+                    await fetchData();
+                    addToast("Federación eliminada permanentemente", "success");
+                } catch (err) {
+                    console.error("Error deleting federation", err);
+                    addToast("Error al eliminar la federación", "error");
+                }
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             }
-        }
+        });
     };
 
     const selectedFed = clubesStatus.find(f => f.clubId === selectedFedId);
@@ -561,12 +644,38 @@ const SaaSManagement = () => {
 
                             <div className="detail-section">
                                 <h4><Activity size={16} /> Acciones Rápidas</h4>
-                                <div className="quick-actions-row">
+                                <div className="quick-actions-row" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                                     <button 
                                         className="btn-action-primary"
                                         onClick={() => navigate(`/super/federacion/${selectedFed.clubId}`)}
+                                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     >
                                         <Eye size={16} /> Ver Dashboard Federación
+                                    </button>
+                                    <button 
+                                        className="btn-action-success"
+                                        onClick={() => handleRenovarPlan(selectedFed.clubId)}
+                                        style={{ 
+                                            width: '100%',
+                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '10px 16px',
+                                            borderRadius: '8px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                                            transition: 'all 0.2s ease',
+                                            textTransform: 'uppercase',
+                                            fontSize: '0.8rem',
+                                            letterSpacing: '0.5px'
+                                        }}
+                                    >
+                                        <Check size={16} /> Renovar Plan Actual ({selectedFed.frecuenciaPago || 'Mensual'})
                                     </button>
                                 </div>
                             </div>
@@ -870,6 +979,18 @@ const SaaSManagement = () => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {confirmDialog.isOpen && (
+                <ConfirmDialog
+                    isOpen={confirmDialog.isOpen}
+                    onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmDialog.onConfirm}
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    type={confirmDialog.type}
+                    icon={confirmDialog.icon}
+                />
             )}
         </div>
     );

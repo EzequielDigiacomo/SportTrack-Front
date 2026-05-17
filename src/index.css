@@ -12,17 +12,17 @@
 
 /* CSS Variables - Design System */
 :root {
-  /* Primary Colors - Ecuador Blue */
+  /* Primary Colors - Ocean Blue */
   --color-primary: hsl(204, 100%, 36%);
   --color-primary-dark: hsl(204, 100%, 26%);
   --color-primary-light: hsl(204, 100%, 46%);
   
-  /* Secondary Colors - Ecuador Red */
+  /* Secondary Colors - Energy Red */
   --color-secondary: hsl(356, 84%, 57%);
   --color-secondary-dark: hsl(356, 84%, 47%);
   --color-secondary-light: hsl(356, 84%, 67%);
   
-  /* Accent Colors - Ecuador Yellow */
+  /* Accent Colors - Warm Yellow */
   --color-accent: hsl(51, 100%, 50%);
   --color-accent-orange: hsl(30, 100%, 60%);
   

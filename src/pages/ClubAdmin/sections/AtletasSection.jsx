@@ -43,7 +43,7 @@ const AtletasSection = () => {
         email: '',
         fechaNacimiento: '',
         sexoId: 1,
-        pais: 'Ecuador'
+        pais: ''
     });
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -83,7 +83,7 @@ const AtletasSection = () => {
     };
 
     const handleOpenCrear = () => {
-        setForm({ nombre: '', apellido: '', dni: '', email: '', fechaNacimiento: '', sexoId: 1, pais: 'Ecuador' });
+        setForm({ nombre: '', apellido: '', dni: '', email: '', fechaNacimiento: '', sexoId: 1, pais: '' });
         setView('crear');
     };
 
@@ -96,7 +96,7 @@ const AtletasSection = () => {
             email: atleta.email || '',
             fechaNacimiento: atleta.fechaNacimiento ? atleta.fechaNacimiento.substring(0, 10) : '',
             sexoId: atleta.sexoId || 1,
-            pais: atleta.pais || 'Ecuador'
+            pais: atleta.pais || ''
         });
         setView('editar');
     };

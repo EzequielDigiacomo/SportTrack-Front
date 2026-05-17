@@ -126,7 +126,7 @@ const AtletaForm = ({
                                 className="admin-input"
                                 type="text" 
                                 name="pais"
-                                value={initialData.pais || 'Ecuador'} 
+                                value={initialData.pais || ''} 
                                 onChange={(e) => onChange('pais', e.target.value)} 
                                 required
                             />
