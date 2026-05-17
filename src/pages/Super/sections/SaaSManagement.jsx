@@ -52,6 +52,7 @@ const SaaSManagement = () => {
         ubicacion: '',
         activo: true,
         frecuenciaPago: 'Mensual',
+        fechaAltaPlan: '',
         fechaVencimientoPlan: '',
         bloqueadoPorFaltaDePago: false,
         adminUsername: '',
@@ -117,7 +118,7 @@ const SaaSManagement = () => {
         setIsEditing(false);
         setFormData({ 
             nombre: '', sigla: '', email: '', telefono: '', direccion: '', ubicacion: '', activo: true,
-            frecuenciaPago: 'Mensual', fechaVencimientoPlan: '', bloqueadoPorFaltaDePago: false,
+            frecuenciaPago: 'Mensual', fechaAltaPlan: '', fechaVencimientoPlan: '', bloqueadoPorFaltaDePago: false,
             adminUsername: '', adminEmail: '', adminPassword: ''
         });
         setShowPassword(false);
@@ -135,6 +136,7 @@ const SaaSManagement = () => {
             ubicacion: fed.ubicacion || '',
             activo: fed.activo,
             frecuenciaPago: fed.frecuenciaPago || 'Mensual',
+            fechaAltaPlan: fed.fechaAltaPlan ? fed.fechaAltaPlan.split('T')[0] : '',
             fechaVencimientoPlan: fed.fechaVencimientoPlan ? fed.fechaVencimientoPlan.split('T')[0] : '',
             bloqueadoPorFaltaDePago: fed.bloqueadoPorFaltaDePago || false,
             adminUsername: '', // No se edita por aquí por seguridad
@@ -514,6 +516,12 @@ const SaaSManagement = () => {
                                         </div>
                                     </div>
                                     <div className="control-field" style={{ marginTop: '12px' }}>
+                                        <label>Inicio de Suscripción</label>
+                                        <div style={{ fontWeight: '600', color: 'var(--color-text)', padding: '6px 0' }}>
+                                            {selectedFed.fechaAltaPlan ? new Date(selectedFed.fechaAltaPlan).toLocaleDateString() : 'Sin fecha'}
+                                        </div>
+                                    </div>
+                                    <div className="control-field" style={{ marginTop: '12px' }}>
                                         <label>Vencimiento de Suscripción</label>
                                         <div style={{ 
                                             fontWeight: '600', 
@@ -663,47 +671,55 @@ const SaaSManagement = () => {
                                     </div>
                                 </div>
 
-                                {isEditing && (
-                                    <>
-                                        <div className="section-title-modal full-width mt-3">Suscripción y Estado de Pago</div>
-                                        <div className="form-group">
-                                            <label>Frecuencia de Pago</label>
-                                            <select 
-                                                className="admin-select"
-                                                name="frecuenciaPago"
-                                                value={formData.frecuenciaPago}
-                                                onChange={(e) => setFormData({...formData, frecuenciaPago: e.target.value})}
-                                            >
-                                                <option value="Mensual">Mensual</option>
-                                                <option value="Anual">Anual</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Fecha de Vencimiento</label>
-                                            <div className="input-with-icon">
-                                                <Calendar size={16} />
-                                                <input 
-                                                    type="date" 
-                                                    name="fechaVencimientoPlan"
-                                                    value={formData.fechaVencimientoPlan}
-                                                    onChange={(e) => setFormData({...formData, fechaVencimientoPlan: e.target.value})}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="form-group full-width" style={{ marginTop: '0.5rem' }}>
-                                            <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    name="bloqueadoPorFaltaDePago"
-                                                    checked={formData.bloqueadoPorFaltaDePago}
-                                                    onChange={(e) => setFormData({...formData, bloqueadoPorFaltaDePago: e.target.checked})}
-                                                    style={{ width: '18px', height: '18px', accentColor: '#EF4444' }}
-                                                />
-                                                <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Bloquear acceso a la federación por falta de pago</span>
-                                            </label>
-                                        </div>
-                                    </>
-                                )}
+                                <div className="section-title-modal full-width mt-3">Suscripción y Estado de Pago</div>
+                                <div className="form-group">
+                                    <label>Frecuencia de Pago</label>
+                                    <select 
+                                        className="admin-select"
+                                        name="frecuenciaPago"
+                                        value={formData.frecuenciaPago}
+                                        onChange={(e) => setFormData({...formData, frecuenciaPago: e.target.value})}
+                                    >
+                                        <option value="Mensual">Mensual</option>
+                                        <option value="Anual">Anual</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de Inicio</label>
+                                    <div className="input-with-icon">
+                                        <Calendar size={16} />
+                                        <input 
+                                            type="date" 
+                                            name="fechaAltaPlan"
+                                            value={formData.fechaAltaPlan}
+                                            onChange={(e) => setFormData({...formData, fechaAltaPlan: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de Vencimiento</label>
+                                    <div className="input-with-icon">
+                                        <Calendar size={16} />
+                                        <input 
+                                            type="date" 
+                                            name="fechaVencimientoPlan"
+                                            value={formData.fechaVencimientoPlan}
+                                            onChange={(e) => setFormData({...formData, fechaVencimientoPlan: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group full-width" style={{ marginTop: '0.5rem' }}>
+                                    <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'rgba(239, 68, 68, 0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                                        <input 
+                                            type="checkbox" 
+                                            name="bloqueadoPorFaltaDePago"
+                                            checked={formData.bloqueadoPorFaltaDePago}
+                                            onChange={(e) => setFormData({...formData, bloqueadoPorFaltaDePago: e.target.checked})}
+                                            style={{ width: '18px', height: '18px', accentColor: '#EF4444' }}
+                                        />
+                                        <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Bloquear acceso a la federación por falta de pago</span>
+                                    </label>
+                                </div>
 
                                 {!isEditing && (
                                     <>
