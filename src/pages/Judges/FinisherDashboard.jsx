@@ -139,6 +139,9 @@ const FinisherDashboard = () => {
                         if (selectedFase && String(selectedFase.id) === String(faseId)) {
                             const updated = newFases.find(x => String(x.id) === String(faseId));
                             if (updated) setSelectedFase(updated);
+                            // ✅ FIX: arrancar el cronómetro local inmediatamente
+                            const parsed = new Date(serverTime).getTime();
+                            if (!isNaN(parsed)) startLocalTimer(parsed);
                         }
                         return newFases;
                     });
@@ -165,14 +168,26 @@ const FinisherDashboard = () => {
                         }));
                         setResultados(formattedData.sort((a,b) => a.carril - b.carril));
 
-                        // Si entramos a una fase que ya está en carrera en el objeto local (o actualizado por global alert)
-                        if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-                            const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
-                            if (!isNaN(parsed)) startLocalTimer(parsed);
-                        } else {
-                            // Por las dudas, si el objeto dice Programada pero el servidor dice En Carrera
-                            // Podríamos hacer un fetch de la fase, o confiar en el mensaje RaceStarted que llegará.
-                            stopLocalTimer();
+                        // ✅ FIX: obtener estado FRESCO de la fase desde la API
+                        // Evita el bug de stale closure donde selectedFase.estado es viejo
+                        try {
+                            const fasesEvento = await FaseService.getByEvento(selectedFase.etapaEventoPruebaEventoId || selectedEvento?.id);
+                            const freshFase = fasesEvento?.find(f => String(f.id) === String(selectedFase.id)) || selectedFase;
+
+                            if (freshFase.estado === 'En Carrera' && freshFase.fechaHoraInicioReal) {
+                                const parsed = new Date(freshFase.fechaHoraInicioReal).getTime();
+                                if (!isNaN(parsed)) startLocalTimer(parsed);
+                            } else {
+                                stopLocalTimer();
+                            }
+                        } catch {
+                            // fallback: usar el estado local
+                            if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
+                                const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
+                                if (!isNaN(parsed)) startLocalTimer(parsed);
+                            } else {
+                                stopLocalTimer();
+                            }
                         }
                     };
 
