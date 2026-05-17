@@ -23,7 +23,6 @@ const DISTANCIA_NAMES = {
     10: '5000m', 11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
 };
 import { useToast } from '../../context/ToastContext';
-import ThemeToggle from '../../components/Common/ThemeToggle';
 import './Judges.css';
 
 const getSoloApellido = (nombreCompleto) => {
@@ -511,7 +510,6 @@ const FinisherDashboard = () => {
                 <aside className={`finisher-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
                         <h3 style={{ margin: 0, flex: 1 }}><Clock size={18} /> Cronograma</h3>
-                        <ThemeToggle />
                         <button className="btn-collapse" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
                             {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
                         </button>
