@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // Si VITE_API_TARGET está definido (ej: en .env.local) lo usamos,
   // si no, usamos el backend local de desarrollo.
   const apiTarget = env.VITE_API_TARGET || 'https://localhost:7156'
-  const isRemote = apiTarget.includes('onrender.com') || apiTarget.startsWith('https://')
+  const isRemote = apiTarget.includes('onrender.com') || (apiTarget.startsWith('https://') && !apiTarget.includes('localhost'))
 
   console.log(`\n🎯 Proxy target: ${apiTarget}\n`)
 
