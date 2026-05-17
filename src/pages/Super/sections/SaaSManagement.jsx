@@ -317,7 +317,7 @@ const SaaSManagement = () => {
                                             <td data-label="Federación">
                                                 <div className="fed-cell-name">
                                                     <div className={`status-dot ${fed.activo ? 'active' : 'inactive'}`} />
-                                                    <span>{fed.clubNombre}</span>
+                                                    <span>{fed.clubNombre} {fed.sigla && `(${fed.sigla})`}</span>
                                                 </div>
                                             </td>
                                             <td data-label="Plan">
@@ -413,7 +413,7 @@ const SaaSManagement = () => {
                                 <div className="header-top">
                                     <button className="btn-close-detail" onClick={() => setSelectedFedId(null)}><X size={20} /></button>
                                     <div className="fed-main-title">
-                                        <h3>{selectedFed.clubNombre}</h3>
+                                        <h3>{selectedFed.clubNombre} {selectedFed.sigla && `(${selectedFed.sigla})`}</h3>
                                         <div className="fed-tags">
                                             <span className={`tag-status ${selectedFed.activo ? 'active' : 'inactive'}`}>
                                                 {selectedFed.activo ? 'Habilitada' : 'Suspendida'}
