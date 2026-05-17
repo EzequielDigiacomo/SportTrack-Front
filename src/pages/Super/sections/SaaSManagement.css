@@ -390,6 +390,37 @@ tr:hover .arrow-icon {
     max-width: 600px;
     padding: 2rem;
     border-radius: 16px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    color: var(--color-text-primary);
+}
+
+.modal-content .modal-header h3 {
+    color: var(--color-text-primary);
+}
+
+.modal-content .btn-close {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: var(--color-text-primary);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+[data-theme='light'] .modal-content .btn-close {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.modal-content .btn-close:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-secondary);
 }
 
 .modal-header {
@@ -415,15 +446,46 @@ tr:hover .arrow-icon {
 
 .form-group.full-width { grid-column: 1 / -1; }
 
-.form-group label { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); }
+.form-group label { 
+    font-size: 0.85rem; 
+    font-weight: 700; 
+    color: var(--color-text-primary); 
+}
 
-.form-group input {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid #475569;
+.form-group input,
+.form-group select,
+.admin-select {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
     padding: 10px 12px;
     border-radius: 8px;
-    color: #000000;
+    color: var(--color-text-primary);
     font-weight: 600;
+    width: 100%;
+    outline: none;
+    transition: all var(--transition-fast);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.admin-select:focus {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 8px rgba(0, 112, 243, 0.2);
+}
+
+[data-theme='light'] .form-group input,
+[data-theme='light'] .form-group select,
+[data-theme='light'] .admin-select {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: #000000;
+}
+
+[data-theme='light'] .form-group input:focus,
+[data-theme='light'] .form-group select:focus,
+[data-theme='light'] .admin-select:focus {
+    border-color: var(--color-primary);
+    background: #ffffff;
 }
 
 .section-title-modal {
@@ -433,7 +495,7 @@ tr:hover .arrow-icon {
     color: var(--color-primary-light);
     letter-spacing: 0.5px;
     padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--color-border);
     margin-bottom: 4px;
 }
 
