@@ -6,6 +6,7 @@ import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import signalRServiceInstance from '../../services/SignalRService';
 import PdfExportService from '../../services/PdfExportService';
+import ThemeToggle from '../../components/Common/ThemeToggle';
 import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search } from 'lucide-react';
 import './LiveResults.css';
 
