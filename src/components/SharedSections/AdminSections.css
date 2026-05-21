@@ -343,13 +343,18 @@
 .admin-input, 
 .admin-select {
     width: 100%;
-    padding: 0.5rem 0.6rem !important;
+    padding: 0.5rem 0.6rem;
     background: var(--color-bg-primary);
     border: 1px solid var(--color-surface-hover);
     border-radius: var(--radius-md);
     color: var(--color-text-primary);
     font-size: 0.9rem;
     transition: all var(--transition-base);
+}
+
+.admin-input.with-search-icon,
+input.admin-input.with-search-icon {
+    padding-left: 2.75rem !important;
 }
 
 .form-group input:focus, 

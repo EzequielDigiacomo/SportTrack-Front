@@ -266,14 +266,22 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                     <option value={15}>Cada 15 min (Lento)</option>
                                 </select>
                             </div>
-                            <div className="form-group">
-                                <label className="checkbox-label" style={{ marginBottom: '10px' }}>
+                            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', justifyContent: 'center' }}>
+                                <label className="checkbox-label" style={{ marginBottom: '0px' }}>
                                     <input 
                                         type="checkbox" 
                                         checked={initialData.sinReceso} 
                                         onChange={(e) => onChange('sinReceso', e.target.checked)} 
                                     />
                                     <strong>Eliminar Receso de Almuerzo</strong>
+                                </label>
+                                <label className="checkbox-label" style={{ marginBottom: '0px' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.usarGapVariable} 
+                                        onChange={(e) => onChange('usarGapVariable', e.target.checked)} 
+                                    />
+                                    <strong style={{ color: 'var(--color-primary)' }}>Ajustar gap de largada según distancia (variable)</strong>
                                 </label>
                             </div>
                         </div>

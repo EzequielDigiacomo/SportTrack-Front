@@ -149,6 +149,11 @@
     color: #ef4444;
 }
 
+.activity-icon-small.inscripcion {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
 .activity-info {
     flex: 1;
 }

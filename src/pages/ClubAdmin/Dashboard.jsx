@@ -4,15 +4,18 @@ import { useAuth } from '../../context/AuthContext';
 import AtletaService from '../../services/AtletaService';
 import EventoService from '../../services/EventoService';
 import ClubService from '../../services/ClubService';
+import InscripcionService from '../../services/InscripcionService';
+import { PruebaService } from '../../services/ConfigService';
 import AtletasSection from './sections/AtletasSection';
 import EventosSection from './sections/EventosSection';
 import ControlesSection from './sections/ControlesSection';
 import PerfilClubSection from './sections/PerfilClubSection';
+import PagosClubSection from './sections/PagosClubSection';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
-import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer } from 'lucide-react';
+import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer, DollarSign, ShieldAlert } from 'lucide-react';
 import './Dashboard.css';
-
+ 
 const ClubDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -21,26 +24,35 @@ const ClubDashboard = () => {
     const [clubName, setClubName] = useState('');
     const [stats, setStats] = useState({ athletes: 0, events: 0 });
     const [recentActivity, setRecentActivity] = useState([]);
-
+    const [pagoAfiliacionAlDia, setPagoAfiliacionAlDia] = useState(true);
+ 
     useEffect(() => {
         if (!user) return;
         
         const loadDashboardData = async () => {
             try {
-                // 1. Obtener nombre del club
+                // 1. Obtener eventos próximos primero
+                const allProximos = await EventoService.getProximos();
+                const proximos = user.rol === 'SuperAdmin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
+                const controles = allProximos.filter(e => e.nombre.toLowerCase().includes('control'));
+                
                 let activityItems = [];
-
+                let athleteActivity = [];
+                let inscriptionsActivity = [];
+ 
                 if (user.clubId) {
+                    // 2. Obtener datos del club
                     const clubData = await ClubService.getById(user.clubId);
                     setClubName(clubData.nombre || clubData.Nombre);
+                    setPagoAfiliacionAlDia(clubData.pagoAfiliacionAlDia !== undefined ? clubData.pagoAfiliacionAlDia : clubData.PagoAfiliacionAlDia);
                     
-                    // 2. Obtener total de atletas (para los contadores en cards)
+                    // 3. Obtener total de atletas (para los contadores en cards)
                     const atletas = await AtletaService.getByClub(user.clubId);
                     setStats(prev => ({ ...prev, athletes: atletas.length }));
-
-                    // 3. Simular Actividad Reciente (Atletas)
+ 
+                    // 4. Actividad Reciente de Atletas
                     const sortedAtletas = [...atletas].sort((a,b) => b.id - a.id).slice(0, 3);
-                    const athleteActivity = sortedAtletas.map(a => ({
+                    athleteActivity = sortedAtletas.map(a => ({
                         id: `atleta-${a.id}`,
                         tipo: 'Atleta',
                         titulo: 'Nuevo Atleta Registrado',
@@ -48,12 +60,71 @@ const ClubDashboard = () => {
                         fecha: 'Hoy',
                         icon: <Users size={16} />
                     }));
-                    activityItems = [...athleteActivity];
+ 
+                    // 5. Cargar inscripciones del club para los eventos próximos
+                    if (proximos.length > 0) {
+                        try {
+                            const results = await Promise.all(
+                                proximos.map(async (evento) => {
+                                    try {
+                                        const [inscripciones, pruebas] = await Promise.all([
+                                            InscripcionService.getByEventoAndClub(evento.id, user.clubId),
+                                            PruebaService.getByEvento(evento.id)
+                                        ]);
+                                        return { evento, inscripciones, pruebas };
+                                    } catch (e) {
+                                        console.error(`Error loading inscriptions for event ${evento.id}`, e);
+                                        return { evento, inscripciones: [], pruebas: [] };
+                                    }
+                                })
+                            );
+ 
+                            results.forEach(({ evento, inscripciones, pruebas }) => {
+                                const pruebasMap = {};
+                                pruebas.forEach(p => {
+                                    pruebasMap[p.id] = p;
+                                });
+ 
+                                inscripciones.forEach(insc => {
+                                    const epId = insc.eventoPruebaId || insc.EventoPruebaId;
+                                    const pruebaInfo = pruebasMap[epId];
+                                    
+                                    const catNombre = pruebaInfo?.prueba?.categoria?.nombre || "Prueba";
+                                    const boteTipo = pruebaInfo?.prueba?.bote?.tipo || "";
+                                    const distDesc = pruebaInfo?.prueba?.distancia?.descripcion || "";
+                                    const sexNombre = pruebaInfo?.prueba?.sexoNombre || pruebaInfo?.prueba?.sexo?.nombre || "";
+                                    
+                                    const pruebaStr = `${catNombre} ${boteTipo} ${distDesc} ${sexNombre}`.trim();
+                                    const atletaNombre = insc.participanteNombreCompleto || insc.ParticipanteNombreCompleto || "Atleta";
+                                    
+                                    const fechaInsc = new Date(insc.fechaInscripcion || insc.FechaInscripcion);
+                                    const fechaStr = isNaN(fechaInsc.getTime()) 
+                                        ? 'Reciente' 
+                                        : fechaInsc.toLocaleDateString();
+ 
+                                    inscriptionsActivity.push({
+                                        id: `inscripcion-${insc.id || insc.Id}`,
+                                        tipo: 'Inscripcion',
+                                        titulo: 'Atleta Inscrito a Regata',
+                                        detalle: `${atletaNombre} inscrito en ${pruebaStr} (${evento.nombre})`,
+                                        fecha: fechaStr,
+                                        icon: <Trophy size={16} />,
+                                        fechaSort: fechaInsc
+                                    });
+                                });
+                            });
+ 
+                            // Ordenar inscripciones por fecha más reciente
+                            inscriptionsActivity.sort((a, b) => {
+                                const dateA = a.fechaSort ? a.fechaSort.getTime() : 0;
+                                const dateB = b.fechaSort ? b.fechaSort.getTime() : 0;
+                                return dateB - dateA;
+                            });
+                        } catch (e) {
+                            console.error("Error loading inscriptions activity", e);
+                        }
+                    }
                 }
-                
-                const allProximos = await EventoService.getProximos();
-                const proximos = user.rol === 'SuperAdmin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
-                const controles = allProximos.filter(e => e.nombre.toLowerCase().includes('control'));
                 
                 setStats(prev => ({ 
                     ...prev, 
@@ -61,8 +132,9 @@ const ClubDashboard = () => {
                     controles: controles.length
                 }));
                 
+                let eventActivity = [];
                 if (proximos.length > 0) {
-                    const eventActivity = proximos.slice(0, 2).map(e => ({
+                    eventActivity = proximos.slice(0, 2).map(e => ({
                         id: `evento-${e.id}`,
                         tipo: 'Evento',
                         titulo: 'Evento Próximo',
@@ -70,9 +142,15 @@ const ClubDashboard = () => {
                         fecha: 'Inscripciones Abiertas',
                         icon: <Calendar size={16} />
                     }));
-                    activityItems = [...activityItems, ...eventActivity];
                 }
-
+ 
+                // Combinar actividades en orden de relevancia
+                activityItems = [
+                    ...inscriptionsActivity.slice(0, 4), // Mostrar hasta 4 inscripciones recientes
+                    ...athleteActivity,
+                    ...eventActivity
+                ];
+ 
                 setRecentActivity(activityItems);
                 
             } catch (err) {
@@ -80,15 +158,14 @@ const ClubDashboard = () => {
             }
         };
         
-        loadDashboardData();
     }, [user]);
 
     return (
         <div className="dashboard-page container">
             <div className="dashboard-header-inline" style={{ 
                 alignItems: 'center',
-                borderLeft: user?.plan ? `6px solid ${user.plan.nombre.toLowerCase() === 'oro' ? '#FFD700' : user.plan.nombre.toLowerCase() === 'plata' ? '#E0E0E0' : '#CD7F32'}` : 'none',
-                paddingLeft: user?.plan ? '1.5rem' : '0',
+                borderLeft: (user?.rol === 'Admin' && user?.plan) ? `6px solid ${user.plan.nombre.toLowerCase() === 'oro' ? '#FFD700' : user.plan.nombre.toLowerCase() === 'plata' ? '#E0E0E0' : '#CD7F32'}` : 'none',
+                paddingLeft: (user?.rol === 'Admin' && user?.plan) ? '1.5rem' : '0',
                 transition: 'all 0.3s ease'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
@@ -111,7 +188,7 @@ const ClubDashboard = () => {
                     <div>
                         <h1 className="gradient-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                             {user?.rol === 'Admin' ? 'Panel de la Federación' : 'Panel del Club'} {clubName ? `"${clubName}"` : ''}
-                            {user?.plan && (
+                            {(user?.rol === 'Admin' && user?.plan) && (
                                 <span style={{ 
                                     fontSize: '0.7rem', 
                                     padding: '4px 12px', 
@@ -133,14 +210,74 @@ const ClubDashboard = () => {
                 </div>
             </div>
 
+            {/* Premium Debtor Glassmorphic Warning Banner */}
+            {!pagoAfiliacionAlDia && (
+                <div className="debtor-warning-banner glass-effect fade-in" style={{
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.05) 100%)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    boxShadow: '0 0 25px rgba(239, 68, 68, 0.15), inset 0 0 12px rgba(239, 68, 68, 0.1)',
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    marginTop: '1.5rem',
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1.25rem',
+                    backdropFilter: 'blur(12px)'
+                }}>
+                    <div style={{
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        color: '#EF4444',
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        border: '1px solid rgba(239, 68, 68, 0.3)'
+                    }}>
+                        <ShieldAlert size={24} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: 0, color: '#EF4444', fontSize: '1.05rem', fontWeight: 'bold' }}>
+                            Afiliación Anual Vencida / Restringido
+                        </h4>
+                        <p style={{ margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                            Su club tiene la afiliación anual vencida. Por favor, regularice el pago con la Federación.
+                            <strong> Las funciones de registro de nuevos atletas e inscripciones a regatas se encuentran temporalmente suspendidas.</strong>
+                        </p>
+                    </div>
+                    <button 
+                        className="btn-admin-primary" 
+                        onClick={() => navigate('pagos')} 
+                        style={{
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            color: '#FFF',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 10px rgba(239, 68, 68, 0.1)'
+                        }}
+                    >
+                        Ver Detalles
+                    </button>
+                </div>
+            )}
+ 
             <div className="dashboard-content-area">
                 <Routes>
-                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} user={user} />} />
-                    <Route path="atletas" element={<AtletasSection />} />
-                    <Route path="eventos" element={<EventosSection />} />
+                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} user={user} pagoAfiliacionAlDia={pagoAfiliacionAlDia} />} />
+                    <Route path="atletas" element={<AtletasSection pagoAfiliacionAlDia={pagoAfiliacionAlDia} />} />
+                    <Route path="eventos" element={<EventosSection pagoAfiliacionAlDia={pagoAfiliacionAlDia} />} />
                     <Route path="controles" element={<ControlesSection />} />
                     <Route path="perfil" element={<PerfilClubSection />} />
-                    <Route path="organizar/*" element={<GestionEventosSection />} />
+                    <Route path="pagos" element={<PagosClubSection />} />
+                    {/* <Route path="organizar/*" element={<GestionEventosSection />} /> */}
                     <Route path="resultados" element={<GestionResultadosSection />} />
                 </Routes>
             </div>
@@ -148,7 +285,7 @@ const ClubDashboard = () => {
     );
 };
 
-const DashboardMenu = ({ navigate, stats, recentActivity }) => (
+const DashboardMenu = ({ navigate, stats, recentActivity, user, pagoAfiliacionAlDia }) => (
     <div className="dashboard-menu-container fade-in">
         <div className="dashboard-grid mb-xl">
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('atletas')}>
@@ -156,19 +293,30 @@ const DashboardMenu = ({ navigate, stats, recentActivity }) => (
                 <h3>Atletas</h3>
                 <p className="card-label">Gestiona tu nómina ({stats.athletes})</p>
             </div>
-
+ 
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('eventos')}>
                 <div className="card-icon" style={{ color: 'var(--color-secondary)' }}><Calendar size={40} /></div>
                 <h3>Inscripciones</h3>
                 <p className="card-label">{stats.events} eventos disponibles</p>
             </div>
-
-            <div className="dashboard-card glass-effect clickable" onClick={() => navigate('organizar')}>
-                <div className="card-icon" style={{ color: '#10B981' }}><LayoutTemplate size={40} /></div>
-                <h3>Organizar Evento</h3>
-                <p className="card-label">Crear y gestionar regatas</p>
+ 
+            <div className="dashboard-card glass-effect clickable" onClick={() => navigate('pagos')} style={{ 
+                borderTop: pagoAfiliacionAlDia ? '2px solid #10B981' : '2px solid #EF4444',
+                boxShadow: pagoAfiliacionAlDia ? 'none' : '0 0 15px rgba(239, 68, 68, 0.1)'
+            }}>
+                <div className="card-icon" style={{ color: pagoAfiliacionAlDia ? '#10B981' : '#EF4444' }}><DollarSign size={40} /></div>
+                <h3>Estado de Pagos</h3>
+                <p className="card-label">{pagoAfiliacionAlDia ? 'Afiliación Anual Al Día' : 'Afiliación Pendiente'}</p>
             </div>
-
+ 
+            {/* user?.rol === 'Admin' && (
+                <div className="dashboard-card glass-effect clickable" onClick={() => navigate('organizar')}>
+                    <div className="card-icon" style={{ color: '#10B981' }}><LayoutTemplate size={40} /></div>
+                    <h3>Organizar Evento</h3>
+                    <p className="card-label">Crear y gestionar regatas</p>
+                </div>
+            ) */}
+ 
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('resultados')}>
                 <div className="card-icon" style={{ color: 'var(--color-accent-orange)' }}><Trophy size={40} /></div>
                 <h3>Resultados</h3>

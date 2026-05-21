@@ -64,6 +64,12 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     const [filtroDia, setFiltroDia] = useState('Todos');
     const [editingId, setEditingId] = useState(null);
 
+    const [gapEntrePruebas, setGapEntrePruebas] = useState(evento.gapEntrePruebas || 10);
+    const [gapRecuperacion, setGapRecuperacion] = useState(40);
+    const [horaInicioFinales, setHoraInicioFinales] = useState('10:30');
+    const [usarBloqueFinales, setUsarBloqueFinales] = useState(true);
+    const [usarGapVariable, setUsarGapVariable] = useState(evento.usarGapVariable || false);
+
     const [modalConfig, setModalConfig] = useState({ show: false, type: 'warning', title: '', message: '' });
 
     useEffect(() => {
@@ -91,6 +97,10 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                 );
                 setPruebasActuales(actuals);
                 setFasesLive(live || []);
+                if (evento) {
+                    setGapEntrePruebas(evento.gapEntrePruebas || 10);
+                    setUsarGapVariable(evento.usarGapVariable || false);
+                }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -204,6 +214,35 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                     <button className="btn-admin-primary flex-1" onClick={handleAddPrueba} disabled={saving}>{saving ? '...' : (editingId ? 'Actualizar' : 'Habilitar')}</button>
                                 </div>
                             </div>
+
+                            <hr className="admin-divider" style={{ margin: '1.5rem 0', borderColor: 'rgba(255,255,255,0.08)' }} />
+                            <h4 className="section-title">Ajustes del Cronograma</h4>
+                            <div className="admin-grid-form" style={{ gap: '12px' }}>
+                                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div className="form-group">
+                                        <label style={{ fontSize: '0.8rem', opacity: 0.8 }}>Gap base (min)</label>
+                                        <input type="number" className="admin-input" value={gapEntrePruebas} onChange={e => setGapEntrePruebas(parseInt(e.target.value) || 10)} min="1" max="120" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ fontSize: '0.8rem', opacity: 0.8 }}>Descanso (min)</label>
+                                        <input type="number" className="admin-input" value={gapRecuperacion} onChange={e => setGapRecuperacion(parseInt(e.target.value) || 40)} min="10" max="180" />
+                                    </div>
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                    <input type="checkbox" id="chkBloqueFinales" checked={usarBloqueFinales} onChange={e => setUsarBloqueFinales(e.target.checked)} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
+                                    <label htmlFor="chkBloqueFinales" style={{ cursor: 'pointer', marginBottom: 0, fontSize: '0.85rem', opacity: 0.9 }}>Fijar hora para Finales</label>
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                    <input type="checkbox" id="chkUsarGapVariable" checked={usarGapVariable} onChange={e => setUsarGapVariable(e.target.checked)} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
+                                    <label htmlFor="chkUsarGapVariable" style={{ cursor: 'pointer', marginBottom: 0, fontSize: '0.85rem', opacity: 0.9 }}>Ajustar gap de largada según distancia (variable)</label>
+                                </div>
+                                {usarBloqueFinales && (
+                                    <div className="form-group">
+                                        <label style={{ fontSize: '0.8rem', opacity: 0.8 }}>Inicio Bloque Finales</label>
+                                        <input type="time" className="admin-input" value={horaInicioFinales} onChange={e => setHoraInicioFinales(e.target.value)} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="list-column">
@@ -246,8 +285,12 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
 
                                     // 2. Aplicar Motor de Pateo en Vivo
                                     const itemsProyectados = SchedulerService.recalcularTiempos(rawItems, {
-                                        gapBaseMs: 10 * 60 * 1000,
-                                        gapRecuperacionMs: 40 * 60 * 1000
+                                        gapEntrePruebas: gapEntrePruebas,
+                                        gapRecuperacionMs: gapRecuperacion * 60 * 1000,
+                                        horaInicioFinales: usarBloqueFinales ? horaInicioFinales : null,
+                                        horaInicioEvento: evento.horaInicioEvento || "08:00",
+                                        horaFinEvento: "18:00",
+                                        usarGapVariable: usarGapVariable
                                     });
 
                                     // 3. Filtrar por día
@@ -280,7 +323,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {itemsFinales.map((it, idx) => {
+                                                {[...itemsFinales].reverse().map((it, idx) => {
                                                     const isF = it.tipo === 'fase';
                                                     const raw = it.raw;
                                                     const p = isF ? (raw.etapa?.eventoPrueba?.prueba || raw.prueba?.prueba || raw.prueba) : raw.prueba;
@@ -298,7 +341,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                                             opacity: isF ? 1 : 0.8,
                                                             background: isF ? 'rgba(59, 130, 246, 0.03)' : 'transparent'
                                                         }}>
-                                                            <td>{idx + 1}</td>
+                                                            <td>{itemsFinales.length - idx}</td>
                                                             <td>
                                                                 <span className="badge-outline" style={{ borderColor: CATEGORIA_COLORS[catId]?.text, color: CATEGORIA_COLORS[catId]?.text }}>
                                                                     {CATEGORIA_NAMES[catId] || 'Cat'}

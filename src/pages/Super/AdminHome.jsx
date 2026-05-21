@@ -11,7 +11,8 @@ import {
     TrendingUp, 
     Activity,
     ShieldCheck,
-    Eye
+    Eye,
+    CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
@@ -19,6 +20,8 @@ import ClubService from '../../services/ClubService';
 import SaaSService from '../../services/SaaSService';
 import SupportService from '../../services/SupportService';
 import { History, Clock, FileText, AlertCircle, User } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import ConfirmDialog from '../../components/Common/ConfirmDialog';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -33,100 +36,169 @@ const AdminHome = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedDay, setSelectedDay] = useState(null);
 
+    const { addToast } = useToast();
+    const [activeTab, setActiveTab] = useState('agenda');
+    const [confirmDialog, setConfirmDialog] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'warning',
+        onConfirm: null
+    });
+
     const role = user?.rol?.trim().toLowerCase();
     const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
     const isViewingSpecificFed = isSuper && id;
 
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                if (isSuper && !id) {
-                    // Cargar métricas globales para SuperAdmin
-                    const [metricsData, logs, events, saasInfo, allClubs] = await Promise.all([
-                        SaaSService.getGlobalMetrics().catch(() => ({})),
-                        SupportService.getLogs({ limit: 8 }).catch(() => []),
-                        EventoService.getAll().catch(() => []),
-                        SaaSService.getClubesStatus().catch(() => []),
-                        ClubService.getAll().catch(() => [])
-                    ]);
-                    setGlobalStats({
-                        ...metricsData,
-                        uncompletedEvents: events.filter(e => e.estado !== 'Finalizado'),
-                        saasExpirations: saasInfo.filter(s => s.fechaVencimientoPlan),
-                        allClubs
-                    });
-                    setRecentLogs(logs);
-                } else if (isSuper && id) {
-                    // SuperAdmin viendo una federación específica → usar datos de SaaS
-                    const [clubesStatus, events, allClubs] = await Promise.all([
-                        SaaSService.getClubesStatus().catch(() => []),
-                        EventoService.getAll().catch(() => []),
-                        ClubService.getAll().catch(() => [])
-                    ]);
-                    
-                    setGlobalStats(prev => ({
-                        ...prev,
-                        allClubs: allClubs
-                    }));
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            if (isSuper && !id) {
+                // Cargar métricas globales para SuperAdmin
+                const [metricsData, logs, events, saasInfo, allClubs] = await Promise.all([
+                    SaaSService.getGlobalMetrics().catch(() => ({})),
+                    SupportService.getLogs({ limit: 8 }).catch(() => []),
+                    EventoService.getAll().catch(() => []),
+                    SaaSService.getClubesStatus().catch(() => []),
+                    ClubService.getAll().catch(() => [])
+                ]);
+                setGlobalStats({
+                    ...metricsData,
+                    uncompletedEvents: events.filter(e => e.estado !== 'Finalizado'),
+                    saasExpirations: saasInfo.filter(s => s.fechaVencimientoPlan),
+                    saasInfo: saasInfo,
+                    allClubs
+                });
+                setRecentLogs(logs);
+            } else if (isSuper && id) {
+                // SuperAdmin viendo una federación específica → usar datos de SaaS
+                const [clubesStatus, events, allClubs] = await Promise.all([
+                    SaaSService.getClubesStatus().catch(() => []),
+                    EventoService.getAll().catch(() => []),
+                    ClubService.getAll().catch(() => [])
+                ]);
+                
+                setGlobalStats(prev => ({
+                    ...prev,
+                    allClubs: allClubs
+                }));
 
-                    const fed = clubesStatus.find(f => String(f.clubId) === String(id));
-                    if (fed) {
-                        setFedName(fed.clubNombre);
-                        setStats({
-                            eventos: fed.torneosActivosCount || 0,
-                            programados: 0,
-                            clubes: fed.clubesAfiliadosCount || 0,
-                            atletas: fed.atletasRegistrados || 0
-                        });
-                    }
-
-                    const targetFedId = Number(id);
-                    const myEvents = events.filter(e => {
-                        const club = allClubs.find(c => c.id === e.clubId);
-                        const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
-                        return parentFedId === targetFedId && e.estado !== 'Finalizado';
-                    });
-                    setFedEvents(myEvents);
-                } else {
-                    // Admin normal: cargar sus propios datos
-                    const [eventosRaw, clubesData] = await Promise.all([
-                        EventoService.getAll(),
-                        ClubService.getAll()
-                    ]);
-                    
-                    setGlobalStats(prev => ({
-                        ...prev,
-                        allClubs: clubesData
-                    }));
-
-                    const targetFedId = Number(user.clubId);
-                    const myEvents = eventosRaw.filter(e => {
-                        const club = clubesData.find(c => c.id === e.clubId);
-                        const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
-                        return parentFedId === targetFedId && e.estado !== 'Finalizado';
-                    });
-                    setFedEvents(myEvents);
-
-                    const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
-                    const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
-                    const subClubes = clubesData.filter(c => c.id !== user.clubId);
-                    const totalAtletas = subClubes.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
+                const fed = clubesStatus.find(f => String(f.clubId) === String(id));
+                if (fed) {
+                    setFedName(fed.clubNombre);
                     setStats({
-                        eventos: eventosData.length,
-                        programados: eventosProgramados,
-                        clubes: subClubes.length,
-                        atletas: totalAtletas
+                        eventos: fed.torneosActivosCount || 0,
+                        programados: 0,
+                        clubes: fed.clubesAfiliadosCount || 0,
+                        atletas: fed.atletasRegistrados || 0
                     });
                 }
-            } catch (err) {
-                console.error("Error cargando dashboard", err);
-            } finally {
-                setLoading(false);
+
+                const targetFedId = Number(id);
+                const myEvents = events.filter(e => {
+                    const club = allClubs.find(c => c.id === e.clubId);
+                    const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
+                    return parentFedId === targetFedId && e.estado !== 'Finalizado';
+                });
+                setFedEvents(myEvents);
+            } else {
+                // Admin normal: cargar sus propios datos
+                const [eventosRaw, clubesData] = await Promise.all([
+                    EventoService.getAll(),
+                    ClubService.getAll()
+                ]);
+                
+                setGlobalStats(prev => ({
+                    ...prev,
+                    allClubs: clubesData
+                }));
+
+                const targetFedId = Number(user.clubId);
+                const myEvents = eventosRaw.filter(e => {
+                    const club = clubesData.find(c => c.id === e.clubId);
+                    const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
+                    return parentFedId === targetFedId && e.estado !== 'Finalizado';
+                });
+                setFedEvents(myEvents);
+
+                const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
+                const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
+                const subClubes = clubesData.filter(c => c.id !== user.clubId);
+                const totalAtletas = subClubes.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
+                setStats({
+                    eventos: eventosData.length,
+                    programados: eventosProgramados,
+                    clubes: subClubes.length,
+                    atletas: totalAtletas
+                });
             }
-        };
+        } catch (err) {
+            console.error("Error cargando dashboard", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         loadData();
     }, [isSuper, id]);
+
+    const handleRenovarPlan = async (clubId) => {
+        if (!globalStats?.saasInfo) return;
+        const fed = globalStats.saasInfo.find(f => f.clubId === clubId);
+        if (!fed) return;
+
+        let baseDate = new Date();
+        if (fed.fechaVencimientoPlan) {
+            const currentVenc = new Date(fed.fechaVencimientoPlan);
+            if (!isNaN(currentVenc.getTime()) && currentVenc > baseDate) {
+                baseDate = currentVenc;
+            }
+        }
+
+        const freq = fed.frecuenciaPago || 'Mensual';
+        const nextDate = new Date(baseDate);
+        if (freq === 'Anual') {
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+        } else {
+            nextDate.setMonth(nextDate.getMonth() + 1);
+        }
+
+        const newVencimiento = nextDate.toISOString().split('T')[0];
+
+        const clubData = {
+            nombre: fed.clubNombre,
+            sigla: fed.sigla || '',
+            email: fed.email || '',
+            telefono: fed.telefono || '',
+            direccion: fed.direccion || '',
+            ubicacion: fed.ubicacion || '',
+            activo: true,
+            frecuenciaPago: freq,
+            fechaAltaPlan: new Date().toISOString().split('T')[0],
+            fechaVencimientoPlan: newVencimiento,
+            bloqueadoPorFaltaDePago: false
+        };
+
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Confirmar Renovación Rápida',
+            message: `¿Confirmar la renovación del Plan ${fed.planNombre} (${freq}) para la federación "${fed.clubNombre}"?\n\nNuevo vencimiento estimado: ${new Date(newVencimiento).toLocaleDateString()}`,
+            type: 'success',
+            icon: <Calendar size={32} />,
+            onConfirm: async () => {
+                try {
+                    await SaaSService.updateFederacion(clubId, clubData);
+                    addToast(`Plan ${fed.planNombre} de ${fed.clubNombre} renovado con éxito`, "success");
+                    await loadData();
+                } catch (err) {
+                    console.error("Error al renovar plan:", err);
+                    addToast("Error al renovar el plan.", "error");
+                }
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
 
 
     // --- PALETAS DE COLORES PARA FEDERACIONES (Para SuperAdmin) ---
@@ -490,111 +562,235 @@ const AdminHome = () => {
                             })()}
 
                             {/* Detalle del Mes/Día Seleccionado */}
-                            <div className="selected-month-details" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '1rem', maxHeight: '310px', overflowY: 'auto', flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.4rem' }}>
-                                    <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>
-                                        {selectedDay !== null 
-                                            ? `Agenda del día ${selectedDay}` 
-                                            : `Agenda de ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][selectedMonth]}`
-                                        }
-                                    </h5>
-                                    {selectedDay !== null && (
-                                        <button 
-                                            onClick={() => setSelectedDay(null)}
-                                            style={{ background: 'none', border: 'none', color: 'var(--color-accent-orange)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, padding: 0 }}
-                                        >
-                                            Ver todo el mes
-                                        </button>
-                                    )}
+                            <div className="selected-month-details" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '1rem', height: '350px', maxHeight: '380px', overflowY: 'auto', flex: 1 }}>
+                                {/* Selector de Pestañas */}
+                                <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.8rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
+                                    <button 
+                                        onClick={() => setActiveTab('agenda')}
+                                        className={`saas-tab-btn ${activeTab === 'agenda' ? 'active' : ''}`}
+                                    >
+                                        <Calendar size={13} /> Agenda
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('saas')}
+                                        className={`saas-tab-btn ${activeTab === 'saas' ? 'active' : ''}`}
+                                    >
+                                        <CreditCard size={13} /> SaaS
+                                    </button>
                                 </div>
 
-                                {(() => {
-                                    const currentYear = new Date().getFullYear();
-                                    let mExps = (globalStats.saasExpirations || []).filter(item => {
-                                        const d = new Date(item.fechaVencimientoPlan);
-                                        return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
-                                    });
-                                    let mEvts = (globalStats.uncompletedEvents || []).filter(item => {
-                                        const d = new Date(item.fecha);
-                                        return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
-                                    });
-
-                                    if (selectedDay !== null) {
-                                        mExps = mExps.filter(item => new Date(item.fechaVencimientoPlan).getDate() === selectedDay);
-                                        mEvts = mEvts.filter(item => new Date(item.fecha).getDate() === selectedDay);
-                                    }
-
-                                    if (mExps.length === 0 && mEvts.length === 0) {
-                                        return (
-                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)', gap: '0.5rem', padding: '2rem 0' }}>
-                                                <Calendar size={32} style={{ opacity: 0.3 }} />
-                                                <span style={{ fontSize: '0.8rem' }}>
-                                                    {selectedDay !== null ? `Sin actividades para el día ${selectedDay}` : 'Sin actividades planificadas'}
-                                                </span>
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                            {/* Sección Vencimientos */}
-                                            {mExps.length > 0 && (
-                                                <div>
-                                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>⚠️ Vencimientos SaaS ({mExps.length})</span>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                                        {mExps.map((exp, idx) => {
-                                                            const dateObj = new Date(exp.fechaVencimientoPlan);
-                                                            const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                                                            const palette = getFederationPalette(exp.clubId);
-                                                            return (
-                                                                <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                    <div>
-                                                                        <strong style={{ color: 'var(--color-text)' }}>{exp.clubNombre}</strong>
-                                                                        <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
-                                                                            Plan {exp.planNombre || 'Activo'} ({exp.frecuenciaPago || 'Mensual'})
-                                                                        </span>
-                                                                    </div>
-                                                                    <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
+                                {activeTab === 'agenda' ? (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', paddingBottom: '0.4rem' }}>
+                                            <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>
+                                                {selectedDay !== null 
+                                                    ? `Agenda del día ${selectedDay}` 
+                                                    : `Agenda de ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][selectedMonth]}`
+                                                }
+                                            </h5>
+                                            {selectedDay !== null && (
+                                                <button 
+                                                    onClick={() => setSelectedDay(null)}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--color-accent-orange)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, padding: 0 }}
+                                                >
+                                                    Ver todo el mes
+                                                </button>
                                             )}
+                                        </div>
 
-                                            {/* Sección Eventos */}
-                                            {mEvts.length > 0 && (
-                                                <div>
-                                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>🏆 Eventos Activos ({mEvts.length})</span>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                                        {mEvts.map((evt, idx) => {
-                                                            const dateObj = new Date(evt.fecha);
-                                                            const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                                                            const parentFedId = getFederationIdForClub(evt.clubId);
-                                                            const palette = getFederationPalette(parentFedId);
-                                                            return (
-                                                                <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                    <div>
-                                                                        <strong style={{ color: 'var(--color-text)' }}>{evt.nombre}</strong>
-                                                                        <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
-                                                                            Org: {evt.clubNombre || 'Federación'}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                                                                        <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
-                                                                        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: evt.estado === 'EnProgreso' ? '#22c55e' : palette.text }}>
-                                                                            {evt.estado === 'EnProgreso' ? 'En Curso' : 'Programado'}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
+                                        {(() => {
+                                            const currentYear = new Date().getFullYear();
+                                            let mExps = (globalStats.saasExpirations || []).filter(item => {
+                                                const d = new Date(item.fechaVencimientoPlan);
+                                                return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                            });
+                                            let mEvts = (globalStats.uncompletedEvents || []).filter(item => {
+                                                const d = new Date(item.fecha);
+                                                return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                            });
+
+                                            if (selectedDay !== null) {
+                                                mExps = mExps.filter(item => new Date(item.fechaVencimientoPlan).getDate() === selectedDay);
+                                                mEvts = mEvts.filter(item => new Date(item.fecha).getDate() === selectedDay);
+                                            }
+
+                                            if (mExps.length === 0 && mEvts.length === 0) {
+                                                return (
+                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)', gap: '0.5rem', padding: '2rem 0' }}>
+                                                        <Calendar size={32} style={{ opacity: 0.3 }} />
+                                                        <span style={{ fontSize: '0.8rem' }}>
+                                                            {selectedDay !== null ? `Sin actividades para el día ${selectedDay}` : 'Sin actividades planificadas'}
+                                                        </span>
                                                     </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                                    {/* Sección Vencimientos */}
+                                                    {mExps.length > 0 && (
+                                                        <div>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>⚠️ Vencimientos SaaS ({mExps.length})</span>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                                {mExps.map((exp, idx) => {
+                                                                    const dateObj = new Date(exp.fechaVencimientoPlan);
+                                                                    const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                                                    const palette = getFederationPalette(exp.clubId);
+                                                                    return (
+                                                                        <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <div>
+                                                                                <strong style={{ color: 'var(--color-text)' }}>{exp.clubNombre}</strong>
+                                                                                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                                                                                    Plan {exp.planNombre || 'Activo'} ({exp.frecuenciaPago || 'Mensual'})
+                                                                                </span>
+                                                                            </div>
+                                                                            <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Sección Eventos */}
+                                                    {mEvts.length > 0 && (
+                                                        <div>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>🏆 Eventos Activos ({mEvts.length})</span>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                                {mEvts.map((evt, idx) => {
+                                                                    const dateObj = new Date(evt.fecha);
+                                                                    const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                                                    const parentFedId = getFederationIdForClub(evt.clubId);
+                                                                    const palette = getFederationPalette(parentFedId);
+                                                                    return (
+                                                                        <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <div>
+                                                                                <strong style={{ color: 'var(--color-text)' }}>{evt.nombre}</strong>
+                                                                                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                                                                                    Org: {evt.clubNombre || 'Federación'}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                                                                <span style={{ background: palette.primary, color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px' }}>{formattedDate}</span>
+                                                                                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: evt.estado === 'EnProgreso' ? '#22c55e' : palette.text }}>
+                                                                                    {evt.estado === 'EnProgreso' ? 'En Curso' : 'Programado'}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </>
+                                ) : (
+                                    /* Tab 2: SaaS View */
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                                            <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>Suscripciones</h5>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>{globalStats.saasInfo?.length || 0} Federaciones</span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                            {globalStats.saasInfo && globalStats.saasInfo.length > 0 ? (
+                                                globalStats.saasInfo.map((fed) => {
+                                                    const palette = getFederationPalette(fed.clubId);
+                                                    
+                                                    // Determine billing status
+                                                    let billingStatus = 'Al Día ✅';
+                                                    let statusBadgeStyle = { background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#22c55e' };
+                                                    
+                                                    if (fed.bloqueadoPorFaltaDePago || !fed.activo) {
+                                                        billingStatus = 'Bloqueado 🛑';
+                                                        statusBadgeStyle = { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' };
+                                                    } else if (fed.fechaVencimientoPlan) {
+                                                        const isExpired = new Date() > new Date(fed.fechaVencimientoPlan);
+                                                        if (isExpired) {
+                                                            billingStatus = 'Vencido ⚠️';
+                                                            statusBadgeStyle = { background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#f59e0b' };
+                                                        }
+                                                    }
+
+                                                    // Plan Tier badge style
+                                                    const pNombre = (fed.planNombre || 'Activo').toLowerCase();
+                                                    let planColor = '#CD7F32'; // Bronce
+                                                    let planBg = 'rgba(205, 127, 50, 0.1)';
+                                                    let planBorder = 'rgba(205, 127, 50, 0.3)';
+                                                    
+                                                    if (pNombre.includes('oro')) {
+                                                        planColor = '#FFD700'; // Oro
+                                                        planBg = 'rgba(255, 215, 0, 0.15)';
+                                                        planBorder = 'rgba(255, 215, 0, 0.4)';
+                                                    } else if (pNombre.includes('plata')) {
+                                                        planColor = '#E0E0E0'; // Plata
+                                                        planBg = 'rgba(224, 224, 224, 0.15)';
+                                                        planBorder = 'rgba(224, 224, 224, 0.4)';
+                                                    }
+
+                                                    const planBadgeStyle = {
+                                                        background: planBg,
+                                                        border: `1px solid ${planBorder}`,
+                                                        color: planColor,
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: 800,
+                                                        padding: '2px 6px',
+                                                        borderRadius: '6px',
+                                                        textTransform: 'uppercase',
+                                                        boxShadow: pNombre.includes('oro') ? '0 0 6px rgba(255,215,0,0.2)' : 'none'
+                                                    };
+
+                                                    const formattedExpDate = fed.fechaVencimientoPlan 
+                                                        ? new Date(fed.fechaVencimientoPlan).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) 
+                                                        : 'Sin exp';
+
+                                                    return (
+                                                        <div key={fed.clubId} className="saas-fed-row" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: palette.primary }} />
+                                                                    <strong style={{ color: 'var(--color-text)', fontSize: '0.8rem' }}>{fed.clubNombre}</strong>
+                                                                </div>
+                                                                <span style={planBadgeStyle}>{fed.planNombre || 'Sin Plan'}</span>
+                                                            </div>
+
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                                                    <span style={{
+                                                                        ...statusBadgeStyle,
+                                                                        fontSize: '0.65rem',
+                                                                        fontWeight: 700,
+                                                                        padding: '2px 6px',
+                                                                        borderRadius: '6px'
+                                                                    }}>
+                                                                        {billingStatus}
+                                                                    </span>
+                                                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                                                                        {formattedExpDate}
+                                                                    </span>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => handleRenovarPlan(fed.clubId)}
+                                                                    className="btn-renovar-quick"
+                                                                >
+                                                                    Renovar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)', gap: '0.5rem', padding: '2rem 0' }}>
+                                                    <CreditCard size={32} style={{ opacity: 0.3 }} />
+                                                    <span style={{ fontSize: '0.8rem' }}>No se encontraron federaciones</span>
                                                 </div>
                                             )}
                                         </div>
-                                    );
-                                })()}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -710,6 +906,79 @@ const AdminHome = () => {
                         </table>
                     </div>
                 </div>
+
+                <style>{`
+                    .saas-tab-btn {
+                        background: none;
+                        border: none;
+                        color: var(--color-text-dim);
+                        padding: 6px 12px;
+                        border-radius: 20px;
+                        cursor: pointer;
+                        font-size: 0.75rem;
+                        font-weight: 800;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    .saas-tab-btn:hover {
+                        color: var(--color-text);
+                        background: rgba(255, 255, 255, 0.05);
+                    }
+                    .saas-tab-btn.active {
+                        background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.05));
+                        border: 1px solid rgba(249, 115, 22, 0.3);
+                        color: var(--color-accent-orange);
+                        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+                    }
+                    .btn-renovar-quick {
+                        background: rgba(34, 197, 94, 0.1);
+                        border: 1px solid rgba(34, 197, 94, 0.3);
+                        color: #22c55e;
+                        border-radius: 8px;
+                        padding: 4px 8px;
+                        font-size: 0.72rem;
+                        font-weight: 800;
+                        cursor: pointer;
+                        transition: all 0.2s ease-in-out;
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    .btn-renovar-quick:hover {
+                        background: #22c55e;
+                        color: #ffffff;
+                        box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+                        transform: translateY(-1px);
+                    }
+                    .btn-renovar-quick:active {
+                        transform: translateY(0);
+                    }
+                    .saas-fed-row {
+                        padding: 0.6rem 0.8rem;
+                        background: rgba(255, 255, 255, 0.02);
+                        border: 1px solid var(--color-border);
+                        border-radius: 12px;
+                        transition: all 0.2s ease;
+                    }
+                    .saas-fed-row:hover {
+                        background: rgba(255, 255, 255, 0.04);
+                        border-color: rgba(255, 255, 255, 0.15);
+                    }
+                `}</style>
+
+                {confirmDialog.isOpen && (
+                    <ConfirmDialog
+                        isOpen={confirmDialog.isOpen}
+                        title={confirmDialog.title}
+                        message={confirmDialog.message}
+                        type={confirmDialog.type}
+                        icon={confirmDialog.icon}
+                        onConfirm={confirmDialog.onConfirm}
+                        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                    />
+                )}
             </div>
         );
     }

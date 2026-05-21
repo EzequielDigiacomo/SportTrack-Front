@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import './InscripcionModal.css';
 
-const InscripcionAtletaModal = ({ evento, onClose }) => {
+const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true }) => {
     const { user } = useAuth();
     const [pruebasHabilitadas, setPruebasHabilitadas] = useState([]);
     const [atletasClub, setAtletasClub] = useState([]);
@@ -111,6 +111,11 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
     };
 
     const handleConfirmInscripcion = async () => {
+        if (!pagoAfiliacionAlDia) {
+            setMsg({ type: 'error', text: 'El registro de nuevas inscripciones está deshabilitado por afiliación anual vencida.' });
+            return;
+        }
+
         const maxRequired = getMaxTripulantes(selectedPrueba.prueba.bote?.tipo);
 
         if (selectedAtletas.length === 0 || selectedAtletas.length % maxRequired !== 0) {
@@ -208,6 +213,21 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                 </div>
 
                 {msg && <div className={`alert-msg ${msg.type}`}>{msg.text}</div>}
+                {!pagoAfiliacionAlDia && (
+                    <div className="alert-msg error" style={{
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        color: '#ef4444',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        padding: '10px 15px',
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    }}>
+                        ⚠️ <strong>Afiliación Anual Vencida:</strong> El registro de nuevas inscripciones está deshabilitado temporalmente hasta que se regularice la situación del club con la Federación.
+                    </div>
+                )}
 
                 <div className="modal-body inscripcion-body">
                     <div className="pruebas-selector">
@@ -463,6 +483,7 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
                             <button 
                                 className="btn-admin-primary"
                                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }}
+                                disabled={saving || !pagoAfiliacionAlDia}
                                 onClick={async () => {
                                     setSaving(true);
                                     const pruebasConSeleccion = Object.keys(selectionsMap).filter(k => selectionsMap[k]?.length > 0);
@@ -513,7 +534,7 @@ const InscripcionAtletaModal = ({ evento, onClose }) => {
 
                         <button
                             className={`btn-admin-primary ${(botesDisponibles === 0 && selectedAtletas.length === 0) ? 'disabled' : ''}`}
-                            disabled={!selectedPrueba || selectedAtletas.length === 0 || saving || inscripcionesCerradas || botesDisponibles === 0}
+                            disabled={!selectedPrueba || selectedAtletas.length === 0 || saving || inscripcionesCerradas || botesDisponibles === 0 || !pagoAfiliacionAlDia}
                             onClick={handleConfirmInscripcion}
                         >
                             {inscripcionesCerradas ? "Inscripciones Cerradas" : (saving ? "Procesando..." : `Confirmar ${selectedPrueba?.prueba?.categoria?.nombre || ''}`)}

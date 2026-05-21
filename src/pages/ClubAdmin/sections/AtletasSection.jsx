@@ -30,7 +30,7 @@ const AtletaSkeleton = () => (
     </div>
 );
 
-const AtletasSection = () => {
+const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
     const navigate = useNavigate();
     const [atletas, setAtletas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -112,6 +112,11 @@ const AtletasSection = () => {
             return;
         }
 
+        if (!pagoAfiliacionAlDia && view !== 'editar') {
+            showAlert('error', 'El registro de nuevos atletas está suspendido por afiliación anual de club vencida.');
+            return;
+        }
+
         setSaving(true);
         try {
             if (view === 'editar') {
@@ -188,7 +193,20 @@ const AtletasSection = () => {
                     <h1 style={{ margin: 0 }}>Mis Atletas</h1>
                 </div>
                 {view === 'lista' && (
-                    <button className="btn-admin-primary" onClick={handleOpenCrear}>
+                    <button 
+                        className="btn-admin-primary" 
+                        onClick={pagoAfiliacionAlDia ? handleOpenCrear : undefined}
+                        disabled={!pagoAfiliacionAlDia}
+                        title={!pagoAfiliacionAlDia ? "Registro bloqueado por afiliación anual vencida" : "Nuevo Atleta"}
+                        style={!pagoAfiliacionAlDia ? { 
+                            opacity: 0.5, 
+                            cursor: 'not-allowed', 
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            color: '#EF4444',
+                            borderColor: 'rgba(239, 68, 68, 0.4)',
+                            boxShadow: 'none'
+                        } : {}}
+                    >
                         <UserPlus size={20} /> Nuevo Atleta
                     </button>
                 )}

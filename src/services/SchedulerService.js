@@ -1,13 +1,12 @@
 /**
  * SchedulerService.js
- * Motor de cálculo de cronograma basado en el principio de "Pateo Condicional".
+ * Motor de cálculo de cronograma inteligente basado en "Bloques por Categoría" e "Intercalación Activa".
+ * Agrupa las series de la misma categoría de manera consecutiva y coloca las semis/finales
+ * en los huecos naturales entre categorías respetando una ventana óptima de descanso (40-60 minutos).
+ * Adicionalmente, retiene las Finales para que comiencen a partir de una hora preferencial (ej. 10:30 AM).
  */
 
 const SchedulerService = {
-    /**
-     * Recalcula los horarios de una secuencia de regatas (Fases o Pruebas).
-     * Respeta el horario original si es posible, de lo contrario empuja (patea) hacia adelante.
-     */
     recalcularTiempos: (items, config = {}) => {
         if (!items || items.length === 0) return [];
         
@@ -18,7 +17,9 @@ const SchedulerService = {
             horaFinEvento = "18:00",
             sinReceso = false,
             horaInicioReceso = "13:00",
-            horaFinReceso = "14:00"
+            horaFinReceso = "14:00",
+            horaInicioFinales = config.horaInicioFinales || "10:30", // Hora preferencial para iniciar las finales
+            usarGapVariable = config.usarGapVariable || false
         } = config;
 
         const getMinutesOfDay = (item) => {
@@ -27,36 +28,33 @@ const SchedulerService = {
 
             const date = new Date(val);
             if (!isNaN(date.getTime())) {
-                // Si es una fecha válida (ISO), devolvemos minutos locales
                 return date.getHours() * 60 + date.getMinutes();
             }
 
-            // Fallback para strings tipo "HH:MM"
             const match = String(val).match(/(\d{2}):(\d{2})/);
             if (match) return parseInt(match[1]) * 60 + parseInt(match[2]);
             return 480; // 08:00 default
         };
 
-        // 1. ORDENAMIENTO CRONOLÓGICO (Permite entreverar Eliminatorias con Semis/Finales)
-        const sorted = [...items].sort((a, b) => {
-            // Prioridad 1: Hora original del programa (Permite intercalar)
-            const minA = getMinutesOfDay(a);
-            const minB = getMinutesOfDay(b);
-            if (minA !== minB) return minA - minB;
+        const getPruebaId = (item) => {
+            return item.eventoPruebaId || item.raw?.eventoPruebaId || item.raw?.id || "unknown";
+        };
 
-            // Prioridad 2: Orden de la Etapa (1: Eliminatorias, 2: Semis, 3: Finales) para desempatar si caen en la misma hora
-            const orderA = a.etapa?.orden || a.etapaOrden || 1;
-            const orderB = b.etapa?.orden || b.etapaOrden || 1;
-            if (orderA !== orderB) return orderA - orderB;
+        const getEtapaOrden = (item) => {
+            return item.etapa?.orden || item.etapaOrden || 1;
+        };
 
-            // Prioridad 3: Número de fase (Serie 1, Serie 2...)
-            return (a.numeroFase || 0) - (b.numeroFase || 0);
-        });
+        const getNumeroFase = (item) => {
+            return item.numeroFase || 0;
+        };
 
-        let cursorMinutos = -1;
-        let currentDiaOffset = 0;
-        const resultados = [];
-        const ultimosMinutosPorPrueba = {};
+        const getISODateStr = (item) => {
+            const val = item.time || item.fechaHoraOriginal || item.prueba?.fechaHora || item.raw?.fechaHora || item.raw?.fechaHoraProgramada;
+            if (val && String(val).includes('T')) {
+                return String(val).split('T')[0];
+            }
+            return new Date().toISOString().split('T')[0];
+        };
 
         const parseMinutes = (horaStr) => {
             const [h, m] = horaStr.split(':').map(Number);
@@ -64,6 +62,7 @@ const SchedulerService = {
         };
         const inicioEventoMin = parseMinutes(horaInicioEvento);
         const finEventoMin = parseMinutes(horaFinEvento || "18:00");
+        const inicioFinalesMin = parseMinutes(horaInicioFinales || "10:30");
 
         const formatMinutes = (totalMinutes) => {
             const h = Math.floor(totalMinutes / 60);
@@ -81,71 +80,233 @@ const SchedulerService = {
             return minutos;
         };
 
-        for (let i = 0; i < sorted.length; i++) {
-            const item = sorted[i];
-            
-            let minutosCalculados;
+        // --- 1. AGRUPAR ITEMS POR PRUEBA/CATEGORÍA ---
+        const itemsByPrueba = {};
+        items.forEach(item => {
+            const pId = getPruebaId(item);
+            if (!itemsByPrueba[pId]) {
+                itemsByPrueba[pId] = [];
+            }
+            itemsByPrueba[pId].push(item);
+        });
 
-            if (i === 0) {
-                // La primera regata ancla el horario
-                minutosCalculados = getMinutesOfDay(item);
-            } else {
-                // Empaquetamiento secuencial estricto. Se ignora la hora de la BD para evitar "saltos" por placeholder
-                minutosCalculados = cursorMinutos;
+        // --- 2. ORDENAR LOS ITEMS INTERNOS DE CADA CATEGORÍA ---
+        // Series (etapaOrden 1) -> Semis (etapaOrden 2) -> Finales (etapaOrden 3)
+        Object.keys(itemsByPrueba).forEach(pId => {
+            itemsByPrueba[pId].sort((a, b) => {
+                const orderA = getEtapaOrden(a);
+                const orderB = getEtapaOrden(b);
+                if (orderA !== orderB) return orderA - orderB;
+                return getNumeroFase(a) - getNumeroFase(b);
+            });
+        });
+
+        // --- 3. PARTIR EN BLOQUES DE ETAPAS POR CATEGORÍA ---
+        const categoryBlocks = {};
+        Object.keys(itemsByPrueba).forEach(pId => {
+            const sortedItems = itemsByPrueba[pId];
+            const blocks = [];
+            let currentBlock = null;
+
+            sortedItems.forEach(item => {
+                const stage = getEtapaOrden(item);
+                if (!currentBlock || currentBlock.etapaOrden !== stage) {
+                    currentBlock = {
+                        id: `${pId}-${stage}`,
+                        pruebaId: pId,
+                        etapaOrden: stage,
+                        items: []
+                    };
+                    blocks.push(currentBlock);
+                }
+                currentBlock.items.push(item);
+            });
+
+            categoryBlocks[pId] = blocks;
+        });
+
+        // --- 4. DETERMINAR EL HORARIO DE INICIO ORIGINAL DE CADA CATEGORÍA ---
+        const categoryStartTimes = {};
+        Object.keys(itemsByPrueba).forEach(pId => {
+            const firstItem = itemsByPrueba[pId][0];
+            categoryStartTimes[pId] = getMinutesOfDay(firstItem);
+        });
+
+        // Listar las pruebas ordenadas por su hora de inicio original en la base de datos
+        const sortedPruebaIds = Object.keys(itemsByPrueba).sort((a, b) => {
+            return categoryStartTimes[a] - categoryStartTimes[b];
+        });
+
+        // --- 5. BUCLE DE PLANIFICACIÓN INTELIGENTE (GREEDY SCHEDULER) ---
+        let cursorMinutos = sortedPruebaIds.length > 0 ? categoryStartTimes[sortedPruebaIds[0]] : inicioEventoMin;
+        let currentDiaOffset = 0;
+        const resultados = [];
+        const lastStageFinishTime = {};
+        const lastStageDiaOffset = {};
+
+        while (true) {
+            // Obtener el bloque activo actual de cada categoría (el primero de la cola)
+            const eligibleBlocks = [];
+            sortedPruebaIds.forEach(pId => {
+                const blocks = categoryBlocks[pId];
+                if (blocks && blocks.length > 0) {
+                    eligibleBlocks.push(blocks[0]);
+                }
+            });
+
+            if (eligibleBlocks.length === 0) {
+                break; // No quedan más bloques por programar
             }
 
-            // --- Multi-day Check (Corte de fin de jornada) ---
-            if (minutosCalculados >= finEventoMin) {
-                currentDiaOffset++;
-                minutosCalculados = inicioEventoMin;
-                cursorMinutos = inicioEventoMin;
-            }
+            // Clasificar bloques elegibles en listos (ready) o en descanso/retención (not ready)
+            const readyBlocks = [];
+            const notReadyBlocks = [];
 
-            minutosCalculados = aplicarReceso(minutosCalculados);
+            eligibleBlocks.forEach(block => {
+                if (block.etapaOrden === 1) {
+                    // Las Series de eliminación siempre están listas para arrancar según su turno original
+                    readyBlocks.push(block);
+                } else if (block.etapaOrden === 2) {
+                    // Semifinales: Requieren un descanso mínimo respecto al bloque anterior
+                    const lastFinish = lastStageFinishTime[block.pruebaId];
+                    const lastOffset = lastStageDiaOffset[block.pruebaId];
 
-            // Regla de Descanso Específica (por si hay muy pocas categorías y el bloque global no alcanza)
-            const pruebaId = item.eventoPruebaId || item.raw?.eventoPruebaId || item.raw?.id;
-            if (ultimosMinutosPorPrueba[pruebaId]) {
-                const infoAnt = ultimosMinutosPorPrueba[pruebaId];
-                const etapaActual = item.etapaId || item.raw?.etapaId || item.etapa?.id;
-                
-                // Solo forzamos descanso si pasaron en el mismo día
-                if (etapaActual && infoAnt.etapaId !== etapaActual && infoAnt.diaOffset === currentDiaOffset) {
-                    const minTimeRequired = infoAnt.minutos + (gapRecuperacionMs / 60000);
-                    if (minutosCalculados < minTimeRequired) {
-                        minutosCalculados = Math.floor(minTimeRequired);
-                        
-                        // Validar salto de día de nuevo por si el descanso forzó superar las 18:00
-                        if (minutosCalculados >= finEventoMin) {
-                            currentDiaOffset++;
-                            minutosCalculados = inicioEventoMin;
-                            cursorMinutos = inicioEventoMin;
+                    if (lastFinish === undefined || lastOffset !== currentDiaOffset) {
+                        readyBlocks.push(block);
+                    } else {
+                        const elapsed = cursorMinutos - lastFinish;
+                        if (elapsed >= (gapRecuperacionMs / 60000)) {
+                            readyBlocks.push(block);
+                        } else {
+                            notReadyBlocks.push(block);
+                        }
+                    }
+                } else if (block.etapaOrden === 3) {
+                    // Finales: Requieren haber superado la hora de inicio de finales (ej: 10:30) y descanso suficiente
+                    if (cursorMinutos < inicioFinalesMin) {
+                        notReadyBlocks.push(block);
+                    } else {
+                        const lastFinish = lastStageFinishTime[block.pruebaId];
+                        const lastOffset = lastStageDiaOffset[block.pruebaId];
+
+                        if (lastFinish === undefined || lastOffset !== currentDiaOffset) {
+                            readyBlocks.push(block);
+                        } else {
+                            const elapsed = cursorMinutos - lastFinish;
+                            if (elapsed >= (gapRecuperacionMs / 60000)) {
+                                readyBlocks.push(block);
+                            } else {
+                                notReadyBlocks.push(block);
+                            }
                         }
                     }
                 }
-            }
-
-            const displayTime = formatMinutes(minutosCalculados);
-
-            resultados.push({
-                ...item,
-                nuevaHora: displayTime,
-                timeCalculated: displayTime,
-                diaOffset: currentDiaOffset
             });
 
-            const gapItem = (item.gapSugerido || 0);
-            const gapAplicar = gapItem > 0 ? gapItem : (gapBaseMs / 60000);
-            
-            cursorMinutos = minutosCalculados + gapAplicar;
+            let selectedBlock = null;
 
-            if (pruebaId) {
-                ultimosMinutosPorPrueba[pruebaId] = {
-                    minutos: minutosCalculados,
-                    etapaId: item.etapaId || item.raw?.etapaId || item.etapa?.id,
-                    diaOffset: currentDiaOffset
-                };
+            if (readyBlocks.length > 0) {
+                // PRIORIDAD A: Semifinales listas.
+                // Queremos correrlas lo antes posible en los "huecos" de la mañana.
+                const readySemis = readyBlocks.filter(b => b.etapaOrden === 2);
+
+                if (readySemis.length > 0) {
+                    readySemis.sort((a, b) => {
+                        return sortedPruebaIds.indexOf(a.pruebaId) - sortedPruebaIds.indexOf(b.pruebaId);
+                    });
+                    selectedBlock = readySemis[0];
+                } else {
+                    // PRIORIDAD B: Si no hay semis listas, ver si hay Finales listas (si ya es horario de finales)
+                    const readyFinals = readyBlocks.filter(b => b.etapaOrden === 3);
+                    if (readyFinals.length > 0) {
+                        readyFinals.sort((a, b) => {
+                            return sortedPruebaIds.indexOf(a.pruebaId) - sortedPruebaIds.indexOf(b.pruebaId);
+                        });
+                        selectedBlock = readyFinals[0];
+                    } else {
+                        // PRIORIDAD C: Si no hay semis ni finales listas, corremos las Series del bloque de la mañana
+                        readyBlocks.sort((a, b) => {
+                            return sortedPruebaIds.indexOf(a.pruebaId) - sortedPruebaIds.indexOf(b.pruebaId);
+                        });
+                        selectedBlock = readyBlocks[0];
+                    }
+                }
+            } else {
+                // CASO LÍMITE: No hay ningún bloque listo (solo quedan semis/finales en retención o descanso).
+                // Adelantamos el cursorMinutos al momento en que la primera de ellas esté lista.
+                let earliestReadyTime = Infinity;
+                let bestBlock = null;
+
+                notReadyBlocks.forEach(block => {
+                    const lastFinish = lastStageFinishTime[block.pruebaId];
+                    let readyTime = lastFinish !== undefined ? lastFinish + (gapRecuperacionMs / 60000) : cursorMinutos;
+
+                    // Si es una final, también debe cumplir la hora de inicio de finales preferencial
+                    if (block.etapaOrden === 3) {
+                        readyTime = Math.max(readyTime, inicioFinalesMin);
+                    }
+
+                    if (readyTime < earliestReadyTime) {
+                        earliestReadyTime = readyTime;
+                        bestBlock = block;
+                    }
+                });
+
+                if (bestBlock) {
+                    cursorMinutos = Math.floor(earliestReadyTime);
+                    selectedBlock = bestBlock;
+                } else {
+                    break; // Failsafe
+                }
             }
+
+            if (!selectedBlock) break;
+
+            // --- 6. PROCESAR Y AGENDAR EL BLOQUE SELECCIONADO ---
+            const pId = selectedBlock.pruebaId;
+            categoryBlocks[pId].shift(); // Quitar de la cola
+
+            let blockFinishTime = cursorMinutos;
+
+            for (let j = 0; j < selectedBlock.items.length; j++) {
+                const item = selectedBlock.items[j];
+
+                // Corte diario de fin de jornada
+                if (cursorMinutos >= finEventoMin) {
+                    currentDiaOffset++;
+                    cursorMinutos = inicioEventoMin;
+                }
+
+                cursorMinutos = aplicarReceso(cursorMinutos);
+
+                const displayTime = formatMinutes(cursorMinutos);
+                
+                const baseDateStr = getISODateStr(item);
+                let finalDateStr = baseDateStr;
+                if (currentDiaOffset > 0) {
+                    const d = new Date(baseDateStr + 'T12:00:00');
+                    d.setDate(d.getDate() + currentDiaOffset);
+                    finalDateStr = d.toISOString().split('T')[0];
+                }
+                const timeCalculatedStr = `${finalDateStr}T${displayTime}:00`;
+
+                resultados.push({
+                    ...item,
+                    nuevaHora: displayTime,
+                    timeCalculated: timeCalculatedStr,
+                    diaOffset: currentDiaOffset
+                });
+
+                const gapItem = usarGapVariable ? (item.gapSugerido || 0) : 0;
+                const gapAplicar = gapItem > 0 ? gapItem : (gapBaseMs / 60000);
+
+                blockFinishTime = cursorMinutos; // El inicio de esta regata
+                cursorMinutos = cursorMinutos + gapAplicar; // Avanzar cursor para la siguiente
+            }
+
+            // Registrar cuándo finalizó esta etapa de la categoría
+            lastStageFinishTime[pId] = blockFinishTime;
+            lastStageDiaOffset[pId] = currentDiaOffset;
         }
 
         return resultados;

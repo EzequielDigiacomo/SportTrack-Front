@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
-const EventosSection = () => {
+const EventosSection = ({ pagoAfiliacionAlDia = true }) => {
     const { user } = useAuth();
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -96,7 +96,24 @@ const EventosSection = () => {
                                         </span>
                                     </div>
                                     <div className="evento-native-actions">
-                                        <button className="btn-admin-primary" onClick={() => handleOpenInscripcion(ev)} style={{ fontSize: '0.85rem', padding: '0.5rem 0.8rem'}}>
+                                        <button 
+                                            className="btn-admin-primary" 
+                                            onClick={pagoAfiliacionAlDia ? () => handleOpenInscripcion(ev) : undefined}
+                                            disabled={!pagoAfiliacionAlDia}
+                                            title={!pagoAfiliacionAlDia ? "Inscripción bloqueada por afiliación anual vencida" : "Inscribir"}
+                                            style={{ 
+                                                fontSize: '0.85rem', 
+                                                padding: '0.5rem 0.8rem',
+                                                ...(!pagoAfiliacionAlDia ? {
+                                                    opacity: 0.5, 
+                                                    cursor: 'not-allowed', 
+                                                    background: 'rgba(239, 68, 68, 0.2)',
+                                                    color: '#EF4444',
+                                                    borderColor: 'rgba(239, 68, 68, 0.4)',
+                                                    boxShadow: 'none'
+                                                } : {})
+                                            }}
+                                        >
                                             Inscribir
                                         </button>
                                     </div>
@@ -116,8 +133,20 @@ const EventosSection = () => {
                                 <div className="evento-actions">
                                     <button
                                         className="btn-primary"
-                                        style={{ width: '100%' }}
-                                        onClick={() => handleOpenInscripcion(evento)}
+                                        disabled={!pagoAfiliacionAlDia}
+                                        onClick={pagoAfiliacionAlDia ? () => handleOpenInscripcion(evento) : undefined}
+                                        title={!pagoAfiliacionAlDia ? "Inscripción bloqueada por afiliación anual vencida" : "Inscribir Atletas"}
+                                        style={{ 
+                                            width: '100%',
+                                            ...(!pagoAfiliacionAlDia ? {
+                                                opacity: 0.5, 
+                                                cursor: 'not-allowed', 
+                                                background: 'rgba(239, 68, 68, 0.2)',
+                                                color: '#EF4444',
+                                                borderColor: 'rgba(239, 68, 68, 0.4)',
+                                                boxShadow: 'none'
+                                            } : {})
+                                        }}
                                     >
                                         Inscribir Atletas
                                     </button>
@@ -133,6 +162,7 @@ const EventosSection = () => {
             {showInscripcionModal && (
                 <InscripcionAtletaModal
                     evento={selectedEvento}
+                    pagoAfiliacionAlDia={pagoAfiliacionAlDia}
                     onClose={() => window.history.back()}
                 />
             )}
