@@ -12,12 +12,11 @@ Este archivo actúa como la **memoria activa y bitácora de desarrollo** para el
 SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/canoa) compuesto por:
 
 ### 💻 Frontend (`SportTrack-Front`)
-* **Framework / Librerías**: React, Vanilla CSS para estilos, `jsPDF` y `jspdf-autotable` para reportes.
+* **Framework / Librerías**: React, Vanilla CSS para estilos, `jsPDF` y `jspdf-autotable` para reportes, `lucide-react` para iconos vectoriales unificados.
 * **Componentes Principales**:
   * [ConfigurarPruebasModal.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/components/SharedSections/ConfigurarPruebasModal.jsx): Modal administrativo para gestionar pruebas (categorías, botes, distancias, ramas, fechas/horas) y configurar las reglas del cronograma.
+  * [GestionPagosSection.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/pages/Super/sections/GestionPagosSection.jsx): Panel de administración manual de cobros y estados de afiliación de clubes, atletas e inscripciones.
   * [useResultados.js](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/components/SharedSections/useResultados.js): Hook personalizado para consumir y gestionar los resultados de las pruebas.
-* **Lógica de Negocio Destacada**:
-  * **Motor de Pateo en Vivo (`SchedulerService`)**: Recalcula dinámicamente las horas de las regatas aplicando reglas de gap base, gap de recuperación entre series/finales, uso de gap variable por distancia y bloques fijos para finales.
 
 ### ⚙️ Backend (`SportTrack-v1`)
 * **Tecnología**: ASP.NET Core (C#), Arquitectura en Capas/Limpia.
@@ -42,9 +41,28 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
   * Si es una fase activa (`isF`): usar `resultados.length` (o cantidad calculada de palistas en la fase).
   * Si es una prueba base: usar `cantidadInscritos`.
 
+### 🟢 React y Estados del Dashboard con Subrutas
+* **Actualización al Navegar**: En vistas de tipo Dashboard que contienen subrutas internas (por ejemplo, `/club` con subruta `/club/atletas`), la carga de estadísticas y actividad reciente en el componente padre se queda obsoleta si no se re-ejecuta al volver. Se debe incluir `isRoot` en las dependencias del `useEffect` de carga y evaluar si `isRoot` es verdadero para re-sincronizar el estado del dashboard (contadores, últimos movimientos) sin requerir recargar la página.
+
 ### 🟢 Control de Accesos por Rol
 * **Ocultar 'Organizar Evento' a Clubes**: Se ocultó la tarjeta "Organizar Evento" del Dashboard si el usuario no tiene rol `'Admin'` (Federación), previniendo que los clubes accedan a funcionalidades de organización reservadas por ahora solo para la federación.
 * **Ocultar Plan de la Federación a Clubes**: Se removió el borde izquierdo coloreado según el plan y la insignia con el nombre del plan (ej. `'ORO'`) en la cabecera del panel cuando el usuario tiene rol `'Club'` (solo visible para el rol `'Admin'`).
+
+### 🟢 Sistema de Iconos e Identidad Visual
+* **Unificación de Emojis a Lucide**: Para garantizar que la interfaz se vea premium e idéntica en cualquier sistema operativo (evitando los emojis de sistema de Windows, Android, macOS que son inconsistentes), se migraron todos los emojis tipográficos nativos en vistas administrativas y móviles a iconos SVG de `lucide-react`. Las alineaciones verticales deben estructurarse usando `display: inline-flex` y `alignItems: center`.
+
+### 🟢 Paginación y Filtrado del Lado del Cliente (Client-Side)
+* **Reinicio de Página Activa**: Cuando se implementa paginación local en componentes React (`itemsPerPage = 9`), se debe definir obligatoriamente un efecto (`useEffect`) para reiniciar la página activa (`currentPage`) a `1` cada vez que el texto de búsqueda o los filtros adicionales (como el desplegable de club) cambien. Esto previene que el paginador quede en una página vacía inexistente cuando el nuevo conjunto filtrado de resultados sea menor.
+* **Lógica Combinada**: El filtrado por texto y club debe combinarse en un único `useMemo` para evitar desfases de renderizado.
+
+### 🟢 Sincronización Automática de Expiración SaaS
+* **Acceso Efectivo y Estado Real**: En modelos SaaS multi-inquilino, el estado operativo (bloqueo por morosidad o vencimiento de plan) debe calcularse dinámicamente tanto en backend como frontend para evitar discrepancias visuales.
+  * **Backend (`SaaSService.cs`)**: El indicador `PlanAlDia` evalúa dinámicamente si la fecha actual sobrepasa `FechaVencimientoPlan` o si está marcado como `BloqueadoPorFaltaDePago`.
+  * **Frontend (`SaaSManagement.jsx`)**: Se deriva un estado de actividad efectiva (`isEffectiveActive`) combinando `activo && !bloqueadoPorFaltaDePago && !isExpired`, actualizando instantáneamente los dots de estado, badges informativos específicos (`"Vencido"`, `"Bloqueado"`, `"Excedido"`, `"Al día"`) y etiquetas del botón de acceso (`"BLOQUEADA"`, `"VENCIDA"`, `"SUSPENS."`, `"ACTIVA"`) sin forzar inserciones innecesarias en base de datos.
+  * **Alerta visual**: Se incluye una advertencia detallada en el panel de detalle a la derecha para explicar de forma explícita por qué el acceso está retenido.
+
+### 🟢 Prevención de Errores de JSX y Atributos
+* **Atributos JSX Duplicados**: Estar sumamente atentos al colocar múltiples expresiones dentro de etiquetas de apertura de JSX de gran tamaño. Los botones o contenedores que definen funciones inline extensas (ej. `onClick={async () => { ... }}`) suelen inducir a errores donde se vuelve a declarar un atributo (como `disabled`) al final del tag por no haber cerrado el tag de apertura adecuadamente.
 
 ---
 
@@ -55,10 +73,16 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
 | **2026-05-21** | Creación del archivo de contexto unificado. | ✅ Completado | Documento inicial en ambos repositorios. |
 | **2026-05-21** | Ocultar módulo 'Organizar Evento' para clubes. | ✅ Completado | Se limitó el acceso a `user?.rol === 'Admin'` en `ClubDashboard.jsx`. |
 | **2026-05-21** | Ocultar insignia y borde de plan a clubes. | ✅ Completado | Se condicionó la visualización a `user?.rol === 'Admin'` en `ClubDashboard.jsx`. |
+| **2026-05-22** | Corregir carga y actualización de Dashboard. | ✅ Completado | Se invocó `loadDashboardData` en mount y se agregó `isRoot` al `useEffect` para refrescar estadísticas y "Últimos Movimientos". |
+| **2026-05-22** | Unificación de Iconos Emojis a Lucide SVG. | ✅ Completado | Migrados múltiples emojis a Lucide (`AtletaGrid.jsx`, `AdminHome.jsx`, `SaaSManagement.jsx`, etc.). |
+| **2026-05-22** | Creación de Bitácora de Preguntas del Cliente. | ✅ Completado | Creación de [preguntas_cliente.md](file:///c:/Users/EZEQU/source/repos/SportTrack-v1/preguntas_cliente.md) para registrar dudas críticas de negocio (precios de eventos, morosidad de inscripción). |
+| **2026-05-22** | Paginación y Filtro de Club en Control de Pagos. | ✅ Completado | Agregada paginación estricta de 9 filas por página y selector de club en las solapas de Atletas e Inscripciones. |
+| **2026-05-22** | Sincronización Automática de Vencimiento SaaS. | ✅ Completado | Sincronizado el estado de vencimiento y bloqueo en backend (`SaaSService`) y frontend (`SaaSManagement.jsx`) con badges específicos y alertas informativas en el panel lateral. |
+| **2026-05-22** | Correcciones sintácticas y de compilación. | ✅ Completado | Reparado tag de cierre JSX roto en `GestionPagosSection.jsx` y atributo `disabled` duplicado en `InscripcionAtletaModal.jsx`. |
 
 ---
 
 ## 🎯 4. Estado Actual y Próximos Pasos
 
-* **Contexto Inmediato**: Estamos enfocados en la configuración de pruebas y regatas en `ConfigurarPruebasModal.jsx` y su sincronización con los DTOs y Entidades del Backend (`EventoDtos.cs`, `Evento.cs`).
-* **Próxima acción**: *[Esperando instrucciones específicas del usuario sobre la tarea a realizar]*
+* **Contexto Inmediato**: Hemos implementado de forma segura y exitosa la sincronización automática de vencimientos y bloqueos del portal SaaS (tanto en la lógica de datos del backend como en los componentes visuales e interactivos del frontend). Todo el proyecto compila perfectamente.
+* **Próxima acción**: *[Esperando directivas adicionales del usuario]*

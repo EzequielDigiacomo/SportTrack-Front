@@ -28,6 +28,7 @@ const ClubDashboard = () => {
  
     useEffect(() => {
         if (!user) return;
+        if (!isRoot) return;
         
         const loadDashboardData = async () => {
             try {
@@ -158,7 +159,8 @@ const ClubDashboard = () => {
             }
         };
         
-    }, [user]);
+        loadDashboardData();
+    }, [user, isRoot]);
 
     return (
         <div className="dashboard-page container">

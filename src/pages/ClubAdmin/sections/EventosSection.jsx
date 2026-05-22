@@ -74,11 +74,11 @@ const EventosSection = ({ pagoAfiliacionAlDia = true }) => {
                     <div className="eventos-mobile-list">
                         {eventos.map(ev => {
                             const estadoConf = {
-                                'Programado': { color: '#60a5fa', dot: '🔵' },
-                                'EnCurso':    { color: '#34d399', dot: '🟢' },
-                                'Finalizado': { color: '#9ca3af', dot: '⚫' },
-                                'Cancelado':  { color: '#f87171', dot: '🔴' },
-                            }[ev.estado] || { color: '#9ca3af', dot: '⚫' };
+                                'Programado': { color: '#60a5fa' },
+                                'EnCurso':    { color: '#34d399' },
+                                'Finalizado': { color: '#9ca3af' },
+                                'Cancelado':  { color: '#f87171' },
+                            }[ev.estado] || { color: '#9ca3af' };
                             return (
                                 <div key={ev.id} className="evento-native-row glass-effect">
                                     <div className="evento-native-status-bar" style={{ background: estadoConf.color }} />

@@ -1599,3 +1599,154 @@ th.sortable:hover .sort-icon {
     font-size: 0.65rem;
     font-weight: 700;
 }
+
+/* ── Manual Payment History Badges ── */
+.badge-pill.pago-tipo-ClubAfiliacion {
+    background: rgba(139, 92, 246, 0.12) !important;
+    color: #a78bfa !important;
+}
+.badge-pill.pago-tipo-AtletaAfiliacion {
+    background: rgba(59, 130, 246, 0.12) !important;
+    color: #60a5fa !important;
+}
+.badge-pill.pago-tipo-InscripcionEvento {
+    background: rgba(245, 158, 11, 0.12) !important;
+    color: #fbbf24 !important;
+}
+
+[data-theme='light'] .badge-pill.pago-tipo-ClubAfiliacion {
+    background: rgba(109, 40, 217, 0.15) !important;
+    color: #6d28d9 !important;
+}
+[data-theme='light'] .badge-pill.pago-tipo-AtletaAfiliacion {
+    background: rgba(29, 78, 216, 0.15) !important;
+    color: #1d4ed8 !important;
+}
+[data-theme='light'] .badge-pill.pago-tipo-InscripcionEvento {
+    background: rgba(180, 83, 9, 0.15) !important;
+    color: #b45309 !important;
+}
+
+/* ── Control de Pagos Masivos Styles ── */
+.pagos-masivos-container {
+    padding: 1.25rem;
+    border-radius: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.pagos-masivos-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--color-bg-tertiary);
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+.pagos-masivos-card:hover {
+    border-color: var(--color-primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.pagos-masivos-title {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-primary-light);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+}
+
+.pagos-masivos-desc {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+}
+
+.pagos-masivos-status {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+/* Light Theme Enhancements for maximum contrast */
+[data-theme='light'] .pagos-masivos-container {
+    background: hsl(220, 20%, 25%) !important; /* Sleek deep slate dark panel for high distinction */
+    border: 2px solid hsl(220, 25%, 15%) !important;
+    box-shadow: var(--shadow-lg), 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme='light'] .pagos-masivos-card {
+    background: #ffffff !important; /* Crisp white card for absolute legibility and focus */
+    border: 1.5px solid hsl(220, 15%, 70%) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme='light'] .pagos-masivos-card:hover {
+    border-color: var(--color-primary-light) !important;
+    background: hsl(220, 10%, 96%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme='light'] .pagos-masivos-title {
+    color: #0f172a !important; /* Deep, rich slate-900 blue for titles */
+    font-weight: 800 !important;
+}
+
+[data-theme='light'] .pagos-masivos-desc {
+    color: #334155 !important; /* High contrast slate-700 for subtitles */
+    font-weight: 600 !important;
+}
+
+[data-theme='light'] .pagos-masivos-status {
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+}
+
+[data-theme='light'] .pagos-masivos-card select.admin-select {
+    background: #ffffff !important;
+    border: 1.5px solid hsl(220, 15%, 55%) !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+[data-theme='light'] .pagos-masivos-card select.admin-select:focus {
+    border-color: var(--color-primary-light) !important;
+    background: #ffffff !important;
+}
+
+/* Switches unchecked backgrounds and borders in light theme */
+[data-theme='light'] .toggle-switch input:not(:checked) + .slider {
+    background: #475569 !important; /* Very deep contrast off-state for light theme toggles */
+    border-color: #334155 !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme='light'] .toggle-switch .slider {
+    border: 1.5px solid hsl(220, 15%, 55%) !important;
+}
+
+[data-theme='light'] .custom-table th {
+    border-bottom: 2px solid hsl(220, 15%, 55%) !important;
+    color: var(--color-text-primary) !important;
+}
+
+[data-theme='light'] .custom-table td {
+    border-bottom: 1px solid hsl(220, 15%, 65%) !important;
+    color: var(--color-text-primary) !important;
+}
+
+

@@ -526,7 +526,6 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                                     // Limpiar mensaje después de un tiempo
                                     setTimeout(() => setMsg(null), 3000);
                                 }}
-                                disabled={saving}
                             >
                                 ✅ Confirmar TODAS las Pendientes
                             </button>

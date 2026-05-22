@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { LogOut, ShieldCheck, ArrowLeft, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
 import './JuezControl.css';
@@ -37,7 +37,7 @@ const JuezControlDashboard = () => {
                     {/* Info banner con auto-ocultado y transición */}
                     {isVisible && (
                         <div className={`jc-info-banner fade-in ${isExiting ? 'jc-banner-exit' : ''}`} style={{ position: 'relative' }}>
-                            <span className="jc-info-icon">ℹ️</span>
+                            <span className="jc-info-icon" style={{ display: 'inline-flex', alignItems: 'center' }}><Info size={16} /></span>
                             <p>
                                 Acceso de <strong>Juez de Control</strong>: podés consultar el cronograma,
                                 ver la grilla de largada de cada serie, registrar y validar resultados oficiales.

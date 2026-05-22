@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Link2 } from 'lucide-react';
+import { Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Link2, User, Building2, AlertTriangle } from 'lucide-react';
 import EmptyState from '../../../components/Common/EmptyState';
 
 const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, requestSort }) => {
@@ -30,12 +30,13 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                                     {atleta.categoriaNombre || ''}
                                 </span>
                             </span>
-                            <span className="evento-native-meta">
-                                🛂 DNI: {atleta.dni || '—'} · {atleta.sexoNombre?.[0]} / {atleta.edad}a
+                            <span className="evento-native-meta" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <User size={13} className="text-primary" /> DNI: {atleta.dni || '—'} · {atleta.sexoNombre?.[0]} / {atleta.edad}a
                             </span>
-                            <span className="evento-native-meta" style={{ marginTop: '4px' }}>
-                                🏟️ <span className={`chip ${atleta.clubNombre ? 'chip-ecu-blue' : 'chip-ecu-red'}`} style={{ padding: '0.1rem 0.4rem' }}>
-                                    {atleta.clubNombre || '⚠️ Sin Club'}
+                            <span className="evento-native-meta" style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Building2 size={13} className="text-accent" />
+                                <span className={`chip ${atleta.clubNombre ? 'chip-ecu-blue' : 'chip-ecu-red'}`} style={{ padding: '0.1rem 0.4rem', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                    {!atleta.clubNombre && <AlertTriangle size={11} />} {atleta.clubNombre || 'Sin Club'}
                                 </span>
                             </span>
                         </div>
@@ -84,8 +85,8 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                                 </td>
                                 <td>{atleta.dni || '—'}</td>
                                 <td>
-                                    <span className={`chip ${atleta.clubNombre ? 'chip-ecu-blue' : 'chip-ecu-red'}`}>
-                                        {atleta.clubNombre || '⚠️ Sin Club'}
+                                    <span className={`chip ${atleta.clubNombre ? 'chip-ecu-blue' : 'chip-ecu-red'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        {!atleta.clubNombre && <AlertTriangle size={12} />} {atleta.clubNombre || 'Sin Club'}
                                     </span>
                                 </td>
                                 <td>

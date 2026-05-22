@@ -42,6 +42,23 @@ const GestionPagosSection = () => {
     const [searchHistorial, setSearchHistorial] = useState('');
     const [selectedClubForBulk, setSelectedClubForBulk] = useState('');
     const [selectedClubForBulkAtletas, setSelectedClubForBulkAtletas] = useState('');
+    
+    // Filtro por Club para Búsqueda
+    const [selectedClubFilterAtletas, setSelectedClubFilterAtletas] = useState('');
+    const [selectedClubFilterInscripciones, setSelectedClubFilterInscripciones] = useState('');
+
+    // Paginación
+    const [currentPageAtletas, setCurrentPageAtletas] = useState(1);
+    const [currentPageInscripciones, setCurrentPageInscripciones] = useState(1);
+    const itemsPerPage = 9;
+
+    useEffect(() => {
+        setCurrentPageAtletas(1);
+    }, [searchAtleta, selectedClubFilterAtletas]);
+
+    useEffect(() => {
+        setCurrentPageInscripciones(1);
+    }, [searchInscripcion, selectedClubFilterInscripciones]);
 
     // Modal de Registro de Pago
     const [modalOpen, setModalOpen] = useState(false);
@@ -287,18 +304,42 @@ const GestionPagosSection = () => {
         (c.sigla && c.sigla.toLowerCase().includes(searchClub.toLowerCase()))
     );
 
-    const filteredAtletas = atletas.filter(a => 
-        a.nombre.toLowerCase().includes(searchAtleta.toLowerCase()) ||
-        a.apellido.toLowerCase().includes(searchAtleta.toLowerCase()) ||
-        (a.dni && a.dni.toLowerCase().includes(searchAtleta.toLowerCase())) ||
-        (a.clubNombre && a.clubNombre.toLowerCase().includes(searchAtleta.toLowerCase()))
-    );
+    const filteredAtletas = React.useMemo(() => {
+        return atletas.filter(a => {
+            const matchesClub = !selectedClubFilterAtletas || (a.clubNombre && a.clubNombre.trim() === selectedClubFilterAtletas.trim());
+            const matchesSearch = !searchAtleta ||
+                a.nombre.toLowerCase().includes(searchAtleta.toLowerCase()) ||
+                a.apellido.toLowerCase().includes(searchAtleta.toLowerCase()) ||
+                (a.dni && a.dni.toLowerCase().includes(searchAtleta.toLowerCase())) ||
+                (a.clubNombre && a.clubNombre.toLowerCase().includes(searchAtleta.toLowerCase()));
+            return matchesClub && matchesSearch;
+        });
+    }, [atletas, selectedClubFilterAtletas, searchAtleta]);
 
-    const filteredInscripciones = inscripciones.filter(i => 
-        (i.participanteNombreCompleto && i.participanteNombreCompleto.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
-        (i.clubNombre && i.clubNombre.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
-        (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase()))
-    );
+    const filteredInscripciones = React.useMemo(() => {
+        return inscripciones.filter(i => {
+            const matchesClub = !selectedClubFilterInscripciones || (i.clubNombre && i.clubNombre.trim() === selectedClubFilterInscripciones.trim());
+            const matchesSearch = !searchInscripcion ||
+                (i.participanteNombreCompleto && i.participanteNombreCompleto.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
+                (i.clubNombre && i.clubNombre.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
+                (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase()));
+            return matchesClub && matchesSearch;
+        });
+    }, [inscripciones, selectedClubFilterInscripciones, searchInscripcion]);
+
+    // Atletas Pagination
+    const totalPagesAtletas = Math.max(1, Math.ceil(filteredAtletas.length / itemsPerPage));
+    const paginatedAtletas = React.useMemo(() => {
+        const start = (currentPageAtletas - 1) * itemsPerPage;
+        return filteredAtletas.slice(start, start + itemsPerPage);
+    }, [filteredAtletas, currentPageAtletas]);
+
+    // Inscripciones Pagination
+    const totalPagesInscripciones = Math.max(1, Math.ceil(filteredInscripciones.length / itemsPerPage));
+    const paginatedInscripciones = React.useMemo(() => {
+        const start = (currentPageInscripciones - 1) * itemsPerPage;
+        return filteredInscripciones.slice(start, start + itemsPerPage);
+    }, [filteredInscripciones, currentPageInscripciones]);
 
     const filteredHistorial = historial.filter(h => 
         (h.clubNombre && h.clubNombre.toLowerCase().includes(searchHistorial.toLowerCase())) ||
@@ -512,7 +553,7 @@ const GestionPagosSection = () => {
                                             </tr>
                                         ) : (
                                             filteredClubes.map(club => (
-                                                <tr key={club.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                                <tr key={club.id} style={{ borderBottom: '1px solid var(--color-surface-hover)' }}>
                                                     <td style={{ padding: '1rem' }}>
                                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                             <strong>{club.nombre}</strong>
@@ -551,7 +592,7 @@ const GestionPagosSection = () => {
                                                                 position: 'absolute',
                                                                 cursor: 'pointer',
                                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                                background: club.pagoAfiliacionAlDia ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                                background: club.pagoAfiliacionAlDia ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                                 borderRadius: '34px',
                                                                 transition: '.3s',
                                                                 boxShadow: club.pagoAfiliacionAlDia ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -597,44 +638,49 @@ const GestionPagosSection = () => {
                     {/* ATLETAS TAB */}
                     {activeTab === 'atletas' && (
                         <div>
-                            {/* Search bar */}
-                            <div className="search-bar-container mb-md" style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ position: 'relative', flex: 1 }}>
+                            {/* Search bar with Club Filter */}
+                            <div className="search-bar-container mb-md" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div style={{ position: 'relative', flex: '2 1 300px' }}>
                                     <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dim)' }} />
                                     <input 
                                         type="text" 
-                                        placeholder="Buscar atleta por nombre, DNI, club..." 
+                                        placeholder="Buscar atleta por nombre, DNI..." 
                                         className="admin-input with-search-icon" 
                                         value={searchAtleta}
                                         onChange={e => setSearchAtleta(e.target.value)}
                                         style={{ paddingLeft: '2.5rem', width: '100%', boxSizing: 'border-box' }}
                                     />
                                 </div>
+                                <div style={{ position: 'relative', flex: '1 1 200px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Building2 size={18} style={{ color: 'var(--color-text-dim)', flexShrink: 0 }} />
+                                    <select 
+                                        className="admin-select"
+                                        value={selectedClubFilterAtletas}
+                                        onChange={e => setSelectedClubFilterAtletas(e.target.value)}
+                                        style={{ width: '100%', padding: '0.6rem 1rem', fontSize: '0.9rem', borderRadius: '8px', border: '1px solid var(--color-surface-hover)', background: 'var(--color-surface)' }}
+                                    >
+                                        <option value="">Todos los Clubes</option>
+                                        {uniqueClubsWithAtletas.map(club => (
+                                            <option key={club} value={club}>{club}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             {/* Panel de Controles Masivos para Atletas (Todos y Por Clubes) */}
-                            <div className="glass-effect mb-md" style={{
-                                padding: '1.25rem',
-                                borderRadius: '16px',
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                                gap: '1.5rem',
-                                border: '1px solid var(--color-surface-hover)',
-                                background: 'rgba(255, 255, 255, 0.02)',
-                                marginBottom: '1.5rem'
-                            }}>
+                            <div className="pagos-masivos-container">
                                 {/* Lote Todo */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                <div className="pagos-masivos-card">
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
+                                        <h4 className="pagos-masivos-title">
                                             <Users size={18} /> Master Switch (Todos)
                                         </h4>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>
+                                        <p className="pagos-masivos-desc">
                                             Marcar todos los atletas como Al Día o Deudores
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: (atletas.length > 0 && atletas.every(a => a.pagoAfiliacionAlDia)) ? '#10B981' : '#EF4444' }}>
+                                        <span className="pagos-masivos-status" style={{ color: (atletas.length > 0 && atletas.every(a => a.pagoAfiliacionAlDia)) ? 'var(--color-success)' : 'var(--color-error)' }}>
                                             {(atletas.length > 0 && atletas.every(a => a.pagoAfiliacionAlDia)) ? 'TODOS AL DÍA' : 'MORA PENDIENTE'}
                                         </span>
                                         <label className="toggle-switch" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: 'pointer' }}>
@@ -652,7 +698,7 @@ const GestionPagosSection = () => {
                                                 position: 'absolute',
                                                 cursor: 'pointer',
                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                background: (atletas.length > 0 && atletas.every(a => a.pagoAfiliacionAlDia)) ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                background: (atletas.length > 0 && atletas.every(a => a.pagoAfiliacionAlDia)) ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                 borderRadius: '34px',
                                                 transition: '.3s',
                                                 boxShadow: (atletas.length > 0 && atletas.every(a => a.pagoAfiliacionAlDia)) ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -673,16 +719,16 @@ const GestionPagosSection = () => {
                                 </div>
 
                                 {/* Lote por Club */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                <div className="pagos-masivos-card">
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
+                                        <h4 className="pagos-masivos-title">
                                             <Building2 size={18} /> Switch por Club
                                         </h4>
                                         <select 
                                             className="admin-select"
                                             value={selectedClubForBulkAtletas}
                                             onChange={e => setSelectedClubForBulkAtletas(e.target.value)}
-                                            style={{ padding: '6px 10px !important', fontSize: '0.85rem', width: '100%', background: 'var(--color-bg-primary)', border: '1px solid var(--color-surface-hover)', borderRadius: '6px', color: 'white' }}
+                                            style={{ padding: '6px 10px', fontSize: '0.85rem', width: '100%', borderRadius: '6px' }}
                                         >
                                             <option value="">Seleccionar Club...</option>
                                             {uniqueClubsWithAtletas.map(club => (
@@ -691,7 +737,7 @@ const GestionPagosSection = () => {
                                         </select>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: (selectedClubForBulkAtletas && atletas.filter(a => a.clubNombre === selectedClubForBulkAtletas).every(a => a.pagoAfiliacionAlDia)) ? '#10B981' : '#EF4444' }}>
+                                        <span className="pagos-masivos-status" style={{ color: (selectedClubForBulkAtletas && atletas.filter(a => a.clubNombre === selectedClubForBulkAtletas).every(a => a.pagoAfiliacionAlDia)) ? 'var(--color-success)' : 'var(--color-error)' }}>
                                             {(selectedClubForBulkAtletas && atletas.filter(a => a.clubNombre === selectedClubForBulkAtletas).every(a => a.pagoAfiliacionAlDia)) ? 'CLUB AL DÍA' : 'PENDIENTE'}
                                         </span>
                                         <label className="toggle-switch" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: selectedClubForBulkAtletas ? 'pointer' : 'not-allowed', opacity: selectedClubForBulkAtletas ? 1 : 0.5 }}>
@@ -711,7 +757,7 @@ const GestionPagosSection = () => {
                                                 position: 'absolute',
                                                 cursor: selectedClubForBulkAtletas ? 'pointer' : 'not-allowed',
                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                background: (selectedClubForBulkAtletas && atletas.filter(a => a.clubNombre === selectedClubForBulkAtletas).every(a => a.pagoAfiliacionAlDia)) ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                background: (selectedClubForBulkAtletas && atletas.filter(a => a.clubNombre === selectedClubForBulkAtletas).every(a => a.pagoAfiliacionAlDia)) ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                 borderRadius: '34px',
                                                 transition: '.3s',
                                                 boxShadow: (selectedClubForBulkAtletas && atletas.filter(a => a.clubNombre === selectedClubForBulkAtletas).every(a => a.pagoAfiliacionAlDia)) ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -732,7 +778,7 @@ const GestionPagosSection = () => {
                                 </div>
                             </div>
 
-                            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px' }}>
+                            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px', marginBottom: '1.5rem' }}>
                                 <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--color-surface-hover)', textAlign: 'left' }}>
@@ -751,8 +797,8 @@ const GestionPagosSection = () => {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredAtletas.map(atleta => (
-                                                <tr key={atleta.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                            paginatedAtletas.map(atleta => (
+                                                <tr key={atleta.id} style={{ borderBottom: '1px solid var(--color-surface-hover)' }}>
                                                     <td style={{ padding: '1rem' }}>
                                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                             <strong>{atleta.nombre} {atleta.apellido}</strong>
@@ -791,7 +837,7 @@ const GestionPagosSection = () => {
                                                                 position: 'absolute',
                                                                 cursor: 'pointer',
                                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                                background: atleta.pagoAfiliacionAlDia ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                                background: atleta.pagoAfiliacionAlDia ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                                 borderRadius: '34px',
                                                                 transition: '.3s',
                                                                 boxShadow: atleta.pagoAfiliacionAlDia ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -831,15 +877,38 @@ const GestionPagosSection = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPagesAtletas > 1 && (
+                                <div className="admin-pagination">
+                                    <button 
+                                        className="btn-pagination" 
+                                        disabled={currentPageAtletas === 1} 
+                                        onClick={() => setCurrentPageAtletas(p => Math.max(1, p - 1))}
+                                    >
+                                        Anterior
+                                    </button>
+                                    <span className="pagination-info">
+                                        Página <strong>{currentPageAtletas}</strong> de {totalPagesAtletas}
+                                    </span>
+                                    <button 
+                                        className="btn-pagination" 
+                                        disabled={currentPageAtletas === totalPagesAtletas} 
+                                        onClick={() => setCurrentPageAtletas(p => Math.min(totalPagesAtletas, p + 1))}
+                                    >
+                                        Siguiente
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* INSCRIPCIONES TAB */}
                     {activeTab === 'inscripciones' && (
                         <div>
-                            {/* Search bar */}
-                            <div className="search-bar-container mb-md" style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ position: 'relative', flex: 1 }}>
+                            {/* Search bar with Club Filter */}
+                            <div className="search-bar-container mb-md" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div style={{ position: 'relative', flex: '2 1 300px' }}>
                                     <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dim)' }} />
                                     <input 
                                         type="text" 
@@ -850,31 +919,36 @@ const GestionPagosSection = () => {
                                         style={{ paddingLeft: '2.5rem', width: '100%', boxSizing: 'border-box' }}
                                     />
                                 </div>
+                                <div style={{ position: 'relative', flex: '1 1 200px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Building2 size={18} style={{ color: 'var(--color-text-dim)', flexShrink: 0 }} />
+                                    <select 
+                                        className="admin-select"
+                                        value={selectedClubFilterInscripciones}
+                                        onChange={e => setSelectedClubFilterInscripciones(e.target.value)}
+                                        style={{ width: '100%', padding: '0.6rem 1rem', fontSize: '0.9rem', borderRadius: '8px', border: '1px solid var(--color-surface-hover)', background: 'var(--color-surface)' }}
+                                    >
+                                        <option value="">Todos los Clubes</option>
+                                        {uniqueClubsWithInscriptions.map(club => (
+                                            <option key={club} value={club}>{club}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             {/* Panel de Controles Masivos (Todos y Por Clubes) */}
-                            <div className="glass-effect mb-md" style={{
-                                padding: '1.25rem',
-                                borderRadius: '16px',
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                                gap: '1.5rem',
-                                border: '1px solid var(--color-surface-hover)',
-                                background: 'rgba(255, 255, 255, 0.02)',
-                                marginBottom: '1.5rem'
-                            }}>
+                            <div className="pagos-masivos-container">
                                 {/* Lote Todo */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                <div className="pagos-masivos-card">
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
+                                        <h4 className="pagos-masivos-title">
                                             <Calendar size={18} /> Master Switch (Todos)
                                         </h4>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>
+                                        <p className="pagos-masivos-desc">
                                             Marcar todas las inscripciones como Pagadas o Impagas
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: (inscripciones.length > 0 && inscripciones.every(i => i.pagado)) ? '#10B981' : '#F59E0B' }}>
+                                        <span className="pagos-masivos-status" style={{ color: (inscripciones.length > 0 && inscripciones.every(i => i.pagado)) ? 'var(--color-success)' : 'var(--color-warning)' }}>
                                             {(inscripciones.length > 0 && inscripciones.every(i => i.pagado)) ? 'TODO PAGADO' : 'IMPAGO PENDIENTE'}
                                         </span>
                                         <label className="toggle-switch" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: 'pointer' }}>
@@ -892,7 +966,7 @@ const GestionPagosSection = () => {
                                                 position: 'absolute',
                                                 cursor: 'pointer',
                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                background: (inscripciones.length > 0 && inscripciones.every(i => i.pagado)) ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                background: (inscripciones.length > 0 && inscripciones.every(i => i.pagado)) ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                 borderRadius: '34px',
                                                 transition: '.3s',
                                                 boxShadow: (inscripciones.length > 0 && inscripciones.every(i => i.pagado)) ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -913,16 +987,16 @@ const GestionPagosSection = () => {
                                 </div>
 
                                 {/* Lote por Club */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                <div className="pagos-masivos-card">
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
+                                        <h4 className="pagos-masivos-title">
                                             <Building2 size={18} /> Switch por Club
                                         </h4>
                                         <select 
                                             className="admin-select"
                                             value={selectedClubForBulk}
                                             onChange={e => setSelectedClubForBulk(e.target.value)}
-                                            style={{ padding: '6px 10px !important', fontSize: '0.85rem', width: '100%', background: 'var(--color-bg-primary)', border: '1px solid var(--color-surface-hover)', borderRadius: '6px', color: 'white' }}
+                                            style={{ padding: '6px 10px', fontSize: '0.85rem', width: '100%', borderRadius: '6px' }}
                                         >
                                             <option value="">Seleccionar Club...</option>
                                             {uniqueClubsWithInscriptions.map(club => (
@@ -931,7 +1005,7 @@ const GestionPagosSection = () => {
                                         </select>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: (selectedClubForBulk && inscripciones.filter(i => i.clubNombre === selectedClubForBulk).every(i => i.pagado)) ? '#10B981' : '#F59E0B' }}>
+                                        <span className="pagos-masivos-status" style={{ color: (selectedClubForBulk && inscripciones.filter(i => i.clubNombre === selectedClubForBulk).every(i => i.pagado)) ? 'var(--color-success)' : 'var(--color-warning)' }}>
                                             {(selectedClubForBulk && inscripciones.filter(i => i.clubNombre === selectedClubForBulk).every(i => i.pagado)) ? 'CLUB AL DÍA' : 'PENDIENTE'}
                                         </span>
                                         <label className="toggle-switch" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: selectedClubForBulk ? 'pointer' : 'not-allowed', opacity: selectedClubForBulk ? 1 : 0.5 }}>
@@ -951,7 +1025,7 @@ const GestionPagosSection = () => {
                                                 position: 'absolute',
                                                 cursor: selectedClubForBulk ? 'pointer' : 'not-allowed',
                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                background: (selectedClubForBulk && inscripciones.filter(i => i.clubNombre === selectedClubForBulk).every(i => i.pagado)) ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                background: (selectedClubForBulk && inscripciones.filter(i => i.clubNombre === selectedClubForBulk).every(i => i.pagado)) ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                 borderRadius: '34px',
                                                 transition: '.3s',
                                                 boxShadow: (selectedClubForBulk && inscripciones.filter(i => i.clubNombre === selectedClubForBulk).every(i => i.pagado)) ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -972,7 +1046,7 @@ const GestionPagosSection = () => {
                                 </div>
                             </div>
 
-                            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px' }}>
+                            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px', marginBottom: '1.5rem' }}>
                                 <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--color-surface-hover)', textAlign: 'left' }}>
@@ -991,8 +1065,8 @@ const GestionPagosSection = () => {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredInscripciones.map(ins => (
-                                                <tr key={ins.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                            paginatedInscripciones.map(ins => (
+                                                <tr key={ins.id} style={{ borderBottom: '1px solid var(--color-surface-hover)' }}>
                                                     <td style={{ padding: '1rem' }}>
                                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                             <strong>{ins.participanteNombreCompleto || 'Tripulación Colectiva'}</strong>
@@ -1034,7 +1108,7 @@ const GestionPagosSection = () => {
                                                                 position: 'absolute',
                                                                 cursor: 'pointer',
                                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                                background: ins.pagado ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.15)',
+                                                                background: ins.pagado ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                                 borderRadius: '34px',
                                                                 transition: '.3s',
                                                                 boxShadow: ins.pagado ? '0 0 8px var(--color-primary-light)' : 'none'
@@ -1074,9 +1148,31 @@ const GestionPagosSection = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPagesInscripciones > 1 && (
+                                <div className="admin-pagination">
+                                    <button 
+                                        className="btn-pagination" 
+                                        disabled={currentPageInscripciones === 1} 
+                                        onClick={() => setCurrentPageInscripciones(p => Math.max(1, p - 1))}
+                                    >
+                                        Anterior
+                                    </button>
+                                    <span className="pagination-info">
+                                        Página <strong>{currentPageInscripciones}</strong> de {totalPagesInscripciones}
+                                    </span>
+                                    <button 
+                                        className="btn-pagination" 
+                                        disabled={currentPageInscripciones === totalPagesInscripciones} 
+                                        onClick={() => setCurrentPageInscripciones(p => Math.min(totalPagesInscripciones, p + 1))}
+                                    >
+                                        Siguiente
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
-
                     {/* HISTORIAL TAB */}
                     {activeTab === 'historial' && (
                         <div>
@@ -1117,18 +1213,16 @@ const GestionPagosSection = () => {
                                             </tr>
                                         ) : (
                                             filteredHistorial.map(pago => (
-                                                <tr key={pago.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                                <tr key={pago.id} style={{ borderBottom: '1px solid var(--color-surface-hover)' }}>
                                                     <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
                                                         {new Date(pago.fechaPago).toLocaleString('es-AR')}
                                                     </td>
                                                     <td style={{ padding: '1rem' }}>
-                                                        <span style={{
+                                                        <span className={`badge-pill pago-tipo-${pago.tipoPago}`} style={{
                                                             fontSize: '0.75rem',
                                                             fontWeight: 700,
                                                             padding: '2px 8px',
-                                                            borderRadius: '6px',
-                                                            background: pago.tipoPago === 'ClubAfiliacion' ? 'rgba(139, 92, 246, 0.12)' : pago.tipoPago === 'AtletaAfiliacion' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                                                            color: pago.tipoPago === 'ClubAfiliacion' ? '#a78bfa' : pago.tipoPago === 'AtletaAfiliacion' ? '#60a5fa' : '#fbbf24'
+                                                            borderRadius: '6px'
                                                         }}>
                                                             {pago.tipoPago === 'ClubAfiliacion' ? 'Club' : pago.tipoPago === 'AtletaAfiliacion' ? 'Atleta' : 'Regata'}
                                                         </span>
@@ -1140,11 +1234,11 @@ const GestionPagosSection = () => {
                                                              `${pago.eventoNombre || 'Evento'} (${pago.participanteNombre || 'Atleta'})`}
                                                         </strong>
                                                     </td>
-                                                    <td style={{ padding: '1rem', color: '#10B981', fontWeight: 800 }}>
+                                                    <td style={{ padding: '1rem', color: 'var(--color-success)', fontWeight: 800 }}>
                                                         ${pago.monto.toLocaleString()}
                                                     </td>
                                                     <td style={{ padding: '1rem' }}>
-                                                        <span style={{ fontFamily: 'monospace', background: 'rgba(255, 255, 255, 0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                        <span style={{ fontFamily: 'monospace', background: 'var(--color-surface-hover)', padding: '2px 6px', borderRadius: '4px' }}>
                                                             {pago.referencia}
                                                         </span>
                                                     </td>

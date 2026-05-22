@@ -97,7 +97,8 @@ const PagosClubSection = () => {
 
     const filteredInscripciones = inscripciones.filter(i => 
         (i.participanteNombreCompleto && i.participanteNombreCompleto.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
-        (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase()))
+        (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
+        (i.pruebaNombre && i.pruebaNombre.toLowerCase().includes(searchInscripcion.toLowerCase()))
     );
 
     const isAlDia = clubInfo?.pagoAfiliacionAlDia || clubInfo?.PagoAfiliacionAlDia;
@@ -422,6 +423,7 @@ const PagosClubSection = () => {
                                         <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'left' }}>
                                             <th style={{ padding: '1rem' }}>Competidor</th>
                                             <th style={{ padding: '1rem' }}>Regata / Evento</th>
+                                            <th style={{ padding: '1rem' }}>Prueba</th>
                                             <th style={{ padding: '1rem' }}>Nº Dorsal</th>
                                             <th style={{ padding: '1rem' }}>Estado de Pago</th>
                                         </tr>
@@ -429,7 +431,7 @@ const PagosClubSection = () => {
                                     <tbody>
                                         {filteredInscripciones.length === 0 ? (
                                             <tr>
-                                                <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
+                                                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
                                                     No se encontraron inscripciones.
                                                 </td>
                                             </tr>
@@ -441,6 +443,9 @@ const PagosClubSection = () => {
                                                     </td>
                                                     <td style={{ padding: '1rem' }}>
                                                         {ins.eventoNombre || 'Evento'}
+                                                    </td>
+                                                    <td style={{ padding: '1rem' }}>
+                                                        {ins.pruebaNombre || '—'}
                                                     </td>
                                                     <td style={{ padding: '1rem' }}>
                                                         <span style={{ fontFamily: 'monospace', color: 'var(--color-primary-light)' }}>#{ins.numeroCompetidor || 'PENDIENTE'}</span>

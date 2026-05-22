@@ -73,6 +73,36 @@ const SaaSManagement = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
 
+    const checkIsEffectiveActive = (fed) => {
+        if (!fed) return false;
+        const isExpired = fed.fechaVencimientoPlan && new Date(fed.fechaVencimientoPlan) < new Date();
+        return fed.activo && !fed.bloqueadoPorFaltaDePago && !isExpired;
+    };
+
+    const getEstadoFinanciero = (fed) => {
+        if (!fed) return { text: 'Desconocido', className: 'badge danger' };
+        if (fed.bloqueadoPorFaltaDePago) {
+            return { text: 'Bloqueado', className: 'badge danger' };
+        }
+        const isExpired = fed.fechaVencimientoPlan && new Date(fed.fechaVencimientoPlan) < new Date();
+        if (isExpired) {
+            return { text: 'Vencido', className: 'badge danger' };
+        }
+        if (!fed.planAlDia) {
+            return { text: 'Excedido', className: 'badge danger' };
+        }
+        return { text: 'Al día', className: 'badge success' };
+    };
+
+    const getAccessButtonLabel = (fed, isDesktop = false) => {
+        if (!fed) return isDesktop ? 'SUSPENS.' : 'SUSPENDIDA';
+        if (fed.bloqueadoPorFaltaDePago) return 'BLOQUEADA';
+        const isExpired = fed.fechaVencimientoPlan && new Date(fed.fechaVencimientoPlan) < new Date();
+        if (isExpired) return 'VENCIDA';
+        if (!fed.activo) return isDesktop ? 'SUSPENS.' : 'SUSPENDIDA';
+        return 'ACTIVA';
+    };
+
     const fetchData = async () => {
         setLoading(true);
         setLoadingStatus(true);
@@ -401,11 +431,10 @@ const SaaSManagement = () => {
                                         <span className="fed-plan-badge" data-plan={fed.planNombre?.toLowerCase()}>
                                             {fed.planNombre}
                                         </span>
-                                        {fed.planAlDia ? (
-                                            <span className="badge success">Al día</span>
-                                        ) : (
-                                            <span className="badge danger">Excedido</span>
-                                        )}
+                                        {(() => {
+                                            const est = getEstadoFinanciero(fed);
+                                            return <span className={est.className}>{est.text}</span>;
+                                        })()}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                         <p style={{ margin: 0 }}><Users size={14} className="text-primary" /> <strong>{fed.atletasRegistrados}</strong> Atletas</p>
@@ -413,22 +442,28 @@ const SaaSManagement = () => {
                                     </div>
                                 </div>
                                 <div className="card-actions-row">
-                                    <button 
-                                        className={`btn-quick-toggle ${fed.activo ? 'is-active' : 'is-suspended'}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleToggleActivo(fed.clubId);
-                                        }}
-                                        style={{
-                                            backgroundColor: fed.activo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                            color: fed.activo ? '#10B981' : '#EF4444',
-                                            border: `1px solid ${fed.activo ? '#10B98166' : '#EF444466'}`,
-                                            borderRadius: '6px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '700'
-                                        }}
-                                    >
-                                        <Power size={14} style={{ marginRight: '6px' }} />
-                                        {fed.activo ? 'ACTIVA' : 'SUSPENDIDA'}
-                                    </button>
+                                    {(() => {
+                                        const isEffActive = checkIsEffectiveActive(fed);
+                                        const label = getAccessButtonLabel(fed, false);
+                                        return (
+                                            <button 
+                                                className={`btn-quick-toggle ${isEffActive ? 'is-active' : 'is-suspended'}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleToggleActivo(fed.clubId);
+                                                }}
+                                                style={{
+                                                    backgroundColor: isEffActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                    color: isEffActive ? '#10B981' : '#EF4444',
+                                                    border: `1px solid ${isEffActive ? '#10B98166' : '#EF444466'}`,
+                                                    borderRadius: '6px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: '700'
+                                                }}
+                                            >
+                                                <Power size={14} style={{ marginRight: '6px' }} />
+                                                {label}
+                                            </button>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         );
@@ -463,7 +498,7 @@ const SaaSManagement = () => {
                                     <th></th>
                                 </tr>
                             </thead>
-                            <tbody>
+<tbody>
                                 {loadingStatus ? (
                                     <tr><td colSpan="8"><div className="loader-row"><div className="loader"></div></div></td></tr>
                                 ) : filteredFederaciones.map(fed => {
@@ -471,12 +506,12 @@ const SaaSManagement = () => {
                                     return (
                                         <tr 
                                             key={fed.clubId} 
-                                            className={`${selectedFedId === fed.clubId ? 'is-selected' : ''} ${!fed.planAlDia ? 'row-warning' : ''}`}
+                                            className={`${selectedFedId === fed.clubId ? 'is-selected' : ''} ${!fed.planAlDia || !checkIsEffectiveActive(fed) ? 'row-warning' : ''}`}
                                             onClick={() => setSelectedFedId(fed.clubId)}
                                         >
                                             <td data-label="Federación">
                                                 <div className="fed-cell-name">
-                                                    <div className={`status-dot ${fed.activo ? 'active' : 'inactive'}`} />
+                                                    <div className={`status-dot ${checkIsEffectiveActive(fed) ? 'active' : 'inactive'}`} />
                                                     <span>{fed.clubNombre} {fed.sigla && `(${fed.sigla})`}</span>
                                                 </div>
                                             </td>
@@ -486,11 +521,10 @@ const SaaSManagement = () => {
                                                 </span>
                                             </td>
                                             <td data-label="Estado" style={{ whiteSpace: 'nowrap', minWidth: '100px' }}>
-                                                {fed.planAlDia ? (
-                                                    <span className="badge success">Al día</span>
-                                                ) : (
-                                                    <span className="badge danger">Excedido</span>
-                                                )}
+                                                {(() => {
+                                                    const est = getEstadoFinanciero(fed);
+                                                    return <span className={est.className}>{est.text}</span>;
+                                                })()}
                                             </td>
                                             <td data-label="Atletas" className="text-center font-bold">{fed.atletasRegistrados}</td>
                                             <td data-label="Clubes" className="text-center">
@@ -500,18 +534,37 @@ const SaaSManagement = () => {
                                             </td>
                                             <td data-label="Suscripción / Vence">
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <span className="badge" style={{
-                                                        padding: '2px 8px',
-                                                        fontSize: '0.65rem',
-                                                        backgroundColor: fed.bloqueadoPorFaltaDePago ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                                                        color: fed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981',
-                                                        border: `1px solid ${fed.bloqueadoPorFaltaDePago ? '#EF4444' : '#10B981'}`,
-                                                        borderRadius: '4px',
-                                                        width: 'fit-content',
-                                                        fontWeight: 'bold'
-                                                    }}>
-                                                        {fed.bloqueadoPorFaltaDePago ? 'Bloqueado 🛑' : (fed.frecuenciaPago || 'Mensual')}
-                                                    </span>
+                                                    {(() => {
+                                                        const isExpired = fed.fechaVencimientoPlan && new Date(fed.fechaVencimientoPlan) < new Date();
+                                                        const isBlocked = fed.bloqueadoPorFaltaDePago || isExpired;
+                                                        return (
+                                                            <span className="badge" style={{
+                                                                padding: '2px 8px',
+                                                                fontSize: '0.65rem',
+                                                                backgroundColor: isBlocked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                                color: isBlocked ? '#EF4444' : '#10B981',
+                                                                border: `1px solid ${isBlocked ? '#EF4444' : '#10B981'}`,
+                                                                borderRadius: '4px',
+                                                                width: 'fit-content',
+                                                                fontWeight: 'bold',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px'
+                                                            }}>
+                                                                {fed.bloqueadoPorFaltaDePago ? (
+                                                                    <>
+                                                                        <XCircle size={10} /> Bloqueado
+                                                                    </>
+                                                                ) : isExpired ? (
+                                                                    <>
+                                                                        <XCircle size={10} /> Vencido
+                                                                    </>
+                                                                ) : (
+                                                                    fed.frecuenciaPago || 'Mensual'
+                                                                )}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                     {fed.fechaVencimientoPlan ? (
                                                         <span style={{ 
                                                             fontSize: '0.75rem', 
@@ -526,33 +579,39 @@ const SaaSManagement = () => {
                                                 </div>
                                             </td>
                                             <td data-label="Acceso" className="text-center">
-                                                <button 
-                                                    className={`btn-quick-toggle ${fed.activo ? 'is-active' : 'is-suspended'}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleToggleActivo(fed.clubId);
-                                                    }}
-                                                    title={fed.activo ? 'Suspender acceso' : 'Habilitar acceso'}
-                                                    style={{
-                                                        backgroundColor: fed.activo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                        color: fed.activo ? '#10B981' : '#EF4444',
-                                                        border: `1px solid ${fed.activo ? '#10B98166' : '#EF444466'}`,
-                                                        borderRadius: '6px',
-                                                        padding: '4px 10px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        fontSize: '0.7rem',
-                                                        fontWeight: '600',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s ease',
-                                                        width: '90px',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                >
-                                                    <Power size={12} />
-                                                    <span>{fed.activo ? 'ACTIVA' : 'SUSPENS.'}</span>
-                                                </button>
+                                                {(() => {
+                                                    const isEffActive = checkIsEffectiveActive(fed);
+                                                    const label = getAccessButtonLabel(fed, true);
+                                                    return (
+                                                        <button 
+                                                            className={`btn-quick-toggle ${isEffActive ? 'is-active' : 'is-suspended'}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleActivo(fed.clubId);
+                                                            }}
+                                                            title={isEffActive ? 'Suspender acceso' : 'Habilitar acceso'}
+                                                            style={{
+                                                                backgroundColor: isEffActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                                color: isEffActive ? '#10B981' : '#EF4444',
+                                                                border: `1px solid ${isEffActive ? '#10B98166' : '#EF444466'}`,
+                                                                borderRadius: '6px',
+                                                                padding: '4px 10px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                fontSize: '0.7rem',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s ease',
+                                                                width: '90px',
+                                                                justifyContent: 'center'
+                                                            }}
+                                                        >
+                                                            <Power size={12} />
+                                                            <span>{label}</span>
+                                                        </button>
+                                                    );
+                                                })()}
                                             </td>
                                             <td>
                                                 <ArrowRight size={18} className="arrow-icon" />
@@ -574,9 +633,19 @@ const SaaSManagement = () => {
                                     <div className="fed-main-title">
                                         <h3>{selectedFed.clubNombre} {selectedFed.sigla && `(${selectedFed.sigla})`}</h3>
                                         <div className="fed-tags">
-                                            <span className={`tag-status ${selectedFed.activo ? 'active' : 'inactive'}`}>
-                                                {selectedFed.activo ? 'Habilitada' : 'Suspendida'}
-                                            </span>
+                                            {(() => {
+                                                const isEffActive = checkIsEffectiveActive(selectedFed);
+                                                const isExpired = selectedFed.fechaVencimientoPlan && new Date(selectedFed.fechaVencimientoPlan) < new Date();
+                                                let tagText = 'Suspendida';
+                                                if (selectedFed.bloqueadoPorFaltaDePago) tagText = 'Bloqueada (Pago)';
+                                                else if (isExpired) tagText = 'Suscripción Vencida';
+                                                else if (selectedFed.activo) tagText = 'Habilitada';
+                                                return (
+                                                    <span className={`tag-status ${isEffActive ? 'active' : 'inactive'}`}>
+                                                        {tagText}
+                                                    </span>
+                                                );
+                                            })()}
                                             <span className="tag-id">ID: #{selectedFed.clubId}</span>
                                         </div>
                                     </div>
@@ -731,8 +800,8 @@ const SaaSManagement = () => {
                                                 fontWeight: 'bold'
                                             }}
                                         >
-                                            <option value="AlDia" style={{ color: '#10B981' }}>✅ Habilitado (Al día)</option>
-                                            <option value="Bloqueado" style={{ color: '#EF4444' }}>🛑 Suspendido por Falta de Pago</option>
+                                             <option value="AlDia" style={{ color: '#10B981' }}>Habilitado (Al día)</option>
+                                             <option value="Bloqueado" style={{ color: '#EF4444' }}>Suspendido por Falta de Pago</option>
                                         </select>
                                     </div>
                                     <div className="control-field">
@@ -762,6 +831,35 @@ const SaaSManagement = () => {
                                             {selectedFed.activo ? <Check size={18} /> : <XCircle size={18} />}
                                             {selectedFed.activo ? 'SUSPENDER ACCESO' : 'HABILITAR FEDERACIÓN'}
                                         </button>
+                                        {(() => {
+                                            const isEffActive = checkIsEffectiveActive(selectedFed);
+                                            const isExpired = selectedFed.fechaVencimientoPlan && new Date(selectedFed.fechaVencimientoPlan) < new Date();
+                                            if (selectedFed.activo && !isEffActive) {
+                                                return (
+                                                    <div style={{
+                                                        marginTop: '10px',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                        color: '#EF4444',
+                                                        fontSize: '0.75rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        fontWeight: '500'
+                                                    }}>
+                                                        <XCircle size={14} style={{ flexShrink: 0 }} />
+                                                        <span>
+                                                            {selectedFed.bloqueadoPorFaltaDePago 
+                                                                ? "El acceso está bloqueado manualmente por falta de pago." 
+                                                                : "El acceso está suspendido automáticamente porque la suscripción ha vencido."}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </div>
                                 </div>
                             </div>

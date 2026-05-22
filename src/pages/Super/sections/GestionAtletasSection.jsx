@@ -261,7 +261,7 @@ const GestionAtletasSection = () => {
                             onChange={(e) => setSelectedClub(e.target.value)}
                         >
                             <option value="">Todos los Clubes</option>
-                            <option value="__SIN_CLUB__">⚠️ Sin Club asignado</option>
+                            <option value="__SIN_CLUB__">Sin Club asignado</option>
                             {clubes
                                 .filter(c => !fedIdFromUrl || c.id === parseInt(fedIdFromUrl) || c.parentClubId === parseInt(fedIdFromUrl))
                                 .map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)

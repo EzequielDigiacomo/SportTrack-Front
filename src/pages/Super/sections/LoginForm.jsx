@@ -34,13 +34,13 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                                     >
                                         <option value="Club">Club (Representante)</option>
                                         <option value="Largador" disabled={isBronce}>
-                                            Juez: Largador {isBronce && '🔒 (Solo Plata/Oro)'}
+                                            Juez: Largador {isBronce && '(Exclusivo Plata/Oro)'}
                                         </option>
                                         <option value="Cronometrista" disabled={isBronce}>
-                                            Juez: Cronometrista {isBronce && '🔒 (Solo Plata/Oro)'}
+                                            Juez: Cronometrista {isBronce && '(Exclusivo Plata/Oro)'}
                                         </option>
                                         <option value="JuezControl" disabled={isBronce}>
-                                            Juez de Control {isBronce && '🔒 (Solo Plata/Oro)'}
+                                            Juez de Control {isBronce && '(Exclusivo Plata/Oro)'}
                                         </option>
                                         <option value="Admin">Administrador (Acceso Total)</option>
                                     </select>

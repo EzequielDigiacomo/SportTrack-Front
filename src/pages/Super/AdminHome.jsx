@@ -19,7 +19,7 @@ import EventoService from '../../services/EventoService';
 import ClubService from '../../services/ClubService';
 import SaaSService from '../../services/SaaSService';
 import SupportService from '../../services/SupportService';
-import { History, Clock, FileText, AlertCircle, User } from 'lucide-react';
+import { History, Clock, FileText, AlertCircle, User, AlertTriangle, Trophy, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 
@@ -630,7 +630,9 @@ const AdminHome = () => {
                                                     {/* Sección Vencimientos */}
                                                     {mExps.length > 0 && (
                                                         <div>
-                                                            <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>⚠️ Vencimientos SaaS ({mExps.length})</span>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem' }}>
+                                                                <AlertTriangle size={14} style={{ color: 'var(--color-accent-orange)' }} /> Vencimientos SaaS ({mExps.length})
+                                                            </span>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                                                 {mExps.map((exp, idx) => {
                                                                     const dateObj = new Date(exp.fechaVencimientoPlan);
@@ -655,7 +657,9 @@ const AdminHome = () => {
                                                     {/* Sección Eventos */}
                                                     {mEvts.length > 0 && (
                                                         <div>
-                                                            <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'block', marginBottom: '0.4rem' }}>🏆 Eventos Activos ({mEvts.length})</span>
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-secondary)', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem' }}>
+                                                                <Trophy size={14} style={{ color: '#eab308' }} /> Eventos Activos ({mEvts.length})
+                                                            </span>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                                                 {mEvts.map((evt, idx) => {
                                                                     const dateObj = new Date(evt.fecha);
@@ -700,16 +704,19 @@ const AdminHome = () => {
                                                     const palette = getFederationPalette(fed.clubId);
                                                     
                                                     // Determine billing status
-                                                    let billingStatus = 'Al Día ✅';
+                                                    let billingText = 'Al Día';
+                                                    let billingIcon = <CheckCircle2 size={12} />;
                                                     let statusBadgeStyle = { background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#22c55e' };
                                                     
                                                     if (fed.bloqueadoPorFaltaDePago || !fed.activo) {
-                                                        billingStatus = 'Bloqueado 🛑';
+                                                        billingText = 'Bloqueado';
+                                                        billingIcon = <XCircle size={12} />;
                                                         statusBadgeStyle = { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' };
                                                     } else if (fed.fechaVencimientoPlan) {
                                                         const isExpired = new Date() > new Date(fed.fechaVencimientoPlan);
                                                         if (isExpired) {
-                                                            billingStatus = 'Vencido ⚠️';
+                                                            billingText = 'Vencido';
+                                                            billingIcon = <AlertTriangle size={12} />;
                                                             statusBadgeStyle = { background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#f59e0b' };
                                                         }
                                                     }
@@ -763,9 +770,12 @@ const AdminHome = () => {
                                                                         fontSize: '0.65rem',
                                                                         fontWeight: 700,
                                                                         padding: '2px 6px',
-                                                                        borderRadius: '6px'
+                                                                        borderRadius: '6px',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px'
                                                                     }}>
-                                                                        {billingStatus}
+                                                                        {billingIcon} {billingText}
                                                                     </span>
                                                                     <span style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
                                                                         {formattedExpDate}
