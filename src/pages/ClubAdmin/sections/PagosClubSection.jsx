@@ -75,7 +75,9 @@ const PagosClubSection = () => {
         setSendingSolicitud(true);
         try {
             // 1. Persistir la solicitud en la base de datos
-            await api.put(`/pagos/clubes/${user.clubId}/solicitar-pago`, true);
+            await api.put(`/pagos/clubes/${user.clubId}/solicitar-pago`, true, {
+                headers: { 'Content-Type': 'application/json' }
+            });
 
             // 2. Notificar en tiempo real mediante WebSockets
             await timingSignalRService.connect();
@@ -87,8 +89,8 @@ const PagosClubSection = () => {
             setSolicitudEnviada(true);
             showAlert('success', 'Solicitud de cambio de estado de pago enviada a la federación.');
         } catch (err) {
-            console.error("Error al enviar la solicitud:", err);
-            showAlert('error', 'Error al enviar la solicitud de cambio de pago.');
+            console.error("Error al enviar la solicitud:", err.response || err);
+            showAlert('error', 'Error al enviar la solicitud de cambio de pago. Revisa la consola para más detalles.');
         } finally {
             setSendingSolicitud(false);
         }
