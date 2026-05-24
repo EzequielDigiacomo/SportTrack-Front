@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus, Calendar } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
@@ -355,12 +355,29 @@ return (
                                     className={`btn-admin-action secondary ${isManualMode ? 'active' : ''}`}
                                     onClick={() => {
                                         if (!isManualMode) {
+                                            const N = inscriptos.length;
+                                            const numSeries = Math.ceil(N / 9.0);
+                                            const baseSize = Math.floor(N / numSeries);
+                                            const extras = N % numSeries;
+
+                                            let currentSerie = 1;
+                                            let currentCount = 0;
                                             const initial = {};
-                                            inscriptos.forEach((ins, idx) => {
+
+                                            inscriptos.forEach((ins) => {
+                                                const targetSize = baseSize + (currentSerie <= extras ? 1 : 0);
+                                                const carril = currentCount + 1;
+
                                                 initial[ins.id] = { 
-                                                    serie: Math.floor(idx / 9) + 1, 
-                                                    carril: (idx % 9) + 1 
+                                                    serie: currentSerie, 
+                                                    carril: carril 
                                                 };
+
+                                                currentCount++;
+                                                if (currentCount >= targetSize) {
+                                                    currentSerie++;
+                                                    currentCount = 0;
+                                                }
                                             });
                                             setManualPlacements(initial);
                                         }
@@ -746,7 +763,10 @@ return (
             <div className="global-cronograma-view fade-in" style={{ padding: '0 1rem' }}>
                 <div className="section-header-row mb-lg" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h3 style={{ color: 'var(--color-primary-light)', margin: 0 }}>📅 Cronograma General del Evento</h3>
+                        <h3 style={{ color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
+                            Cronograma General del Evento
+                        </h3>
                         <p style={{ color: 'var(--color-text-dim)', fontSize: '0.9rem', margin: '0.3rem 0 0 0' }}>
                             Vista consolidada de todas las series, semifinales y finales programadas.
                         </p>
@@ -755,9 +775,10 @@ return (
                         className="btn-admin-secondary"
                         onClick={handleRecalcularCronograma}
                         disabled={saving}
-                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                     >
-                        🧠 Reprogramar Todo el Evento
+                        <RefreshCw size={16} className={saving ? "spin" : ""} />
+                        Reprogramar Todo el Evento
                     </button>
                 </div>
                 

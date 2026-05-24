@@ -33,7 +33,15 @@ function App() {
         roleStr.includes('superadmin') ||
         roleStr.includes('juezcontrol') || 
         roleStr.includes('control')
-    )
+    );
+
+    const showNotificationCenter = isJudgeOrAdmin && (
+        location.pathname.startsWith('/club') || 
+        location.pathname.startsWith('/super') || 
+        location.pathname.startsWith('/admin') || 
+        location.pathname.startsWith('/juez-control') || 
+        location.pathname.startsWith('/jueces')
+    );
 
     return (
         <>
@@ -78,7 +86,7 @@ function App() {
             <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
-        {!isHomePage && <NotificationCenter isAdmin={isJudgeOrAdmin} />}
+        {showNotificationCenter && <NotificationCenter isAdmin={isJudgeOrAdmin} />}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
         </>
     )

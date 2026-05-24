@@ -344,10 +344,17 @@ const FinisherDashboard = () => {
                 return;
             }
 
-            // TECLAS 1-9 -> LLEGADA DE CARRIL
-            const key = e.key;
-            if (/^[1-9]$/.test(key)) {
-                const laneNum = parseInt(key);
+            // TECLAS 1-9 (Soporta teclado numérico/pad y NumLock desactivado) -> LLEGADA DE CARRIL
+            let laneNum = null;
+            if (/^[1-9]$/.test(e.key)) {
+                laneNum = parseInt(e.key);
+            } else if (/^Numpad[1-9]$/.test(e.code)) {
+                laneNum = parseInt(e.code.replace('Numpad', ''));
+            } else if (/^Digit[1-9]$/.test(e.code)) {
+                laneNum = parseInt(e.code.replace('Digit', ''));
+            }
+
+            if (laneNum !== null) {
                 // Solo si la carrera está activa
                 if (isRaceRunning) {
                     const res = resultados.find(r => r.carril === laneNum);

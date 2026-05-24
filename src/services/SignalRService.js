@@ -60,27 +60,27 @@ class SignalRService {
                 console.warn("No se pudo unir al grupo: SignalR no está conectado.");
                 return;
             }
-
+ 
             if (this.currentGroupId === eventId.toString()) return;
-
+ 
             if (this.currentGroupId) {
                 try {
-                    await this.connection.invoke("LeaveEventGroup", this.currentGroupId);
-                } catch (e) { console.warn("Error LeaveEventGroup:", e); }
+                    await this.connection.invoke("LeaveRaceGroup", this.currentGroupId);
+                } catch (e) { console.warn("Error LeaveRaceGroup:", e); }
             }
-
-            await this.connection.invoke("JoinEventGroup", eventId.toString());
+ 
+            await this.connection.invoke("JoinRaceGroup", eventId.toString());
             this.currentGroupId = eventId.toString();
         } catch (e) {
             console.error("Error in joinEventGroup:", e);
         }
     }
-
+ 
     async leaveEventGroup(eventId) {
         if (!eventId || !this.connection) return;
         try {
             if (this.connection.state === signalR.HubConnectionState.Connected) {
-                await this.connection.invoke("LeaveEventGroup", eventId.toString());
+                await this.connection.invoke("LeaveRaceGroup", eventId.toString());
             }
             if (this.currentGroupId === eventId.toString()) {
                 this.currentGroupId = null;

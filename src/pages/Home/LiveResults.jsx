@@ -5,6 +5,7 @@ import { PruebaService } from '../../services/ConfigService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import signalRServiceInstance from '../../services/SignalRService';
+import timingSignalRService from '../../services/TimingSignalRService';
 import PdfExportService from '../../services/PdfExportService';
 import ThemeToggle from '../../components/Common/ThemeToggle';
 import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search } from 'lucide-react';
@@ -54,16 +55,24 @@ const formatDate = (isoString) => {
 const replaceKayakNames = (name) => {
     if (!name) return "";
     return name.replace(/Kayak Individual/gi, "K1")
-               .replace(/Kayak Doble/gi, "K2")
-               .replace(/Kayak Cuádruple/gi, "K4")
-               .replace(/Canoa Individual/gi, "C1")
-               .replace(/Canoa Doble/gi, "C2");
+        .replace(/Kayak Doble/gi, "K2")
+        .replace(/Kayak Cuádruple/gi, "K4")
+        .replace(/Canoa Individual/gi, "C1")
+        .replace(/Canoa Doble/gi, "C2");
 };
+
+const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
 const getSexName = (p) => {
     if (!p) return 'Mixto';
-    // Prioritize deeper nested objects if they exist
-    return p.prueba?.sexo?.nombre || p.prueba?.sexoNombre || p.sexoNombre || 'Mixto';
+    // 1. Check inside underlying Prueba object (if p is EventoPrueba)
+    const innerPrueba = p.prueba || p;
+    const sId = innerPrueba.sexoId || innerPrueba.sexo?.id;
+    if (sId && SEXO_NAMES[sId]) {
+        return SEXO_NAMES[sId];
+    }
+    // Fallbacks
+    return innerPrueba.sexo?.nombre || innerPrueba.sexoNombre || p.sexoNombre || 'Mixto';
 };
 
 const LiveResults = () => {
@@ -80,6 +89,78 @@ const LiveResults = () => {
     const [showPdfMenu, setShowPdfMenu] = useState(false);
     const [pruebaNumbersMap, setPruebaNumbersMap] = useState({});
     const [faseNumberMap, setFaseNumberMap] = useState({});
+    const [allFases, setAllFases] = useState([]);
+    const [refreshResultsCounter, setRefreshResultsCounter] = useState(0);
+
+    const reloadPhasesOnly = async () => {
+        try {
+            const allFasesData = await FaseService.getByEvento(id);
+            const sortedAllFases = [...allFasesData].sort((a, b) => {
+                const timeA = new Date(a.fechaHoraProgramada || a.FechaHoraProgramada).getTime();
+                const timeB = new Date(b.fechaHoraProgramada || b.FechaHoraProgramada).getTime();
+                return timeA - timeB;
+            });
+            setAllFases(sortedAllFases);
+
+            // Update selectedFase in-place to reflect its new status/data
+            if (selectedFase) {
+                const updatedSelected = sortedAllFases.find(f => f.id === selectedFase.id);
+                if (updatedSelected) {
+                    setSelectedFase(updatedSelected);
+                }
+            }
+        } catch (e) {
+            console.error("Error reloading phases:", e);
+        }
+    };
+
+    useEffect(() => {
+        // Connect to the timing hub globally
+        timingSignalRService.connect().catch(console.error);
+
+        // Listen for any race starting, officialized, in review, or reset globally
+        timingSignalRService.onGlobalRaceStarted(({ faseId }) => {
+            console.log(`[SignalR] Race started globally: ${faseId}`);
+            reloadPhasesOnly();
+            if (selectedFase && selectedFase.id === faseId) {
+                setRefreshResultsCounter(prev => prev + 1);
+            }
+        });
+
+        timingSignalRService.onGlobalRaceOfficialized((faseId) => {
+            console.log(`[SignalR] Race officialized globally: ${faseId}`);
+            reloadPhasesOnly();
+            if (selectedFase && selectedFase.id === faseId) {
+                setRefreshResultsCounter(prev => prev + 1);
+            }
+        });
+
+        timingSignalRService.onGlobalRaceInReview((fase) => {
+            const fid = fase.id || fase.Id;
+            console.log(`[SignalR] Race in review globally: ${fid}`);
+            reloadPhasesOnly();
+            if (selectedFase && selectedFase.id === fid) {
+                setRefreshResultsCounter(prev => prev + 1);
+            }
+        });
+
+        timingSignalRService.onRaceReset((faseId) => {
+            console.log(`[SignalR] Race reset: ${faseId}`);
+            reloadPhasesOnly();
+            if (selectedFase && selectedFase.id === faseId) {
+                setRefreshResultsCounter(prev => prev + 1);
+            }
+        });
+
+        timingSignalRService.onGlobalResultStatusUpdated((resultadoId, status) => {
+            console.log(`[SignalR] Result status updated globally: ${resultadoId} -> ${status}`);
+            setRefreshResultsCounter(prev => prev + 1);
+        });
+
+        return () => {
+            // Shared singleton clean up is not strictly necessary but keeps memory safe
+        };
+    }, [id, selectedFase]);
 
     useEffect(() => {
         const loadInitial = async () => {
@@ -87,11 +168,10 @@ const LiveResults = () => {
                 const ev = await EventoService.getById(id);
                 setEvento(ev);
                 const prs = await PruebaService.getByEvento(id);
-                setPruebas(prs);
 
                 // Fetch all phases to get global sequential race numbers (#1, #2, #3...)
                 const allFasesData = await FaseService.getByEvento(id);
-                
+
                 // Sort by date/time to ensure #1 is the first race of the event
                 const sortedAllFases = [...allFasesData].sort((a, b) => {
                     const timeA = new Date(a.fechaHoraProgramada || a.FechaHoraProgramada).getTime();
@@ -101,22 +181,50 @@ const LiveResults = () => {
 
                 const sidebarMapping = {};
                 const globalFaseNumberMap = {};
-                
+
                 sortedAllFases.forEach((f, idx) => {
                     const raceNum = idx + 1;
                     const pid = f.eventoPruebaId || f.EventoPruebaId;
                     const fid = f.id || f.Id;
-                    
+
                     if (!sidebarMapping[pid]) sidebarMapping[pid] = [];
                     sidebarMapping[pid].push(raceNum);
-                    
+
                     globalFaseNumberMap[fid] = raceNum;
                 });
-                
+
                 setPruebaNumbersMap(sidebarMapping);
                 setFaseNumberMap(globalFaseNumberMap);
+                setAllFases(sortedAllFases);
 
-                if (prs.length > 0) setSelectedPrueba(prs[0]);
+                // Sort prs based on the minimum race number in sidebarMapping
+                const sortedPrs = [...prs].sort((a, b) => {
+                    const aNums = sidebarMapping[a.id] || [];
+                    const bNums = sidebarMapping[b.id] || [];
+                    const minA = aNums.length > 0 ? Math.min(...aNums) : Infinity;
+                    const minB = bNums.length > 0 ? Math.min(...bNums) : Infinity;
+
+                    if (minA !== minB) {
+                        return minA - minB;
+                    }
+
+                    // Fallback to scheduled time if min race number is same
+                    const timeA = new Date(a.fechaHora || a.FechaHora || 0).getTime();
+                    const timeB = new Date(b.fechaHora || b.FechaHora || 0).getTime();
+                    return timeA - timeB;
+                });
+
+                setPruebas(sortedPrs);
+
+                if (sortedAllFases.length > 0) {
+                    const firstFase = sortedAllFases[0];
+                    setSelectedFase(firstFase);
+
+                    const parentPrueba = prs.find(p => p.id === (firstFase.eventoPruebaId || firstFase.EventoPruebaId));
+                    if (parentPrueba) {
+                        setSelectedPrueba(parentPrueba);
+                    }
+                }
             } catch (e) {
                 console.error(e);
             } finally {
@@ -135,7 +243,7 @@ const LiveResults = () => {
                 // 1. Cargamos las FASES de la prueba (incluyendo sus resultados anidados)
                 const data = await FaseService.getByEventoPrueba(selectedPrueba.id);
                 setFases(data || []);
-                
+
                 // 2. Aplanamos todos los resultados de todas las fases en un solo estado
                 const allResults = [];
                 (data || []).forEach(f => {
@@ -183,7 +291,8 @@ const LiveResults = () => {
                         participanteNombre: updatedData.participanteNombre || updatedData.ParticipanteNombre,
                         clubSigla: updatedData.clubSigla || updatedData.ClubSigla,
                         clubNombre: updatedData.clubNombre || updatedData.ClubNombre,
-                        carril: updatedData.carril || updatedData.Carril
+                        carril: updatedData.carril || updatedData.Carril,
+                        estado: updatedData.estado || updatedData.Estado || updatedData.estadoCanto || updatedData.EstadoCanto
                     };
 
                     setResultados(prev => {
@@ -221,7 +330,7 @@ const LiveResults = () => {
                 signalRServiceInstance.connection?.off("RecibirEstructura");
             }
         };
-    }, [selectedPrueba]);
+    }, [selectedPrueba, refreshResultsCounter]);
 
     const handleDownloadPDF = (mode = 'current') => {
         if (!selectedPrueba || !fases.length) return;
@@ -243,13 +352,13 @@ const LiveResults = () => {
                 resultados: resultados
                     .filter(r => (r.faseId || r.FaseId) === fase.id)
                     .map(r => ({
-                        posicion:          r.posicion          || r.Posicion,
-                        carril:            r.carril            || r.Carril,
+                        posicion: r.posicion || r.Posicion,
+                        carril: r.carril || r.Carril,
                         participanteNombre: r.participanteNombre || r.ParticipanteNombre,
-                        clubNombre:        r.clubNombre        || r.ClubNombre,
-                        clubSigla:         r.clubSigla         || r.ClubSigla,
-                        tiempoOficial:     r.tiempoOficial     || r.TiempoOficial,
-                        tripulantes:       r.tripulantes       || [],
+                        clubNombre: r.clubNombre || r.ClubNombre,
+                        clubSigla: r.clubSigla || r.ClubSigla,
+                        tiempoOficial: r.tiempoOficial || r.TiempoOficial,
+                        tripulantes: r.tripulantes || [],
                     })),
             });
 
@@ -285,17 +394,54 @@ const LiveResults = () => {
 
     if (loading) return <div className="results-loading"><div className="loader"></div><p>Sincronizando con el canal oficial...</p></div>;
     if (!evento) return <div className="results-error">Evento no encontrado</div>;
-
-    const filteredPruebas = pruebas.filter(p => {
-        const rawName = `${p.prueba?.categoria?.nombre} ${p.prueba?.bote?.tipo} ${p.prueba?.distancia?.descripcion} ${getSexName(p)}`;
+    const filteredFases = allFases.filter(f => {
+        const p = f.prueba || {};
+        const rawName = `${f.nombreFase} ${p.prueba?.categoria?.nombre || p.categoria?.nombre || ''} ${p.prueba?.bote?.tipo || p.bote?.tipo || ''} ${p.prueba?.distancia?.descripcion || p.distancia?.descripcion || ''} ${getSexName(p)}`;
         const name = replaceKayakNames(rawName).toLowerCase();
         return name.includes(searchTerm.toLowerCase());
     });
 
+    // Buscar la prueba activa en curso
+    const activeRace = allFases.find(f => {
+        const est = (f.estado || f.Estado || '').toUpperCase();
+        return est === 'ENCURSO' || est === 'EN CARRERA';
+    });
+
+    // Buscar la próxima prueba programada (que no esté en curso ni finalizada/cancelada)
+    const nextRace = allFases.find(f => {
+        const est = (f.estado || f.Estado || '').toUpperCase();
+        return est !== 'ENCURSO' && est !== 'EN CARRERA' && est !== 'FINALIZADA' && est !== 'FINALIZADO' && est !== 'CANCELADO' && est !== 'CANCELADA';
+    });
+
+    // Validar si el evento completo finalizó
+    const allFinished = allFases.length > 0 && allFases.every(f => {
+        const est = (f.estado || f.Estado || '').toUpperCase();
+        return est === 'FINALIZADA' || est === 'FINALIZADO' || est === 'CANCELADO' || est === 'CANCELADA';
+    });
+
+    const getRaceBannerLabel = (f) => {
+        if (!f) return null;
+        const p = f.prueba || {};
+        const catName = p.prueba?.categoria?.nombre || p.categoria?.nombre || '';
+        const botName = p.prueba?.bote?.tipo || p.bote?.tipo || p.prueba?.bote?.nombre || p.bote?.nombre || '';
+        const distName = p.prueba?.distancia?.descripcion || p.distancia?.descripcion || (p.prueba?.distancia?.metros ? `${p.prueba.distancia.metros}m` : '');
+        const sexName = getSexName(p);
+        const details = replaceKayakNames(`${catName} ${botName} ${distName} - ${sexName}`);
+        const number = (faseNumberMap && faseNumberMap[f.id]) || f.numeroPrueba || f.NumeroPrueba || '';
+        return {
+            number,
+            faseName: f.nombreFase || f.NombreFase || `Fase ${f.numeroFase}`,
+            details
+        };
+    };
+
+    const activeBanner = getRaceBannerLabel(activeRace);
+    const nextBanner = getRaceBannerLabel(nextRace);
+
     return (
         <div className="live-results-page fade-in">
             <div className="results-bg-glow"></div>
-            
+
             <header className="results-header container">
                 <div className="top-nav">
                     <Link to="/" className="back-link">
@@ -307,7 +453,7 @@ const LiveResults = () => {
                         </div>
                     )}
                 </div>
-                
+
                 <div className="header-main">
                     <div className="event-info">
                         {(() => {
@@ -339,6 +485,47 @@ const LiveResults = () => {
                             <span><Calendar size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> {new Date(evento.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</span>
                         </div>
                     </div>
+
+                    {/* LIVE STATUS BOARD BANNERS */}
+                    {activeBanner ? (
+                        <div className="live-status-board running fade-in">
+                            <div className="board-header">
+                                <span className="live-pulse-dot"></span>
+                                <span className="board-title">Se está corriendo</span>
+                            </div>
+                            <div className="board-content">
+                                <div className="board-race-num">#{activeBanner.number}</div>
+                                <div className="board-race-details">
+                                    <div className="board-race-fase">{activeBanner.faseName}</div>
+                                    <div className="board-race-cat">{activeBanner.details}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : nextBanner ? (
+                        <div className="live-status-board scheduled fade-in">
+                            <div className="board-header">
+                                <Clock size={12} className="board-icon-grey" />
+                                <span className="board-title">Continúa</span>
+                            </div>
+                            <div className="board-content">
+                                <div className="board-race-num upcoming">#{nextBanner.number}</div>
+                                <div className="board-race-details">
+                                    <div className="board-race-fase upcoming">{nextBanner.faseName}</div>
+                                    <div className="board-race-cat">{nextBanner.details}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : allFinished ? (
+                        <div className="live-status-board finished fade-in">
+                            <div className="board-header">
+                                <Trophy size={12} className="board-icon-gold" />
+                                <span className="board-title">Competencia Finalizada</span>
+                            </div>
+                            <div className="board-content">
+                                <div className="board-finished-msg">Todas las regatas han concluido.</div>
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             </header>
 
@@ -360,59 +547,43 @@ const LiveResults = () => {
                         </div>
                     </div>
                     <div className="pruebas-v-list">
-                        {filteredPruebas.map(p => (
-                            <button 
-                                key={p.id} 
-                                className={`prueba-v-item ${selectedPrueba?.id === p.id ? 'active' : ''}`}
-                                style={{ opacity: (p.estado || p.Estado || '').toUpperCase() === 'FINALIZADO' ? 0.6 : 1 }}
-                                onClick={() => setSelectedPrueba(p)}
-                            >
-                                <div className="p-header">
-                                    <div className="status-dot-container" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        {(() => {
-                                            const est = (p.estado || p.Estado || '').toUpperCase();
-                                            let dotColor = 'transparent';
-                                            let isPulsing = false;
-                                            let isMedal = false;
-
-                                            if (est === 'ENCURSO' || est === 'PROGRAMADA' || est === '') {
-                                                dotColor = '#10b981';
-                                                isPulsing = true;
-                                            } else if (est === 'FINALIZADO') {
-                                                isMedal = true;
-                                            } else if (est === 'CANCELADO') {
-                                                dotColor = '#ef4444';
-                                            }
-                                            
-                                            if (isMedal) return <Trophy size={14} style={{ color: '#eab308', marginRight: '4px' }} />;
-
-                                            return dotColor !== 'transparent' && (
-                                                <span 
-                                                    className={`status-dot ${isPulsing ? 'pulse-anim' : ''}`} 
-                                                    style={{ 
-                                                        width: '8px', 
-                                                        height: '8px', 
-                                                        borderRadius: '50%', 
-                                                        backgroundColor: dotColor,
-                                                        boxShadow: `0 0 10px ${dotColor}66`
-                                                    }}
-                                                ></span>
-                                            );
-                                        })()}
-                                        <span className="p-time">{formatDate(p.fechaHora)} - {formatTime(p.fechaHora)}</span>
+                        {filteredFases.map(f => {
+                            const p = f.prueba || {};
+                            const raceNum = faseNumberMap[f.id] || f.numeroPrueba || f.NumeroPrueba || f.id;
+                            const isSelected = selectedFase?.id === f.id;
+                            const catName = p.prueba?.categoria?.nombre || p.categoria?.nombre || '';
+                            const botName = p.prueba?.bote?.tipo || p.bote?.tipo || p.prueba?.bote?.nombre || p.bote?.nombre || '';
+                            const distName = p.prueba?.distancia?.descripcion || p.distancia?.descripcion || (p.prueba?.distancia?.metros ? `${p.prueba.distancia.metros}m` : '');
+                            const sexName = getSexName(p);
+                            const label = replaceKayakNames(`${catName} ${botName} ${distName} - ${sexName}`);
+                            return (
+                                <button 
+                                    key={f.id} 
+                                    className={`prueba-v-item ${isSelected ? 'active' : ''}`}
+                                    style={{ opacity: (f.estado || f.Estado || '').toUpperCase().startsWith('FINAL') ? 0.8 : 1 }}
+                                    onClick={() => {
+                                        setSelectedFase(f);
+                                        const parentPrueba = pruebas.find(pr => pr.id === (f.eventoPruebaId || f.EventoPruebaId));
+                                        if (parentPrueba) {
+                                            setSelectedPrueba(parentPrueba);
+                                        }
+                                    }}
+                                >
+                                    <div className="p-header">
+                                        <div className="status-dot-container" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span className="p-time">{formatDate(f.fechaHoraProgramada)} - {formatTime(f.fechaHoraProgramada)}</span>
+                                        </div>
+                                        <span className="p-badge" style={{ background: 'var(--color-primary-light)', color: 'white', fontWeight: 'bold' }}>#{raceNum}</span>
                                     </div>
-                                    {p.cantidadInscritos > 0 && <span className="p-badge">{p.cantidadInscritos} botes</span>}
-                                </div>
-                                <span className="p-name">
-                                    {replaceKayakNames(`${p.prueba?.categoria?.nombre} ${p.prueba?.bote?.tipo} ${p.prueba?.distancia?.descripcion} - ${getSexName(p)}`)}
-                                </span>
-                                {pruebaNumbersMap[p.id] && (
-                                    <div className="p-race-range" style={{ fontSize: '0.7rem', color: 'var(--color-primary-light)', marginTop: '4px', fontWeight: 'bold' }}>
-                                        Pruebas: {pruebaNumbersMap[p.id].sort((a,b) => a-b).map(n => `#${n}`).join(', ')}
-                                    </div>
-                                )}
-                            </button>
-                        ))}
+                                    <span className="p-name" style={{ fontWeight: 'bold', color: 'white' }}>
+                                        {f.nombreFase}
+                                    </span>
+                                    <span className="p-name" style={{ fontSize: '0.85rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
+                                        {label}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </aside>
 
@@ -431,13 +602,13 @@ const LiveResults = () => {
                                 </div>
                                 <div className="status-indicator" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                     <div className="pdf-dropdown-container">
-                                        <button 
-                                            className="btn-pdf-main" 
+                                        <button
+                                            className="btn-pdf-main"
                                             onClick={() => setShowPdfMenu(!showPdfMenu)}
                                         >
                                             <Download size={16} style={{ marginRight: '8px' }} /> Descargar PDF
                                         </button>
-                                        
+
                                         {showPdfMenu && (
                                             <>
                                                 <div className="pdf-menu-backdrop" onClick={() => setShowPdfMenu(false)}></div>
@@ -453,21 +624,32 @@ const LiveResults = () => {
                                         )}
                                     </div>
                                     {(() => {
-                                        // Verificar si la prueba está terminada
-                                        // Se considera terminada si existen fases de tipo Final y todas tienen resultados con tiempo
-                                        const finalFases = fases.filter(f => (f.etapaNombre || f.EtapaNombre || '').toUpperCase().includes('FINAL'));
-                                        const allFinalsDone = finalFases.length > 0 && finalFases.every(f => {
-                                            const res = resultados.filter(r => (r.faseId || r.FaseId) === f.id);
-                                            return res.length > 0 && res.every(r => r.tiempoOficial || r.TiempoOficial);
-                                        });
-
-                                        return allFinalsDone ? (
-                                            <span className="status-label" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
-                                                PRUEBA FINALIZADA
-                                            </span>
-                                        ) : (
-                                            <span className="status-label">PRUEBA EN CURSO</span>
-                                        );
+                                        const est = (selectedFase?.estado || selectedFase?.Estado || '').toUpperCase();
+                                        if (est === 'ENCURSO' || est === 'EN CARRERA') {
+                                            return (
+                                                <span className="status-label" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                                                    PRUEBA EN CURSO
+                                                </span>
+                                            );
+                                        } else if (est === 'FINALIZADA' || est === 'FINALIZADO') {
+                                            return (
+                                                <span className="status-label" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
+                                                    FINALIZADA
+                                                </span>
+                                            );
+                                        } else if (est === 'CANCELADO' || est === 'CANCELADA') {
+                                            return (
+                                                <span className="status-label" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                                                    CANCELADA
+                                                </span>
+                                            );
+                                        } else {
+                                            return (
+                                                <span className="status-label" style={{ color: '#94a3b8', background: 'rgba(148, 163, 184, 0.1)', borderColor: 'rgba(148, 163, 184, 0.2)' }}>
+                                                    PROGRAMADA
+                                                </span>
+                                            );
+                                        }
                                     })()}
                                 </div>
                             </div>
@@ -489,10 +671,10 @@ const LiveResults = () => {
                                             </div>
                                             <div className="phase-tabs" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                                 {etapaFases.map(f => (
-                                                    <button 
+                                                    <button
                                                         key={f.id}
                                                         className={`phase-tab ${selectedFase?.id === f.id ? 'active' : ''}`}
-                                                        style={{ 
+                                                        style={{
                                                             padding: '0.6rem 1.2rem',
                                                             borderRadius: '8px',
                                                             border: '1px solid rgba(255,255,255,0.1)',
@@ -541,7 +723,7 @@ const LiveResults = () => {
                                         <tbody>
                                             {(() => {
                                                 const currentResults = resultados.filter(r => (r.faseId || r.FaseId) === selectedFase.id);
-                                                const sorted = [...currentResults].sort((a,b) => {
+                                                const sorted = [...currentResults].sort((a, b) => {
                                                     const posA = a.posicion || a.Posicion;
                                                     const posB = b.posicion || b.Posicion;
                                                     if (posA && posB) return posA - posB;
@@ -549,7 +731,7 @@ const LiveResults = () => {
                                                     if (posB) return 1;
                                                     return (a.carril || a.Carril || 99) - (b.carril || b.Carril || 99);
                                                 });
-                                                
+
                                                 const lider = sorted.find(r => (r.posicion || r.Posicion) === 1);
                                                 const liderMs = lider ? timeToMs(lider.tiempoOficial || lider.TiempoOficial) : null;
 
@@ -577,7 +759,46 @@ const LiveResults = () => {
                                                                     <span className="club-badge">{r.clubSigla || r.ClubSigla}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="time-cell">{(r.tiempoOficial || r.TiempoOficial)?.split('.')[0] || '--:--'}</td>
+                                                            <td className="time-cell">
+                                                                {(() => {
+                                                                    const statusStr = (r.estado || r.Estado || r.estadoCanto || r.EstadoCanto || '').toUpperCase();
+                                                                    const isSpecialStatus = ['DNS', 'DNF', 'DSQ', 'DESCALIFICADO'].includes(statusStr);
+
+                                                                    if (isSpecialStatus) {
+                                                                        return (
+                                                                            <span style={{
+                                                                                display: 'inline-block',
+                                                                                padding: '4px 10px',
+                                                                                borderRadius: '6px',
+                                                                                fontWeight: '800',
+                                                                                fontSize: '0.85rem',
+                                                                                textTransform: 'uppercase',
+                                                                                textAlign: 'center',
+                                                                                background: statusStr === 'DNS'
+                                                                                    ? 'rgba(31, 41, 55, 0.6)'
+                                                                                    : statusStr === 'DNF'
+                                                                                        ? 'rgba(146, 64, 14, 0.4)'
+                                                                                        : 'rgba(153, 27, 27, 0.4)',
+                                                                                color: statusStr === 'DNS'
+                                                                                    ? '#f3f4f6'
+                                                                                    : statusStr === 'DNF'
+                                                                                        ? '#fef3c7'
+                                                                                        : '#fee2e2',
+                                                                                border: `1px solid ${statusStr === 'DNS'
+                                                                                    ? 'rgba(255, 255, 255, 0.15)'
+                                                                                    : statusStr === 'DNF'
+                                                                                        ? 'rgba(251, 191, 36, 0.25)'
+                                                                                        : 'rgba(248, 113, 113, 0.25)'
+                                                                                    }`
+                                                                            }}>
+                                                                                {statusStr === 'DESCALIFICADO' ? 'DSQ' : statusStr}
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    return (r.tiempoOficial || r.TiempoOficial)?.split('.')[0] || '--:--';
+                                                                })()}
+                                                            </td>
                                                             <td className="diff-cell">
                                                                 {isLeader ? <span className="leader-label">LIDER</span> : formatDiff(diff)}
                                                             </td>

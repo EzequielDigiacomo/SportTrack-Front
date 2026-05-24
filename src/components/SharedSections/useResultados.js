@@ -190,6 +190,16 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     };
 
     const handleSortearCarriles = async () => {
+        const N = inscriptos.length;
+        if (N > 9) {
+            const requiredSeeds = Math.ceil(N / 9.0);
+            const currentSeedsCount = inscriptos.filter(i => i.esCabezaDeSerie).length;
+            if (currentSeedsCount !== requiredSeeds) {
+                setMessage(`⚠️ Para realizar el sorteo con ${N} inscritos, debes seleccionar exactamente ${requiredSeeds} ${requiredSeeds === 1 ? 'cabeza' : 'cabezas'} de serie (actualmente tienes ${currentSeedsCount}).`);
+                return;
+            }
+        }
+
         setSaving(true);
         try {
             // 1. Generar los Heats en el backend
@@ -216,6 +226,16 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     };
 
     const handleGenerarManual = async (placements) => {
+        const N = inscriptos.length;
+        if (N > 9) {
+            const requiredSeeds = Math.ceil(N / 9.0);
+            const currentSeedsCount = inscriptos.filter(i => i.esCabezaDeSerie).length;
+            if (currentSeedsCount !== requiredSeeds) {
+                setMessage(`⚠️ Para realizar el sorteo manual con ${N} inscritos, debes seleccionar exactamente ${requiredSeeds} ${requiredSeeds === 1 ? 'cabeza' : 'cabezas'} de serie (actualmente tienes ${currentSeedsCount}).`);
+                return;
+            }
+        }
+
         setSaving(true);
         try {
             await FaseService.generarManual(selectedPrueba, placements);

@@ -35,42 +35,25 @@ const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName =
                     {showPruebaName && p && (
                         <div style={{ width: '100%', display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px', alignItems: 'center' }}>
                             {pruebaNro !== null && (
-                                <span style={{
-                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(100, 180, 255, 0.15) 100%)',
-                                    color: '#bfdbfe',
-                                    fontSize: '1rem',
-                                    fontWeight: '900',
-                                    padding: '3px 12px',
-                                    borderRadius: '6px',
-                                    border: '1.5px solid rgba(100, 180, 255, 0.5)',
-                                    letterSpacing: '1px',
-                                    fontFamily: 'monospace',
-                                    boxShadow: '0 0 10px rgba(100, 180, 255, 0.2)',
-                                    flexShrink: 0,
-                                }}>
+                                <span className="chip-prueba-nro">
                                     #{pruebaNro}
                                 </span>
                             )}
-                            <span className="chip" style={{ background: 'rgba(100, 180, 255, 0.15)', color: '#64b4ff', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(100, 180, 255, 0.3)' }}>
+                            <span className="chip chip-categoria">
                                 {CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre}
                             </span>
-                            <span className="chip" style={{ background: 'rgba(167, 139, 250, 0.15)', color: '#a78bfa', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(167, 139, 250, 0.3)' }}>
+                            <span className="chip chip-bote">
                                 {BOTE_NAMES[p.bote?.id] || p.bote?.nombre}
                             </span>
-                            <span className="chip" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <span className="chip chip-distancia">
                                 {DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm'}
                             </span>
-                            <span className="chip" style={{ 
-                                background: p.sexoId === 1 ? 'rgba(59, 130, 246, 0.15)' : p.sexoId === 2 ? 'rgba(236, 72, 153, 0.15)' : 'rgba(20, 184, 166, 0.15)', 
-                                color: p.sexoId === 1 ? '#3b82f6' : p.sexoId === 2 ? '#ec4899' : '#14b8a6', 
-                                fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', 
-                                border: `1px solid ${p.sexoId === 1 ? 'rgba(59, 130, 246, 0.3)' : p.sexoId === 2 ? 'rgba(236, 72, 153, 0.3)' : 'rgba(20, 184, 166, 0.3)'}` 
-                            }}>
+                            <span className={`chip chip-sexo ${p.sexoId === 1 ? 'male' : p.sexoId === 2 ? 'female' : 'mixed'}`}>
                                 {SEXO_NAMES[p.sexoId] || p.sexoNombre}
                             </span>
                         </div>
                     )}
-                    <h4 style={{ margin: 0, color: 'var(--color-primary-light)' }}>{fase.nombreFase}</h4>
+                    <h4 style={{ margin: 0, color: 'var(--color-text-primary)' }}>{fase.nombreFase}</h4>
                     <span className="badge-time">
                         <Clock size={12} /> {formatTime(fase.fechaHoraProgramada)} hs
                     </span>
