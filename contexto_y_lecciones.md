@@ -64,6 +64,18 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
 ### 🟢 Prevención de Errores de JSX y Atributos
 * **Atributos JSX Duplicados**: Estar sumamente atentos al colocar múltiples expresiones dentro de etiquetas de apertura de JSX de gran tamaño. Los botones o contenedores que definen funciones inline extensas (ej. `onClick={async () => { ... }}`) suelen inducir a errores donde se vuelve a declarar un atributo (como `disabled`) al final del tag por no haber cerrado el tag de apertura adecuadamente.
 
+### 🟢 Módulo de Resultados Adaptado para Consulta (Rol Club)
+* **Filtrado por Federación**: Los clubes deben visualizar de forma exclusiva los eventos organizados por su federación madre. Esto se logra buscando el `parentClubId` del club del usuario logueado en la base de datos y pasándolo como filtro.
+* **Orden Secuencial de Pruebas**: Para ordenar desplegables de pruebas chronológicamente, se debe calcular la primera aparición (número de regata) de cada prueba dentro del cronograma del evento y ordenar la lista ascendentemente basados en dicho índice.
+* **Diseño Premium y Simplificado (Live Results)**: La grilla de consulta para usuarios de club debe deshacerse de los inputs e interactividad administrativa, reemplazándola por una vista de sólo lectura estilizada que muestre copas (🥇🥈🥉), nombres completos de tripulantes, badges del club y la diferencia (`Dif.`) calculada dinámicamente en milisegundos con respecto al líder de la serie.
+* **Ocultamiento de Funciones Administrativas**: Los botones de reprogramación, sorteo de series, siembra manual, cabezas de serie interactivas y leyendas de bloqueo deben encapsularse estrictamente en bloques de control `{isAdmin && ...}` para resguardar la consistencia y seguridad del sistema.
+
+### 🟢 Control de Afiliaciones y Notificaciones en Tiempo Real (WebSockets / SignalR)
+* **Relaciones en Repositorios Backend**: Al buscar entidades con relaciones dinámicas de primer nivel (como un sub-club y su federación), se debe incluir explícitamente el `.Include(c => c.ParentClub)` en la consulta por ID del repositorio backend para evitar que el mapeo de nombres de relaciones en los DTOs resulte en campos nulos o vacíos.
+* **Mensajería Instantánea Inter-Roles**: La comunicación crítica o notificaciones que requieren una resolución ágil (como una solicitud de cambio de estado a pagado hecha por un club) pueden transmitirse fluidamente mediante eventos dedicados en SignalR (`RequestPaymentStatusChange`), evitando sobrecargar la base de datos con lecturas frecuentes de persistencia.
+* **Diseño Reactivo en Formularios de Envío**: Los botones que disparan eventos de WebSockets deben incorporar estados de feedback inmediato (ej. desactivar el click y mostrar el texto `"Solicitud Enviada ✓"` en verde glassmorphic) para guiar correctamente la interacción del usuario y prevenir llamadas SignalR duplicadas.
+* **Redirección desde Notificaciones**: Las alertas recibidas en el Centro de Notificaciones (`NotificationCenter.jsx`) deben soportar diferentes acciones basadas en su contexto. Al hacer clic en un aviso de pago de un club, el administrador debe ser redirigido directamente al módulo de `/super/pagos` para facilitar una acción resolutiva inmediata.
+
 ---
 
 ## 📝 3. Bitácora de Desarrollo e Historial de Cambios
@@ -79,10 +91,11 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
 | **2026-05-22** | Paginación y Filtro de Club en Control de Pagos. | ✅ Completado | Agregada paginación estricta de 9 filas por página y selector de club en las solapas de Atletas e Inscripciones. |
 | **2026-05-22** | Sincronización Automática de Vencimiento SaaS. | ✅ Completado | Sincronizado el estado de vencimiento y bloqueo en backend (`SaaSService`) y frontend (`SaaSManagement.jsx`) con badges específicos y alertas informativas en el panel lateral. |
 | **2026-05-22** | Correcciones sintácticas y de compilación. | ✅ Completado | Reparado tag de cierre JSX roto en `GestionPagosSection.jsx` y atributo `disabled` duplicado en `InscripcionAtletaModal.jsx`. |
+| **2026-05-24** | Módulo de Resultados y Pagos para Clubes con alertas SignalR | ✅ Completado | Filtrado de eventos, pruebas ordenadas por cronograma, vista Live de resultados y solicitud de cambio de estado de pago en tiempo real con notificaciones al administrador. |
 
 ---
 
 ## 🎯 4. Estado Actual y Próximos Pasos
 
-* **Contexto Inmediato**: Hemos implementado de forma segura y exitosa la sincronización automática de vencimientos y bloqueos del portal SaaS (tanto en la lógica de datos del backend como en los componentes visuales e interactivos del frontend). Todo el proyecto compila perfectamente.
+* **Contexto Inmediato**: Hemos adaptado exitosamente los módulos de resultados y de pagos para el rol de Club, logrando una interfaz limpia de solo lectura para resultados, y un canal interactivo bidireccional en tiempo real con SignalR para solicitar cambios de estado de afiliación directamente al centro de notificaciones del administrador. Todos los componentes compilan y el backend inicia de manera perfecta.
 * **Próxima acción**: *[Esperando directivas adicionales del usuario]*

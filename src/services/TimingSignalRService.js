@@ -213,6 +213,26 @@ class TimingSignalRService {
         this.connection.on("GlobalResultStatusUpdated", callback);
     }
 
+    onPaymentStatusChangeRequested(callback) {
+        if (!this.connection) return;
+        const handler = (data) => {
+            callback(data);
+        };
+        this.connection.off("paymentStatusChangeRequested");
+        this.connection.off("paymentstatuschangerequested");
+        this.connection.on("paymentStatusChangeRequested", handler);
+        this.connection.on("paymentstatuschangerequested", handler);
+    }
+
+    async requestPaymentStatusChange(clubNombre, clubId) {
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
+            await this.connect();
+        }
+        if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
+            await this.connection.invoke("RequestPaymentStatusChange", clubNombre.toString(), clubId.toString());
+        }
+    }
+
     disconnect() {
         if (this.connection) {
             this.connection.stop();

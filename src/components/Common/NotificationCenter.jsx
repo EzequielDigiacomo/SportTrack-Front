@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, Clock, X } from 'lucide-react';
+import { Bell, CheckCircle, Clock, X, CreditCard } from 'lucide-react';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { useNavigate } from 'react-router-dom';
 import './NotificationCenter.css';
@@ -58,6 +58,25 @@ const NotificationCenter = ({ isAdmin }) => {
                         ...prev
                     ]);
                 });
+
+                // 4. Escuchar solicitudes de cambio de estado de pago de clubes
+                timingSignalRService.onPaymentStatusChangeRequested(({ clubNombre, clubId, motive }) => {
+                    setNotifications(prev => {
+                        // Evitar duplicados por id de notificación único por club
+                        const notifId = `pay_${clubId}_${Date.now()}`;
+                        return [
+                            {
+                                id: notifId,
+                                title: `Solicitud de Pago: ${clubNombre}`,
+                                desc: motive,
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                type: 'payment',
+                                clubId: clubId
+                            },
+                            ...prev
+                        ];
+                    });
+                });
             } catch (err) {
                 console.error("[NotifCenter] SignalR Setup Error:", err);
             }
@@ -76,6 +95,15 @@ const NotificationCenter = ({ isAdmin }) => {
         setIsVisible(false);
     };
 
+    const handleNotificationClick = (n) => {
+        if (n.type === 'payment') {
+            navigate('/super/pagos');
+            setIsVisible(false);
+        } else {
+            handleGoToRace(n.id);
+        }
+    };
+
     return (
         <div className={`notification-center-container ${isVisible ? 'open' : ''}`}>
             <button 
@@ -90,7 +118,7 @@ const NotificationCenter = ({ isAdmin }) => {
 
             <div className="notification-panel glass-effect">
                 <div className="notification-header">
-                    <h3>Regatas Pendientes</h3>
+                    <h3>Notificaciones y Alertas</h3>
                     <button onClick={() => setIsVisible(false)} className="close-btn">
                         <X size={18} />
                     </button>
@@ -100,21 +128,32 @@ const NotificationCenter = ({ isAdmin }) => {
                     {notifications.length === 0 ? (
                         <div className="empty-notifications">
                             <CheckCircle size={32} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                            <p>No hay regatas pendientes de validación</p>
+                            <p>No hay alertas ni notificaciones pendientes</p>
                         </div>
                     ) : (
                         notifications.map(n => (
                             <div 
                                 key={n.id} 
                                 className="notification-item"
-                                onClick={() => handleGoToRace(n.id)}
+                                onClick={() => handleNotificationClick(n)}
                             >
                                 <div className="notif-icon">
-                                    <Clock size={16} />
+                                    {n.type === 'payment' ? <CreditCard size={16} color="var(--color-primary-light)" /> : <Clock size={16} />}
                                 </div>
                                 <div className="notif-content">
                                     <span className="notif-title">{n.title}</span>
-                                    <span className="notif-time">
+                                    {n.desc && (
+                                        <span className="notif-desc" style={{ 
+                                            fontSize: '0.8rem', 
+                                            color: 'var(--color-text-secondary)', 
+                                            display: 'block', 
+                                            marginTop: '2px',
+                                            lineHeight: '1.2' 
+                                        }}>
+                                            {n.desc}
+                                        </span>
+                                    )}
+                                    <span className="notif-time" style={{ display: 'block', marginTop: '4px' }}>
                                         {n.time}
                                     </span>
                                 </div>

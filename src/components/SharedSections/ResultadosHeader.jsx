@@ -30,7 +30,8 @@ const ResultadosHeader = ({
     hideTabs,
     cronograma = [],
     onSelectRegata,
-    selectedFaseId
+    selectedFaseId,
+    isAdmin = true
 }) => {
     const CATEGORIA_COLORS = {
         1: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
@@ -71,40 +72,53 @@ const ResultadosHeader = ({
                 </div>
 
                 {/* Prueba Selector */}
-                <div className="form-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Search size={14} className="text-secondary" /> Prueba / Categoría
-                    </label>
-                    <select 
-                        value={selectedPrueba} 
-                        onChange={(e) => setSelectedPrueba(e.target.value)}
-                        className="admin-select"
-                        style={{ 
-                            borderLeft: `3px solid ${catColor.text}`,
-                            color: catColor.text
-                        }}
-                    >
-                        <option value="">-- Seleccione una Prueba --</option>
-                        {pruebas.map(p => {
-                            const inner = p.prueba || p;
-                            const catId = inner.categoria?.id || inner.categoriaId;
-                            const botId = inner.bote?.id || inner.boteId;
-                            const distId = inner.distancia?.id || inner.distanciaId;
+                {isAdmin && (
+                    <div className="form-group">
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Search size={14} className="text-secondary" /> Prueba / Categoría
+                        </label>
+                        <select 
+                            value={selectedPrueba} 
+                            onChange={(e) => setSelectedPrueba(e.target.value)}
+                            className="admin-select"
+                            style={{ 
+                                borderLeft: `3px solid ${catColor.text}`,
+                                color: catColor.text
+                            }}
+                        >
+                            <option value="">-- Seleccione una Prueba --</option>
+                            {pruebas.map(p => {
+                                const inner = p.prueba || p;
+                                const catId = inner.categoria?.id || inner.categoriaId;
+                                const botId = inner.bote?.id || inner.boteId;
+                                const distId = inner.distancia?.id || inner.distanciaId;
 
-                            const catName = CATEGORIA_NAMES[catId] || inner.categoria?.nombre || 'Cat';
-                            const botName = BOTE_NAMES[botId] || inner.bote?.tipo || 'Bote';
-                            const distName = DISTANCIA_NAMES[distId] || (inner.distancia?.metros ? `${inner.distancia.metros}m` : '?m');
+                                const catName = CATEGORIA_NAMES[catId] || inner.categoria?.nombre || 'Cat';
+                                const botName = BOTE_NAMES[botId] || inner.bote?.tipo || 'Bote';
+                                const distName = DISTANCIA_NAMES[distId] || (inner.distancia?.metros ? `${inner.distancia.metros}m` : '?m');
 
-                            const label = p.nombre || `${catName} - ${botName} - ${distName}`;
-                            
-                            return (
-                                <option key={p.id} value={p.id} style={{ color: CATEGORIA_COLORS[catId]?.text || 'white' }}>
-                                    {label}
-                                </option>
-                            );
-                        })}
-                    </select>
-                </div>
+                                // Calcular el número de regata secuencial en el cronograma
+                                const raceIndices = [];
+                                (cronograma || []).forEach((f, idx) => {
+                                    const pid = f.eventoPruebaId || f.EventoPruebaId;
+                                    if (String(pid) === String(p.id)) {
+                                        raceIndices.push(idx + 1);
+                                    }
+                                });
+                                const minRaceNum = raceIndices.length > 0 ? Math.min(...raceIndices) : null;
+                                const prefix = minRaceNum ? `#${minRaceNum} - ` : '';
+
+                                const label = `${prefix}${p.nombre || `${catName} - ${botName} - ${distName}`}`;
+                                
+                                return (
+                                    <option key={p.id} value={p.id} style={{ color: CATEGORIA_COLORS[catId]?.text || 'white' }}>
+                                        {label}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+                )}
 
                 {/* Regata Selector */}
                 <div className="form-group">

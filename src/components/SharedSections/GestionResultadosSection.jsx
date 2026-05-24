@@ -326,6 +326,7 @@ return (
             cronograma={cronograma}
             onSelectRegata={handleSelectRegata}
             selectedFaseId={faseSeleccionada?.id}
+            isAdmin={isAdmin}
         />
 
         {loading ? (
@@ -343,51 +344,55 @@ return (
                             </div>
                             
                             <div className="flex-row gap-md">
-                                <button
-                                    className="btn-admin-action primary"
-                                    onClick={handleSortearCarriles}
-                                    disabled={saving || isManualMode}
-                                >
-                                    <RotateCcw size={16} /> {fases.length > 0 ? 'Regenerar Sorteo' : 'Generar Heats'}
-                                </button>
+                                {isAdmin && (
+                                    <button
+                                        className="btn-admin-action primary"
+                                        onClick={handleSortearCarriles}
+                                        disabled={saving || isManualMode}
+                                    >
+                                        <RotateCcw size={16} /> {fases.length > 0 ? 'Regenerar Sorteo' : 'Generar Heats'}
+                                    </button>
+                                )}
                                 
-                                <button
-                                    className={`btn-admin-action secondary ${isManualMode ? 'active' : ''}`}
-                                    onClick={() => {
-                                        if (!isManualMode) {
-                                            const N = inscriptos.length;
-                                            const numSeries = Math.ceil(N / 9.0);
-                                            const baseSize = Math.floor(N / numSeries);
-                                            const extras = N % numSeries;
+                                {isAdmin && (
+                                    <button
+                                        className={`btn-admin-action secondary ${isManualMode ? 'active' : ''}`}
+                                        onClick={() => {
+                                            if (!isManualMode) {
+                                                const N = inscriptos.length;
+                                                const numSeries = Math.ceil(N / 9.0);
+                                                const baseSize = Math.floor(N / numSeries);
+                                                const extras = N % numSeries;
 
-                                            let currentSerie = 1;
-                                            let currentCount = 0;
-                                            const initial = {};
+                                                let currentSerie = 1;
+                                                let currentCount = 0;
+                                                const initial = {};
 
-                                            inscriptos.forEach((ins) => {
-                                                const targetSize = baseSize + (currentSerie <= extras ? 1 : 0);
-                                                const carril = currentCount + 1;
+                                                inscriptos.forEach((ins) => {
+                                                    const targetSize = baseSize + (currentSerie <= extras ? 1 : 0);
+                                                    const carril = currentCount + 1;
 
-                                                initial[ins.id] = { 
-                                                    serie: currentSerie, 
-                                                    carril: carril 
-                                                };
+                                                    initial[ins.id] = { 
+                                                        serie: currentSerie, 
+                                                        carril: carril 
+                                                    };
 
-                                                currentCount++;
-                                                if (currentCount >= targetSize) {
-                                                    currentSerie++;
-                                                    currentCount = 0;
-                                                }
-                                            });
-                                            setManualPlacements(initial);
-                                        }
-                                        setIsManualMode(!isManualMode);
-                                    }}
-                                >
-                                    {isManualMode ? '❌ Cancelar' : <><RefreshCw size={16} /> Manual</>}
-                                </button>
+                                                    currentCount++;
+                                                    if (currentCount >= targetSize) {
+                                                        currentSerie++;
+                                                        currentCount = 0;
+                                                    }
+                                                });
+                                                setManualPlacements(initial);
+                                            }
+                                            setIsManualMode(!isManualMode);
+                                        }}
+                                    >
+                                        {isManualMode ? '❌ Cancelar' : <><RefreshCw size={16} /> Manual</>}
+                                    </button>
+                                )}
                                 
-                                {isManualMode && (
+                                {isAdmin && isManualMode && (
                                     <button
                                         className="btn-admin-action accent"
                                         onClick={handleApplyManualGeneration}
@@ -416,7 +421,7 @@ return (
                                     </div>
                                 )}
 
-                                {fases.length > 0 && (
+                                {isAdmin && fases.length > 0 && (
                                     <button
                                         className="btn-admin-action info"
                                         onClick={handleRecalcularCronograma}
@@ -428,7 +433,7 @@ return (
                             </div>
                         </div>
 
-                        {inscriptos.length > 0 && (
+                        {isAdmin && inscriptos.length > 0 && (
                             <div className="inscriptos-seeding-panel glass-effect p-md mb-lg" style={{ borderRadius: 'var(--radius-lg)', position: 'relative' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNominaCollapsed ? '0' : '1.5rem' }}>
                                     <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary-light)' }}>
@@ -492,6 +497,12 @@ return (
                                                                             onChange={(e) => handleManualPlacementChange(ins.id, 'serie', e.target.value)}
                                                                         />
                                                                     </div>
+                                                                ) : !isAdmin ? (
+                                                                    ins.esCabezaDeSerie ? (
+                                                                        <Star size={16} fill="var(--color-accent)" color="var(--color-accent)" style={{ opacity: 0.8 }} />
+                                                                    ) : (
+                                                                        <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                                                                    )
                                                                 ) : (
                                                                     <button
                                                                         className="btn-icon-admin"
@@ -705,6 +716,7 @@ return (
                                     onResultChange={handleResultChange}
                                     isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') ? false : isLocked}
                                     isSuccess={saveSuccess}
+                                    isAdmin={isAdmin}
                                 />
                                 
                                 {(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && (
@@ -743,7 +755,7 @@ return (
                                         </button>
                                     </div>
                                 )}
-                                {isLocked && (
+                                {isAdmin && isLocked && (
                                     <div style={{ marginTop: '0.5rem', color: 'var(--color-warning)', fontSize: '0.85rem', textAlign: 'right' }}>
                                         ⚠️ Esta prueba está marcada como bloqueada, pero puedes guardar cambios si es necesario.
                                     </div>

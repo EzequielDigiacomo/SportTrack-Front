@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
+import ClubService from '../../services/ClubService';
 import { PruebaService } from '../../services/ConfigService';
 import InscripcionService from '../../services/InscripcionService';
 import ResultadoService from '../../services/ResultadoService';
@@ -8,6 +10,7 @@ import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
+    const { user } = useAuth();
     const location = useLocation();
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(() => localStorage.getItem('results_selected_evento') || preselectedEventoId || '');
@@ -56,7 +59,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
     useEffect(() => {
         loadEventos();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (selectedEvento) {
@@ -96,10 +99,50 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     }, [selectedPrueba]);
 
+    useEffect(() => {
+        if (cronograma.length > 0 && pruebas.length > 0) {
+            const mapping = {};
+            cronograma.forEach((f, idx) => {
+                const pid = f.eventoPruebaId || f.EventoPruebaId;
+                if (!mapping[pid]) mapping[pid] = [];
+                mapping[pid].push(idx + 1);
+            });
+
+            const sorted = [...pruebas].sort((a, b) => {
+                const aNums = mapping[a.id] || [];
+                const bNums = mapping[b.id] || [];
+                const minA = aNums.length > 0 ? Math.min(...aNums) : Infinity;
+                const minB = bNums.length > 0 ? Math.min(...bNums) : Infinity;
+
+                if (minA !== minB) {
+                    return minA - minB;
+                }
+
+                const timeA = new Date(a.fechaHora || a.FechaHora || 0).getTime();
+                const timeB = new Date(b.fechaHora || b.FechaHora || 0).getTime();
+                return timeA - timeB;
+            });
+
+            const orderChanged = sorted.some((p, i) => p.id !== pruebas[i]?.id);
+            if (orderChanged) {
+                setPruebas(sorted);
+            }
+        }
+    }, [cronograma, pruebas]);
+
     const loadEventos = async () => {
         try {
-            const data = await EventoService.getAll();
-            setEventos(data);
+            let data;
+            if (user?.rol === 'Club' && user?.clubId) {
+                const club = await ClubService.getById(user.clubId);
+                const fedId = club?.parentClubId || club?.id;
+                data = await EventoService.getAll(fedId);
+            } else if (user?.rol === 'Admin' && user?.clubId) {
+                data = await EventoService.getAll(user.clubId);
+            } else {
+                data = await EventoService.getAll();
+            }
+            setEventos(data || []);
         } catch (error) {
             setMessage("Error al cargar eventos.");
         }

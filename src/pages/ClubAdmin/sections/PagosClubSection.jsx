@@ -18,6 +18,7 @@ import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
 import { useAuth } from '../../../context/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
+import timingSignalRService from '../../../services/TimingSignalRService';
 import '../../../components/SharedSections/AdminSections.css';
 
 const PagosClubSection = () => {
@@ -26,6 +27,8 @@ const PagosClubSection = () => {
     const [activeTab, setActiveTab] = useState('afiliacion');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [sendingSolicitud, setSendingSolicitud] = useState(false);
+    const [solicitudEnviada, setSolicitudEnviada] = useState(false);
 
     // Data states
     const [clubInfo, setClubInfo] = useState(null);
@@ -64,6 +67,25 @@ const PagosClubSection = () => {
             showAlert('error', 'Error al cargar los datos de pagos del club.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSolicitarPago = async () => {
+        setSendingSolicitud(true);
+        try {
+            await timingSignalRService.connect();
+            const clubNombre = clubInfo?.nombre || user?.username || 'Club';
+            const clubId = user?.clubId || 0;
+            
+            await timingSignalRService.requestPaymentStatusChange(clubNombre, clubId);
+            
+            setSolicitudEnviada(true);
+            showAlert('success', 'Solicitud de cambio de estado de pago enviada a la federación.');
+        } catch (err) {
+            console.error("Error al enviar la solicitud:", err);
+            showAlert('error', 'Error al enviar la solicitud de cambio de pago.');
+        } finally {
+            setSendingSolicitud(false);
         }
     };
 
@@ -307,24 +329,47 @@ const PagosClubSection = () => {
 
                             <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.05)', margin: '0.5rem 0' }} />
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                                <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)' }}>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tipo de Membresía</span>
-                                    <h4 style={{ margin: '6px 0 0 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <Award size={18} color="var(--color-primary-light)" /> Afiliación Club SportTrack (Anual)
-                                    </h4>
-                                </div>
-                                <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                                <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                     <span style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Federación de Afiliación</span>
-                                    <h4 style={{ margin: '6px 0 0 0', fontSize: '1.1rem' }}>
-                                        {clubInfo?.parentClubNombre || 'Federación Raíz'}
+                                    <h4 style={{ margin: '6px 0 0 0', fontSize: '1.15rem', color: 'var(--color-text-primary)' }}>
+                                        {clubInfo?.parentClubNombre || 'Federación Ecuatoriana'}
                                     </h4>
                                 </div>
-                                <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)' }}>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estado Administrativo</span>
-                                    <h4 style={{ margin: '6px 0 0 0', fontSize: '1.1rem', color: isAlDia ? '#10B981' : '#EF4444' }}>
-                                        {isAlDia ? '● Activo y Vigente' : '● Restringido por Pago'}
-                                    </h4>
+                                <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estado Administrativo</span>
+                                        <h4 style={{ margin: '6px 0 0 0', fontSize: '1.15rem', color: isAlDia ? '#10B981' : '#EF4444' }}>
+                                            {isAlDia ? '● Activo y Vigente' : '● Restringido por Pago'}
+                                        </h4>
+                                    </div>
+                                    {!isAlDia && (
+                                        <button 
+                                            className="btn-admin-primary" 
+                                            onClick={handleSolicitarPago}
+                                            disabled={sendingSolicitud || solicitudEnviada}
+                                            style={{ 
+                                                marginTop: '16px', 
+                                                width: '100%', 
+                                                padding: '10px 14px', 
+                                                fontSize: '0.85rem',
+                                                fontWeight: 600,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                borderRadius: '8px',
+                                                background: solicitudEnviada ? 'rgba(16, 185, 129, 0.15)' : 'var(--color-primary-light)',
+                                                border: solicitudEnviada ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                                                color: solicitudEnviada ? '#10B981' : 'var(--color-background)',
+                                                cursor: (sendingSolicitud || solicitudEnviada) ? 'not-allowed' : 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <CreditCard size={16} />
+                                            {sendingSolicitud ? 'Enviando...' : solicitudEnviada ? 'Solicitud Enviada ✓' : 'Solicitar Cambio de Estado a Pago'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

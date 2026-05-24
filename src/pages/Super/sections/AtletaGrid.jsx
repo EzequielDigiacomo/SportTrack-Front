@@ -59,7 +59,7 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                     <thead>
                         <tr>
                             <th className="sortable" onClick={() => requestSort('apellido')}>
-                                Nombre Completo <span className="sort-icon">{getSortIcon('apellido')}</span>
+                                Nombre y Apellido <span className="sort-icon">{getSortIcon('apellido')}</span>
                             </th>
                             <th className="sortable" onClick={() => requestSort('dni')}>
                                 DNI <span className="sort-icon">{getSortIcon('dni')}</span>
