@@ -350,7 +350,7 @@ const PagosClubSection = () => {
                                             {isAlDia ? '● Activo y Vigente' : '● Restringido por Pago'}
                                         </h4>
                                     </div>
-                                    {!isAlDia && (
+                                    {/* !isAlDia && (
                                         <button 
                                             className="btn-admin-primary" 
                                             onClick={handleSolicitarPago}
@@ -376,7 +376,7 @@ const PagosClubSection = () => {
                                             <CreditCard size={16} />
                                             {sendingSolicitud ? 'Enviando...' : solicitudEnviada ? 'Solicitud Enviada ✓' : 'Solicitar Cambio de Estado a Pago'}
                                         </button>
-                                    )}
+                                    ) */}
                                 </div>
                             </div>
                         </div>
