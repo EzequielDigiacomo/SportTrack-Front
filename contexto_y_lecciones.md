@@ -91,11 +91,11 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
 | **2026-05-22** | Paginación y Filtro de Club en Control de Pagos. | ✅ Completado | Agregada paginación estricta de 9 filas por página y selector de club en las solapas de Atletas e Inscripciones. |
 | **2026-05-22** | Sincronización Automática de Vencimiento SaaS. | ✅ Completado | Sincronizado el estado de vencimiento y bloqueo en backend (`SaaSService`) y frontend (`SaaSManagement.jsx`) con badges específicos y alertas informativas en el panel lateral. |
 | **2026-05-22** | Correcciones sintácticas y de compilación. | ✅ Completado | Reparado tag de cierre JSX roto en `GestionPagosSection.jsx` y atributo `disabled` duplicado en `InscripcionAtletaModal.jsx`. |
-| **2026-05-24** | Módulo de Resultados y Pagos para Clubes con alertas SignalR | ✅ Completado | Filtrado de eventos, pruebas ordenadas por cronograma, vista Live de resultados y solicitud de cambio de estado de pago en tiempo real con notificaciones al administrador. |
+| **2026-05-24** | Módulo de Resultados y Pagos para Clubes con alertas SignalR y persistencia DB | ✅ Completado | Filtrado de eventos, pruebas ordenadas por cronograma, vista Live de resultados y solicitud de pago persistente en base de datos (con migración EF Core a PostgreSQL) y alerta WebSocket en tiempo real al administrador. |
 
 ---
 
 ## 🎯 4. Estado Actual y Próximos Pasos
 
-* **Contexto Inmediato**: Hemos adaptado exitosamente los módulos de resultados y de pagos para el rol de Club, logrando una interfaz limpia de solo lectura para resultados, y un canal interactivo bidireccional en tiempo real con SignalR para solicitar cambios de estado de afiliación directamente al centro de notificaciones del administrador. Todos los componentes compilan y el backend inicia de manera perfecta.
+* **Contexto Inmediato**: Hemos adaptado exitosamente los módulos de resultados y de pagos para el rol de Club, logrando una interfaz limpia de solo lectura para resultados, y un canal interactivo bidireccional en tiempo real con SignalR para solicitar cambios de estado de afiliación directamente al centro de notificaciones del administrador. Además, implementamos la persistencia en base de datos (PostgreSQL) mediante una migración de Entity Framework Core y expusimos el nuevo endpoint de manera que el estado del botón del Club quede guardado de forma permanente entre inicios de sesión y se limpie automáticamente al registrarse el pago. Todos los componentes compilan y el backend inicia de manera perfecta.
 * **Próxima acción**: *[Esperando directivas adicionales del usuario]*

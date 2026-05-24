@@ -29,6 +29,14 @@ class TimingSignalRService {
                         .configureLogging(signalR.LogLevel.Warning)
                         .withAutomaticReconnect()
                         .build();
+
+                    // Registrar de manera permanente antes de iniciar la conexión
+                    this.connection.on("paymentStatusChangeRequested", (data) => {
+                        if (this._paymentCallback) this._paymentCallback(data);
+                    });
+                    this.connection.on("paymentstatuschangerequested", (data) => {
+                        if (this._paymentCallback) this._paymentCallback(data);
+                    });
                 }
 
                 // Iniciar si está desconectado
@@ -214,14 +222,7 @@ class TimingSignalRService {
     }
 
     onPaymentStatusChangeRequested(callback) {
-        if (!this.connection) return;
-        const handler = (data) => {
-            callback(data);
-        };
-        this.connection.off("paymentStatusChangeRequested");
-        this.connection.off("paymentstatuschangerequested");
-        this.connection.on("paymentStatusChangeRequested", handler);
-        this.connection.on("paymentstatuschangerequested", handler);
+        this._paymentCallback = callback;
     }
 
     async requestPaymentStatusChange(clubNombre, clubId) {

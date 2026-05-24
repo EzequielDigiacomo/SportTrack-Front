@@ -50,6 +50,7 @@ const PagosClubSection = () => {
             // Fetch club info
             const club = await ClubService.getById(user.clubId);
             setClubInfo(club);
+            setSolicitudEnviada(club?.solicitudPagoPendiente || club?.SolicitudPagoPendiente || false);
 
             // Fetch athletes of this club
             const athletesData = await AtletaService.getByClub(user.clubId);
@@ -73,6 +74,10 @@ const PagosClubSection = () => {
     const handleSolicitarPago = async () => {
         setSendingSolicitud(true);
         try {
+            // 1. Persistir la solicitud en la base de datos
+            await api.put(`/pagos/clubes/${user.clubId}/solicitar-pago`, true);
+
+            // 2. Notificar en tiempo real mediante WebSockets
             await timingSignalRService.connect();
             const clubNombre = clubInfo?.nombre || user?.username || 'Club';
             const clubId = user?.clubId || 0;
