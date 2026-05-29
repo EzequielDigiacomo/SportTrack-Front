@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
 import AuthService from '../services/AuthService';
+import timingSignalRService from '../services/TimingSignalRService';
 
 const AuthContext = createContext(null);
 
@@ -48,6 +49,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
+        try {
+            timingSignalRService.disconnect();
+        } catch (e) {
+            console.error("Error al desconectar SignalR en el cierre de sesión", e);
+        }
+
         // Limpiamos el estado local INMEDIATAMENTE
         setUser(null);
         localStorage.removeItem(STORAGE_KEYS.USER_DATA);

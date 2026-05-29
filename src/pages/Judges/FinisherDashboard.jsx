@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { 
     Timer, CheckCircle, Clock, Users, XCircle, RefreshCw, Save, 
-    Play, Activity, Search, LogOut, ArrowLeft, ArrowRight, Layout, Grid
+    Play, Activity, Search, LogOut, ArrowLeft, ArrowRight, Layout, Grid, Link2
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
@@ -53,6 +54,15 @@ const FinisherDashboard = () => {
     const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const { addToast } = useToast();
+    const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
+    const [activeJudges, setActiveJudges] = useState([]);
+
+    useEffect(() => {
+        const unsubscribe = timingSignalRService.onStateChange((state) => {
+            setConnectionState(state);
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -122,11 +132,45 @@ const FinisherDashboard = () => {
             // timingSignalRService.disconnect();
             return;
         }
+
+        // Limpiar inmediatamente los resultados de la carrera anterior y las dudas para evitar
+        // bugs de estado stale donde el comparador cree que ya terminó la nueva carrera.
+        setResultados([]);
+        setRawTimes([]);
+
+        // --- ARRANQUE SÍNCRONO DEL CRONÓMETRO ---
+        // Si la fase seleccionada ya está "En Carrera", arrancamos el cronómetro inmediatamente
+        // para evitar que el reloj se quede trabado o en 0 mientras se realiza la conexión lenta.
+        if (selectedFase && selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
+            const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
+            if (!isNaN(parsed)) {
+                setIsRaceRunning(true);
+                setStartTime(parsed);
+                setElapsedTime(timingSignalRService.getSyncedNow().getTime() - parsed);
+                if (timerRef.current) clearInterval(timerRef.current);
+                timerRef.current = setInterval(() => {
+                    setElapsedTime(timingSignalRService.getSyncedNow().getTime() - parsed);
+                }, 37);
+            }
+        } else {
+            setElapsedTime(0);
+            setIsRaceRunning(false);
+            setStartTime(null);
+        }
         
         const setupSignalR = async () => {
             try {
+                // Escuchar jueces conectados en esta regata ANTES de conectar para no perder el primer evento
+                timingSignalRService.onRacePresenceUpdated((presenceList) => {
+                    setActiveJudges(presenceList);
+                });
+
                 // 1. Conectar al Hub (y unirse al grupo si hay una fase seleccionada)
-                await timingSignalRService.connect(selectedFase?.id);
+                await timingSignalRService.connect(
+                    selectedFase?.id,
+                    user?.nombreCompleto || user?.nombre || user?.username || "Cronometrista",
+                    "Cronometrista"
+                );
 
                 // 2. LISTENERS GLOBALES (Siempre activos mientras estemos en el dashboard)
                 timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
@@ -261,8 +305,7 @@ const FinisherDashboard = () => {
 
         return () => {
             stopLocalTimer();
-            // No desconectamos globalmente para mantener la campana viva
-            // timingSignalRService.disconnect();
+            timingSignalRService.disconnect();
         };
     }, [selectedEvento, selectedFase?.id]);
 
@@ -461,6 +504,72 @@ const FinisherDashboard = () => {
 
     return (
         <>
+        {/* BARRA DE SINCRONIZACIÓN GLOBAL (PORTAL AL NAVBAR) */}
+        {document.getElementById('global-sync-bar-portal-target') && createPortal(
+            <div className="global-sync-bar">
+                {(() => {
+                    const connectedStarter = activeJudges.find(j => {
+                        const role = (j.role || j.Role || '').toLowerCase();
+                        return role === 'largador';
+                    });
+                    const connectedControl = activeJudges.find(j => {
+                        const role = (j.role || j.Role || '').toLowerCase();
+                        return role === 'juez de control' || role === 'admin';
+                    });
+                    const starterName = connectedStarter ? (connectedStarter.userName || connectedStarter.UserName || 'Largador') : '';
+                    const controlName = connectedControl ? (connectedControl.userName || connectedControl.UserName || 'Control') : '';
+                    const myName = user?.nombreCompleto || user?.nombre || user?.username || "Cronometrista";
+                    
+                    const isStarterLinked = !!connectedStarter;
+                    const isControlLinked = !!connectedControl;
+                    
+                    return (
+                        <div className="judges-sync-card" title="Estado de Enlace de Jueces">
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">MESA DE LLEGADA</span>
+                                <span className={`sync-user-pill ${selectedFase ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                            </div>
+                            <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
+                                {isControlLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
+                            </div>
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">CONTROL</span>
+                                {connectedControl ? (
+                                    <span className="sync-user-pill connected">{controlName.toUpperCase()}</span>
+                                ) : (
+                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                )}
+                            </div>
+                            <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
+
+                                {isStarterLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
+                            </div>
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">LARGADOR</span>
+                                {connectedStarter ? (
+                                    <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
+                                ) : (
+                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>,
+            document.getElementById('global-sync-bar-portal-target')
+        )}
+
+        {['Reconnecting', 'Connecting'].includes(connectionState) && (
+            <div className="connection-state-alert-bar reconnecting" style={{ margin: '15px 15px 0 15px', width: 'auto' }}>
+                <RefreshCw className="spin animate-spin" size={14} style={{ marginRight: '8px' }} />
+                <span>⚠️ Conexión inestable. Intentando restablecer la sincronización con el largador...</span>
+            </div>
+        )}
+        {connectionState === 'Disconnected' && (
+            <div className="connection-state-alert-bar disconnected" style={{ margin: '15px 15px 0 15px', width: 'auto' }}>
+                <span>⚠️ Sin conexión en tiempo real. No recibirás notificaciones de largada hasta recuperar la señal.</span>
+            </div>
+        )}
         <div className={`finisher-dashboard ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             {globalAlert && (
                 <div className="global-race-alert-overlay">
@@ -476,9 +585,14 @@ const FinisherDashboard = () => {
                                 <button className="btn-jump-big" onClick={() => {
                                     const target = fases.find(f => f.id === globalAlert.faseId);
                                     if (target) {
-                                        setSelectedFase(target);
+                                        const updatedTarget = {
+                                            ...target,
+                                            estado: 'En Carrera',
+                                            fechaHoraInicioReal: globalAlert.serverTime
+                                        };
+                                        setSelectedFase(updatedTarget);
                                         const start = new Date(globalAlert.serverTime);
-                                        setStartTime(start);
+                                        setStartTime(start.getTime());
                                         setIsRaceRunning(true);
                                     }
                                     setGlobalAlert(null);
@@ -496,7 +610,9 @@ const FinisherDashboard = () => {
             
             <header className="finisher-header glass-effect">
                 <div className="header-info">
-                    <div className="badge-live blue">MODO CRONOMETRISTA</div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        <div className="badge-live blue">MODO CRONOMETRISTA</div>
+                    </div>
                     {selectedFase ? (() => {
                         const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
                         const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (selectedFase?.categoriaNombre || 'Sin Categoría');

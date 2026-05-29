@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatTime } from '../../utils/dateUtils';
-import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, ArrowRight, Layout, Grid } from 'lucide-react';
+import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, ArrowRight, Layout, Grid, Link2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
@@ -41,6 +42,16 @@ const StarterDashboard = () => {
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [startingStatus, setStartingStatus] = useState(null); // 'connecting' | 'starting' | 'resetting' | 'fallback_http' | 'success' | 'success_reset' | 'error'
+    const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
+    const [activeJudges, setActiveJudges] = useState([]);
+
+    useEffect(() => {
+        const unsubscribe = timingSignalRService.onStateChange((state) => {
+            setConnectionState(state);
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -118,7 +129,15 @@ const StarterDashboard = () => {
 
         const connectSignalR = async () => {
             try {
-                await timingSignalRService.connect(selectedFase.id);
+                timingSignalRService.onRacePresenceUpdated((presenceList) => {
+                    setActiveJudges(presenceList);
+                });
+
+                await timingSignalRService.connect(
+                    selectedFase.id,
+                    user?.nombreCompleto || user?.nombre || user?.username || "Largador",
+                    "Largador"
+                );
                 if (!isMounted) return;
 
                 timingSignalRService.onRaceReset((id) => {
@@ -188,7 +207,7 @@ const StarterDashboard = () => {
 
         return () => {
             isMounted = false;
-            // timingSignalRService.disconnect();
+            timingSignalRService.disconnect();
         };
     }, [selectedFase]);
 
@@ -196,10 +215,37 @@ const StarterDashboard = () => {
         if (!selectedFase) return;
         try {
             setLoading(true);
-            await timingSignalRService.connect(selectedFase.id);
+            const isConnected = timingSignalRService.getConnectionState() === 'Connected';
+            
+            if (!isConnected) {
+                setStartingStatus('connecting');
+                await timingSignalRService.connect(
+                    selectedFase.id,
+                    user?.nombreCompleto || user?.nombre || user?.username || "Largador",
+                    "Largador"
+                );
+            }
+            
+            setStartingStatus('starting');
             await timingSignalRService.requestStartRace(selectedFase.id);
+            addToast("Carrera iniciada con éxito (Vía WebSocket)", "success");
+            setStartingStatus('success');
+            setTimeout(() => setStartingStatus(null), 1500);
         } catch (err) {
-            console.error(err);
+            console.error("SignalR start error, trying HTTP fallback:", err);
+            setStartingStatus('fallback_http');
+            addToast("Fallo en red de tiempo real. Usando canal secundario...", "warning");
+            try {
+                await FaseService.iniciar(selectedFase.id);
+                addToast("Carrera iniciada con éxito", "success");
+                setStartingStatus('success');
+                setTimeout(() => setStartingStatus(null), 1500);
+            } catch (httpErr) {
+                console.error("HTTP fallback error starting race:", httpErr);
+                addToast("Error al iniciar la carrera. Verifique su conexión.", "error");
+                setStartingStatus('error');
+                setTimeout(() => setStartingStatus(null), 3000);
+            }
         } finally {
             setLoading(false);
         }
@@ -245,9 +291,37 @@ const StarterDashboard = () => {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
                     setLoading(true);
+                    const isConnected = timingSignalRService.getConnectionState() === 'Connected';
+                    
+                    if (!isConnected) {
+                        setStartingStatus('connecting');
+                        await timingSignalRService.connect(
+                            selectedFase.id,
+                            user?.nombreCompleto || user?.nombre || user?.username || "Largador",
+                            "Largador"
+                        );
+                    }
+                    
+                    setStartingStatus('resetting');
                     await timingSignalRService.requestResetRace(selectedFase.id);
+                    addToast("Carrera reiniciada con éxito (Vía WebSocket)", "success");
+                    setStartingStatus('success_reset');
+                    setTimeout(() => setStartingStatus(null), 1500);
                 } catch (err) {
-                    console.error("Error resetting race:", err);
+                    console.error("SignalR reset error, trying HTTP fallback:", err);
+                    setStartingStatus('fallback_http');
+                    addToast("Fallo en red de tiempo real. Usando canal secundario...", "warning");
+                    try {
+                        await FaseService.reiniciar(selectedFase.id);
+                        addToast("Carrera reiniciada con éxito", "success");
+                        setStartingStatus('success_reset');
+                        setTimeout(() => setStartingStatus(null), 1500);
+                    } catch (httpErr) {
+                        console.error("HTTP fallback error resetting race:", httpErr);
+                        addToast("Error al reiniciar la carrera. Verifique su conexión.", "error");
+                        setStartingStatus('error');
+                        setTimeout(() => setStartingStatus(null), 3000);
+                    }
                 } finally {
                     setLoading(false);
                 }
@@ -256,7 +330,73 @@ const StarterDashboard = () => {
     };
 
     return (
+        <>
+        {/* BARRA DE SINCRONIZACIÓN GLOBAL (PORTAL AL NAVBAR) */}
+        {document.getElementById('global-sync-bar-portal-target') && createPortal(
+            <div className="global-sync-bar">
+                {(() => {
+                    const connectedTimekeeper = activeJudges.find(j => {
+                        const role = (j.role || j.Role || '').toLowerCase();
+                        return role === 'cronometrista';
+                    });
+                    const connectedControl = activeJudges.find(j => {
+                        const role = (j.role || j.Role || '').toLowerCase();
+                        return role === 'juez de control' || role === 'admin';
+                    });
+                    const tkName = connectedTimekeeper ? (connectedTimekeeper.userName || connectedTimekeeper.UserName || 'Cronometrista') : '';
+                    const controlName = connectedControl ? (connectedControl.userName || connectedControl.UserName || 'Control') : '';
+                    const myName = user?.nombreCompleto || user?.nombre || user?.username || "Largador";
+                    
+                    const isTkLinked = !!connectedTimekeeper;
+                    const isControlLinked = !!connectedControl;
+                    
+                    return (
+                        <div className="judges-sync-card" title="Estado de Enlace de Jueces">
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">LARGADOR</span>
+                                <span className={`sync-user-pill ${selectedFase ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                            </div>
+                            <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
+                                {isControlLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
+                            </div>
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">CONTROL</span>
+                                {connectedControl ? (
+                                    <span className="sync-user-pill connected">{controlName.toUpperCase()}</span>
+                                ) : (
+                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                )}
+                            </div>
+                            <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
+                                {isTkLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
+                            </div>
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">MESA DE LLEGADA</span>
+                                {connectedTimekeeper ? (
+                                    <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
+                                ) : (
+                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>,
+            document.getElementById('global-sync-bar-portal-target')
+        )}
+
         <div className="starter-dashboard fade-in">
+            {['Reconnecting', 'Connecting'].includes(connectionState) && (
+                <div className="connection-state-alert-bar reconnecting">
+                    <RefreshCw className="spin animate-spin" size={14} style={{ marginRight: '8px' }} />
+                    <span>⚠️ Conexión inestable. El sistema se está auto-sincronizando... por favor, espere antes de largar.</span>
+                </div>
+            )}
+            {connectionState === 'Disconnected' && (
+                <div className="connection-state-alert-bar disconnected">
+                    <span>⚠️ Sin conexión en tiempo real. Se usará el canal de respaldo HTTP al largar.</span>
+                </div>
+            )}
             <aside className={`starter-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
                     <h3 style={{ margin: 0, flex: 1 }}><Clock size={18} /> Próximas Pruebas</h3>
@@ -320,7 +460,9 @@ const StarterDashboard = () => {
                     <div className="race-control glass-effect">
                         <header className="race-header">
                             <div className="header-left-actions">
-                                <div className="badge-live">MODO LARGADOR</div>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                    <div className="badge-live">MODO LARGADOR</div>
+                                </div>
                                 {(() => {
                                     const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
                                     const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (selectedFase?.categoriaNombre || 'Sin Categoría');
@@ -374,15 +516,27 @@ const StarterDashboard = () => {
 
                             <div className="control-actions">
                                 <button 
-                                    className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''}`}
+                                    className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''} ${connectionState !== 'Connected' ? 'connection-lost' : ''}`}
                                     onClick={handleStartRace}
-                                    disabled={selectedFase.estado !== 'Programada' || loading}
+                                    disabled={selectedFase.estado !== 'Programada' || loading || connectionState !== 'Connected'}
                                 >
                                     {selectedFase.estado === 'Programada' ? (
-                                        <>
-                                            <Play size={48} fill="currentColor" />
-                                            <span>LARGAR CARRERA</span>
-                                        </>
+                                        connectionState === 'Connected' ? (
+                                            <>
+                                                <Play size={48} fill="currentColor" />
+                                                <span>LARGAR CARRERA</span>
+                                            </>
+                                        ) : ['Reconnecting', 'Connecting'].includes(connectionState) ? (
+                                            <>
+                                                <RefreshCw size={48} className="spin animate-spin" />
+                                                <span>ESPERE SEÑAL...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw size={48} />
+                                                <span>SIN CONEXIÓN</span>
+                                            </>
+                                        )
                                     ) : (
                                         <>
                                             <Activity size={48} className={selectedFase.estado === 'En Carrera' ? 'pulse' : ''} />
@@ -396,7 +550,7 @@ const StarterDashboard = () => {
                                     </button>
                                 )}
                             </div>
-
+                            
                             {/* Navegación Rápida */}
                             <div className="quick-nav-footer">
                                 <button 
@@ -439,7 +593,47 @@ const StarterDashboard = () => {
                     type={confirmDialog.type || 'warning'}
                 />
             )}
+            {startingStatus && (
+                <div className="starting-overlay">
+                    <div className="starting-overlay-card glass-effect">
+                        <div className="starting-spinner-wrapper">
+                            {startingStatus === 'success' || startingStatus === 'success_reset' ? (
+                                <div className="success-checkmark-animated">✓</div>
+                            ) : startingStatus === 'error' ? (
+                                <div className="error-cross-animated">✗</div>
+                            ) : (
+                                <div className="starting-spinner"></div>
+                            )}
+                        </div>
+                        <h2>
+                            {startingStatus === 'connecting' && "Estableciendo Conexión..."}
+                            {startingStatus === 'starting' && "Iniciando Carrera..."}
+                            {startingStatus === 'resetting' && "Reiniciando Carrera..."}
+                            {startingStatus === 'fallback_http' && "Cambiando a Red de Respaldo..."}
+                            {startingStatus === 'success' && "¡LARGADA COMPLETADA!"}
+                            {startingStatus === 'success_reset' && "¡REINICIO COMPLETADO!"}
+                            {startingStatus === 'error' && "¡ERROR DE CONEXIÓN!"}
+                        </h2>
+                        <p className="status-desc">
+                            {startingStatus === 'connecting' && "Sincronizando reloj de alta precisión con los cronometristas..."}
+                            {startingStatus === 'starting' && "Enviando señal de inicio a todos los dispositivos en el agua..."}
+                            {startingStatus === 'resetting' && "Restableciendo el cronómetro en todas las terminales..."}
+                            {startingStatus === 'fallback_http' && "Los WebSockets fallaron. Sincronizando por canal HTTP de respaldo..."}
+                            {startingStatus === 'success' && "El sistema ha tomado el tiempo inicial de largada con precisión absoluta."}
+                            {startingStatus === 'success_reset' && "La regata ha sido restablecida en todas las terminales del sistema."}
+                            {startingStatus === 'error' && "No se pudo establecer comunicación con el servidor. Revisa tu cobertura móvil."}
+                        </p>
+                        {['connecting', 'starting', 'resetting', 'fallback_http'].includes(startingStatus) && (
+                            <div className="overlay-critical-alert">
+                                ⚠️ NO CERRAR NI ACTUALIZAR LA PÁGINA
+                                <small>Esto evita desajustes de hora entre la largada y la llegada.</small>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
+        </>
     );
 };
 

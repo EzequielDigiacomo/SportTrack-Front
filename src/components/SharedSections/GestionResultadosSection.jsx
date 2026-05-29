@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatTime } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus, Calendar } from 'lucide-react';
+import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus, Calendar, Link2 } from 'lucide-react';
 import { useResultados } from './useResultados';
 import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
@@ -49,6 +50,16 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const [manualPlacements, setManualPlacements] = useState({});
     const [isNominaCollapsed, setIsNominaCollapsed] = useState(false);
 
+    const [activeJudges, setActiveJudges] = useState([]);
+    const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
+
+    React.useEffect(() => {
+        const unsubscribe = timingSignalRService.onStateChange((state) => {
+            setConnectionState(state);
+        });
+        return () => unsubscribe();
+    }, []);
+
     // Lógica de selección de fase (Movida arriba para evitar errores de hoisting)
     const hideTabs = viewMode === 'tiempos' || viewMode === 'startlist';
 
@@ -61,7 +72,11 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
     const faseSeleccionada = filtroVisualFase === 'Todas'
         ? null
-        : ((fases || []).find(f => f.nombreFase === filtroVisualFase) || (fases || [])[0]);
+        : ((fases || []).find(f => f.nombreFase === filtroVisualFase) || (fases || [])[0] || null);
+
+    const faseSeleccionadaParaSync = filtroVisualFase === 'Todas'
+        ? ((fases || []).find(f => f.estado === 'En Carrera') || (fases || [])[0] || null)
+        : faseSeleccionada;
 
     const startLocalTimer = (startTime) => {
         setIsRaceRunning(true);
@@ -78,7 +93,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
     React.useEffect(() => {
         const canSync = viewMode === 'tiempos' || viewMode === 'resultados';
-        if (!faseSeleccionada || !canSync) {
+        if (!faseSeleccionadaParaSync || !canSync) {
             stopLocalTimer();
             return;
         }
@@ -86,25 +101,41 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         let isMounted = true;
 
         const setupLiveSync = async () => {
-            if (isBronce) return; // EL PLAN BRONCE NO TIENE SYNC EN VIVO
+            const lowerRol = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
+            const isJudgeOrAdminUser = lowerRol.includes('control') || lowerRol.includes('juez') || lowerRol.includes('admin') || lowerRol.includes('largador') || lowerRol.includes('cronometrista');
             
-            // Sincronizar si la regata está activa o terminando
-            if (faseSeleccionada.estado === 'En Carrera' ||
-                faseSeleccionada.estado === 'Pendiente de Validación' ||
-                faseSeleccionada.estado === 'Finalizada') {
-                try {
-                    await timingSignalRService.connect(faseSeleccionada.id);
+            if (isBronce && !isJudgeOrAdminUser) return; // EL PLAN BRONCE NO TIENE SYNC EN VIVO PARA ESPECTADORES/OTROS
+            
+            try {
+                // Escuchar jueces conectados en esta regata ANTES de conectar para no perder el primer evento
+                timingSignalRService.onRacePresenceUpdated((presenceList) => {
+                    if (isMounted) setActiveJudges(presenceList);
+                });
+
+                const name = user?.nombreCompleto || user?.nombre || user?.username || "Control";
+                let sigRole = "Espectador";
+                if (lowerRol.includes('admin')) {
+                    sigRole = "Admin";
+                } else if (lowerRol.includes('control') || lowerRol.includes('juez')) {
+                    sigRole = "Juez de Control";
+                }
+
+                await timingSignalRService.connect(faseSeleccionadaParaSync.id, name, sigRole);
                 if (!isMounted) return;
 
                 // 1. Sincronizar el temporizador si ya inició
-                if (faseSeleccionada.fechaHoraInicioReal) {
-                    const start = new Date(faseSeleccionada.fechaHoraInicioReal + (faseSeleccionada.fechaHoraInicioReal.endsWith('Z') ? '' : 'Z'));
+                if (faseSeleccionadaParaSync.fechaHoraInicioReal && (
+                    faseSeleccionadaParaSync.estado === 'En Carrera' ||
+                    faseSeleccionadaParaSync.estado === 'Pendiente de Validación' ||
+                    faseSeleccionadaParaSync.estado === 'Finalizada'
+                )) {
+                    const start = new Date(faseSeleccionadaParaSync.fechaHoraInicioReal + (faseSeleccionadaParaSync.fechaHoraInicioReal.endsWith('Z') ? '' : 'Z'));
                     if (!isNaN(start)) startLocalTimer(start);
                 }
 
                 // 2. Escuchar inicio de carrera (si ocurre mientras estamos mirando)
                 timingSignalRService.onRaceStarted((id, startTime) => {
-                    if (id.toString() === faseSeleccionada.id.toString()) {
+                    if (id.toString() === faseSeleccionadaParaSync.id.toString()) {
                         const start = new Date(startTime + (startTime.endsWith('Z') ? '' : 'Z'));
                         if (!isNaN(start)) startLocalTimer(start);
                     }
@@ -127,7 +158,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 5. Reset de carrera
                 timingSignalRService.onRaceReset((id) => {
-                    if (id.toString() === faseSeleccionada.id.toString()) {
+                    if (id.toString() === faseSeleccionadaParaSync.id.toString()) {
                         stopLocalTimer();
                         setElapsedTime(0);
                         setTiemposLocales({});
@@ -136,7 +167,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 6. En revisión
                 timingSignalRService.onRaceInReview((id) => {
-                    if (id.toString() === faseSeleccionada.id.toString()) {
+                    if (id.toString() === faseSeleccionadaParaSync.id.toString()) {
                         stopLocalTimer();
                         loadDatosPrueba(selectedPrueba);
                     }
@@ -150,9 +181,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                     }));
                 });
 
-                } catch (err) {
-                    console.error("Error connecting to live sync:", err);
-                }
+            } catch (err) {
+                console.error("Error connecting to live sync:", err);
             }
         };
 
@@ -160,11 +190,10 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
         return () => {
             isMounted = false;
-            // No desconectamos para no romper la campana global
-            // timingSignalRService.disconnect();
+            timingSignalRService.disconnect();
             stopLocalTimer();
         };
-    }, [faseSeleccionada, viewMode]);
+    }, [faseSeleccionadaParaSync, viewMode]);
 
     // Funciones movidas arriba
 
@@ -281,7 +310,64 @@ const handleExportCsv = () => {
 };
 
 return (
-    <div className="gestion-resultados-container fade-in">
+    <>
+        {/* BARRA DE SINCRONIZACIÓN GLOBAL (PORTAL AL NAVBAR) */}
+        {document.getElementById('global-sync-bar-portal-target') && createPortal(
+            <div className="global-sync-bar">
+                {(() => {
+                    const connectedStarter = activeJudges.find(j => {
+                        const role = (j.role || j.Role || '').toLowerCase();
+                        return role === 'largador';
+                    });
+                    const connectedTimekeeper = activeJudges.find(j => {
+                        const role = (j.role || j.Role || '').toLowerCase();
+                        return role === 'cronometrista';
+                    });
+                    
+                    const starterName = connectedStarter ? (connectedStarter.userName || connectedStarter.UserName || 'Largador') : '';
+                    const tkName = connectedTimekeeper ? (connectedTimekeeper.userName || connectedTimekeeper.UserName || 'Cronometrista') : '';
+                    
+                    const myName = user?.nombreCompleto || user?.nombre || user?.username || "Control";
+                    
+                    const isStarterLinked = !!connectedStarter;
+                    const isTkLinked = !!connectedTimekeeper;
+                    
+                    return (
+                        <div className="judges-sync-card" title="Estado de Enlace de Jueces">
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">LARGADOR</span>
+                                {connectedStarter ? (
+                                    <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
+                                ) : (
+                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                )}
+                            </div>
+                            <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
+                                {isStarterLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
+                            </div>
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">CONTROL</span>
+                                <span className={`sync-user-pill ${faseSeleccionadaParaSync ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                            </div>
+                            <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
+                                {isTkLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
+                            </div>
+                            <div className="sync-role-node">
+                                <span className="sync-role-name">MESA DE LLEGADA</span>
+                                {connectedTimekeeper ? (
+                                    <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
+                                ) : (
+                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>,
+            document.getElementById('global-sync-bar-portal-target')
+        )}
+
+        <div className="gestion-resultados-container fade-in">
         {!hideTabs && (
             <div className="admin-header-main">
                 <div>
@@ -821,6 +907,7 @@ return (
             </div>
         )}
     </div>
+    </>
 );
 };
 
