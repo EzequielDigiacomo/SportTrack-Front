@@ -127,19 +127,19 @@
 }
 
 [data-theme='light'] {
-  /* Neutral Colors - Light Mode (Maximum Contrast) */
-  --color-bg-primary: hsl(220, 10%, 82%);
-  --color-bg-secondary: hsl(220, 10%, 74%);
-  --color-bg-tertiary: hsl(220, 10%, 66%);
-  --color-surface: hsl(220, 10%, 88%);
-  --color-surface-hover: hsl(220, 10%, 60%);
-  --color-border: hsl(220, 20%, 35%); /* Very dark border */
+  /* Neutral Colors - Light Mode (Clean & Elegant) */
+  --color-bg-primary: #f8fafc; /* slate-50 */
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f1f5f9; /* slate-100 */
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e2e8f0; /* slate-200 */
   
   /* Text Colors - Pure High Contrast */
-  --color-text-primary: #000000;
-  --color-text-secondary: #0a0f1a;
-  --color-text-muted: #111827;
-  --color-text-dim: #1f2937;
+  --color-text-primary: #0f172a; /* slate-900 */
+  --color-text-secondary: #334155; /* slate-700 */
+  --color-text-muted: #64748b; /* slate-500 */
+  --color-text-dim: #94a3b8; /* slate-400 */
   --color-on-primary: #ffffff; /* Pure white for text on dark backgrounds */
 
   /* Functional Colors - Deep & Dark for Light Mode */

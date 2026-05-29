@@ -129,11 +129,12 @@ const StarterDashboard = () => {
 
         const connectSignalR = async () => {
             try {
-                timingSignalRService.onRacePresenceUpdated((presenceList) => {
+                timingSignalRService.onEventPresenceUpdated((presenceList) => {
                     setActiveJudges(presenceList);
                 });
 
                 await timingSignalRService.connect(
+                    selectedEvento?.id,
                     selectedFase.id,
                     user?.nombreCompleto || user?.nombre || user?.username || "Largador",
                     "Largador"
@@ -354,7 +355,7 @@ const StarterDashboard = () => {
                         <div className="judges-sync-card" title="Estado de Enlace de Jueces">
                             <div className="sync-role-node">
                                 <span className="sync-role-name">LARGADOR</span>
-                                <span className={`sync-user-pill ${selectedFase ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                                <span className={`sync-user-pill ${selectedEvento ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
                             </div>
                             <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
                                 {isControlLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
@@ -403,7 +404,6 @@ const StarterDashboard = () => {
                     <button 
                         className="btn-collapse"
                         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}
                     >
                         {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
                     </button>
@@ -411,7 +411,7 @@ const StarterDashboard = () => {
                 {!isSidebarCollapsed && (
                     <div className="selection-stack">
                         <div className="mobile-event-selector">
-                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px', display: 'block' }}>Evento:</label>
                             <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
                                 <option value="">Seleccionar Evento...</option>
                                 {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
@@ -419,7 +419,7 @@ const StarterDashboard = () => {
                         </div>
 
                         <div className="sidebar-section-header">
-                            <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cronograma ({fases.length}):</label>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Cronograma ({fases.length}):</label>
                             <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
                                 {isCompact ? <Layout size={14} /> : <Grid size={14} />}
                             </button>
@@ -476,7 +476,7 @@ const StarterDashboard = () => {
                                                 <span className="race-id-prefix">
                                                     #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
                                                 </span>
-                                                {catName}
+                                                {' '}{catName}
                                             </h2>
                                             <div className="race-meta">
                                                 <span className="meta-item"><Clock size={14} /> {timeName}</span>

@@ -107,8 +107,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
             if (isBronce && !isJudgeOrAdminUser) return; // EL PLAN BRONCE NO TIENE SYNC EN VIVO PARA ESPECTADORES/OTROS
             
             try {
-                // Escuchar jueces conectados en esta regata ANTES de conectar para no perder el primer evento
-                timingSignalRService.onRacePresenceUpdated((presenceList) => {
+                // Escuchar jueces conectados en este EVENTO para la barra de sincronización
+                timingSignalRService.onEventPresenceUpdated((presenceList) => {
                     if (isMounted) setActiveJudges(presenceList);
                 });
 
@@ -120,7 +120,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                     sigRole = "Juez de Control";
                 }
 
-                await timingSignalRService.connect(faseSeleccionadaParaSync.id, name, sigRole);
+                await timingSignalRService.connect(selectedEvento?.id, faseSeleccionadaParaSync?.id, name, sigRole);
                 if (!isMounted) return;
 
                 // 1. Sincronizar el temporizador si ya inició
@@ -347,7 +347,7 @@ return (
                             </div>
                             <div className="sync-role-node">
                                 <span className="sync-role-name">CONTROL</span>
-                                <span className={`sync-user-pill ${faseSeleccionadaParaSync ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                                <span className={`sync-user-pill ${selectedEvento ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
                             </div>
                             <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
                                 {isTkLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
@@ -662,7 +662,7 @@ return (
                                                 Mostrando: <strong style={{ color: 'var(--color-primary-light)' }}>{filtroVisualFase}</strong>
                                                 <button
                                                     onClick={() => setFiltroVisualFase('Todas')}
-                                                    style={{ marginLeft: '8px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                    style={{ marginLeft: '8px', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.85rem' }}
                                                     title="Ver todas las fases"
                                                 >✕</button>
                                             </span>

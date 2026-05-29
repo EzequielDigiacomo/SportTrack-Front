@@ -13,6 +13,7 @@ class TimingSignalRService {
 
         // Callback registers (to prevent race conditions)
         this._presenceCallback = null;
+        this._eventPresenceCallback = null;
         this._raceStartedCallback = null;
         this._raceResetCallback = null;
         this._raceFinishedCallback = null;
@@ -60,7 +61,7 @@ class TimingSignalRService {
         return false;
     }
 
-    async connect(faseId = null, userName = null, role = null) {
+    async connect(eventoId = null, faseId = null, userName = null, role = null) {
         this.userName = userName || this.userName || "Usuario";
         this.role = role || this.role || "Espectador";
 
@@ -92,8 +93,13 @@ class TimingSignalRService {
                     });
 
                     this.connection.on("RacePresenceUpdated", (presenceList) => {
-                        console.log("[SignalR] Presence Updated:", presenceList);
+                        console.log("[SignalR] Race Presence Updated:", presenceList);
                         if (this._presenceCallback) this._presenceCallback(presenceList);
+                    });
+
+                    this.connection.on("EventPresenceUpdated", (presenceList) => {
+                        console.log("[SignalR] Event Presence Updated:", presenceList);
+                        if (this._eventPresenceCallback) this._eventPresenceCallback(presenceList);
                     });
 
                     this.connection.on("RaceStarted", (id, sTime) => {
@@ -153,16 +159,22 @@ class TimingSignalRService {
                         this._notifyStateChange("Reconnecting");
                     });
 
-                    // Auto-reconexión robusta: re-unirse al grupo e iniciar sincronización de reloj
                     this.connection.onreconnected(async (connectionId) => {
                         console.log("[SignalR] Reconnected successfully. Re-joining groups and syncing clock.");
                         this._notifyStateChange("Connected");
                         await this.syncClock();
+                        if (this.currentEventoId) {
+                            try {
+                                await this.connection.invoke("JoinEventGroup", this.currentEventoId.toString(), this.userName, this.role);
+                            } catch (err) {
+                                console.error("[SignalR] Error re-joining event group after reconnect:", err);
+                            }
+                        }
                         if (this.currentFaseId) {
                             try {
                                 await this.connection.invoke("JoinRaceGroup", this.currentFaseId, this.userName, this.role);
                             } catch (err) {
-                                console.error("[SignalR] Error re-joining group after reconnect:", err);
+                                console.error("[SignalR] Error re-joining race group after reconnect:", err);
                             }
                         }
                     });
@@ -197,7 +209,18 @@ class TimingSignalRService {
                     }
                 }
 
-                // Si pedimos una fase específica, nos unimos siempre para asegurar presencia actualizada
+                // Si pedimos un evento específico, nos unimos siempre para asegurar presencia a nivel de evento
+                if (eventoId) {
+                    if (this.connection.state === signalR.HubConnectionState.Connected) {
+                        console.log(`[SignalR] Joining event group: event_${eventoId} for user ${this.userName} (${this.role})`);
+                        await this.connection.invoke("JoinEventGroup", eventoId.toString(), this.userName, this.role);
+                        this.currentEventoId = eventoId.toString();
+                    }
+                } else {
+                    this.currentEventoId = null;
+                }
+
+                // Si pedimos una fase específica, nos unimos siempre para asegurar presencia a nivel de carrera
                 if (faseId) {
                     if (this.connection.state === signalR.HubConnectionState.Connected) {
                         console.log(`[SignalR] Joining race group: race_${faseId} for user ${this.userName} (${this.role})`);
@@ -296,6 +319,10 @@ class TimingSignalRService {
 
     onRacePresenceUpdated(callback) {
         this._presenceCallback = callback;
+    }
+
+    onEventPresenceUpdated(callback) {
+        this._eventPresenceCallback = callback;
     }
 
     onRaceStarted(callback) {

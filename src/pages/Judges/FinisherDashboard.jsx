@@ -160,13 +160,14 @@ const FinisherDashboard = () => {
         
         const setupSignalR = async () => {
             try {
-                // Escuchar jueces conectados en esta regata ANTES de conectar para no perder el primer evento
-                timingSignalRService.onRacePresenceUpdated((presenceList) => {
+                // Escuchar jueces conectados en este EVENTO ANTES de conectar para no perder el primer evento
+                timingSignalRService.onEventPresenceUpdated((presenceList) => {
                     setActiveJudges(presenceList);
                 });
 
                 // 1. Conectar al Hub (y unirse al grupo si hay una fase seleccionada)
                 await timingSignalRService.connect(
+                    selectedEvento?.id,
                     selectedFase?.id,
                     user?.nombreCompleto || user?.nombre || user?.username || "Cronometrista",
                     "Cronometrista"
@@ -527,7 +528,7 @@ const FinisherDashboard = () => {
                         <div className="judges-sync-card" title="Estado de Enlace de Jueces">
                             <div className="sync-role-node">
                                 <span className="sync-role-name">MESA DE LLEGADA</span>
-                                <span className={`sync-user-pill ${selectedFase ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                                <span className={`sync-user-pill ${selectedEvento ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
                             </div>
                             <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
                                 {isControlLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
@@ -626,7 +627,7 @@ const FinisherDashboard = () => {
                                     <span className="race-id-prefix">
                                         #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
                                     </span>
-                                    {catName}
+                                    {' '}{catName}
                                 </h2>
                                 <div className="race-meta">
                                     <span className="meta-item"><Clock size={14} /> {timeName}</span>
@@ -638,7 +639,7 @@ const FinisherDashboard = () => {
                         );
                     })() : (
                         <div className="race-header-info">
-                            <h2 style={{ color: '#94a3b8' }}>Seleccione una prueba</h2>
+                            <h2 style={{ color: 'var(--color-text-muted)' }}>Seleccione una prueba</h2>
                         </div>
                     )}
                 </div>
@@ -651,20 +652,20 @@ const FinisherDashboard = () => {
                 <aside className={`finisher-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
                         <h3 style={{ margin: 0, flex: 1 }}><Clock size={18} /> Cronograma</h3>
-                        <button className="btn-collapse" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                        <button className="btn-collapse" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
                             {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
                         </button>
                     </div>
                     {!isSidebarCollapsed && (
                         <div className="selection-stack">
-                            <label style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px', display: 'block' }}>Evento:</label>
                             <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
                                 <option value="">Seleccionar Evento...</option>
                                 {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                             </select>
 
                             <div className="sidebar-section-header">
-                                <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Pruebas ({fases.length}):</label>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Pruebas ({fases.length}):</label>
                                 <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
                                     {isCompact ? <Layout size={14} /> : <Grid size={14} />}
                                 </button>
@@ -721,9 +722,9 @@ const FinisherDashboard = () => {
                                     width: '100%',
                                     padding: '15px',
                                     marginTop: '15px',
-                                    background: isRaceRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
-                                    color: isRaceRunning ? 'white' : 'var(--color-text-muted)',
-                                    border: isRaceRunning ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                    background: isRaceRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'var(--color-bg-secondary)',
+                                    color: 'var(--color-text-primary)',
+                                    border: isRaceRunning ? 'none' : '1px solid var(--color-border)',
                                     borderRadius: '8px',
                                     fontSize: '1.1rem',
                                     fontWeight: 'bold',
@@ -807,7 +808,7 @@ const FinisherDashboard = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="empty-msg" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: '#94a3b8' }}>
+                        <div className="empty-msg" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--color-text-muted)' }}>
                             <Activity size={48} opacity={0.2} />
                             <p>Seleccione una carrera del cronograma para comenzar</p>
                         </div>
