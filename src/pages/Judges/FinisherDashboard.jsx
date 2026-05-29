@@ -135,7 +135,12 @@ const FinisherDashboard = () => {
 
         // Limpiar inmediatamente los resultados de la carrera anterior y las dudas para evitar
         // bugs de estado stale donde el comparador cree que ya terminó la nueva carrera.
-        setResultados([]);
+        if (selectedFase && selectedFase.estado === 'En Carrera') {
+            // No limpiamos resultados a [] para que no se dispare el autostop del timer al estar vacío
+            // ya que al recargar la fase se sobreescribirá correctamente.
+        } else {
+            setResultados([]);
+        }
         setRawTimes([]);
 
         // --- ARRANQUE SÍNCRONO DEL CRONÓMETRO ---
@@ -225,7 +230,10 @@ const FinisherDashboard = () => {
                                 const parsed = new Date(freshFase.fechaHoraInicioReal).getTime();
                                 if (!isNaN(parsed)) startLocalTimer(parsed);
                             } else {
-                                stopLocalTimer();
+                                // Solo detener si explícitamente ya no está En Carrera
+                                if (freshFase.estado !== 'En Carrera') {
+                                    stopLocalTimer();
+                                }
                             }
                         } catch {
                             // fallback: usar el estado local
@@ -233,7 +241,9 @@ const FinisherDashboard = () => {
                                 const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
                                 if (!isNaN(parsed)) startLocalTimer(parsed);
                             } else {
-                                stopLocalTimer();
+                                if (selectedFase.estado !== 'En Carrera') {
+                                    stopLocalTimer();
+                                }
                             }
                         }
                     };
@@ -313,7 +323,7 @@ const FinisherDashboard = () => {
     // Detener timer automáticamente cuando todos han llegado, tienen estado (DSQ, DNF, etc)
     // o están cubiertos por una duda capturada en rawTimes
     useEffect(() => {
-        if (isRaceRunning && resultados.length > 0) {
+        if (isRaceRunning && resultados && resultados.length > 0) {
             // Cuántos atletas siguen sin tiempo Y sin estado especial
             const stillPending = resultados.filter(r =>
                 !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente')
