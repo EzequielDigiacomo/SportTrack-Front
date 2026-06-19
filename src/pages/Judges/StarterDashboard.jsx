@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatTime } from '../../utils/dateUtils';
-import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, ArrowRight, Layout, Grid, Link2 } from 'lucide-react';
+import { Play, CheckCircle, Clock, Users, Activity, Search, RefreshCw, LogOut, ArrowLeft, ArrowRight, Layout, Grid, Link2, RotateCcw } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -279,6 +279,57 @@ const StarterDashboard = () => {
                 resultados: previousResultados
             }));
         }
+    };
+
+    const handleResetAllStatuses = async () => {
+        if (!selectedFase || !selectedFase.resultados) return;
+
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Restablecer Lista',
+            message: '⚠️ ¿Estás seguro de que deseas restablecer el estado de todos los carriles a su estado original (Pendiente)? Esto eliminará los DNS/DNF/DSQ cargados.',
+            type: 'warning',
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                const previousResultados = selectedFase.resultados;
+                
+                try {
+                    // Actualización optimista en cascada
+                    setSelectedFase(prev => ({
+                        ...prev,
+                        resultados: prev.resultados.map(r => ({ ...r, estadoCanto: 'Pendiente' }))
+                    }));
+
+                    // Filtrar los que realmente cambiaron para enviar las peticiones
+                    const changedResults = previousResultados.filter(
+                        r => r.estadoCanto && r.estadoCanto !== 'Pendiente'
+                    );
+
+                    if (changedResults.length > 0) {
+                        setLoading(true);
+                        // Enviar actualizaciones concurrentes
+                        await Promise.all(
+                            changedResults.map(r => 
+                                timingSignalRService.updateResultStatus(selectedFase.id, r.id, 'Pendiente')
+                            )
+                        );
+                        addToast("Estados restablecidos con éxito", "success");
+                    } else {
+                        addToast("La lista ya se encuentra en su estado original", "info");
+                    }
+                } catch (err) {
+                    console.error("Error resetting status of all results:", err);
+                    addToast("Error al restablecer los estados en el servidor", "error");
+                    // Revertir
+                    setSelectedFase(prev => ({
+                        ...prev,
+                        resultados: previousResultados
+                    }));
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
     };
 
     const handleResetRace = async () => {
