@@ -262,6 +262,19 @@ const handleApplyManualGeneration = () => {
         return;
     }
 
+    // Validar que no haya carriles duplicados dentro de la misma serie
+    const seriesMap = {};
+    for (const p of placements) {
+        if (!seriesMap[p.serie]) {
+            seriesMap[p.serie] = new Set();
+        }
+        if (seriesMap[p.serie].has(p.carril)) {
+            setMessage(`⚠️ El carril ${p.carril} está repetido en la Serie ${p.serie}.`);
+            return;
+        }
+        seriesMap[p.serie].add(p.carril);
+    }
+
     handleGenerarManual(placements);
     setIsManualMode(false);
 };
