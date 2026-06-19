@@ -146,6 +146,7 @@ El backend expone dos hubs funcionales:
 | **2026-05-22** | Sincronización Automática de Vencimiento SaaS. | ✅ Completado | Sincronizado el estado de vencimiento y bloqueo en backend (`SaaSService`) y frontend (`SaaSManagement.jsx`) con badges específicos y alertas informativas en el panel lateral. |
 | **2026-05-22** | Correcciones sintácticas y de compilación. | ✅ Completado | Reparado tag de cierre JSX roto en `GestionPagosSection.jsx` y atributo `disabled` duplicado en `InscripcionAtletaModal.jsx`. |
 | **2026-05-24** | Módulo de Resultados y Pagos para Clubes con alertas SignalR y persistencia DB | ✅ Completado | Filtrado de eventos, pruebas ordenadas por cronograma, vista Live de resultados y solicitud de pago persistente en base de datos (con migración EF Core a PostgreSQL) y alerta WebSocket en tiempo real al administrador. |
+| **2026-06-19** | Solución a desconexión SignalR, Restablecer Lista de Largada y Validación de Llegada Conectada | ✅ Completado | Se corrigió la dependencia de useEffect para evitar desconexiones al actualizar estados; se añadió el botón "Restablecer Lista" con actualización concurrente y alertas SignalR en tiempo real; y se bloquea la largada si la mesa de llegada está desconectada, mostrando aviso de advertencia visual ámbar en el botón. |
 
 ---
 

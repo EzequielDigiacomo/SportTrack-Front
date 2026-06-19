@@ -46,6 +46,11 @@ const StarterDashboard = () => {
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
     const [activeJudges, setActiveJudges] = useState([]);
 
+    const isTimekeeperConnected = activeJudges.some(j => {
+        const role = (j.role || j.Role || '').toLowerCase();
+        return role === 'cronometrista';
+    });
+
     useEffect(() => {
         const unsubscribe = timingSignalRService.onStateChange((state) => {
             setConnectionState(state);
@@ -543,7 +548,19 @@ const StarterDashboard = () => {
 
                         <div className="fase-details">
                             <div className="athletes-checkin">
-                                <h3><Users size={20} /> Atletas en Carriles</h3>
+                                <div className="checkin-header">
+                                    <h3><Users size={20} /> Atletas en Carriles</h3>
+                                    <button 
+                                        type="button" 
+                                        className="btn-reset-list"
+                                        onClick={handleResetAllStatuses}
+                                        title="Restablecer todos los carriles al estado original (Pendiente)"
+                                        disabled={loading || selectedFase.estado !== 'Programada'}
+                                    >
+                                        <RotateCcw size={14} />
+                                        <span>Restablecer Lista</span>
+                                    </button>
+                                </div>
                                 <div className="checkin-grid">
                                     {(selectedFase.resultados || []).sort((a,b) => a.carril - b.carril).map(r => (
                                         <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
@@ -567,16 +584,23 @@ const StarterDashboard = () => {
 
                             <div className="control-actions">
                                 <button 
-                                    className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''} ${connectionState !== 'Connected' ? 'connection-lost' : ''}`}
+                                    className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''} ${connectionState !== 'Connected' ? 'connection-lost' : ''} ${connectionState === 'Connected' && !isTimekeeperConnected ? 'no-timekeeper' : ''}`}
                                     onClick={handleStartRace}
-                                    disabled={selectedFase.estado !== 'Programada' || loading || connectionState !== 'Connected'}
+                                    disabled={selectedFase.estado !== 'Programada' || loading || connectionState !== 'Connected' || !isTimekeeperConnected}
                                 >
                                     {selectedFase.estado === 'Programada' ? (
                                         connectionState === 'Connected' ? (
-                                            <>
-                                                <Play size={48} fill="currentColor" />
-                                                <span>LARGAR CARRERA</span>
-                                            </>
+                                            !isTimekeeperConnected ? (
+                                                <>
+                                                    <Users size={48} />
+                                                    <span>ESPERANDO LLEGADA</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Play size={48} fill="currentColor" />
+                                                    <span>LARGAR CARRERA</span>
+                                                </>
+                                            )
                                         ) : ['Reconnecting', 'Connecting'].includes(connectionState) ? (
                                             <>
                                                 <RefreshCw size={48} className="spin animate-spin" />
