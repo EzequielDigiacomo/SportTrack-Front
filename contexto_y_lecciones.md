@@ -7,30 +7,83 @@ Este archivo actúa como la **memoria activa y bitácora de desarrollo** para el
 
 ---
 
-## 🏗️ 1. Arquitectura y Estructura del Sistema
+## 🏗️ 1. Arquitectura, Stack Tecnológico y Estructura del Sistema
 
-SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/canoa) compuesto por:
+SportTrack es un sistema multi-inquilino (SaaS) para la gestión deportiva y cronogramas de regatas de kayak y canoa en tiempo real.
 
-### 💻 Frontend (`SportTrack-Front`)
-* **Framework / Librerías**: React, Vanilla CSS para estilos, `jsPDF` y `jspdf-autotable` para reportes, `lucide-react` para iconos vectoriales unificados.
-* **Componentes Principales**:
-  * [ConfigurarPruebasModal.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/components/SharedSections/ConfigurarPruebasModal.jsx): Modal administrativo para gestionar pruebas (categorías, botes, distancias, ramas, fechas/horas) y configurar las reglas del cronograma.
-  * [GestionPagosSection.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/pages/Super/sections/GestionPagosSection.jsx): Panel de administración manual de cobros y estados de afiliación de clubes, atletas e inscripciones.
-  * [useResultados.js](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/components/SharedSections/useResultados.js): Hook personalizado para consumir y gestionar los resultados de las pruebas.
+### ⚙️ Entorno y Stack Tecnológico
+* **Frontend**: React (Vite), React Router v6, Axios para peticiones HTTP, `@microsoft/signalr` para conexiones WebSocket. Estilos basados en Vanilla CSS con enfoque premium y responsivo. Librerías auxiliares: `jsPDF` y `jspdf-autotable` para reportes, `lucide-react` para iconos.
+* **Backend**: ASP.NET Core (C#), arquitectura en capas/limpia (Api, Controladores, Entidades, AccesoDatos).
+* **Base de Datos**: PostgreSQL con Entity Framework Core.
+* **Autenticación/Autorización**: JWT. Los tokens se envían mediante la cabecera `Authorization: Bearer <token>` o a través de la cookie `X-Access-Token` para conexiones WebSocket (SignalR).
+* **Puertos de Desarrollo**:
+  * Frontend: `http://localhost:5173` (redirige `/api` a backend).
+  * Backend API: `http://localhost:5029` (o HTTPS según configuración).
 
-### ⚙️ Backend (`SportTrack-v1`)
-* **Tecnología**: ASP.NET Core (C#), Arquitectura en Capas/Limpia.
-* **Estructura**:
-  * `SportTrack-v1.Api` ([Program.cs](file:///c:/Users/EZEQU/source/repos/SportTrack-v1/SportTrack-v1.Api/Program.cs)): Punto de entrada, controladores y endpoints.
-  * `SportTrack-v1.Controladores` ([EventoDtos.cs](file:///c:/Users/EZEQU/source/repos/SportTrack-v1/SportTrack-v1.Controladores/Evento/Dtos/EventoDtos.cs)): DTOs y lógica de transferencia de datos.
-  * `SportTrack-v1.Entidades` ([Evento.cs](file:///c:/Users/EZEQU/source/repos/SportTrack-v1/SportTrack-v1.Entidades/Entidades/Evento.cs)): Modelos de base de datos.
+### 📁 Estructura del Código
+
+#### 💻 Frontend (`SportTrack-Front`)
+* `src/App.jsx`: Configuración de rutas públicas y privadas (protegidas por rol) y renderizado de la barra de notificaciones y toasts.
+* `src/context/`:
+  * [AuthContext.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/context/AuthContext.jsx): Gestiona el estado de sesión del usuario actual, login, logout y lectura de JWT.
+  * [ThemeContext.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/context/ThemeContext.jsx): Administrador del tema visual (claro/oscuro).
+  * [ToastContext.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/context/ToastContext.jsx): Notificaciones tipo Toast en pantalla.
+* `src/services/`:
+  * [api.js](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/services/api.js): Cliente Axios configurado con interceptores para adjuntar token JWT y manejar errores 401 globales.
+  * [SchedulerService.js](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/services/SchedulerService.js): Motor del cronograma inteligente para regatas.
+  * [TimingSignalRService.js](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/services/TimingSignalRService.js): Conexión en tiempo real al hub de cronometraje (`/hubs/timing`).
+* `src/pages/ClubAdmin/sections/`:
+  * [AtletasSection.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/pages/ClubAdmin/sections/AtletasSection.jsx): Paginación y filtro local de atletas.
+  * [InscripcionAtletaModal.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/pages/ClubAdmin/sections/InscripcionAtletaModal.jsx): Inscripción de palistas a pruebas.
+  * [PagosClubSection.jsx](file:///c:/Users/EZEQU/source/reposFront/SportTrack-Front/src/pages/ClubAdmin/sections/PagosClubSection.jsx): Solicitud interactiva de cambios de estado de afiliación mediante SignalR.
+
+#### ⚙️ Backend (`SportTrack-v1`)
+* `SportTrack-v1.Api` ([Program.cs](file:///c:/Users/EZEQU/source/repos/SportTrack-v1/SportTrack-v1.Api/Program.cs)): Configuración del backend (CORS con credentials, autenticación JWT con soporte de Query String para WebSockets, inyección de dependencias, salvaguardas y mapeo de hubs).
+* `SportTrack-v1.Controladores`: Capa de controladores que exponen endpoints HTTP.
+* `SportTrack-v1.Entidades`: Modelos de negocio en C# y enumeradores.
+* `SportTrack-v1.AccesoDatos` ([SportTrackDbContext.cs](file:///c:/Users/EZEQU/source/repos/SportTrack-v1/SportTrack-v1.AccesoDatos/SportTrackDbContext.cs)): Contexto de Entity Framework Core para PostgreSQL.
 
 ---
 
-## 🧠 2. Lecciones Aprendidas y Prevención de Errores
+## 🗃️ 2. Arquitectura de Base de Datos y Entidades
 
-> [!TIP]
-> *Aquí registramos los bugs que solucionamos y reglas técnicas críticas para no cometer los mismos errores.*
+El backend utiliza las siguientes entidades principales en `SportTrack.Entidades`:
+1. **Club**: Identidad deportiva. Puede ser club individual o federación madre (`ParentClubId`).
+2. **Usuario**: Credenciales y roles. Relacionado con un Club.
+3. **Participante** (Atleta): Información personal de los atletas afiliados a un club.
+4. **Evento**: Competencia deportiva organizada por un Club (o Federación). Incluye campos de control de estado (`Habilitado`, `CostoInscripcion`, `UsarGapVariable`).
+5. **Prueba** (EventoPrueba): Las pruebas específicas dentro de un evento (ej: K1 500m Cadete Masculino).
+6. **Inscripcion**: Vinculación de un Atleta a una Prueba específica con su `PaymentStatus` e `InscripcionTripulante` para botes grupales (K2, K4).
+7. **Fase**: Fases de la regata (Eliminatoria, Semifinal, Final).
+8. **Resultado**: Tiempos registrados por cada inscripción en una fase determinada, incluyendo posición, milisegundos de carrera, notas y estado del palista (`DNS`, `DNF`, `DSQ`, `OK`).
+9. **PlanSaaS**: Planes del sistema (Oro, Plata, Bronce, Demo) que limitan funcionalidad de clubes y administradores.
+
+---
+
+## 👥 3. Jerarquía de Roles y Control de Accesos
+* **Admin / SuperAdmin**: Rol federativo supremo. Puede gestionar planes SaaS, habilitar o suspender clubes, organizar eventos, configurar pruebas, sortear series y administrar cobros.
+* **Club**: Acceso al panel administrativo de club. Puede afiliar atletas, inscribir botes a eventos de su federación, consultar resultados en vivo de solo lectura y solicitar cambio de estado de pago.
+* **Largador (Starter)**: Juez en la línea de partida. Inicia regatas en tiempo real sincronizando relojes.
+* **Cronometrista (Timer / Llegada)**: Registra tiempos manuales o interactúa con el sistema de cronometraje en la meta.
+* **JuezControl**: Administra y vigila el flujo del evento.
+
+---
+
+## ⚡ 4. Mensajería en Tiempo Real (SignalR Hubs)
+
+El backend expone dos hubs funcionales:
+1. **`ResultsHub`** (Ruta: `/hubs/results`):
+   * Notifica actualizaciones de resultados en vivo (`RecibirResultado`, `RecibirEstructura`, `GlobalUpdate`).
+   * Permite unirse a grupos específicos por ID de prueba (`JoinPruebaGroup` / `LeavePruebaGroup`).
+2. **`TimingHub`** (Ruta: `/hubs/timing`):
+   * Control de cronometraje de baja latencia inter-roles.
+   * `JoinRaceGroup`/`LeaveRaceGroup` y `JoinEventGroup`: Seguimiento de presencia en tiempo real (`RacePresenceUpdated` y `EventPresenceUpdated`) para jueces y administradores.
+   * Acciones de carrera: `RequestStartRace` (inicia carrera con timestamp), `RequestResetRace`, `RecordLap`, `FinishRace`, `SendTime`.
+   * Notificaciones dinámicas: `RequestPaymentStatusChange` envía avisos en tiempo real al administrador desde el panel del club.
+
+---
+
+## 🧠 5. Lecciones Aprendidas y Gotchas Técnicos
 
 ### 🟢 Reglas del Motor de Cronograma (`SchedulerService`)
 * **Prioridad de Fases**: Al ordenar las fases, las eliminatorias/series deben ir siempre antes de las semifinales o finales (`etapa.orden` o `etapaOrden` es fundamental para el orden correcto).
@@ -75,10 +128,11 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
 * **Mensajería Instantánea Inter-Roles**: La comunicación crítica o notificaciones que requieren una resolución ágil (como una solicitud de cambio de estado a pagado hecha por un club) pueden transmitirse fluidamente mediante eventos dedicados en SignalR (`RequestPaymentStatusChange`), evitando sobrecargar la base de datos con lecturas frecuentes de persistencia.
 * **Diseño Reactivo en Formularios de Envío**: Los botones que disparan eventos de WebSockets deben incorporar estados de feedback inmediato (ej. desactivar el click y mostrar el texto `"Solicitud Enviada ✓"` en verde glassmorphic) para guiar correctamente la interacción del usuario y prevenir llamadas SignalR duplicadas.
 * **Redirección desde Notificaciones**: Las alertas recibidas en el Centro de Notificaciones (`NotificationCenter.jsx`) deben soportar diferentes acciones basadas en su contexto. Al hacer clic en un aviso de pago de un club, el administrador debe ser redirigido directamente al módulo de `/super/pagos` para facilitar una acción resolutiva inmediata.
+* **Ciclo de Vida de Conexión y Dependencias en React (useEffect)**: Al sincronizar hubs de SignalR, la función de limpieza (cleanup) del `useEffect` suele desconectar el servicio (`timingSignalRService.disconnect()`). Para prevenir micro-desconexiones y errores de invocación cancelada al actualizar estados de la fase local (por ejemplo, cambiar estado a DNS/DNF/DSQ), la dependencia del `useEffect` debe basarse en propiedades primitivas estables como `selectedFase?.id` y `selectedEvento?.id` en lugar de la referencia del objeto fase completo.
 
 ---
 
-## 📝 3. Bitácora de Desarrollo e Historial de Cambios
+## 📝 6. Bitácora de Desarrollo e Historial de Cambios
 
 | Fecha | Tarea / Cambio Realizado | Estado | Notas Técnicas |
 | :--- | :--- | :--- | :--- |
@@ -95,7 +149,11 @@ SportTrack es un sistema de gestión deportiva y cronogramas de regatas (kayak/c
 
 ---
 
-## 🎯 4. Estado Actual y Próximos Pasos
+## 🎯 7. Estado Actual y Próximos Pasos
 
-* **Contexto Inmediato**: Hemos adaptado exitosamente los módulos de resultados y de pagos para el rol de Club, logrando una interfaz limpia de solo lectura para resultados, y un canal interactivo bidireccional en tiempo real con SignalR para solicitar cambios de estado de afiliación directamente al centro de notificaciones del administrador. Además, implementamos la persistencia en base de datos (PostgreSQL) mediante una migración de Entity Framework Core y expusimos el nuevo endpoint de manera que el estado del botón del Club quede guardado de forma permanente entre inicios de sesión y se limpie automáticamente al registrarse el pago. Todos los componentes compilan y el backend inicia de manera perfecta.
-* **Próxima acción**: *[Esperando directivas adicionales del usuario]*
+* **Estado Actual**:
+  * El backend compila perfectamente y ejecuta migraciones/salvaguardas automáticamente al inicio (verificando tablas de base de datos como `Auditoria` con `UserAgent` y `Eventos` con `UsarGapVariable`).
+  * El frontend se construye correctamente (`npm run build` sin errores).
+  * Los accesos están restringidos correctamente según el rol del usuario, asegurando que los usuarios con rol `'Club'` accedan de forma segura solo a lo permitido y cuenten con herramientas dedicadas (Live results optimizados, solicitud de pago).
+* **Próximos Pasos**:
+  * Esperando nuevas solicitudes e instrucciones del usuario.

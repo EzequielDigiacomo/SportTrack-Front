@@ -210,7 +210,7 @@ const StarterDashboard = () => {
             isMounted = false;
             timingSignalRService.disconnect();
         };
-    }, [selectedFase]);
+    }, [selectedEvento?.id, selectedFase?.id]);
 
     const handleStartRace = async () => {
         if (!selectedFase) return;

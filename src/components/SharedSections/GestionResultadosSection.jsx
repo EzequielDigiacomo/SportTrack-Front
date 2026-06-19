@@ -193,7 +193,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
             timingSignalRService.disconnect();
             stopLocalTimer();
         };
-    }, [faseSeleccionadaParaSync, viewMode]);
+    }, [selectedEvento?.id, faseSeleccionadaParaSync?.id, viewMode]);
 
     // Funciones movidas arriba
 
