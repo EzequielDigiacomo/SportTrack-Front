@@ -733,11 +733,11 @@ const LiveResults = () => {
 
                             {selectedFase ? (
                                 <div className="table-responsive">
-                                    <div className="fase-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div className="fase-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <h3 style={{ margin: 0, color: 'var(--color-primary)' }}>
                                             {selectedFase.nombreFase || selectedFase.NombreFase}
                                         </h3>
-                                        <div className="fase-time" style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div className="fase-time" style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Clock size={14} /> Programada: {formatTime(selectedFase.fechaHoraProgramada || selectedFase.FechaHoraProgramada)} hs
                                         </div>
                                     </div>

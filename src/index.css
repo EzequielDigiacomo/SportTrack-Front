@@ -96,6 +96,8 @@
   --color-surface: #1a1e2e;
   --color-surface-hover: #21262d;
   --color-border: #30363d;
+  --color-calendar-cell-border: rgba(255, 255, 255, 0.12);
+  --color-calendar-cell-bg: rgba(255, 255, 255, 0.02);
   
   --color-text-primary: #f0f6fc;
   --color-text-secondary: #8b949e;
@@ -134,6 +136,8 @@
   --color-surface: #ffffff;
   --color-surface-hover: #f1f5f9;
   --color-border: #e2e8f0; /* slate-200 */
+  --color-calendar-cell-border: rgba(15, 23, 42, 0.22);
+  --color-calendar-cell-bg: rgba(15, 23, 42, 0.02);
   
   /* Text Colors - Pure High Contrast */
   --color-text-primary: #0f172a; /* slate-900 */

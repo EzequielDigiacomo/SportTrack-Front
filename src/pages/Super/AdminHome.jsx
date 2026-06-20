@@ -375,7 +375,7 @@ const AdminHome = () => {
                                 <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Calendar size={18} style={{ color: 'var(--color-accent-orange)' }} /> Planificador Anual de Operaciones
                                 </h4>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', margin: '0.2rem 0 0 0' }}>Monitoreo de vencimientos SaaS y eventos deportivos en tiempo real</p>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0.2rem 0 0 0' }}>Monitoreo de vencimientos SaaS y eventos deportivos en tiempo real</p>
                             </div>
                             <span className="badge-pill" style={{ background: 'rgba(var(--color-accent-orange-rgb), 0.15)', color: 'var(--color-accent-orange)', fontWeight: 800 }}>Año {new Date().getFullYear()}</span>
                         </div>
@@ -410,7 +410,7 @@ const AdminHome = () => {
                                             border: isSelected 
                                                 ? '1px solid var(--color-accent-orange)' 
                                                 : '1px solid var(--color-border)',
-                                            color: isSelected ? '#ffffff' : 'var(--color-text)',
+                                            color: isSelected ? '#ffffff' : 'var(--color-text-secondary)',
                                             borderRadius: '20px',
                                             padding: '6px 14px',
                                             cursor: 'pointer',
@@ -456,7 +456,7 @@ const AdminHome = () => {
                                 return (
                                     <div className="calendar-days-grid-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1.3 }}>
                                         {/* Cabecera L-D */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontWeight: 800, fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontWeight: 800, fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                                             {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(wd => (
                                                 <div key={wd} style={{ paddingBottom: '0.2rem' }}>{wd}</div>
                                             ))}
@@ -486,9 +486,9 @@ const AdminHome = () => {
 
                                                 const isDaySelected = selectedDay === day;
                                                 
-                                                let cellBg = 'rgba(255,255,255,0.01)';
-                                                let borderStyle = '1px solid var(--color-border)';
-                                                let textColor = 'var(--color-text)';
+                                                let cellBg = 'var(--color-calendar-cell-bg)';
+                                                let borderStyle = '1px solid var(--color-calendar-cell-border)';
+                                                let textColor = 'var(--color-text-primary)';
                                                 
                                                 if (isDaySelected) {
                                                     cellBg = 'linear-gradient(135deg, var(--color-accent-orange), #f97316)';
@@ -582,7 +582,7 @@ const AdminHome = () => {
                                 {activeTab === 'agenda' ? (
                                     <>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', paddingBottom: '0.4rem' }}>
-                                            <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>
+                                            <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>
                                                 {selectedDay !== null 
                                                     ? `Agenda del día ${selectedDay}` 
                                                     : `Agenda de ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][selectedMonth]}`
@@ -641,7 +641,7 @@ const AdminHome = () => {
                                                                     return (
                                                                         <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                             <div>
-                                                                                <strong style={{ color: 'var(--color-text)' }}>{exp.clubNombre}</strong>
+                                                                                <strong style={{ color: 'var(--color-text-primary)' }}>{exp.clubNombre}</strong>
                                                                                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
                                                                                     Plan {exp.planNombre || 'Activo'} ({exp.frecuenciaPago || 'Mensual'})
                                                                                 </span>
@@ -669,7 +669,7 @@ const AdminHome = () => {
                                                                     return (
                                                                         <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                             <div>
-                                                                                <strong style={{ color: 'var(--color-text)' }}>{evt.nombre}</strong>
+                                                                                <strong style={{ color: 'var(--color-text-primary)' }}>{evt.nombre}</strong>
                                                                                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
                                                                                     Org: {evt.clubNombre || 'Federación'}
                                                                                 </span>
@@ -694,7 +694,7 @@ const AdminHome = () => {
                                     /* Tab 2: SaaS View */
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                                            <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>Suscripciones</h5>
+                                            <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>Suscripciones</h5>
                                             <span style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>{globalStats.saasInfo?.length || 0} Federaciones</span>
                                         </div>
 
@@ -758,7 +758,7 @@ const AdminHome = () => {
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: palette.primary }} />
-                                                                    <strong style={{ color: 'var(--color-text)', fontSize: '0.8rem' }}>{fed.clubNombre}</strong>
+                                                                    <strong style={{ color: 'var(--color-text-primary)', fontSize: '0.8rem' }}>{fed.clubNombre}</strong>
                                                                 </div>
                                                                 <span style={planBadgeStyle}>{fed.planNombre || 'Sin Plan'}</span>
                                                             </div>
@@ -818,7 +818,7 @@ const AdminHome = () => {
                                     <div key={idx} className="entity-row" style={{ margin: 0, borderLeft: `4px solid ${palette.primary}`, background: palette.lightBg }}>
                                         <div className="entity-rank" style={{ background: palette.primary, color: '#ffffff' }}>{idx + 1}</div>
                                         <div className="entity-name">
-                                            <strong style={{ color: 'var(--color-text)' }}>{fed.nombre}</strong>
+                                            <strong style={{ color: 'var(--color-text-primary)' }}>{fed.nombre}</strong>
                                             <span style={{ color: 'var(--color-text-secondary)' }}>{fed.clubesCount} Clubes</span>
                                         </div>
                                         <ShieldCheck size={18} style={{ color: palette.primary }} />
@@ -1091,7 +1091,7 @@ const AdminHome = () => {
                                         <Calendar size={20} style={{ color: palette.primary }} />
                                         Planificador Operativo de Torneos
                                     </h4>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
                                         Monitoreo y agenda de competiciones oficiales de tu federación
                                     </p>
                                 </div>
@@ -1127,7 +1127,7 @@ const AdminHome = () => {
                                 {/* Grilla Calendario */}
                                 <div className="calendar-days-grid-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1.3 }}>
                                     {/* Cabecera L-D */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontWeight: 800, fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontWeight: 800, fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                                         {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(wd => (
                                             <div key={wd} style={{ paddingBottom: '0.2rem' }}>{wd}</div>
                                         ))}
@@ -1144,9 +1144,9 @@ const AdminHome = () => {
                                             const hasEvts = dayEvts.length > 0;
                                             const isDaySelected = selectedDay === day;
                                             
-                                            let cellBg = 'rgba(255,255,255,0.01)';
-                                            let borderStyle = '1px solid var(--color-border)';
-                                            let textColor = 'var(--color-text)';
+                                            let cellBg = 'var(--color-calendar-cell-bg)';
+                                            let borderStyle = '1px solid var(--color-calendar-cell-border)';
+                                            let textColor = 'var(--color-text-primary)';
                                             
                                             if (isDaySelected) {
                                                 cellBg = `linear-gradient(135deg, ${palette.primary}, ${palette.text})`;
@@ -1201,7 +1201,7 @@ const AdminHome = () => {
                                 {/* Detalle del Mes/Día Seleccionado */}
                                 <div className="selected-month-details" style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '1rem', maxHeight: '310px', overflowY: 'auto', flex: 1 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.4rem' }}>
-                                        <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text)', fontSize: '0.9rem' }}>
+                                        <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>
                                             {selectedDay !== null 
                                                 ? `Eventos del día ${selectedDay}` 
                                                 : `Eventos de ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][selectedMonth]}`
@@ -1242,7 +1242,7 @@ const AdminHome = () => {
                                                     return (
                                                         <div key={idx} style={{ padding: '0.6rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div>
-                                                                <strong style={{ color: 'var(--color-text)' }}>{evt.nombre}</strong>
+                                                                <strong style={{ color: 'var(--color-text-primary)' }}>{evt.nombre}</strong>
                                                                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
                                                                     Lugar: {evt.lugar || 'Por definir'} | Club: {evt.clubNombre || 'Federación'}
                                                                 </span>

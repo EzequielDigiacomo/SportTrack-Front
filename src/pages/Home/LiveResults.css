@@ -943,3 +943,46 @@
     background: rgba(6, 95, 70, 0.15) !important;
     border-color: rgba(6, 95, 70, 0.25) !important;
 }
+
+/* Custom Overrides for high contrast grid and text in light mode */
+.carril-cell {
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.diff-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .pos-row {
+    background: #f8fafc !important;
+}
+
+[data-theme='light'] .pos-row:hover {
+    background: #f1f5f9 !important;
+}
+
+[data-theme='light'] .pos-row td {
+    border-color: #cbd5e1 !important;
+}
+
+[data-theme='light'] .results-table th {
+    color: var(--color-text-secondary) !important;
+    font-weight: 800 !important;
+}
+
+[data-theme='light'] .club-badge {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+[data-theme='light'] .pos-number {
+    color: #334155 !important;
+}
+
+[data-theme='light'] .diff-cell {
+    color: var(--color-text-primary) !important;
+}

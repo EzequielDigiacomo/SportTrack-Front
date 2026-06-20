@@ -210,6 +210,7 @@ const GestionClubesSection = () => {
                 loading ? <div className="loader-container"><div className="loader"></div></div> : (
                     <ClubGrid 
                         clubes={clubes} 
+                        showFederation={!fedId}
                         onEdit={handleOpenEditar} 
                         onViewAtletas={(c) => navigate(`/super/atletas?clubId=${c.id}&clubNombre=${encodeURIComponent(c.nombre)}`)}
                         onAssignParent={(club) => setParentModal({ show: true, club, parentId: '' })}

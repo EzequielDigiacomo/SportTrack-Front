@@ -1,6 +1,6 @@
 import { Edit2, Users, Link2, Mail, MapPin } from 'lucide-react';
 
-const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
+const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent, showFederation = true }) => {
     return (
         <div className="club-grid-container fade-in">
             {/* Mobile View */}
@@ -39,7 +39,7 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                         <tr>
                             <th>Club / Entidad</th>
                             <th style={{ width: '100px' }}>Sigla</th>
-                            <th>Federación</th>
+                            {showFederation && <th>Federación</th>}
                             <th>Email</th>
                             <th>Ubicación</th>
                             <th style={{ width: '100px' }}>Atletas</th>
@@ -54,11 +54,13 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, onAssignParent }) => {
                                     {!c.parentClubId && <span className="badge badge-ecu-blue" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>FED</span>}
                                 </td>
                                 <td><span className="badge badge-ecu-yellow">{c.sigla || '—'}</span></td>
-                                <td>
-                                    <span style={{ fontSize: '0.85rem', color: c.parentClubId ? 'var(--color-text-dim)' : 'var(--color-primary-light)' }}>
-                                        {c.parentClubId ? (c.parentClubNombre || `ID: ${c.parentClubId}`) : '—'}
-                                    </span>
-                                </td>
+                                {showFederation && (
+                                    <td>
+                                        <span style={{ fontSize: '0.85rem', color: c.parentClubId ? 'var(--color-text-dim)' : 'var(--color-primary-light)' }}>
+                                            {c.parentClubId ? (c.parentClubNombre || `ID: ${c.parentClubId}`) : '—'}
+                                        </span>
+                                    </td>
+                                )}
                                 <td>{c.email || '—'}</td>
                                 <td>{c.ubicacion || '—'}</td>
                                 <td>{c.cantidadAtletas || 0}</td>
