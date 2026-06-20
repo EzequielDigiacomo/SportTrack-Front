@@ -8,7 +8,7 @@ import signalRServiceInstance from '../../services/SignalRService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import PdfExportService from '../../services/PdfExportService';
 import ThemeToggle from '../../components/Common/ThemeToggle';
-import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import './LiveResults.css';
 
 // Convierte "mm:ss.ms" o "hh:mm:ss.ms" a milisegundos
@@ -91,6 +91,7 @@ const LiveResults = () => {
     const [faseNumberMap, setFaseNumberMap] = useState({});
     const [allFases, setAllFases] = useState([]);
     const [refreshResultsCounter, setRefreshResultsCounter] = useState(0);
+    const [startIndex, setStartIndex] = useState(0);
 
     const reloadPhasesOnly = async () => {
         try {
@@ -392,14 +393,41 @@ const LiveResults = () => {
         }
     };
 
-    if (loading) return <div className="results-loading"><div className="loader"></div><p>Sincronizando con el canal oficial...</p></div>;
-    if (!evento) return <div className="results-error">Evento no encontrado</div>;
-    const filteredFases = allFases.filter(f => {
+    const filteredFases = allFases.filter(f => {
         const p = f.prueba || {};
         const rawName = `${f.nombreFase} ${p.prueba?.categoria?.nombre || p.categoria?.nombre || ''} ${p.prueba?.bote?.tipo || p.bote?.tipo || ''} ${p.prueba?.distancia?.descripcion || p.distancia?.descripcion || ''} ${getSexName(p)}`;
         const name = replaceKayakNames(rawName).toLowerCase();
         return name.includes(searchTerm.toLowerCase());
     });
+
+    // Resetear startIndex a 0 cuando cambie el termino de busqueda
+    useEffect(() => {
+        setStartIndex(0);
+    }, [searchTerm]);
+
+    // Limitar/validar startIndex si filteredFases disminuye por filtrado
+    useEffect(() => {
+        setStartIndex(prev => {
+            const maxStart = Math.max(0, filteredFases.length - 10);
+            return Math.min(prev, maxStart);
+        });
+    }, [filteredFases.length]);
+
+    // Sincronizar el scroll de la pagina/carrera seleccionada
+    useEffect(() => {
+        if (!selectedFase) return;
+        const selectedIndex = filteredFases.findIndex(f => f.id === selectedFase.id);
+        if (selectedIndex !== -1) {
+            if (selectedIndex < startIndex) {
+                setStartIndex(selectedIndex);
+            } else if (selectedIndex >= startIndex + 10) {
+                setStartIndex(Math.max(0, selectedIndex - 9));
+            }
+        }
+    }, [selectedFase?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (loading) return <div className="results-loading"><div className="loader"></div><p>Sincronizando con el canal oficial...</p></div>;
+    if (!evento) return <div className="results-error">Evento no encontrado</div>;
 
     // Buscar la prueba activa en curso
     const activeRace = allFases.find(f => {
@@ -489,41 +517,35 @@ const LiveResults = () => {
                     {/* LIVE STATUS BOARD BANNERS */}
                     {activeBanner ? (
                         <div className="live-status-board running fade-in">
-                            <div className="board-header">
+                            <div className="live-board-header">
                                 <span className="live-pulse-dot"></span>
                                 <span className="board-title">Se está corriendo</span>
                             </div>
-                            <div className="board-content">
-                                <div className="board-race-num">#{activeBanner.number}</div>
-                                <div className="board-race-details">
-                                    <div className="board-race-fase">{activeBanner.faseName}</div>
-                                    <div className="board-race-cat">{activeBanner.details}</div>
-                                </div>
+                            <div className="board-race-num">#{activeBanner.number}</div>
+                            <div className="board-race-details">
+                                <div className="board-race-fase">{activeBanner.faseName}</div>
+                                <div className="board-race-cat">{activeBanner.details}</div>
                             </div>
                         </div>
                     ) : nextBanner ? (
                         <div className="live-status-board scheduled fade-in">
-                            <div className="board-header">
+                            <div className="live-board-header">
                                 <Clock size={12} className="board-icon-grey" />
                                 <span className="board-title">Continúa</span>
                             </div>
-                            <div className="board-content">
-                                <div className="board-race-num upcoming">#{nextBanner.number}</div>
-                                <div className="board-race-details">
-                                    <div className="board-race-fase upcoming">{nextBanner.faseName}</div>
-                                    <div className="board-race-cat">{nextBanner.details}</div>
-                                </div>
+                            <div className="board-race-num upcoming">#{nextBanner.number}</div>
+                            <div className="board-race-details">
+                                <div className="board-race-fase upcoming">{nextBanner.faseName}</div>
+                                <div className="board-race-cat">{nextBanner.details}</div>
                             </div>
                         </div>
                     ) : allFinished ? (
                         <div className="live-status-board finished fade-in">
-                            <div className="board-header">
+                            <div className="live-board-header">
                                 <Trophy size={12} className="board-icon-gold" />
-                                <span className="board-title">Competencia Finalizada</span>
+                                <span className="board-title">Finalizado</span>
                             </div>
-                            <div className="board-content">
-                                <div className="board-finished-msg">Todas las regatas han concluido.</div>
-                            </div>
+                            <div className="board-finished-msg">Todas las regatas han concluido.</div>
                         </div>
                     ) : null}
                 </div>
@@ -538,16 +560,39 @@ const LiveResults = () => {
                             <ThemeToggle />
                         </div>
                         <div className="search-box">
-                            <input 
-                                type="text" 
-                                placeholder="Buscar categoría..." 
+                            <input
+                                type="text"
+                                placeholder="Buscar categoría..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+                        {filteredFases.length > 10 && (
+                            <div className="sidebar-pagination">
+                                <button
+                                    className="pagination-arrow-btn"
+                                    onClick={() => setStartIndex(prev => Math.max(0, prev - 1))}
+                                    disabled={startIndex === 0}
+                                    title="Anterior"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                <span className="pagination-info">
+                                    {startIndex + 1} - {Math.min(filteredFases.length, startIndex + 10)} de {filteredFases.length}
+                                </span>
+                                <button
+                                    className="pagination-arrow-btn"
+                                    onClick={() => setStartIndex(prev => Math.min(filteredFases.length - 10, prev + 1))}
+                                    disabled={startIndex >= filteredFases.length - 10}
+                                    title="Siguiente"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                     <div className="pruebas-v-list">
-                        {filteredFases.map(f => {
+                        {filteredFases.slice(startIndex, startIndex + 10).map(f => {
                             const p = f.prueba || {};
                             const raceNum = faseNumberMap[f.id] || f.numeroPrueba || f.NumeroPrueba || f.id;
                             const isSelected = selectedFase?.id === f.id;
@@ -557,8 +602,8 @@ const LiveResults = () => {
                             const sexName = getSexName(p);
                             const label = replaceKayakNames(`${catName} ${botName} ${distName} - ${sexName}`);
                             return (
-                                <button 
-                                    key={f.id} 
+                                <button
+                                    key={f.id}
                                     className={`prueba-v-item ${isSelected ? 'active' : ''}`}
                                     style={{ opacity: (f.estado || f.Estado || '').toUpperCase().startsWith('FINAL') ? 0.8 : 1 }}
                                     onClick={() => {
@@ -569,16 +614,16 @@ const LiveResults = () => {
                                         }
                                     }}
                                 >
-                                    <div className="p-header">
-                                        <div className="status-dot-container" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <div className="p-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             <span className="p-time">{formatDate(f.fechaHoraProgramada)} - {formatTime(f.fechaHoraProgramada)}</span>
+                                            <span className="p-phase-name">
+                                                {f.nombreFase}
+                                            </span>
                                         </div>
-                                        <span className="p-badge" style={{ background: 'var(--color-primary-light)', color: 'white', fontWeight: 'bold' }}>#{raceNum}</span>
+                                        <span className="p-badge" style={{ background: 'var(--color-primary-light)', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.25rem 0.6rem', borderRadius: '6px' }}>#{raceNum}</span>
                                     </div>
-                                    <span className="p-name" style={{ fontWeight: 'bold', color: 'white' }}>
-                                        {f.nombreFase}
-                                    </span>
-                                    <span className="p-name" style={{ fontSize: '0.85rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
+                                    <span className="p-name">
                                         {label}
                                     </span>
                                 </button>
@@ -627,25 +672,25 @@ const LiveResults = () => {
                                         const est = (selectedFase?.estado || selectedFase?.Estado || '').toUpperCase();
                                         if (est === 'ENCURSO' || est === 'EN CARRERA') {
                                             return (
-                                                <span className="status-label" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                                                <span className="status-label in-progress">
                                                     PRUEBA EN CURSO
                                                 </span>
                                             );
                                         } else if (est === 'FINALIZADA' || est === 'FINALIZADO') {
                                             return (
-                                                <span className="status-label" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
+                                                <span className="status-label finished">
                                                     FINALIZADA
                                                 </span>
                                             );
                                         } else if (est === 'CANCELADO' || est === 'CANCELADA') {
                                             return (
-                                                <span className="status-label" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                                                <span className="status-label canceled">
                                                     CANCELADA
                                                 </span>
                                             );
                                         } else {
                                             return (
-                                                <span className="status-label" style={{ color: '#94a3b8', background: 'rgba(148, 163, 184, 0.1)', borderColor: 'rgba(148, 163, 184, 0.2)' }}>
+                                                <span className="status-label scheduled">
                                                     PROGRAMADA
                                                 </span>
                                             );
@@ -674,19 +719,6 @@ const LiveResults = () => {
                                                     <button
                                                         key={f.id}
                                                         className={`phase-tab ${selectedFase?.id === f.id ? 'active' : ''}`}
-                                                        style={{
-                                                            padding: '0.6rem 1.2rem',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid rgba(255,255,255,0.1)',
-                                                            background: selectedFase?.id === f.id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
-                                                            color: 'white',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.9rem',
-                                                            transition: 'all 0.2s',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '8px'
-                                                        }}
                                                         onClick={() => setSelectedFase(f)}
                                                     >
                                                         <span style={{ opacity: 0.6, fontSize: '0.8rem', fontWeight: 'bold' }}>#{faseNumberMap[f.id] || f.numeroPrueba || f.NumeroPrueba || f.id}</span>

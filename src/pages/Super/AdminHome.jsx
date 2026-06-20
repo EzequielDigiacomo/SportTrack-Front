@@ -1017,12 +1017,18 @@ const AdminHome = () => {
             desc: (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
                     <span style={{ fontSize: '1rem' }}>Clubes: <strong style={{ color: 'var(--color-secondary-light)', fontSize: '1.4rem' }}>{stats.clubes}</strong></span>
-                    <span style={{ fontSize: '1rem' }}>Atletas: <strong style={{ color: '#10B981', fontSize: '1.4rem' }}>{stats.atletas}</strong></span>
                 </div>
             ) 
         },
         { id: '/super/logins', icon: <Key size={32} />, title: 'Logins & Usuarios', desc: <span style={{ fontSize: '1rem' }}>Accesos para mis clubes</span>, color: '#10B981' },
-        { id: '/super/atletas', icon: <Users size={32} />, title: 'Atletas', desc: <span style={{ fontSize: '1rem' }}>Nómina de mi federación</span>, color: 'var(--color-accent)' },
+        { 
+            id: '/super/atletas', icon: <Users size={32} />, title: 'Atletas', color: 'var(--color-accent)',
+            desc: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '1rem' }}>Atletas: <strong style={{ color: 'var(--color-accent)', fontSize: '1.4rem' }}>{stats.atletas}</strong></span>
+                </div>
+            ) 
+        },
         { id: '/super/controles', icon: <Timer size={32} />, title: 'Controles Técnicos', desc: <span style={{ fontSize: '1rem' }}>Registros técnicos internos</span>, color: '#f59e0b' },
         { id: '/super/resultados', icon: <Timer size={32} />, title: 'Resultados', desc: <span style={{ fontSize: '1rem' }}>Cronometraje y validación</span>, color: 'var(--color-accent-orange)' },
     ];
