@@ -308,7 +308,12 @@ const handleExportPrueba = () => {
     setShowPdfMenu(false);
 };
 
-const handleExportEvento = () => {
+const handleExportRegattaSchedule = () => {
+    PdfExportService.exportRegattaSchedule(cronograma, eventoNombre);
+    setShowPdfMenu(false);
+};
+
+const handleExportStartListCompleto = () => {
     PdfExportService.exportCronogramaCompleto(cronograma, eventoNombre);
     setShowPdfMenu(false);
 };
@@ -510,7 +515,8 @@ return (
                                         </button>
                                         {showPdfMenu && (
                                             <div className="pdf-dropdown-menu fade-in">
-                                                <button onClick={handleExportEvento}>📅 Cronograma General</button>
+                                                <button onClick={handleExportRegattaSchedule}>📅 Regatta Schedule</button>
+                                                <button onClick={handleExportStartListCompleto}>👥 Start List Completo</button>
                                                 <button onClick={handleExportPrueba}>🏆 Prueba Seleccionada</button>
                                                 {etiquetasEtapas.map(etapa => (
                                                     <button key={etapa} onClick={() => handleExportGrupo(etapa)}>📋 Solo {etapa}</button>

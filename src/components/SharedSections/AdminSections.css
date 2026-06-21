@@ -180,6 +180,41 @@
     gap: var(--spacing-sm);
 }
 
+/* Fix for table cells using actions-cell class directly, which breaks table layout */
+td.actions-cell {
+    display: table-cell !important;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+td.actions-cell > button,
+td.actions-cell > a,
+td.actions-cell > div,
+td.actions-cell > span {
+    display: inline-flex !important;
+    vertical-align: middle;
+    margin-right: var(--spacing-sm) !important;
+}
+
+td.actions-cell > *:last-child {
+    margin-right: 0 !important;
+}
+
+/* Event Grid specific alignment changes */
+.eventos-desktop-table .admin-table th,
+.eventos-desktop-table .admin-table td {
+    text-align: center;
+}
+
+.eventos-desktop-table .admin-table th:first-child,
+.eventos-desktop-table .admin-table td:first-child {
+    text-align: left;
+}
+
+.eventos-desktop-table .actions-cell {
+    text-align: center !important;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    ACTION BUTTONS (COLORFUL)
    ────────────────────────────────────────────────────────────────────────── */

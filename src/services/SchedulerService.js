@@ -40,6 +40,18 @@ const SchedulerService = {
             return item.eventoPruebaId || item.raw?.eventoPruebaId || item.raw?.id || "unknown";
         };
 
+        const getCatAndSex = (item) => {
+            const f = item.raw || item;
+            const p = f.etapa?.eventoPrueba?.prueba 
+                   || f.prueba?.prueba 
+                   || f.prueba 
+                   || f.eventoPrueba?.prueba 
+                   || f;
+            const catId = p?.categoriaId || p?.categoria?.id || p?.categoria;
+            const sexId = p?.sexoId || p?.sexo?.id || p?.sexo;
+            return { catId, sexId };
+        };
+
         const getEtapaOrden = (item) => {
             return item.etapa?.orden || item.etapaOrden || 1;
         };
@@ -143,6 +155,9 @@ const SchedulerService = {
         const resultados = [];
         const lastStageFinishTime = {};
         const lastStageDiaOffset = {};
+        const lastCatSexTime = {};
+        const lastCatSexDia = {};
+        const lastCatSexPruebaId = {};
 
         while (true) {
             // Obtener el bloque activo actual de cada categoría (el primero de la cola)
@@ -271,6 +286,31 @@ const SchedulerService = {
             for (let j = 0; j < selectedBlock.items.length; j++) {
                 const item = selectedBlock.items[j];
 
+                // Check and enforce category/sex gap (minimum 40 minutes)
+                const { catId, sexId } = getCatAndSex(item);
+                const currentPruebaId = getPruebaId(item);
+
+                if (catId && sexId) {
+                    if (!lastCatSexTime[catId]) {
+                        lastCatSexTime[catId] = {};
+                        lastCatSexDia[catId] = {};
+                        lastCatSexPruebaId[catId] = {};
+                    }
+                    const lastTime = lastCatSexTime[catId][sexId];
+                    const lastOffset = lastCatSexDia[catId][sexId];
+                    const lastPId = lastCatSexPruebaId[catId][sexId];
+
+                    if (lastTime !== undefined && lastOffset === currentDiaOffset) {
+                        // Only apply recovery gap if it is a DIFFERENT event (pruebaId)
+                        if (lastPId !== currentPruebaId) {
+                            const diff = cursorMinutos - lastTime;
+                            if (diff < 40) {
+                                cursorMinutos = lastTime + 40;
+                            }
+                        }
+                    }
+                }
+
                 // Corte diario de fin de jornada
                 if (cursorMinutos >= finEventoMin) {
                     currentDiaOffset++;
@@ -296,6 +336,13 @@ const SchedulerService = {
                     timeCalculated: timeCalculatedStr,
                     diaOffset: currentDiaOffset
                 });
+
+                // Update the last scheduled time for this category/sex
+                if (catId && sexId) {
+                    lastCatSexTime[catId][sexId] = cursorMinutos;
+                    lastCatSexDia[catId][sexId] = currentDiaOffset;
+                    lastCatSexPruebaId[catId][sexId] = currentPruebaId;
+                }
 
                 const gapItem = usarGapVariable ? (item.gapSugerido || 0) : 0;
                 const gapAplicar = gapItem > 0 ? gapItem : (gapBaseMs / 60000);

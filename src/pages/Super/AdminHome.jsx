@@ -12,7 +12,9 @@ import {
     Activity,
     ShieldCheck,
     Eye,
-    CreditCard
+    CreditCard,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
@@ -35,6 +37,7 @@ const AdminHome = () => {
     const [fedEvents, setFedEvents] = useState([]);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedDay, setSelectedDay] = useState(null);
+    const [isCalendarMinimized, setIsCalendarMinimized] = useState(false);
 
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState('agenda');
@@ -369,18 +372,45 @@ const AdminHome = () => {
                 </div>
 
                 <div className="dashboard-content-row" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="annual-calendar-container glass-effect" style={{ padding: '1.5rem', borderRadius: '20px', minHeight: '420px', display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <div className="chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+                    <div className="annual-calendar-container glass-effect" style={{ padding: '1.5rem', borderRadius: '20px', minHeight: isCalendarMinimized ? 'auto' : '420px', display: 'flex', flexDirection: 'column', width: '100%' }}>
+                        <div className="chart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCalendarMinimized ? '0' : '1.2rem' }}>
                             <div>
                                 <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Calendar size={18} style={{ color: 'var(--color-accent-orange)' }} /> Planificador Anual de Operaciones
                                 </h4>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0.2rem 0 0 0' }}>Monitoreo de vencimientos SaaS y eventos deportivos en tiempo real</p>
+                                {!isCalendarMinimized && (
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0.2rem 0 0 0' }}>Monitoreo de vencimientos SaaS y eventos deportivos en tiempo real</p>
+                                )}
                             </div>
-                            <span className="badge-pill" style={{ background: 'rgba(var(--color-accent-orange-rgb), 0.15)', color: 'var(--color-accent-orange)', fontWeight: 800 }}>Año {new Date().getFullYear()}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span className="badge-pill" style={{ background: 'rgba(var(--color-accent-orange-rgb), 0.15)', color: 'var(--color-accent-orange)', fontWeight: 800 }}>Año {new Date().getFullYear()}</span>
+                                <button 
+                                    onClick={() => setIsCalendarMinimized(!isCalendarMinimized)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: '8px',
+                                        padding: '6px 12px',
+                                        color: 'var(--color-text-primary)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '600',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    title={isCalendarMinimized ? "Maximizar Calendario" : "Minimizar Calendario"}
+                                >
+                                    {isCalendarMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                    {isCalendarMinimized ? "Mostrar" : "Minimizar"}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Selector de Meses Horizontal */}
+                        {!isCalendarMinimized && (
+                            <>
                         <div className="months-pills-row" style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.6rem', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', scrollbarWidth: 'none' }}>
                             {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((name, idx) => {
                                 const currentYear = new Date().getFullYear();
@@ -803,6 +833,8 @@ const AdminHome = () => {
                                 )}
                             </div>
                         </div>
+                        </>
+                        )}
                     </div>
 
                     <div className="top-entities-list glass-effect" style={{ width: '100%', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
@@ -1084,46 +1116,74 @@ const AdminHome = () => {
 
                 return (
                     <div className="dashboard-content-row" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem', marginBottom: '2rem', width: '100%' }}>
-                        <div className="calendar-card glass-effect" style={{ width: '100%', padding: '1.5rem', borderRadius: '20px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div className="calendar-card glass-effect" style={{ width: '100%', padding: isCalendarMinimized ? '1.2rem 1.5rem' : '1.5rem', borderRadius: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCalendarMinimized ? '0' : '1.2rem', flexWrap: 'wrap', gap: '1rem' }}>
                                 <div>
                                     <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Calendar size={20} style={{ color: palette.primary }} />
                                         Planificador Operativo de Torneos
                                     </h4>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-                                        Monitoreo y agenda de competiciones oficiales de tu federación
-                                    </p>
+                                    {!isCalendarMinimized && (
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                                            Monitoreo y agenda de competiciones oficiales de tu federación
+                                        </p>
+                                    )}
                                 </div>
                                 
-                                {/* Meses en Tab Sliders */}
-                                <div className="months-pills-row" style={{ display: 'flex', gap: '4px', overflowX: 'auto', padding: '4px', background: 'var(--color-bg-primary)', borderRadius: '10px', maxWidth: '100%' }}>
-                                    {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((mName, idx) => (
-                                        <button
-                                            key={mName}
-                                            onClick={() => {
-                                                setSelectedMonth(idx);
-                                                setSelectedDay(null);
-                                            }}
-                                            style={{
-                                                border: 'none',
-                                                background: selectedMonth === idx ? palette.primary : 'none',
-                                                color: selectedMonth === idx ? '#fff' : 'var(--color-text-secondary)',
-                                                padding: '4px 10px',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontWeight: selectedMonth === idx ? 800 : 500,
-                                                fontSize: '0.75rem',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            {mName}
-                                        </button>
-                                    ))}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    {!isCalendarMinimized && (
+                                        <div className="months-pills-row" style={{ display: 'flex', gap: '4px', overflowX: 'auto', padding: '4px', background: 'var(--color-bg-primary)', borderRadius: '10px', maxWidth: '100%' }}>
+                                            {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((mName, idx) => (
+                                                <button
+                                                    key={mName}
+                                                    onClick={() => {
+                                                        setSelectedMonth(idx);
+                                                        setSelectedDay(null);
+                                                    }}
+                                                    style={{
+                                                        border: 'none',
+                                                        background: selectedMonth === idx ? palette.primary : 'none',
+                                                        color: selectedMonth === idx ? '#fff' : 'var(--color-text-secondary)',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontWeight: selectedMonth === idx ? 800 : 500,
+                                                        fontSize: '0.75rem',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    {mName}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    <button 
+                                        onClick={() => setIsCalendarMinimized(!isCalendarMinimized)}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid var(--color-border)',
+                                            borderRadius: '8px',
+                                            padding: '6px 12px',
+                                            color: 'var(--color-text-primary)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem',
+                                            fontWeight: '600',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title={isCalendarMinimized ? "Maximizar Calendario" : "Minimizar Calendario"}
+                                    >
+                                        {isCalendarMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                        {isCalendarMinimized ? "Mostrar" : "Minimizar"}
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="calendar-agenda-split" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                            {!isCalendarMinimized && (
+                                <div className="calendar-agenda-split" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                                 {/* Grilla Calendario */}
                                 <div className="calendar-days-grid-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1.3 }}>
                                     {/* Cabecera L-D */}
@@ -1261,6 +1321,7 @@ const AdminHome = () => {
                                     })()}
                                 </div>
                             </div>
+                            )}
                         </div>
                     </div>
                 );

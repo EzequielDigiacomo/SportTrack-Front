@@ -33,6 +33,9 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+    background: #11141d;
+    position: relative;
+    z-index: 10;
 }
 
 .modal-header h2,
@@ -78,6 +81,8 @@
 .modal-body {
     padding: var(--spacing-md);
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .config-scheduler {
@@ -484,7 +489,7 @@
 }
 
 .admin-table.mini th {
-    background: rgba(255, 255, 255, 0.03);
+    background: #181c26 !important; /* Solid background to prevent overlap transparency when sticky */
     padding: 12px 8px;
     text-transform: uppercase;
     font-size: 0.7rem;
@@ -493,4 +498,21 @@
 
 .row-fase {
     border-left: 3px solid #3b82f6;
+}
+
+/* Scrollable container for the schedule table to keep headers sticky locally */
+.table-container-mini {
+    max-height: 480px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+    .table-container-mini {
+        max-height: 350px;
+    }
 }

@@ -127,18 +127,32 @@ const ResultadosHeader = ({
                             <List size={14} className="text-accent" /> Regata Específica
                         </label>
                         {cronograma.length > 0 && (
-                            <button 
-                                className="btn-admin-secondary compact"
-                                style={{ padding: '0 8px', fontSize: '10px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
-                                onClick={() => {
-                                    const ev = eventos.find(e => String(e.id) === String(selectedEvento));
-                                    import('../../services/PdfExportService').then(m => {
-                                        m.default.exportCronogramaCompleto(cronograma, ev?.nombre || 'Evento');
-                                    });
-                                }}
-                            >
-                                <FileText size={10} style={{ marginRight: '4px' }} /> PDF Start List
-                            </button>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <button 
+                                    className="btn-admin-secondary compact"
+                                    style={{ padding: '0 8px', fontSize: '10px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
+                                    onClick={() => {
+                                        const ev = eventos.find(e => String(e.id) === String(selectedEvento));
+                                        import('../../services/PdfExportService').then(m => {
+                                            m.default.exportRegattaSchedule(cronograma, ev?.nombre || 'Evento');
+                                        });
+                                    }}
+                                >
+                                    <FileText size={10} style={{ marginRight: '4px' }} /> PDF Schedule
+                                </button>
+                                <button 
+                                    className="btn-admin-secondary compact"
+                                    style={{ padding: '0 8px', fontSize: '10px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
+                                    onClick={() => {
+                                        const ev = eventos.find(e => String(e.id) === String(selectedEvento));
+                                        import('../../services/PdfExportService').then(m => {
+                                            m.default.exportCronogramaCompleto(cronograma, ev?.nombre || 'Evento');
+                                        });
+                                    }}
+                                >
+                                    <FileText size={10} style={{ marginRight: '4px' }} /> PDF Start List
+                                </button>
+                            </div>
                         )}
                     </div>
                     <select 

@@ -344,6 +344,59 @@ const PdfExportService = {
         drawFooter(doc, eventoNombre);
         doc.save(`${eventoNombre}_Programa_Provisorio.pdf`.replace(/\s+/g, '_'));
     },
+
+    /** General Event Schedule overview (without start lists/competitors) */
+    exportRegattaSchedule: (cronograma, eventoNombre) => {
+        if (!cronograma?.length) return;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        const rows = [...cronograma]
+            .sort((a, b) => new Date(a.fechaHoraProgramada) - new Date(b.fechaHoraProgramada))
+            .map((fase, idx) => {
+                const p = fase.prueba?.prueba || fase.prueba || fase;
+                const catId  = p?.categoriaId || p?.categoria?.id;
+                const botId  = p?.boteId      || p?.bote?.id;
+                const distId = p?.distanciaId || p?.distancia?.id;
+                const sexId  = p?.sexoId      || p?.sexo?.id;
+
+                const catName  = CATEGORIA_NAMES[catId]  || p?.categoria?.nombre || '-';
+                const botName  = BOTE_NAMES[botId]        || p?.bote?.nombre     || '-';
+                const distName = DISTANCIA_NAMES[distId]  || (p?.distancia?.metros ? `${p.distancia.metros}m` : '-');
+                const sexName  = SEXO_NAMES[sexId]        || p?.sexoNombre       || '-';
+                
+                const timeStr = getTimeStr(fase);
+                const faseName = fase.nombreFase || '-';
+
+                return [idx + 1, faseName, catName, botName, distName, sexName, timeStr];
+            });
+
+        autoTable(doc, {
+            startY: BAND_H + MARGIN,
+            head: [['#', 'Etapa / Fase', 'Categoría', 'Bote', 'Dist.', 'Rama', 'Horario']],
+            body: rows,
+            ...tableStyles(false),
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 45 },
+                3: { halign: 'center', cellWidth: 15 },
+                4: { halign: 'center', cellWidth: 20 },
+                5: { halign: 'center', cellWidth: 20 },
+                6: { halign: 'center', cellWidth: 20, fontStyle: 'bold' },
+            },
+            tableWidth: GRID_W,
+            margin: { left: MARGIN, right: MARGIN },
+        });
+
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            drawBand(doc, eventoNombre, 'Regatta Schedule', i, totalPages);
+            drawFooter(doc, eventoNombre);
+        }
+
+        doc.save(`${eventoNombre}_Regatta_Schedule.pdf`.replace(/\s+/g, '_'));
+    },
 };
 
 export default PdfExportService;

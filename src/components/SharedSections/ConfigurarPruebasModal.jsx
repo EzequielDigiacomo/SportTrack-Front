@@ -110,13 +110,73 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
         loadData();
     }, [evento]);
 
+    // Automatically pre-fill the estimated time based on the last scheduled race and the gap
+    useEffect(() => {
+        if (!editingId && pruebasActuales.length > 0) {
+            const sortedPruebas = [...pruebasActuales].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+            const lastPrueba = sortedPruebas[sortedPruebas.length - 1];
+            const lastTime = new Date(lastPrueba.fechaHora);
+            const nextTime = new Date(lastTime.getTime() + gapEntrePruebas * 60 * 1000);
+            const hours = String(nextTime.getHours()).padStart(2, '0');
+            const minutes = String(nextTime.getMinutes()).padStart(2, '0');
+            setSelectedTime(`${hours}:${minutes}`);
+        } else if (!editingId) {
+            setSelectedTime('');
+        }
+    }, [gapEntrePruebas, pruebasActuales, editingId]);
+
     const resetForm = () => {
         setSelectedCat(''); setSelectedBote(''); setSelectedDist('');
-        setSelectedSex(''); setSelectedTime(''); setEditingId(null);
+        setSelectedSex(''); 
+        
+        // Suggest time for the next race automatically
+        if (pruebasActuales.length > 0) {
+            const sortedPruebas = [...pruebasActuales].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+            const lastPrueba = sortedPruebas[sortedPruebas.length - 1];
+            const lastTime = new Date(lastPrueba.fechaHora);
+            const nextTime = new Date(lastTime.getTime() + gapEntrePruebas * 60 * 1000);
+            const hours = String(nextTime.getHours()).padStart(2, '0');
+            const minutes = String(nextTime.getMinutes()).padStart(2, '0');
+            setSelectedTime(`${hours}:${minutes}`);
+        } else {
+            setSelectedTime('');
+        }
+        
+        setEditingId(null);
     };
 
     const handleAddPrueba = async () => {
-        if (!selectedCat || !selectedBote || !selectedDist || !selectedSex || !selectedDate || !selectedTime) return false;
+        if (!selectedCat || !selectedBote || !selectedDist || !selectedSex || !selectedDate) return false;
+        
+        let finalTime = selectedTime;
+        if (!finalTime) {
+            if (editingId) {
+                const currentEp = pruebasActuales.find(p => p.id === editingId);
+                if (currentEp) {
+                    const originalDate = new Date(currentEp.fechaHora);
+                    const hours = String(originalDate.getHours()).padStart(2, '0');
+                    const minutes = String(originalDate.getMinutes()).padStart(2, '0');
+                    finalTime = `${hours}:${minutes}`;
+                }
+            } else if (pruebasActuales.length > 0) {
+                const sortedPruebas = [...pruebasActuales].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+                const lastPrueba = sortedPruebas[sortedPruebas.length - 1];
+                const lastTime = new Date(lastPrueba.fechaHora);
+                const nextTime = new Date(lastTime.getTime() + gapEntrePruebas * 60 * 1000);
+                const hours = String(nextTime.getHours()).padStart(2, '0');
+                const minutes = String(nextTime.getMinutes()).padStart(2, '0');
+                finalTime = `${hours}:${minutes}`;
+            } else {
+                setModalConfig({
+                    show: true,
+                    title: 'Hora de inicio requerida',
+                    message: 'Debe ingresar la hora de inicio para la primera prueba del evento.',
+                    type: 'warning'
+                });
+                return false;
+            }
+        }
+
         setSaving(true);
         try {
             const payload = {
@@ -125,7 +185,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                 boteId: parseInt(selectedBote),
                 distanciaId: parseInt(selectedDist),
                 sexoId: parseInt(selectedSex),
-                fechaHora: new Date(`${selectedDate}T${selectedTime}:00`).toISOString()
+                fechaHora: new Date(`${selectedDate}T${finalTime}:00`).toISOString()
             };
             if (editingId) await PruebaService.updateAssign(editingId, payload);
             else await PruebaService.assignToEvento(evento.id, null, payload);

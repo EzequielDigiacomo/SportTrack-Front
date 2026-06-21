@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Edit2, Trash2, Copy, Calendar, MapPin, Unlock, Lock } from 'lucide-react';
+import { Settings, Edit2, Trash2, Radio, Calendar, MapPin, Unlock, Lock } from 'lucide-react';
 import StatusBadge from '../Common/StatusBadge';
 import EmptyState from '../Common/EmptyState';
 
@@ -36,7 +36,7 @@ const EventGrid = ({
                             </div>
                         </div>
                         <div className="evento-native-actions">
-                            <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Copy size={16} /></button>
+                            <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Radio size={16} /></button>
                             {isAdmin && (
                                 <>
                                     <button className="btn-icon-admin primary" onClick={() => onOpenDashboard(ev)} title="Dirigir"><Settings size={16} /></button>
@@ -81,7 +81,7 @@ const EventGrid = ({
                                 </td>
                                 <td><StatusBadge estado={ev.estado} /></td>
                                 <td className="actions-cell">
-                                    <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Copy size={18} /></button>
+                                    <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Radio size={18} /></button>
                                     {isAdmin && (
                                         <>
                                             <button className="btn-admin-primary" onClick={() => onOpenDashboard(ev)} title="Dirigir Carrera"><Settings size={16} /> Dirigir</button>
