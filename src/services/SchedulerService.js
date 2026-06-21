@@ -178,7 +178,26 @@ const SchedulerService = {
             const notReadyBlocks = [];
 
             eligibleBlocks.forEach(block => {
-                if (block.etapaOrden === 1) {
+                // Check for category/gender safety gap conflict (minimum 40 minutes rest between different events)
+                const { catId, sexId } = getCatAndSex(block.items[0]);
+                let hasCatSexConflict = false;
+                if (catId && sexId) {
+                    const lastFinish = lastCatSexTime[catId]?.[sexId];
+                    const lastOffset = lastCatSexDia[catId]?.[sexId];
+                    const lastPId = lastCatSexPruebaId[catId]?.[sexId];
+                    if (lastFinish !== undefined && lastOffset === currentDiaOffset) {
+                        if (lastPId !== block.pruebaId) {
+                            const elapsed = cursorMinutos - lastFinish;
+                            if (elapsed < 40) {
+                                hasCatSexConflict = true;
+                            }
+                        }
+                    }
+                }
+
+                if (hasCatSexConflict) {
+                    notReadyBlocks.push(block);
+                } else if (block.etapaOrden === 1) {
                     // Las Series de eliminación siempre están listas para arrancar según su turno original
                     readyBlocks.push(block);
                 } else if (block.etapaOrden === 2) {
@@ -253,8 +272,23 @@ const SchedulerService = {
                 let bestBlock = null;
 
                 notReadyBlocks.forEach(block => {
-                    const lastFinish = lastStageFinishTime[block.pruebaId];
-                    let readyTime = lastFinish !== undefined ? lastFinish + (gapRecuperacionMs / 60000) : cursorMinutos;
+                    // 1. Same-prueba recovery gap
+                    const lastFinishPrueba = lastStageFinishTime[block.pruebaId];
+                    let readyTimePrueba = lastFinishPrueba !== undefined ? lastFinishPrueba + (gapRecuperacionMs / 60000) : cursorMinutos;
+
+                    // 2. Category-sex recovery gap
+                    const { catId, sexId } = getCatAndSex(block.items[0]);
+                    let readyTimeCatSex = cursorMinutos;
+                    if (catId && sexId) {
+                        const lastFinishCS = lastCatSexTime[catId]?.[sexId];
+                        const lastOffsetCS = lastCatSexDia[catId]?.[sexId];
+                        const lastPIdCS = lastCatSexPruebaId[catId]?.[sexId];
+                        if (lastFinishCS !== undefined && lastOffsetCS === currentDiaOffset && lastPIdCS !== block.pruebaId) {
+                            readyTimeCatSex = lastFinishCS + 40;
+                        }
+                    }
+
+                    let readyTime = Math.max(readyTimePrueba, readyTimeCatSex);
 
                     // Si es una final, también debe cumplir la hora de inicio de finales preferencial
                     if (block.etapaOrden === 3) {
@@ -286,31 +320,6 @@ const SchedulerService = {
             for (let j = 0; j < selectedBlock.items.length; j++) {
                 const item = selectedBlock.items[j];
 
-                // Check and enforce category/sex gap (minimum 40 minutes)
-                const { catId, sexId } = getCatAndSex(item);
-                const currentPruebaId = getPruebaId(item);
-
-                if (catId && sexId) {
-                    if (!lastCatSexTime[catId]) {
-                        lastCatSexTime[catId] = {};
-                        lastCatSexDia[catId] = {};
-                        lastCatSexPruebaId[catId] = {};
-                    }
-                    const lastTime = lastCatSexTime[catId][sexId];
-                    const lastOffset = lastCatSexDia[catId][sexId];
-                    const lastPId = lastCatSexPruebaId[catId][sexId];
-
-                    if (lastTime !== undefined && lastOffset === currentDiaOffset) {
-                        // Only apply recovery gap if it is a DIFFERENT event (pruebaId)
-                        if (lastPId !== currentPruebaId) {
-                            const diff = cursorMinutos - lastTime;
-                            if (diff < 40) {
-                                cursorMinutos = lastTime + 40;
-                            }
-                        }
-                    }
-                }
-
                 // Corte diario de fin de jornada
                 if (cursorMinutos >= finEventoMin) {
                     currentDiaOffset++;
@@ -337,13 +346,6 @@ const SchedulerService = {
                     diaOffset: currentDiaOffset
                 });
 
-                // Update the last scheduled time for this category/sex
-                if (catId && sexId) {
-                    lastCatSexTime[catId][sexId] = cursorMinutos;
-                    lastCatSexDia[catId][sexId] = currentDiaOffset;
-                    lastCatSexPruebaId[catId][sexId] = currentPruebaId;
-                }
-
                 const gapItem = usarGapVariable ? (item.gapSugerido || 0) : 0;
                 const gapAplicar = gapItem > 0 ? gapItem : (gapBaseMs / 60000);
 
@@ -354,6 +356,20 @@ const SchedulerService = {
             // Registrar cuándo finalizó esta etapa de la categoría
             lastStageFinishTime[pId] = blockFinishTime;
             lastStageDiaOffset[pId] = currentDiaOffset;
+
+            // Registrar cuándo finalizó esta categoría y sexo (para evitar que otras pruebas se programen demasiado cerca)
+            const firstItem = selectedBlock.items[0];
+            const { catId, sexId } = getCatAndSex(firstItem);
+            if (catId && sexId) {
+                if (!lastCatSexTime[catId]) {
+                    lastCatSexTime[catId] = {};
+                    lastCatSexDia[catId] = {};
+                    lastCatSexPruebaId[catId] = {};
+                }
+                lastCatSexTime[catId][sexId] = blockFinishTime;
+                lastCatSexDia[catId][sexId] = currentDiaOffset;
+                lastCatSexPruebaId[catId][sexId] = pId;
+            }
         }
 
         return resultados;
