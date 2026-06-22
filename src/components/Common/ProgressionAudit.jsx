@@ -12,12 +12,7 @@ const ProgressionAudit = ({ eventoPrueba, auditData }) => {
   //   ...
   // ]
 
-  const data = auditData || [
-    { atleta: "Juan Pérez", eliminatoria: "Heat 2 (1º 👉 L5)", semifinal: "Semi 3 (2º 👉 L4)", final: "Final A (1º 👉 L6)", plan: "Plan D2" },
-    { atleta: "Carlos M.", eliminatoria: "Heat 5 (3º 👉 L7)", semifinal: "Semi 1 (1º 👉 L2)", final: "Final A (2º 👉 L5)", plan: "Plan D2" },
-    { atleta: "Luis F.", eliminatoria: "Heat 1 (5º 👉 L2) *(Next BT)*", semifinal: "Semi 2 (3º 👉 L9)", final: "Final A (3º 👉 L8)", plan: "Plan D2" }
-  ];
-
+  const data = auditData || [];
   return (
     <div className="progression-audit-container glass-effect">
       <h3>Auditoría de Progresión</h3>
@@ -44,7 +39,7 @@ const ProgressionAudit = ({ eventoPrueba, auditData }) => {
                 <td>{row.eliminatoria}</td>
                 <td>{row.semifinal}</td>
                 <td>{row.final}</td>
-                <td><span className="badge badge-light">{row.plan}</span></td>
+                <td><span className="badge badge-light">{eventoPrueba?.planProgresionAsignado || '—'}</span></td>
               </tr>
             ))}
           </tbody>
