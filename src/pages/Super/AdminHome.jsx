@@ -1338,6 +1338,11 @@ const AdminHome = () => {
                 );
             })()}
 
+            {/* Auditoría de Progresión - Vista Federación (Para Testing) */}
+            <div className="dashboard-content-row" style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
+                <ProgressionAudit eventoPrueba={{ nombre: 'K1 1000m Men', planProgresionAsignado: 'Plan D2' }} />
+            </div>
+
             <div className="admin-home-grid">
                 {fedCards.map(c => (
                     <div key={c.id} className="admin-home-card glass-effect" onClick={() => navTo(c.id)}>
