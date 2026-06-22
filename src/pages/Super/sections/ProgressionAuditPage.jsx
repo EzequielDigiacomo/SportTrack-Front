@@ -19,6 +19,17 @@ const ProgressionAuditPage = () => {
     const [auditData, setAuditData] = useState([]);
     const [eventoPruebaMetaData, setEventoPruebaMetaData] = useState(null);
 
+    const formatPruebaName = (pr) => {
+        if (pr.nombre) return pr.nombre;
+        const inner = pr.prueba || pr;
+        if (!inner) return `Prueba #${pr.id}`;
+        const catName = inner.categoria?.nombre || 'Cat';
+        const botName = inner.bote?.tipo || 'Bote';
+        const distName = inner.distancia?.metros ? `${inner.distancia.metros}m` : 'Dist';
+        const sexName = inner.sexoNombre || 'Mixto';
+        return `${catName} - ${botName} - ${distName} - ${sexName}`;
+    };
+
     // 1. Cargar Eventos
     useEffect(() => {
         const loadEventos = async () => {
@@ -65,7 +76,7 @@ const ProgressionAuditPage = () => {
             const pruebaSeleccionada = pruebas.find(p => String(p.id) === String(selectedPruebaId));
             if (pruebaSeleccionada) {
                 setEventoPruebaMetaData({
-                    nombre: pruebaSeleccionada.nombre || 'Prueba Seleccionada',
+                    nombre: formatPruebaName(pruebaSeleccionada),
                     planProgresionAsignado: pruebaSeleccionada.planProgresionAsignado || 'Sin Plan Asignado'
                 });
             }
@@ -127,7 +138,7 @@ const ProgressionAuditPage = () => {
                     >
                         <option value="">-- Elige una Prueba --</option>
                         {pruebas.map(pr => (
-                            <option key={pr.id} value={pr.id}>{pr.nombre}</option>
+                            <option key={pr.id} value={pr.id}>{formatPruebaName(pr)}</option>
                         ))}
                     </select>
                 </div>
