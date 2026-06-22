@@ -68,12 +68,16 @@ const ProgressionAuditPage = () => {
         if (!selectedPruebaId) return;
         setLoading(true);
         try {
+            // Recargar pruebas para asegurar que tenemos el PlanProgresionAsignado más reciente
+            const freshPruebas = await PruebaService.getByEvento(selectedEventoId);
+            setPruebas((freshPruebas || []).sort((a,b) => new Date(a.fechaHora) - new Date(b.fechaHora)));
+
             const [inscs, fs] = await Promise.all([
                 InscripcionService.getByEventoPrueba(selectedPruebaId),
                 FaseService.getByEventoPrueba(selectedPruebaId)
             ]);
             
-            const pruebaSeleccionada = pruebas.find(p => String(p.id) === String(selectedPruebaId));
+            const pruebaSeleccionada = (freshPruebas || []).find(p => String(p.id) === String(selectedPruebaId));
             if (pruebaSeleccionada) {
                 setEventoPruebaMetaData({
                     nombre: formatPruebaName(pruebaSeleccionada),
