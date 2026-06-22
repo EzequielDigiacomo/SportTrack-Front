@@ -14,6 +14,7 @@ import SoporteSection from './sections/SoporteSection';
 import SaaSManagement from './sections/SaaSManagement';
 import ControlesSection from '../ClubAdmin/sections/ControlesSection';
 import GestionPagosSection from './sections/GestionPagosSection';
+import ProgressionAuditPage from './sections/ProgressionAuditPage';
 
 
 import { 
@@ -28,7 +29,8 @@ import {
     Menu,
     Terminal as TerminalIcon,
     Cloud,
-    CreditCard
+    CreditCard,
+    FileText
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -42,6 +44,7 @@ const NAV_ITEMS = [
     { id: 'controles', path: 'controles', icon: <Timer size={20} />, label: 'Controles Técnicos' },
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
+    { id: 'auditoria', path: 'auditoria', icon: <FileText size={20} />, label: 'Auditoría Progresión' },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true },
     { id: 'saas', path: 'saas', icon: <Cloud size={20} />, label: 'Suscripciones SaaS', isSupport: true },
     { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
@@ -166,6 +169,7 @@ const SuperDashboard = () => {
                         <Route path="atletas" element={<GestionAtletasSection />} />
                         <Route path="pagos" element={<GestionPagosSection />} />
                         <Route path="resultados" element={<GestionResultadosSection />} />
+                        <Route path="auditoria" element={<ProgressionAuditPage />} />
                         <Route path="configuracion" element={<ConfiguracionSection />} />
                         <Route path="saas" element={<SaaSManagement />} />
                         <Route path="federacion/:id" element={<AdminHome />} />

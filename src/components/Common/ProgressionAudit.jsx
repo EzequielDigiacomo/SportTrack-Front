@@ -19,35 +19,37 @@ const ProgressionAudit = ({ eventoPrueba, auditData }) => {
   ];
 
   return (
-    <div className="progression-audit-container">
+    <div className="progression-audit-container glass-effect">
       <h3>Auditoría de Progresión</h3>
       <div className="audit-header">
         <p><strong>Evento:</strong> {eventoPrueba.nombre || 'K1 1000m Men'}</p>
         <p><strong>Plan Asignado al Evento:</strong> <span className="badge">{eventoPrueba.planProgresionAsignado || 'Plan D2'}</span></p>
       </div>
 
-      <table className="audit-table">
-        <thead>
-          <tr>
-            <th>Atleta</th>
-            <th>Eliminatoria (Origen)</th>
-            <th>Semifinal (Paso Intermedio)</th>
-            <th>Final A (Destino)</th>
-            <th>Plan Utilizado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, idx) => (
-            <tr key={idx}>
-              <td><strong>{row.atleta}</strong></td>
-              <td>{row.eliminatoria}</td>
-              <td>{row.semifinal}</td>
-              <td>{row.final}</td>
-              <td><span className="badge badge-light">{row.plan}</span></td>
+      <div className="audit-table-wrapper">
+        <table className="audit-table">
+          <thead>
+            <tr>
+              <th>Atleta</th>
+              <th>Eliminatoria (Origen)</th>
+              <th>Semifinal (Paso Intermedio)</th>
+              <th>Final A (Destino)</th>
+              <th>Plan Utilizado</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row, idx) => (
+              <tr key={idx}>
+                <td><strong>{row.atleta}</strong></td>
+                <td>{row.eliminatoria}</td>
+                <td>{row.semifinal}</td>
+                <td>{row.final}</td>
+                <td><span className="badge badge-light">{row.plan}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

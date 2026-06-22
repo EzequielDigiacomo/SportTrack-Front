@@ -1,65 +1,100 @@
 .progression-audit-container {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-top: 20px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-top: 1rem;
+    color: var(--color-text-primary);
 }
 
 .progression-audit-container h3 {
-  margin-top: 0;
-  color: #333;
+    margin-top: 0;
+    color: var(--color-text-primary);
+    font-weight: 700;
 }
 
 .audit-header {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  background: #f8f9fa;
-  padding: 10px 15px;
-  border-radius: 4px;
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border);
+    padding: 12px 20px;
+    border-radius: 12px;
 }
 
 .audit-header p {
-  margin: 0;
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.audit-header strong {
+    color: var(--color-text-primary);
+}
+
+.audit-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
 }
 
 .audit-table {
-  width: 100%;
-  border-collapse: collapse;
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-bg-primary);
 }
 
 .audit-table th, .audit-table td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: left;
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
 }
 
 .audit-table th {
-  background-color: #f1f3f5;
-  font-weight: 600;
-  color: #495057;
+    background-color: rgba(255, 255, 255, 0.03);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
 }
 
-.audit-table tr:hover {
-  background-color: #f8f9fa;
+.audit-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.audit-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.audit-table td {
+    color: var(--color-text-primary);
+    font-size: 0.85rem;
+}
+
+.audit-table td strong {
+    color: var(--color-primary-light);
+    font-weight: 600;
 }
 
 .badge {
-  display: inline-block;
-  padding: 0.25em 0.4em;
-  font-size: 75%;
-  font-weight: 700;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-  vertical-align: baseline;
-  border-radius: 0.25rem;
-  background-color: #007bff;
-  color: white;
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.5rem;
+    background-color: var(--color-primary);
+    color: white;
 }
 
 .badge-light {
-  background-color: #e2e3e5;
-  color: #383d41;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
 }
