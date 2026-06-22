@@ -24,6 +24,7 @@ import SupportService from '../../services/SupportService';
 import { History, Clock, FileText, AlertCircle, User, AlertTriangle, Trophy, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
+import ProgressionAudit from '../../components/Common/ProgressionAudit';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -607,9 +608,19 @@ const AdminHome = () => {
                                     >
                                         <CreditCard size={13} /> SaaS
                                     </button>
+                                    <button 
+                                        onClick={() => setActiveTab('auditoria')}
+                                        className={`saas-tab-btn ${activeTab === 'auditoria' ? 'active' : ''}`}
+                                    >
+                                        <FileText size={13} /> Auditoría
+                                    </button>
                                 </div>
 
-                                {activeTab === 'agenda' ? (
+                                {activeTab === 'auditoria' ? (
+                                    <div style={{ padding: '0.5rem', overflowY: 'auto' }}>
+                                        <ProgressionAudit eventoPrueba={{ nombre: 'K1 1000m Men', planProgresionAsignado: 'Plan D2' }} />
+                                    </div>
+                                ) : activeTab === 'agenda' ? (
                                     <>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', paddingBottom: '0.4rem' }}>
                                             <h5 style={{ margin: 0, fontWeight: 800, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>
