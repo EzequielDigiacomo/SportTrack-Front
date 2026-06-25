@@ -51,10 +51,34 @@ const getTimeStr = (fase) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const getCrew = (r) => {
-    if (r.tripulantes?.length > 0)
-        return [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].join(' / ');
-    return r.participanteNombre || '-';
+const getSoloApellido = (nombreCompleto) => {
+    if (!nombreCompleto) return "-";
+    const parts = nombreCompleto.trim().split(' ');
+    return parts[parts.length - 1];
+};
+
+const isBoteK4 = (fase) => {
+    const p = fase?.prueba?.prueba || fase?.prueba || fase;
+    if (!p) return false;
+    const bote = p.bote;
+    if (!bote) return false;
+    if (bote.id === 3 || bote.id === 6) return true; // K4 or C4
+    const name = bote.nombre || '';
+    return name.toUpperCase().includes('4');
+};
+
+const getCrew = (r, fase) => {
+    const mainName = r.participanteNombre;
+    const trips = r.tripulantes || [];
+    const names = trips.length > 0
+        ? [mainName, ...trips.map(t => t.participanteNombreCompleto || t.participanteNombre)]
+        : [mainName];
+
+    if (isBoteK4(fase)) {
+        return names.map(n => getSoloApellido(n)).join(' - ');
+    } else {
+        return names.join(' - ');
+    }
 };
 
 // ─── Shared layout constants ──────────────────────────────────────────────────
@@ -148,7 +172,7 @@ const buildStartRows = (fase) => {
     if (!fase.resultados?.length) return [['-', 'A definir', '-']];
     return [...fase.resultados]
         .sort((a, b) => (a.carril || 99) - (b.carril || 99))
-        .map(r => [r.carril ?? '-', getCrew(r), r.clubNombre || r.clubSigla || '-']);
+        .map(r => [r.carril ?? '-', getCrew(r, fase), r.clubNombre || r.clubSigla || '-']);
 };
 
 /** Result rows: [pos, carril, atleta, club, tiempo] sorted by position */
@@ -159,7 +183,7 @@ const buildResultRows = (fase) => {
         .map(r => [
             r.posicion || '-',
             r.carril   || '-',
-            getCrew(r),
+            getCrew(r, fase),
             r.clubNombre || r.clubSigla || '-',
             formatTime(r.tiempoOficial),
         ]);

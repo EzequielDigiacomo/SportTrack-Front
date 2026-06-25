@@ -55,6 +55,16 @@ const getSoloApellido = (nombreCompleto) => {
     return parts[parts.length - 1];
 };
 
+const isBoteK4 = (fase) => {
+    const p = fase?.prueba?.prueba || fase?.prueba || fase;
+    if (!p) return false;
+    const bote = p.bote;
+    if (!bote) return false;
+    if (bote.id === 3 || bote.id === 6) return true; // K4 or C4
+    const name = bote.nombre || '';
+    return name.toUpperCase().includes('4');
+};
+
 const ResultadosTable = ({ 
     fase, 
     tiemposLocales, 
@@ -133,10 +143,17 @@ const ResultadosTable = ({
                                     <td className="col-atleta">
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             <strong style={{ color: 'white', fontSize: '1.05rem' }}>
-                                                {res.tripulantes && res.tripulantes.length > 0 
-                                                    ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombre)].join(' - ')
-                                                    : res.participanteNombre
-                                                }
+                                                {(() => {
+                                                    const names = res.tripulantes && res.tripulantes.length > 0 
+                                                        ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)]
+                                                        : [res.participanteNombre];
+                                                    
+                                                    if (isBoteK4(fase)) {
+                                                        return names.map(n => getSoloApellido(n)).join(' - ');
+                                                    } else {
+                                                        return names.join(' - ');
+                                                    }
+                                                })()}
                                             </strong>
                                             {res.tripulantes && res.tripulantes.length > 0 && (
                                                 <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: '2px', letterSpacing: '0.5px' }}>
@@ -232,6 +249,9 @@ const ResultadosTable = ({
                         const local = tiemposLocales[res.id] || {};
                         const displayTime = formatTime(local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial);
                         const displayPos = local.posicion !== undefined ? local.posicion : (res.posicion || '');
+                        const displayCarril = local.carril !== undefined ? local.carril : (res.carril || '');
+                        const displayNombre = local.participanteNombre !== undefined ? local.participanteNombre : (res.participanteNombre || '');
+                        const displayClub = local.clubSigla !== undefined ? local.clubSigla : (res.clubSigla || '');
                         
                         const status = local.estadoCanto || res.estado;
                         const isSpecialStatus = status && !['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(status);
@@ -254,22 +274,38 @@ const ResultadosTable = ({
                                         />
                                     )}
                                 </td>
-                                <td className="col-carril text-center" style={{ fontWeight: 'bold' }}>
-                                    {res.carril || '-'}
+                                <td className="col-carril text-center">
+                                    <input 
+                                        type="number"
+                                        className="admin-input-small"
+                                        value={displayCarril}
+                                        onChange={(e) => onResultChange(res.id, 'carril', e.target.value)}
+                                        disabled={isLocked}
+                                        style={{ textAlign: 'center', width: '50px', fontWeight: 'bold' }}
+                                    />
                                 </td>
                                 <td className="col-atleta">
-                                    <div className="atleta-info-wrapper">
-                                        <span className="atleta-names">
-                                            {res.tripulantes && res.tripulantes.length > 0 
-                                                ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                                : getSoloApellido(res.participanteNombre)
-                                            }
-                                        </span>
+                                    <div className="atleta-info-wrapper" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input 
+                                            type="text"
+                                            className="admin-input-small"
+                                            value={displayNombre}
+                                            onChange={(e) => onResultChange(res.id, 'participanteNombre', e.target.value)}
+                                            disabled={isLocked}
+                                            style={{ width: '100%', minWidth: '150px' }}
+                                        />
                                         {isOfficial && <span className="official-badge">Oficial</span>}
                                     </div>
                                 </td>
                                 <td className="col-club">
-                                    <span className="chip chip-ecu-blue">{res.clubSigla}</span>
+                                    <input 
+                                        type="text"
+                                        className="admin-input-small"
+                                        value={displayClub}
+                                        onChange={(e) => onResultChange(res.id, 'clubSigla', e.target.value)}
+                                        disabled={isLocked}
+                                        style={{ textAlign: 'center', width: '70px', fontWeight: 'bold' }}
+                                    />
                                 </td>
                                 <td className="col-tiempo">
                                     {isSpecialStatus ? (

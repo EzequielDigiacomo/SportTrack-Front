@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import SupportService from '../../../services/SupportService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import SaaSManagement from './SaaSManagement';
+import BackupService from '../../../services/BackupService';
+import { useToast } from '../../../context/ToastContext';
 import { 
     AlertCircle, 
     Trash2, 
@@ -17,7 +19,8 @@ import {
     Smartphone,
     Globe as GlobeIcon,
     Cpu,
-    Info
+    Info,
+    Database
 } from 'lucide-react';
 import { parseUserAgent } from '../../../utils/deviceUtils';
 import './SoporteSection.css';
@@ -29,6 +32,22 @@ const SoporteSection = () => {
     const [expandedLog, setExpandedLog] = useState(null);
     const [confirmClear, setConfirmClear] = useState(false);
     const [filter, setFilter] = useState('');
+    const { addToast } = useToast();
+    const [isBackingUp, setIsBackingUp] = useState(false);
+
+    const handleDownloadBackup = async () => {
+        setIsBackingUp(true);
+        addToast("Generando respaldo de la base de datos...", "info");
+        try {
+            await BackupService.downloadDatabase();
+            addToast("Respaldo descargado exitosamente", "success");
+        } catch (error) {
+            console.error(error);
+            addToast("Error al descargar: verifica que el backend de Render esté actualizado.", "error");
+        } finally {
+            setIsBackingUp(false);
+        }
+    };
 
     const loadLogs = async () => {
         setLoading(true);
@@ -89,6 +108,23 @@ const SoporteSection = () => {
                             <p className="section-desc">Monitoreo de errores del sistema y auditoría técnica.</p>
                         </div>
                         <div className="header-actions">
+                            <button 
+                                className="btn-admin-primary" 
+                                onClick={handleDownloadBackup} 
+                                disabled={isBackingUp}
+                                style={{ 
+                                    background: 'linear-gradient(135deg, var(--color-accent-orange), #f97316)', 
+                                    borderColor: 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontWeight: 'bold'
+                                }}
+                                title="Generar un respaldo SQL completo de la base de datos PostgreSQL de Render"
+                            >
+                                {isBackingUp ? <RefreshCcw size={16} className="spin" /> : <Database size={16} />}
+                                {isBackingUp ? "Generando Backup..." : "Descargar DB (Backup)"}
+                            </button>
                             <button className="btn-admin-secondary" onClick={loadLogs} disabled={loading}>
                                 <RefreshCcw size={16} className={loading ? 'spin' : ''} /> Actualizar
                             </button>

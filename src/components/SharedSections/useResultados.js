@@ -214,7 +214,10 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 f.resultados.forEach(r => {
                     tls[r.id] = {
                         tiempoOficial: r.tiempoOficial || '',
-                        posicion: r.posicion || ''
+                        posicion: r.posicion || '',
+                        carril: r.carril || '',
+                        participanteNombre: r.participanteNombre || '',
+                        clubSigla: r.clubSigla || ''
                     };
                 });
             });
@@ -395,24 +398,32 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 const item = tiemposLocales[id];
                 if (!item) continue;
 
-                const t = item.tiempoOficial || '';
+                const t = item.tiempoOficial;
                 const p = item.posicion;
+                const c = item.carril;
+                const n = item.participanteNombre;
+                const s = item.clubSigla;
                 
-                // Solo procesar si tiene algo
-                if (!t && !p) continue;
+                // Solo procesar si tiene alguna modificación
+                if (t === undefined && p === undefined && c === undefined && n === undefined && s === undefined) continue;
 
                 let totalMs = 99999999;
-                const parts = String(t).split(':');
-                if (parts.length === 2) {
-                    const [m, sFull] = parts;
-                    const [s, ms] = (sFull || '0').split('.');
-                    totalMs = (parseInt(m) * 60000) + (parseInt(s) * 1000) + (parseInt((ms || '0').substring(0,3).padEnd(3,'0')));
+                if (t) {
+                    const parts = String(t).split(':');
+                    if (parts.length === 2) {
+                        const [m, sFull] = parts;
+                        const [s, ms] = (sFull || '0').split('.');
+                        totalMs = (parseInt(m) * 60000) + (parseInt(s) * 1000) + (parseInt((ms || '0').substring(0,3).padEnd(3,'0')));
+                    }
                 }
 
                 resultsToSave.push({
                     id: parseInt(id),
                     tiempoOficial: t,
                     posicion: p,
+                    carril: c,
+                    participanteNombre: n,
+                    clubSigla: s,
                     totalMs
                 });
             }
@@ -434,8 +445,11 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
             const dto = resultsToSave.map(r => ({
                 id: r.id,
-                tiempoOficial: parseTimeToTimeSpan(r.tiempoOficial),
-                posicion: r.posicion ? parseInt(r.posicion) : null
+                tiempoOficial: r.tiempoOficial ? parseTimeToTimeSpan(r.tiempoOficial) : null,
+                posicion: r.posicion ? parseInt(r.posicion) : null,
+                carril: r.carril ? parseInt(r.carril) : null,
+                participanteNombre: r.participanteNombre || null,
+                clubSigla: r.clubSigla || null
             }));
 
             setMessage(`⏳ Enviando ${dto.length} resultados...`);

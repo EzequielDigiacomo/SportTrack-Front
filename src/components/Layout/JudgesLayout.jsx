@@ -160,10 +160,9 @@ const JudgesLayout = ({ children }) => {
                 </header>
             )}
 
-            {/* Portal target for the Global Sync Bar */}
-            <div id="global-sync-bar-portal-target"></div>
-
             <main className="admin-main" style={!isAdmin ? { marginLeft: 0, width: '100%' } : {}}>
+                {/* Portal target for the Global Sync Bar */}
+                <div id="global-sync-bar-portal-target"></div>
                 <div className="admin-content-wrapper" style={!isAdmin ? { padding: '1rem' } : {}}>
                     {children}
                 </div>

@@ -14,7 +14,8 @@ import {
     Eye,
     CreditCard,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    DownloadCloud
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';

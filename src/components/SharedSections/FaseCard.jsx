@@ -20,6 +20,15 @@ const DISTANCIA_NAMES = {
 };
 const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
+const isBoteK4 = (fase) => {
+    const p = fase?.prueba?.prueba || fase?.prueba || fase;
+    if (!p) return false;
+    const boteId = p.bote?.id;
+    if (boteId === 3 || boteId === 6) return true;
+    const boteName = p.bote?.nombre || BOTE_NAMES[boteId] || '';
+    return boteName.toUpperCase().includes('4');
+};
+
 const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName = false, pruebaNro = null }) => {
     if (filtroVisualFase !== 'Todas' && filtroVisualFase !== 'Cronograma' && fase.nombreFase !== filtroVisualFase) return null;
 
@@ -82,10 +91,17 @@ const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName =
                         <tr key={res.id}>
                             <td className="text-center" style={{ fontWeight: 'bold' }}>{res.carril || '-'}</td>
                             <td>
-                                {res.tripulantes && res.tripulantes.length > 0 
-                                    ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].map(n => getSoloApellido(n)).join(' - ')
-                                    : getSoloApellido(res.participanteNombre)
-                                }
+                                {(() => {
+                                    const names = res.tripulantes && res.tripulantes.length > 0 
+                                        ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)]
+                                        : [res.participanteNombre];
+                                    
+                                    if (isBoteK4(fase)) {
+                                        return names.map(n => getSoloApellido(n)).join(' - ');
+                                    } else {
+                                        return names.join(' - ');
+                                    }
+                                })()}
                             </td>
                             <td><span className="chip chip-ecu-blue">{res.clubSigla || res.clubNombre}</span></td>
                         </tr>

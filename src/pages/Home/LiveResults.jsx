@@ -75,6 +75,22 @@ const getSexName = (p) => {
     return innerPrueba.sexo?.nombre || innerPrueba.sexoNombre || p.sexoNombre || 'Mixto';
 };
 
+const getSoloApellido = (nombreCompleto) => {
+    if (!nombreCompleto) return "-";
+    const parts = nombreCompleto.trim().split(' ');
+    return parts[parts.length - 1];
+};
+
+const isBoteK4 = (fase) => {
+    const p = fase?.prueba?.prueba || fase?.prueba || fase;
+    if (!p) return false;
+    const bote = p.bote;
+    if (!bote) return false;
+    if (bote.id === 3 || bote.id === 6) return true; // K4 or C4
+    const name = bote.nombre || '';
+    return name.toUpperCase().includes('4');
+};
+
 const LiveResults = () => {
     const { id } = useParams();
     const [evento, setEvento] = useState(null);
@@ -783,7 +799,21 @@ const LiveResults = () => {
                                                             <td className="carril-cell">{r.carril || r.Carril || '-'}</td>
                                                             <td>
                                                                 <div className="athlete-info">
-                                                                    <span className="name">{r.participanteNombre || r.ParticipanteNombre}</span>
+                                                                    <span className="name">
+                                                                        {(() => {
+                                                                            const mainName = r.participanteNombre || r.ParticipanteNombre;
+                                                                            const trips = r.tripulantes || [];
+                                                                            const names = trips.length > 0 
+                                                                                ? [mainName, ...trips.map(t => t.participanteNombreCompleto || t.participanteNombre)]
+                                                                                : [mainName];
+                                                                            
+                                                                            if (isBoteK4(selectedFase)) {
+                                                                                return names.map(n => getSoloApellido(n)).join(' - ');
+                                                                            } else {
+                                                                                return names.join(' - ');
+                                                                            }
+                                                                        })()}
+                                                                    </span>
                                                                 </div>
                                                             </td>
                                                             <td>

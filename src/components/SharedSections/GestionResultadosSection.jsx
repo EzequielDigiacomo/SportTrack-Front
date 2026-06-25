@@ -120,7 +120,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                     sigRole = "Juez de Control";
                 }
 
-                await timingSignalRService.connect(selectedEvento?.id, faseSeleccionadaParaSync?.id, name, sigRole);
+                await timingSignalRService.connect(selectedEvento, faseSeleccionadaParaSync?.id, name, sigRole);
                 if (!isMounted) return;
 
                 // 1. Sincronizar el temporizador si ya inició
@@ -193,7 +193,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
             timingSignalRService.disconnect();
             stopLocalTimer();
         };
-    }, [selectedEvento?.id, faseSeleccionadaParaSync?.id, viewMode]);
+    }, [selectedEvento, faseSeleccionadaParaSync?.id, viewMode]);
 
     // Funciones movidas arriba
 
