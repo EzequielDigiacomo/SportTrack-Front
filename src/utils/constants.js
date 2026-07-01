@@ -18,6 +18,9 @@ export const ENDPOINTS = {
     // Clubes
     CLUBES: '/clubes',
 
+    // Federaciones
+    FEDERACIONES: '/federaciones',
+
     // Eventos
     EVENTOS: {
         BASE: '/eventos',
