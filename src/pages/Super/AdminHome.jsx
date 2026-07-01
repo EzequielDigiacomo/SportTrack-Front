@@ -855,7 +855,7 @@ const AdminHome = () => {
                             <button className="btn-view-all" style={{ margin: 0, padding: '6px 14px', fontSize: '0.8rem' }} onClick={() => navigate('/super/saas')}>Gestionar Federaciones</button>
                         </div>
                         <div className="entities-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-                            {globalStats.topFederaciones.map((fed, idx) => {
+                            {(globalStats.topFederaciones || []).map((fed, idx) => {
                                 const fedId = getFederationIdByName(fed.nombre);
                                 const palette = getFederationPalette(fedId);
                                 return (
