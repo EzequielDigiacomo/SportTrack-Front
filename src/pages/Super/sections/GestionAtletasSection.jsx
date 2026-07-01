@@ -5,6 +5,7 @@ import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import SearchBox from '../../../components/Common/SearchBox';
+import CustomSelect from '../../../components/Common/CustomSelect';
 import AtletaGrid from './AtletaGrid';
 import AtletaForm from './AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
@@ -255,18 +256,17 @@ const GestionAtletasSection = () => {
                 <div className="admin-filters-bar glass-effect fade-in">
                     <div className="admin-filter-item">
                         <Filter size={18} className="filter-icon" />
-                        <select 
-                            className="filter-select"
+                        <CustomSelect 
                             value={selectedClub} 
-                            onChange={(e) => setSelectedClub(e.target.value)}
-                        >
-                            <option value="">Todos los Clubes</option>
-                            <option value="__SIN_CLUB__">Sin Club asignado</option>
-                            {clubes
-                                .filter(c => !fedIdFromUrl || c.id === parseInt(fedIdFromUrl) || c.parentClubId === parseInt(fedIdFromUrl))
-                                .map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)
-                            }
-                        </select>
+                            onChange={(val) => setSelectedClub(val)}
+                            options={[
+                                { value: '', label: 'Todos los Clubes' },
+                                { value: '__SIN_CLUB__', label: 'Sin Club asignado' },
+                                ...clubes
+                                    .filter(c => !fedIdFromUrl || c.id === parseInt(fedIdFromUrl) || c.parentClubId === parseInt(fedIdFromUrl))
+                                    .map(c => ({ value: c.nombre, label: c.nombre }))
+                            ]}
+                        />
                     </div>
                     <SearchBox 
                         placeholder="Busca por nombre, DNI o categoría..."
@@ -290,9 +290,9 @@ const GestionAtletasSection = () => {
                         
                         {filteredAtletas.length > rowsPerPage && (
                             <div className="admin-pagination">
-                                <button className="btn-admin-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Anterior</button>
-                                <span className="page-indicator">Página <b>{currentPage}</b> de {totalPages}</span>
-                                <button className="btn-admin-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Siguiente</button>
+                                <button className="btn-pagination" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Anterior</button>
+                                <span className="pagination-info">Página <strong>{currentPage}</strong> de {totalPages}</span>
+                                <button className="btn-pagination" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Siguiente</button>
                             </div>
                         )}
                     </>
@@ -351,20 +351,16 @@ const GestionAtletasSection = () => {
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
                                 Seleccionar Club
                             </label>
-                            <select
-                                className="admin-select"
+                            <CustomSelect
                                 value={assignModal.clubId}
-                                onChange={e => setAssignModal(prev => ({ ...prev, clubId: e.target.value }))}
-                                style={{ width: '100%' }}
-                            >
-                                <option value="">-- Elegir un club --</option>
-                                {clubes
-                                    .filter(c => c.parentClubId && (!fedIdFromUrl || c.parentClubId === parseInt(fedIdFromUrl)))
-                                    .map(c => (
-                                        <option key={c.id} value={c.id}>{c.nombre}</option>
-                                    ))
-                                }
-                            </select>
+                                onChange={val => setAssignModal(prev => ({ ...prev, clubId: val }))}
+                                options={[
+                                    { value: '', label: '-- Elegir un club --' },
+                                    ...clubes
+                                        .filter(c => c.parentClubId && (!fedIdFromUrl || c.parentClubId === parseInt(fedIdFromUrl)))
+                                        .map(c => ({ value: c.id, label: c.nombre }))
+                                ]}
+                            />
                         </div>
                         <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
                             <button className="btn-admin-secondary"

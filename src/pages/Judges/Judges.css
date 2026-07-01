@@ -53,8 +53,8 @@
 }
 
 .judge-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     padding: var(--spacing-xl);
     text-align: center;
@@ -64,12 +64,14 @@
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
 }
 
 .judge-card:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--color-surface-hover);
     transform: translateY(-5px);
     border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
 }
 
 .card-icon {
@@ -94,20 +96,65 @@
     border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
+.control .card-icon {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+    border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.manual-timing .card-icon {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
 .btn-judge {
     margin-top: auto;
     padding: var(--spacing-sm) var(--spacing-lg);
     border-radius: var(--radius-full);
-    border: none;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
     font-weight: 600;
     transition: all 0.2s ease;
 }
 
-.judge-card:hover .btn-judge {
-    background: var(--color-primary);
+/* Tinted Buttons Default State */
+.starter .btn-judge {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
 }
+.finisher .btn-judge {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+.control .btn-judge {
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+    border-color: rgba(14, 165, 233, 0.2);
+}
+.manual-timing .btn-judge {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+/* Hover States */
+.starter:hover .btn-judge { background: #ef4444; color: white; border-color: #ef4444; }
+.finisher:hover .btn-judge { background: #3b82f6; color: white; border-color: #3b82f6; }
+.control:hover .btn-judge { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+.manual-timing:hover .btn-judge { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+.judge-card:hover {
+    border-color: var(--color-border);
+}
+
+.starter:hover { border-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+.finisher:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+.control:hover { border-color: #0ea5e9; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2); }
+.manual-timing:hover { border-color: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
 
 .judges-info {
     padding: var(--spacing-md);

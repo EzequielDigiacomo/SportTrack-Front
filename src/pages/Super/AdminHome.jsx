@@ -539,7 +539,7 @@ const AdminHome = () => {
 
                                                 const dayTitle = [
                                                     hasExps ? `Vencimientos (${dayExps.length}): ${dayExps.map(e => e.clubNombre).join(', ')}` : null,
-                                                    hasEvts ? `Eventos (${dayEvts.length}): ${dayEvts.map(e => e.nombre).join(', ')}` : null
+                                                    hasEvts ? dayEvts.map(e => e.nombre).join(', ') : null
                                                 ].filter(Boolean).join(' | ');
 
                                                 return (
@@ -1231,7 +1231,7 @@ const AdminHome = () => {
                                             }
 
                                             const dayTitle = hasEvts 
-                                                ? `Eventos (${dayEvts.length}): ${dayEvts.map(e => e.nombre).join(', ')}` 
+                                                ? dayEvts.map(e => e.nombre).join(', ') 
                                                 : `Día ${day}`;
 
                                             return (

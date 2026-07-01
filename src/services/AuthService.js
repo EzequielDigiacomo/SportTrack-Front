@@ -24,6 +24,11 @@ const AuthService = {
         return response.data;
     },
 
+    updatePerfil: async (id, data) => {
+        const response = await api.put(`/auth/usuarios/${id}/perfil`, data);
+        return response.data;
+    },
+
     toggleActivo: async (id) => {
         const response = await api.patch(`/auth/usuarios/${id}/toggle-activo`);
         return response.data;

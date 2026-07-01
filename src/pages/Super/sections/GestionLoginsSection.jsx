@@ -20,7 +20,7 @@ const GestionLoginsSection = () => {
     const [usuarios, setUsuarios] = useState([]);
     const [clubes, setClubes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar'
+    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'editarPerfil'
     const [selectedUser, setSelectedUser] = useState(null);
     const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
     const [saving, setSaving] = useState(false);
@@ -66,6 +66,12 @@ const GestionLoginsSection = () => {
         setView('editar');
     };
 
+    const handleOpenEditarPerfil = (user) => {
+        setSelectedUser(user);
+        setForm({ username: user.username, email: user.email || '', nombre: user.nombre || '', apellido: user.apellido || '', dni: user.dni || '', telefono: user.telefono || '' });
+        setView('editarPerfil');
+    };
+
     const handleFieldChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
     };
@@ -78,7 +84,7 @@ const GestionLoginsSection = () => {
                 showAlert('error', 'Las contraseñas no coinciden');
                 return;
             }
-        } else {
+        } else if (view === 'crear') {
             if (form.password !== form.confirmPassword) {
                 showAlert('error', 'Las contraseñas no coinciden');
                 return;
@@ -90,6 +96,15 @@ const GestionLoginsSection = () => {
             if (view === 'editar') {
                 await AuthService.updatePassword(selectedUser.id, form.newPassword);
                 showAlert('success', 'Contraseña actualizada correctamente');
+            } else if (view === 'editarPerfil') {
+                await AuthService.updatePerfil(selectedUser.id, {
+                    nombre: form.nombre,
+                    apellido: form.apellido,
+                    dni: form.dni,
+                    telefono: form.telefono,
+                    email: form.email
+                });
+                showAlert('success', 'Perfil actualizado correctamente');
             } else {
                 let finalClubId = null;
                 if (user?.rol === 'Admin') {
@@ -183,6 +198,7 @@ const GestionLoginsSection = () => {
                     <LoginGrid 
                         usuarios={filteredUsuarios} 
                         onEditPassword={handleOpenEditar}
+                        onEditProfile={handleOpenEditarPerfil}
                         onToggleActivo={handleToggleActivo}
                     />
                 )
@@ -192,6 +208,7 @@ const GestionLoginsSection = () => {
                     clubes={filteredClubes}
                     saving={saving}
                     isEditing={view === 'editar'}
+                    isEditingProfile={view === 'editarPerfil'}
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}

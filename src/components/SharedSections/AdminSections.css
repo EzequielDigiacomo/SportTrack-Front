@@ -949,6 +949,8 @@ form:invalid button[type="submit"] {
     border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-xl);
     flex-wrap: wrap;
+    position: relative;
+    z-index: 50;
 }
 
 .admin-section-container {
@@ -963,30 +965,35 @@ form:invalid button[type="submit"] {
     gap: 1.5rem;
     padding: 1rem;
     margin-bottom: 2.5rem;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid var(--color-surface-hover);
 }
 
 .btn-pagination {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--color-surface-hover);
+    border: 1px solid var(--color-border);
     color: var(--color-text-primary);
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1.2rem;
     border-radius: var(--radius-md);
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     transition: all 0.2s;
 }
 
 .btn-pagination:hover:not(:disabled) {
     background: var(--gradient-primary);
+    color: var(--color-on-primary);
     border-color: transparent;
     transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-pagination:disabled {
-    opacity: 0.3;
+    opacity: 0.4;
     cursor: not-allowed;
+    background: transparent;
+    border-color: var(--color-surface-hover);
+    color: var(--color-text-muted);
 }
 
 .pagination-info {

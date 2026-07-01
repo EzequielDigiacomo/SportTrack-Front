@@ -1,4 +1,4 @@
-import { Key, Power, PowerOff, User, Mail, Phone, Building2 } from 'lucide-react';
+import { Key, Power, PowerOff, User, Mail, Phone, Building2, Edit } from 'lucide-react';
 
 const ROL_LABEL = {
     'Admin':         { label: 'Admin',          color: '#ef4444' },
@@ -49,7 +49,7 @@ const EstadoBadge = ({ activo }) => (
     </span>
 );
 
-const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
+const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) => {
     return (
         <div className="login-grid-container fade-in">
             {/* Mobile View */}
@@ -66,17 +66,22 @@ const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
                                 </div>
                             </h4>
                             
-                            {(u.nombre || u.apellido) && (
-                                <p style={{ fontWeight: 800, color: '#000000' }}>
-                                    <User size={14} className="text-primary" /> {[u.nombre, u.apellido].filter(Boolean).join(' ')}
-                                    {u.dni && <span style={{ color: '#000000', fontSize: '0.75rem', marginLeft: '0.5rem' }}>· DNI {u.dni}</span>}
+                            <p style={{ color: '#000000' }}><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
+                            {u.clubNombre ? (
+                                <p style={{ color: '#000000', fontWeight: 800 }}>
+                                    <Building2 size={14} className="text-accent" /> {u.clubNombre}
+                                </p>
+                            ) : (
+                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                    <Building2 size={14} className="text-secondary" /> (Sin institución)
                                 </p>
                             )}
-                            <p style={{ color: '#000000' }}><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
-                            {u.clubNombre && <p style={{ color: '#000000' }}><Building2 size={14} className="text-accent" /> {u.clubNombre}</p>}
                             {u.telefono && <p style={{ color: '#000000' }}><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
                         </div>
                         <div className="card-actions-row">
+                            <button className="btn-icon-view" onClick={() => onEditProfile(u)} title="Editar Perfil">
+                                <Edit size={16} />
+                            </button>
                             <button className="btn-icon-view" onClick={() => onEditPassword(u)} title="Cambiar Contraseña">
                                 <Key size={16} />
                             </button>
@@ -108,10 +113,9 @@ const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
                         <tr>
                             <th>Estado</th>
                             <th>Usuario</th>
-                            <th>Nombre Completo</th>
+                            <th>Institución a la que pertenece</th>
                             <th>Email</th>
                             <th>Rol</th>
-                            <th>Club / Contacto</th>
                             <th style={{ width: '110px', textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
@@ -124,23 +128,25 @@ const LoginGrid = ({ usuarios, onEditPassword, onToggleActivo }) => {
                                 <td style={{ fontWeight: 'bold', color: u.activo === false ? '#64748b' : 'inherit' }}>
                                     {u.username}
                                 </td>
-                                <td>
-                                    {(u.nombre || u.apellido)
-                                        ? <span style={{ color: '#000000', fontWeight: '800' }}>{[u.nombre, u.apellido].filter(Boolean).join(' ')}</span>
-                                        : <span style={{ color: '#94a3b8' }}>—</span>
-                                    }
-                                    {u.dni && (
-                                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}>DNI: {u.dni}</span>
+                                <td style={{ color: '#000000' }}>
+                                    {u.clubNombre ? (
+                                        <span style={{ fontWeight: '800' }}>{u.clubNombre}</span>
+                                    ) : (
+                                        <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>(Sin institución)</span>
                                     )}
+                                    {u.telefono && <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
                                 </td>
                                 <td>{u.email || '—'}</td>
                                 <td><RolBadge rol={u.rol} /></td>
-                                <td style={{ color: '#000000' }}>
-                                    {u.clubNombre || '—'}
-                                    {u.telefono && <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
-                                </td>
                                 <td className="actions-cell" style={{ textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                                        <button
+                                            className="btn-icon-view"
+                                            onClick={() => onEditProfile(u)}
+                                            title="Editar Perfil"
+                                        >
+                                            <Edit size={16} />
+                                        </button>
                                         <button
                                             className="btn-icon-view"
                                             onClick={() => onEditPassword(u)}

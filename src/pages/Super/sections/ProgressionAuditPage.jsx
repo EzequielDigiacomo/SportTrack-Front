@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProgressionAudit from '../../../components/Common/ProgressionAudit';
-import { FileText, RefreshCw } from 'lucide-react';
+import { FileText, RefreshCw, Calendar, Search } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import { PruebaService } from '../../../services/ConfigService';
 import FaseService from '../../../services/FaseService';
@@ -118,43 +118,52 @@ const ProgressionAuditPage = () => {
                 </div>
             </div>
 
-            <div className="admin-grid-form glass-effect p-md mb-lg" style={{ borderRadius: 'var(--radius-lg)' }}>
-                <div className="form-group">
-                    <label>1. Seleccionar Evento</label>
-                    <select 
-                        className="admin-select"
-                        value={selectedEventoId}
-                        onChange={(e) => setSelectedEventoId(e.target.value)}
-                    >
-                        <option value="">-- Elige un Evento --</option>
-                        {eventos.map(ev => (
-                            <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label>2. Seleccionar Prueba</label>
-                    <select 
-                        className="admin-select"
-                        value={selectedPruebaId}
-                        onChange={(e) => setSelectedPruebaId(e.target.value)}
-                        disabled={!selectedEventoId}
-                    >
-                        <option value="">-- Elige una Prueba --</option>
-                        {pruebas.map(pr => (
-                            <option key={pr.id} value={pr.id}>{formatPruebaName(pr)}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button 
-                        className="btn-admin-secondary" 
-                        onClick={loadAuditData}
-                        disabled={!selectedPruebaId || loading}
-                    >
-                        <RefreshCw size={16} className={loading ? 'spin' : ''} />
-                        Actualizar
-                    </button>
+            <div className="resultados-header-section admin-form-card glass-effect" style={{ padding: '1.5rem 2rem', marginBottom: '2.5rem' }}>
+                <div className="admin-grid-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                    <div className="form-group">
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Calendar size={14} className="text-primary" /> Evento
+                        </label>
+                        <select 
+                            className="admin-select"
+                            value={selectedEventoId}
+                            onChange={(e) => setSelectedEventoId(e.target.value)}
+                            style={{ borderLeft: '3px solid var(--color-primary)' }}
+                        >
+                            <option value="">-- Elige un Evento --</option>
+                            {eventos.map(ev => (
+                                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Search size={14} className="text-secondary" /> Prueba / Categoría
+                        </label>
+                        <select 
+                            className="admin-select"
+                            value={selectedPruebaId}
+                            onChange={(e) => setSelectedPruebaId(e.target.value)}
+                            disabled={!selectedEventoId}
+                            style={{ borderLeft: '3px solid var(--color-secondary)' }}
+                        >
+                            <option value="">-- Elige una Prueba --</option>
+                            {pruebas.map(pr => (
+                                <option key={pr.id} value={pr.id}>{formatPruebaName(pr)}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+                        <button 
+                            className="btn-admin-secondary" 
+                            onClick={loadAuditData}
+                            disabled={!selectedPruebaId || loading}
+                            style={{ width: '100%' }}
+                        >
+                            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+                            Actualizar
+                        </button>
+                    </div>
                 </div>
             </div>
 
