@@ -130,6 +130,13 @@ El backend expone dos hubs funcionales:
 * **Redirección desde Notificaciones**: Las alertas recibidas en el Centro de Notificaciones (`NotificationCenter.jsx`) deben soportar diferentes acciones basadas en su contexto. Al hacer clic en un aviso de pago de un club, el administrador debe ser redirigido directamente al módulo de `/super/pagos` para facilitar una acción resolutiva inmediata.
 * **Ciclo de Vida de Conexión y Dependencias en React (useEffect)**: Al sincronizar hubs de SignalR, la función de limpieza (cleanup) del `useEffect` suele desconectar el servicio (`timingSignalRService.disconnect()`). Para prevenir micro-desconexiones y errores de invocación cancelada al actualizar estados de la fase local (por ejemplo, cambiar estado a DNS/DNF/DSQ), la dependencia del `useEffect` debe basarse en propiedades primitivas estables como `selectedFase?.id` y `selectedEvento?.id` en lugar de la referencia del objeto fase completo.
 
+### 🟢 Compatibilidad de Claims y JWT en .NET 8
+* **Error de Autorización**: La serialización de roles y arrays en los tokens JWT presentaba fallos al intentar autorizar roles como `SuperAdmin` bajo .NET 8, afectando las funcionalidades locales o de fallback.
+* **Lección Aprendida**: Usar nombres cortos y nativos para los claims en el backend (`.NET 8`), y mapear correctamente los arrays en la decodificación del cliente, unificando el esquema de claims para todas las validaciones de frontend en `AuthContext`.
+
+### 🟢 Unificación de Formularios
+* **Mantenibilidad UI**: Se consolidaron múltiples formularios de creación y edición en componentes unificados, y se fortaleció la conexión del Dashboard al backend para depender menos de simulaciones de datos locales (localStorage fallbacks).
+
 ---
 
 ## 📝 6. Bitácora de Desarrollo e Historial de Cambios
@@ -148,6 +155,7 @@ El backend expone dos hubs funcionales:
 | **2026-05-24** | Módulo de Resultados y Pagos para Clubes con alertas SignalR y persistencia DB | ✅ Completado | Filtrado de eventos, pruebas ordenadas por cronograma, vista Live de resultados y solicitud de pago persistente en base de datos (con migración EF Core a PostgreSQL) y alerta WebSocket en tiempo real al administrador. |
 | **2026-06-19** | Solución a desconexión SignalR, Restablecer Lista de Largada y Validación de Llegada Conectada | ✅ Completado | Se corrigió la dependencia de useEffect para evitar desconexiones al actualizar estados; se añadió el botón "Restablecer Lista" con actualización concurrente y alertas SignalR en tiempo real; y se bloquea la largada si la mesa de llegada está desconectada, mostrando aviso de advertencia visual ámbar en el botón. |
 | **2026-06-20** | Reubicación de Total de Atletas en Dashboard de Federación | ✅ Completado | Se movió la visualización del total de atletas registrados desde la tarjeta de Clubes Afiliados hacia la tarjeta de Atletas en el componente `AdminHome.jsx` para rol Admin de federación. |
+| **2026-07-01** | Unificación de Formularios, Nueva Tabla Federaciones y Fixes de Autenticación | ✅ Completado | Se unificaron los formularios UI, se conectaron los dashboards al backend en la nube/local de manera más robusta, se agregó la entidad Federaciones en el modelo de BD SaaS, y se corrigió el mapeo de claims para arreglos JWT permitiendo la correcta autorización del rol `SuperAdmin` bajo `.NET 8`. |
 
 ---
 
