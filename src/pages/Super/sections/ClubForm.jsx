@@ -1,11 +1,20 @@
 import React from 'react';
 import { Save } from 'lucide-react';
 
+const ESTADO_MATRICULA_OPTIONS = [
+    { value: 0, label: 'Pendiente' },
+    { value: 1, label: 'Pagado (Al Día)' },
+    { value: 2, label: 'Vencido' },
+    { value: 3, label: 'Parcial' },
+];
+
 const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, isSuperAdmin, planes }) => {
     return (
         <div className="club-form-container fade-in">
             <div className="admin-form-card glass-effect">
                 <form onSubmit={onSubmit} className="admin-grid-form">
+
+                    {/* SECCIÓN: DATOS IDENTIFICATORIOS */}
                     <div className="form-section">
                         <h4>Datos Identificatorios</h4>
                         <div className="form-row">
@@ -26,11 +35,10 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     className="admin-input"
                                     type="text" 
                                     name="sigla"
-                                    value={initialData.sigla} 
-                                    onChange={(e) => onChange('sigla', e.target.value)} 
+                                    value={initialData.sigla || initialData.siglas || ''} 
+                                    onChange={(e) => { onChange('sigla', e.target.value); onChange('siglas', e.target.value); }}
                                     maxLength="10"
                                     placeholder="Eje: CFD, CNS..."
-                                    required
                                 />
                             </div>
                         </div>
@@ -44,7 +52,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     onChange={(e) => onChange('planSaaSId', e.target.value ? parseInt(e.target.value) : null)}
                                 >
                                     <option value="">-- Seleccionar Plan --</option>
-                                    {planes.map(p => (
+                                    {planes && planes.map(p => (
                                         <option key={p.id} value={p.id}>{p.nombre} ({p.maxAtletas === -1 ? 'Ilimitado' : p.maxAtletas + ' atletas'})</option>
                                     ))}
                                 </select>
@@ -52,6 +60,7 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                         )}
                     </div>
 
+                    {/* SECCIÓN: INFORMACIÓN DE CONTACTO */}
                     <div className="form-section">
                         <h4>Información de Contacto</h4>
                         <div className="form-row">
@@ -63,7 +72,6 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     name="email"
                                     value={initialData.email} 
                                     onChange={(e) => onChange('email', e.target.value)} 
-                                    required
                                 />
                             </div>
                             <div className="form-group">
@@ -74,21 +82,37 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     name="telefono"
                                     value={initialData.telefono} 
                                     onChange={(e) => onChange('telefono', e.target.value)} 
-                                    required
                                 />
                             </div>
                         </div>
                         <div className="form-group">
-                            <label>Ubicación / Sede</label>
+                            <label>Ubicación / Sede / Dirección</label>
                             <input 
                                 className="admin-input"
                                 type="text" 
                                 name="ubicacion"
-                                value={initialData.ubicacion} 
-                                onChange={(e) => onChange('ubicacion', e.target.value)} 
+                                value={initialData.ubicacion || initialData.direccion || ''} 
+                                onChange={(e) => { onChange('ubicacion', e.target.value); onChange('direccion', e.target.value); }}
                                 placeholder="Ciudad, Provincia..."
-                                required
                             />
+                        </div>
+                    </div>
+
+                    {/* SECCIÓN: ESTADO ADMINISTRATIVO */}
+                    <div className="form-section">
+                        <h4>Estado Administrativo</h4>
+                        <div className="form-group">
+                            <label>Estado de Matrícula (Federación)</label>
+                            <select 
+                                className="admin-select"
+                                name="estadoMatricula"
+                                value={initialData.estadoMatricula ?? 0}
+                                onChange={(e) => onChange('estadoMatricula', parseInt(e.target.value))}
+                            >
+                                {ESTADO_MATRICULA_OPTIONS.map(o => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

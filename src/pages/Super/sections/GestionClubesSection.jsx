@@ -20,7 +20,7 @@ const GestionClubesSection = () => {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
     const [selectedClub, setSelectedClub] = useState(null);
-    const [form, setForm] = useState({ nombre: '', sigla: '', email: '', telefono: '', ubicacion: '' });
+    const [form, setForm] = useState({ nombre: '', sigla: '', siglas: '', email: '', telefono: '', ubicacion: '', direccion: '', estadoMatricula: 0 });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
     const [parentModal, setParentModal] = useState({ show: false, club: null, parentId: '' });
@@ -87,9 +87,12 @@ const GestionClubesSection = () => {
         setForm({ 
             nombre: '', 
             sigla: '', 
+            siglas: '',
             email: '', 
             telefono: '', 
             ubicacion: '', 
+            direccion: '',
+            estadoMatricula: 0,
             parentClubId: fedId ? parseInt(fedId) : null,
             planSaaSId: '',
             frecuenciaPago: 'Mensual',

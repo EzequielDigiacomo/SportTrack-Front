@@ -29,11 +29,22 @@ const GestionAtletasSection = () => {
         nombre: '',
         apellido: '',
         dni: '',
+        documento: '',
         email: '',
+        telefono: '',
+        direccion: '',
         fechaNacimiento: '',
         sexoId: 1,
+        sexo: 1,
         clubId: '',
-        pais: ''
+        idClub: '',
+        pais: '',
+        estadoPago: 0,
+        presentoAptoMedico: false,
+        perteneceSeleccion: false,
+        becadoEnard: false,
+        becadoSdn: false,
+        montoBeca: 0
     });
 
     const [saving, setSaving] = useState(false);
@@ -85,11 +96,22 @@ const GestionAtletasSection = () => {
             nombre: '',
             apellido: '',
             dni: '',
+            documento: '',
             email: '',
+            telefono: '',
+            direccion: '',
             fechaNacimiento: '',
             sexoId: 1,
+            sexo: 1,
             clubId: '',
-            pais: ''
+            idClub: '',
+            pais: '',
+            estadoPago: 0,
+            presentoAptoMedico: false,
+            perteneceSeleccion: false,
+            becadoEnard: false,
+            becadoSdn: false,
+            montoBeca: 0
         });
         setView('crear');
     };
@@ -99,12 +121,23 @@ const GestionAtletasSection = () => {
         setForm({
             nombre: atleta.nombre || '',
             apellido: atleta.apellido || '',
-            dni: atleta.dni || '',
+            dni: atleta.dni || atleta.documento || '',
+            documento: atleta.documento || atleta.dni || '',
             email: atleta.email || '',
+            telefono: atleta.telefono || '',
+            direccion: atleta.direccion || '',
             fechaNacimiento: atleta.fechaNacimiento ? atleta.fechaNacimiento.substring(0, 10) : '',
-            sexoId: atleta.sexoId || 1,
-            clubId: atleta.clubId || '',
-            pais: atleta.pais || ''
+            sexoId: atleta.sexoId || atleta.sexo || 1,
+            sexo: atleta.sexo || atleta.sexoId || 1,
+            clubId: atleta.clubId || atleta.idClub || '',
+            idClub: atleta.idClub || atleta.clubId || '',
+            pais: atleta.pais || '',
+            estadoPago: atleta.estadoPago ?? 0,
+            presentoAptoMedico: atleta.presentoAptoMedico || false,
+            perteneceSeleccion: atleta.perteneceSeleccion || false,
+            becadoEnard: atleta.becadoEnard || false,
+            becadoSdn: atleta.becadoSdn || false,
+            montoBeca: atleta.montoBeca || 0
         });
         setView('editar');
     };

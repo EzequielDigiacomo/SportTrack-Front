@@ -1,6 +1,19 @@
 import React from 'react';
 import { Save, ArrowLeft } from 'lucide-react';
 
+const SEXO_OPTIONS = [
+    { value: 1, label: 'Masculino' },
+    { value: 2, label: 'Femenino' },
+    { value: 3, label: 'Mixto' },
+];
+
+const ESTADO_PAGO_OPTIONS = [
+    { value: 0, label: 'Adeudado (Pendiente)' },
+    { value: 1, label: 'Abonado (Pagado)' },
+    { value: 2, label: 'Vencido' },
+    { value: 3, label: 'Parcial' },
+];
+
 const AtletaForm = ({ 
     initialData, 
     clubes = [], 
@@ -17,11 +30,13 @@ const AtletaForm = ({
         <div className="atleta-form-container fade-in">
             <div className="admin-form-card glass-effect">
                 <form onSubmit={onSubmit} className="admin-grid-form">
+
+                    {/* SECCIÓN: DATOS PERSONALES */}
                     <div className="form-section">
                         <h4>Datos Personales</h4>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>Nombre</label>
+                                <label>Nombre *</label>
                                 <input 
                                     className="admin-input"
                                     type="text" 
@@ -33,7 +48,7 @@ const AtletaForm = ({
                                 />
                             </div>
                             <div className="form-group">
-                                <label>Apellido</label>
+                                <label>Apellido *</label>
                                 <input 
                                     className="admin-input"
                                     type="text" 
@@ -47,13 +62,13 @@ const AtletaForm = ({
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>DNI / Cédula</label>
+                                <label>DNI / Cédula / Documento *</label>
                                 <input 
                                     className="admin-input"
                                     type="text" 
                                     name="dni"
-                                    value={initialData.dni} 
-                                    onChange={(e) => onChange('dni', e.target.value)} 
+                                    value={initialData.dni || initialData.documento || ''} 
+                                    onChange={(e) => { onChange('dni', e.target.value); onChange('documento', e.target.value); }} 
                                     required 
                                 />
                             </div>
@@ -62,17 +77,17 @@ const AtletaForm = ({
                                 <select 
                                     className="admin-select"
                                     name="sexoId"
-                                    value={initialData.sexoId} 
-                                    onChange={(e) => onChange('sexoId', parseInt(e.target.value))}
+                                    value={initialData.sexoId || initialData.sexo || 1} 
+                                    onChange={(e) => { onChange('sexoId', parseInt(e.target.value)); onChange('sexo', parseInt(e.target.value)); }}
                                 >
-                                    <option value={1}>Masculino</option>
-                                    <option value={2}>Femenino</option>
-                                    <option value={3}>Mixto</option>
+                                    {SEXO_OPTIONS.map(o => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
                         <div className="form-group">
-                            <label>Fecha de Nacimiento</label>
+                            <label>Fecha de Nacimiento *</label>
                             <input 
                                 className="admin-input"
                                 type="date" 
@@ -87,18 +102,52 @@ const AtletaForm = ({
                         </div>
                     </div>
 
+                    {/* SECCIÓN: CONTACTO Y AFILIACIÓN */}
                     <div className="form-section">
                         <h4>Contacto y Afiliación</h4>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Email</label>
+                                <input 
+                                    className="admin-input"
+                                    type="email" 
+                                    name="email"
+                                    value={initialData.email} 
+                                    onChange={(e) => onChange('email', e.target.value)} 
+                                    placeholder="ejemplo@correo.com"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Teléfono</label>
+                                <input 
+                                    className="admin-input"
+                                    type="text" 
+                                    name="telefono"
+                                    value={initialData.telefono || ''} 
+                                    onChange={(e) => onChange('telefono', e.target.value)} 
+                                    placeholder="+54 11 ..."
+                                />
+                            </div>
+                        </div>
                         <div className="form-group">
-                            <label>Email</label>
+                            <label>Dirección</label>
                             <input 
                                 className="admin-input"
-                                type="email" 
-                                name="email"
-                                value={initialData.email} 
-                                onChange={(e) => onChange('email', e.target.value)} 
-                                placeholder="ejemplo@correo.com"
-                                required
+                                type="text" 
+                                name="direccion"
+                                value={initialData.direccion || ''} 
+                                onChange={(e) => onChange('direccion', e.target.value)} 
+                                placeholder="Ciudad, Provincia..."
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>País / Nacionalidad</label>
+                            <input 
+                                className="admin-input"
+                                type="text" 
+                                name="pais"
+                                value={initialData.pais || ''} 
+                                onChange={(e) => onChange('pais', e.target.value)} 
                             />
                         </div>
                         
@@ -108,27 +157,94 @@ const AtletaForm = ({
                                 <select 
                                     className="admin-select"
                                     name="clubId"
-                                    value={initialData.clubId} 
-                                    onChange={(e) => onChange('clubId', e.target.value)}
-                                    required
+                                    value={initialData.clubId || initialData.idClub || ''} 
+                                    onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
                                 >
-                                    <option value="">Seleccionar Club...</option>
+                                    <option value="">Sin Asignar (Agente Libre)</option>
                                     {clubes.map(club => (
-                                        <option key={club.id} value={club.id}>{club.nombre}</option>
+                                        <option key={club.id || club.idClub} value={club.id || club.idClub}>{club.nombre}</option>
                                     ))}
                                 </select>
                             </div>
                         )}
+                    </div>
 
+                    {/* SECCIÓN: DATOS DEPORTIVOS */}
+                    <div className="form-section">
+                        <h4>Datos Deportivos y Administrativos</h4>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Estado de Pago (Matrícula)</label>
+                                <select 
+                                    className="admin-select"
+                                    name="estadoPago"
+                                    value={initialData.estadoPago ?? 0} 
+                                    onChange={(e) => onChange('estadoPago', parseInt(e.target.value))}
+                                >
+                                    {ESTADO_PAGO_OPTIONS.map(o => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="presentoAptoMedico"
+                                    name="presentoAptoMedico" 
+                                    checked={initialData.presentoAptoMedico || false} 
+                                    onChange={(e) => onChange('presentoAptoMedico', e.target.checked)} 
+                                />
+                                <label htmlFor="presentoAptoMedico" style={{ marginBottom: 0 }}>Presentó Apto Médico</label>
+                            </div>
+                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="perteneceSeleccion"
+                                    name="perteneceSeleccion" 
+                                    checked={initialData.perteneceSeleccion || false} 
+                                    onChange={(e) => onChange('perteneceSeleccion', e.target.checked)} 
+                                />
+                                <label htmlFor="perteneceSeleccion" style={{ marginBottom: 0 }}>Pertenece a Selección</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SECCIÓN: BECAS */}
+                    <div className="form-section">
+                        <h4>Becas</h4>
+                        <div className="form-row">
+                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="becadoEnard"
+                                    name="becadoEnard" 
+                                    checked={initialData.becadoEnard || false} 
+                                    onChange={(e) => onChange('becadoEnard', e.target.checked)} 
+                                />
+                                <label htmlFor="becadoEnard" style={{ marginBottom: 0 }}>Becado ENARD</label>
+                            </div>
+                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="becadoSdn"
+                                    name="becadoSdn" 
+                                    checked={initialData.becadoSdn || false} 
+                                    onChange={(e) => onChange('becadoSdn', e.target.checked)} 
+                                />
+                                <label htmlFor="becadoSdn" style={{ marginBottom: 0 }}>Becado SDN</label>
+                            </div>
+                        </div>
                         <div className="form-group">
-                            <label>País / Nacionalidad</label>
+                            <label>Monto Beca</label>
                             <input 
                                 className="admin-input"
-                                type="text" 
-                                name="pais"
-                                value={initialData.pais || ''} 
-                                onChange={(e) => onChange('pais', e.target.value)} 
-                                required
+                                type="number" 
+                                name="montoBeca"
+                                value={initialData.montoBeca || 0} 
+                                onChange={(e) => onChange('montoBeca', parseFloat(e.target.value) || 0)}
+                                min="0"
                             />
                         </div>
                     </div>
