@@ -42,6 +42,7 @@ const SaaSManagement = () => {
     const [asignandoPlanId, setAsignandoPlanId] = useState(null);
     const [selectedFedId, setSelectedFedId] = useState(null);
     const [filter, setFilter] = useState('');
+    const [showPricingGrid, setShowPricingGrid] = useState(true);
     
     // Confirm Dialog State
     const [confirmDialog, setConfirmDialog] = useState({
@@ -268,9 +269,14 @@ const SaaSManagement = () => {
 
     const handleOpenCreate = () => {
         setIsEditing(false);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const vencDate = new Date();
+        vencDate.setMonth(vencDate.getMonth() + 1);
+        const vencStr = vencDate.toISOString().split('T')[0];
+
         setFormData({ 
             nombre: '', sigla: '', email: '', telefono: '', direccion: '', ubicacion: '', activo: true,
-            frecuenciaPago: 'Mensual', fechaAltaPlan: '', fechaVencimientoPlan: '', bloqueadoPorFaltaDePago: false,
+            frecuenciaPago: 'Mensual', fechaAltaPlan: todayStr, fechaVencimientoPlan: vencStr, bloqueadoPorFaltaDePago: false,
             adminUsername: '', adminEmail: '', adminPassword: ''
         });
         setShowPassword(false);
@@ -401,12 +407,100 @@ const SaaSManagement = () => {
                     <h2><Cloud size={24} /> Panel de Suscripciones SaaS</h2>
                     <p className="section-desc">Administración central de federaciones y clubes afiliados.</p>
                 </div>
-                <div className="header-actions">
+                <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                        className="btn-admin-secondary" 
+                        onClick={() => setShowPricingGrid(!showPricingGrid)}
+                        style={{
+                            background: showPricingGrid ? 'rgba(0, 150, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            color: showPricingGrid ? '#0096ff' : 'var(--color-text-primary, #ffffff)',
+                            border: `1px solid ${showPricingGrid ? '#0096ff88' : 'var(--color-border, rgba(255, 255, 255, 0.1))'}`,
+                            borderRadius: '8px',
+                            padding: '8px 16px',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <BarChart3 size={16} />
+                        {showPricingGrid ? 'Ocultar Tarifas' : 'Ver Tarifas'}
+                    </button>
                     <button className="btn-admin-primary" onClick={handleOpenCreate}>
                         <Plus size={16} /> Nueva Federación
                     </button>
                 </div>
             </div>
+
+            {showPricingGrid && (
+                <div className="glass-effect" style={{ 
+                    padding: '1.5rem', 
+                    borderRadius: '12px', 
+                    background: 'var(--color-bg-secondary, rgba(20, 24, 33, 0.9))',
+                    border: '1px solid var(--color-border, rgba(255, 255, 255, 0.05))',
+                    boxShadow: 'var(--shadow-md)',
+                    marginBottom: '1.5rem',
+                    animation: 'fadeIn 0.3s ease'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-text-primary, #ffffff)', margin: 0 }}>Grilla de Precios de Referencia (SaaS)</h3>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary, #94a3b8)', margin: '4px 0 0 0' }}>Valores oficiales de suscripción mensual y pago anual con descuento del 20%.</p>
+                        </div>
+                    </div>
+                    <div className="table-responsive" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        <table className="saas-admin-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--color-border, rgba(255, 255, 255, 0.05))' }}>
+                                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', background: 'transparent' }}>Plan / Módulo</th>
+                                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', background: 'transparent' }}>Mensual</th>
+                                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', background: 'transparent' }}>Anual (Pago Único)</th>
+                                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', background: 'transparent' }}>Equiv. Mensual en Anual</th>
+                                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', background: 'transparent', textAlign: 'right' }}>Ahorro Efectivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[
+                                    { name: 'SIGDEF (S)', mensual: 'USD 50', anual: 'USD 480', equiv: 'USD 40', ahorro: '20%' },
+                                    { name: 'SIGDEF (M)', mensual: 'USD 120', anual: 'USD 1.150', equiv: 'USD 95.8', ahorro: '20%' },
+                                    { name: 'SIGDEF (L)', mensual: 'USD 250', anual: 'USD 2.400', equiv: 'USD 200', ahorro: '20%' },
+                                    { name: 'SportTrack (S)', mensual: 'USD 40', anual: 'USD 380', equiv: 'USD 31.6', ahorro: '20%' },
+                                    { name: 'SportTrack (M)', mensual: 'USD 90', anual: 'USD 860', equiv: 'USD 71.6', ahorro: '20%' },
+                                    { name: 'SportTrack (L)', mensual: 'USD 190', anual: 'USD 1.800', equiv: 'USD 150', ahorro: '20%' },
+                                    { name: 'Pack Dúo (S)', mensual: 'USD 75', anual: 'USD 720', equiv: 'USD 60', ahorro: '20%' },
+                                    { name: 'Pack Dúo (M)', mensual: 'USD 170', anual: 'USD 1.600', equiv: 'USD 133.3', ahorro: '20%' },
+                                    { name: 'Pack Dúo (L)', mensual: 'USD 350', anual: 'USD 3.360', equiv: 'USD 280', ahorro: '20%' },
+                                ].map((row, idx) => (
+                                    <tr key={idx} style={{ 
+                                        borderBottom: '1px solid var(--color-border, rgba(255, 255, 255, 0.05))',
+                                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)'
+                                    }}>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--color-text-primary, #ffffff)' }}>{row.name}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem', color: 'var(--color-text-secondary, #cbd5e1)' }}>{row.mensual}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem', color: '#10b981', fontWeight: '600' }}>{row.anual}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem', color: 'var(--color-text-secondary, #94a3b8)' }}>{row.equiv}</td>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.85rem', textAlign: 'right' }}>
+                                            <span style={{ 
+                                                backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                                                color: '#10b981', 
+                                                fontSize: '0.7rem', 
+                                                padding: '2px 6px', 
+                                                borderRadius: '4px',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {row.ahorro}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             <div className="saas-main-layout">
                 {/* Mobile View */}
@@ -804,32 +898,73 @@ const SaaSManagement = () => {
                                              <option value="Bloqueado" style={{ color: '#EF4444' }}>Suspendido por Falta de Pago</option>
                                         </select>
                                     </div>
-                                    <div className="control-field">
-                                        <label>Control de Acceso</label>
+                                    <div className="control-field" style={{ 
+                                        background: 'rgba(255, 255, 255, 0.02)', 
+                                        padding: '12px', 
+                                        borderRadius: '8px', 
+                                        border: '1px solid var(--color-border, rgba(255, 255, 255, 0.05))',
+                                        marginTop: '10px'
+                                    }}>
+                                        <label style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>
+                                            Control de Acceso
+                                        </label>
+                                        
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--color-text-primary, #ffffff)' }}>
+                                                Estado Actual:
+                                            </span>
+                                            <span style={{ 
+                                                fontSize: '0.85rem', 
+                                                fontWeight: 'bold', 
+                                                color: selectedFed.activo ? '#10B981' : '#EF4444',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}>
+                                                <span style={{ 
+                                                    width: '8px', 
+                                                    height: '8px', 
+                                                    borderRadius: '50%', 
+                                                    backgroundColor: selectedFed.activo ? '#10B981' : '#EF4444',
+                                                    display: 'inline-block',
+                                                    boxShadow: selectedFed.activo ? '0 0 8px #10B981' : '0 0 8px #EF4444'
+                                                }} />
+                                                {selectedFed.activo ? 'ACCESO PERMITIDO' : 'ACCESO SUSPENDIDO'}
+                                            </span>
+                                        </div>
+
                                         <button 
                                             className={`btn-toggle-saas-premium ${selectedFed.activo ? 'is-active' : 'is-inactive'}`}
                                             onClick={() => handleToggleActivo(selectedFed.clubId)}
                                             style={{
                                                 width: '100%',
-                                                padding: '12px',
-                                                borderRadius: '10px',
+                                                padding: '10px',
+                                                borderRadius: '6px',
                                                 border: '1px solid',
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                gap: '10px',
+                                                gap: '8px',
                                                 fontWeight: 'bold',
-                                                fontSize: '0.85rem',
-                                                transition: 'all 0.3s ease',
-                                                backgroundColor: selectedFed.activo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                color: selectedFed.activo ? '#10B981' : '#EF4444',
-                                                borderColor: selectedFed.activo ? '#10B98166' : '#EF444466',
-                                                boxShadow: selectedFed.activo ? '0 0 15px rgba(16, 185, 129, 0.1)' : 'none'
+                                                fontSize: '0.8rem',
+                                                transition: 'all 0.2s ease',
+                                                backgroundColor: selectedFed.activo ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                                color: selectedFed.activo ? '#EF4444' : '#10B981',
+                                                borderColor: selectedFed.activo ? '#EF444444' : '#10B98144',
                                             }}
                                         >
-                                            {selectedFed.activo ? <Check size={18} /> : <XCircle size={18} />}
-                                            {selectedFed.activo ? 'SUSPENDER ACCESO' : 'HABILITAR FEDERACIÓN'}
+                                            {selectedFed.activo ? (
+                                                <>
+                                                    <XCircle size={16} />
+                                                    <span>SUSPENDER ACCESO</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Check size={16} />
+                                                    <span>HABILITAR ACCESO</span>
+                                                </>
+                                            )}
                                         </button>
                                         {(() => {
                                             const isEffActive = checkIsEffectiveActive(selectedFed);
