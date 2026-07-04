@@ -152,19 +152,42 @@ const AtletaForm = ({
                         </div>
                         
                         {!hideClubSelect && (
-                            <div className="form-group">
-                                <label>Club / Entidad</label>
-                                <select 
-                                    className="admin-select"
-                                    name="clubId"
-                                    value={initialData.clubId || initialData.idClub || ''} 
-                                    onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
-                                >
-                                    <option value="">Sin Asignar (Agente Libre)</option>
-                                    {clubes.map(club => (
-                                        <option key={club.id || club.idClub} value={club.id || club.idClub}>{club.nombre}</option>
-                                    ))}
-                                </select>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Federación</label>
+                                    <select 
+                                        className="admin-select"
+                                        name="federacionId"
+                                        value={initialData.federacionId || ''} 
+                                        onChange={(e) => { 
+                                            onChange('federacionId', e.target.value); 
+                                            onChange('clubId', ''); 
+                                            onChange('idClub', ''); 
+                                        }}
+                                    >
+                                        <option value="">Seleccionar Federación</option>
+                                        {clubes.filter(c => !c.parentClubId).map(fed => (
+                                            <option key={fed.id || fed.idClub} value={fed.id || fed.idClub}>{fed.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Club / Entidad</label>
+                                    <select 
+                                        className="admin-select"
+                                        name="clubId"
+                                        value={initialData.clubId || initialData.idClub || ''} 
+                                        onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
+                                        disabled={!initialData.federacionId && clubes.some(c => !c.parentClubId)}
+                                    >
+                                        <option value="">Sin Asignar (Agente Libre)</option>
+                                        {clubes
+                                            .filter(c => c.parentClubId && (!initialData.federacionId || c.parentClubId === parseInt(initialData.federacionId)))
+                                            .map(club => (
+                                            <option key={club.id || club.idClub} value={club.id || club.idClub}>{club.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         )}
                     </div>

@@ -1,11 +1,13 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import PlanGuard from './PlanGuard';
 
 /**
  * ProtectedRoute: Redirige al login si el usuario no está autenticado
  * o si no tiene el rol requerido.
+ * También verifica el acceso según el plan SaaS.
  */
-const ProtectedRoute = ({ children, requiredRole }) => {
+const ProtectedRoute = ({ children, requiredRole, requiereControlesLive }) => {
     const { isAuthenticated, user, loading } = useAuth();
 
     // Mientras carga el contexto de auth, no redirigir todavía
@@ -32,6 +34,21 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     // No autenticado → login
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
+    }
+
+    // Guard de plan: verifica acceso a SportTrack (excepto SuperAdmin)
+    const rol = user?.rol || user?.role || '';
+    const isSuperAdmin = rol === 'SuperAdmin' || rol === 'SUPERADMIN';
+
+    if (!isSuperAdmin) {
+        // Verificar acceso general al sistema SportTrack
+        if (user?.plan && !user.plan.accesoSportTrack) {
+            return <PlanGuard requiereSportTrack user={user}>{children}</PlanGuard>;
+        }
+        // Verificar acceso a controles en vivo (solo plan L)
+        if (requiereControlesLive) {
+            return <PlanGuard requiereControlesLive user={user}>{children}</PlanGuard>;
+        }
     }
 
     // Rol incorrecto → home

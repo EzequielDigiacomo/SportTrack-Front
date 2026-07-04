@@ -73,7 +73,7 @@ function App() {
 
             {/* Panel Juez de Control (Protegido — rol JuezControl o Admin) */}
             <Route path="/juez-control/*" element={
-                <ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'JuezControl']}>
+                <ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'JuezControl']} requiereControlesLive>
                     <JudgesLayout>
                         <JuezControlDashboard />
                     </JudgesLayout>
@@ -81,10 +81,10 @@ function App() {
             } />
 
             {/* Módulo de Jueces */}
-            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista']}><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador']}><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']}><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista']} requiereControlesLive><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador']} requiereControlesLive><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']} requiereControlesLive><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']} requiereControlesLive><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
         {showNotificationCenter && <NotificationCenter isAdmin={isJudgeOrAdmin} />}
         <ToastContainer toasts={toasts} removeToast={removeToast} />

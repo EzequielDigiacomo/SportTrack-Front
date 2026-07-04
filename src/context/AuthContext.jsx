@@ -15,6 +15,16 @@ export const AuthProvider = ({ children }) => {
                 // Intentamos validar la sesión contra el servidor (usa la Cookie HttpOnly)
                 const userData = await AuthService.validateSession();
                 const normalized = normalizeUser(userData);
+
+                // /auth/me no devuelve plan; lo restauramos del localStorage si existe
+                const stored = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+                if (stored) {
+                    try {
+                        const storedUser = JSON.parse(stored);
+                        if (storedUser.plan) normalized.plan = storedUser.plan;
+                    } catch (_) { /* ignorar */ }
+                }
+
                 setUser(normalized);
                 localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(normalized));
             } catch (e) {

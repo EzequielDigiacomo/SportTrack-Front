@@ -74,6 +74,8 @@ const SaaSManagement = () => {
         confirmAdminPassword: ''
     });
     const [showPassword, setShowPassword] = useState(false);
+    // Local buffer for date inputs (avoid API call on every keystroke)
+    const [localDateValues, setLocalDateValues] = useState({ fechaAltaPlan: '', fechaVencimientoPlan: '' });
 
     const checkIsEffectiveActive = (fed) => {
         if (!fed) return false;
@@ -908,16 +910,30 @@ const SaaSManagement = () => {
                                         <label>Inicio de Suscripción</label>
                                         <input 
                                             type="date"
-                                            value={selectedFed.fechaAltaPlan ? selectedFed.fechaAltaPlan.split('T')[0] : ''}
-                                            onChange={(e) => handleUpdateInlineField(selectedFed.clubId, 'fechaAltaPlan', e.target.value)}
+                                            value={localDateValues.fechaAltaPlan !== '' ? localDateValues.fechaAltaPlan : (selectedFed.fechaAltaPlan ? selectedFed.fechaAltaPlan.split('T')[0] : '')}
+                                            onFocus={() => setLocalDateValues(v => ({ ...v, fechaAltaPlan: selectedFed.fechaAltaPlan ? selectedFed.fechaAltaPlan.split('T')[0] : '' }))}
+                                            onChange={(e) => setLocalDateValues(v => ({ ...v, fechaAltaPlan: e.target.value }))}
+                                            onBlur={(e) => {
+                                                if (e.target.value && e.target.value !== (selectedFed.fechaAltaPlan ? selectedFed.fechaAltaPlan.split('T')[0] : '')) {
+                                                    handleUpdateInlineField(selectedFed.clubId, 'fechaAltaPlan', e.target.value);
+                                                }
+                                                setLocalDateValues(v => ({ ...v, fechaAltaPlan: '' }));
+                                            }}
                                         />
                                     </div>
                                     <div className="control-field">
                                         <label>Vencimiento de Suscripción</label>
                                         <input 
                                             type="date"
-                                            value={selectedFed.fechaVencimientoPlan ? selectedFed.fechaVencimientoPlan.split('T')[0] : ''}
-                                            onChange={(e) => handleUpdateInlineField(selectedFed.clubId, 'fechaVencimientoPlan', e.target.value)}
+                                            value={localDateValues.fechaVencimientoPlan !== '' ? localDateValues.fechaVencimientoPlan : (selectedFed.fechaVencimientoPlan ? selectedFed.fechaVencimientoPlan.split('T')[0] : '')}
+                                            onFocus={() => setLocalDateValues(v => ({ ...v, fechaVencimientoPlan: selectedFed.fechaVencimientoPlan ? selectedFed.fechaVencimientoPlan.split('T')[0] : '' }))}
+                                            onChange={(e) => setLocalDateValues(v => ({ ...v, fechaVencimientoPlan: e.target.value }))}
+                                            onBlur={(e) => {
+                                                if (e.target.value && e.target.value !== (selectedFed.fechaVencimientoPlan ? selectedFed.fechaVencimientoPlan.split('T')[0] : '')) {
+                                                    handleUpdateInlineField(selectedFed.clubId, 'fechaVencimientoPlan', e.target.value);
+                                                }
+                                                setLocalDateValues(v => ({ ...v, fechaVencimientoPlan: '' }));
+                                            }}
                                         />
                                     </div>
                                     <div className="control-field">
