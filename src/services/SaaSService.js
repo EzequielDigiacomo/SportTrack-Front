@@ -28,12 +28,12 @@ const SaaSService = {
     },
 
     updateFederacion: async (id, data) => {
-        const response = await api.put(`/Clubes/${id}`, data);
+        const response = await api.put(`/Federaciones/${id}`, data);
         return response.data;
     },
 
     deleteFederacion: async (id) => {
-        const response = await api.delete(`/Clubes/${id}`);
+        const response = await api.delete(`/Federaciones/${id}`);
         return response.data;
     },
 

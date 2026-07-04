@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Globe, Mail, Phone, Edit, Trash2, ShieldCheck, ShieldAlert, Award, X } from 'lucide-react';
+import { Plus, ArrowLeft, Globe, Mail, Phone, Edit, Trash2, ShieldCheck, ShieldAlert, Award, X, Calendar } from 'lucide-react';
 import api from '../../../services/api';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
@@ -46,6 +46,21 @@ const GestionFederacionesSection = () => {
         emailCobro: ''
     });
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'Sin fecha';
+        try {
+            const parts = dateStr.split('T')[0].split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return 'Sin fecha';
+            return d.toLocaleDateString('es-AR');
+        } catch {
+            return 'Sin fecha';
+        }
+    };
+
     useEffect(() => {
         loadFederaciones();
     }, []);
@@ -54,7 +69,12 @@ const GestionFederacionesSection = () => {
         try {
             setLoading(true);
             const res = await api.get('/Federaciones');
-            setFederaciones(res.data || res || []);
+            const data = res.data || res || [];
+            const mapped = data.map(f => ({
+                ...f,
+                id: f.idFederacion
+            }));
+            setFederaciones(mapped);
         } catch (e) {
             console.error("Error loading federations:", e);
             showAlert('error', 'Error al cargar federaciones');
@@ -287,6 +307,14 @@ const GestionFederacionesSection = () => {
                                                         <span>{fed.direccion}</span>
                                                     </div>
                                                 )}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Calendar size={14} />
+                                                    <span>Inicio: {formatDate(fed.fechaAltaPlan)}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Calendar size={14} />
+                                                    <span>Vence: {formatDate(fed.fechaVencimientoPlan)}</span>
+                                                </div>
                                             </div>
                                         </div>
 

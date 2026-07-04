@@ -70,7 +70,8 @@ const SaaSManagement = () => {
         bloqueadoPorFaltaDePago: false,
         adminUsername: '',
         adminEmail: '',
-        adminPassword: ''
+        adminPassword: '',
+        confirmAdminPassword: ''
     });
     const [showPassword, setShowPassword] = useState(false);
 
@@ -277,7 +278,7 @@ const SaaSManagement = () => {
         setFormData({ 
             nombre: '', sigla: '', email: '', telefono: '', direccion: '', ubicacion: '', activo: true,
             frecuenciaPago: 'Mensual', fechaAltaPlan: todayStr, fechaVencimientoPlan: vencStr, bloqueadoPorFaltaDePago: false,
-            adminUsername: '', adminEmail: '', adminPassword: ''
+            adminUsername: '', adminEmail: '', adminPassword: '', confirmAdminPassword: ''
         });
         setShowPassword(false);
         setShowModal(true);
@@ -298,7 +299,8 @@ const SaaSManagement = () => {
             fechaVencimientoPlan: fed.fechaVencimientoPlan ? fed.fechaVencimientoPlan.split('T')[0] : '',
             bloqueadoPorFaltaDePago: fed.bloqueadoPorFaltaDePago || false,
             adminUsername: '', // No se edita por aquí por seguridad
-            adminPassword: ''
+            adminPassword: '',
+            confirmAdminPassword: ''
         });
         setShowModal(true);
     };
@@ -332,21 +334,55 @@ const SaaSManagement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validaciones en modo creación
+        if (!isEditing) {
+            if (!formData.adminUsername.trim()) {
+                addToast("El usuario administrador es obligatorio", "error");
+                return;
+            }
+            if (formData.adminUsername.trim().length < 4) {
+                addToast("El usuario debe tener al menos 4 caracteres", "error");
+                return;
+            }
+            if (!formData.adminEmail.trim()) {
+                addToast("El email del administrador es obligatorio", "error");
+                return;
+            }
+            if (!/\S+@\S+\.\S+/.test(formData.adminEmail)) {
+                addToast("Email del administrador inválido", "error");
+                return;
+            }
+            if (!formData.adminPassword) {
+                addToast("La contraseña del administrador es obligatoria", "error");
+                return;
+            }
+            if (formData.adminPassword.length < 6) {
+                addToast("La contraseña debe tener al menos 6 caracteres", "error");
+                return;
+            }
+            if (formData.adminPassword !== formData.confirmAdminPassword) {
+                addToast("Las contraseñas no coinciden", "error");
+                return;
+            }
+        }
+
         try {
             if (isEditing) {
-                // Para editar solo enviamos los datos del club
-                const { adminUsername, adminPassword, ...clubData } = formData;
+                // Para editar solo enviamos los datos de la federacion
+                const { adminUsername, adminPassword, confirmAdminPassword, ...clubData } = formData;
                 await SaaSService.updateFederacion(selectedFedId, clubData);
                 addToast("Federación actualizada con éxito", "success");
             } else {
-                await SaaSService.createFederacion(formData);
+                const { confirmAdminPassword, ...createData } = formData;
+                await SaaSService.createFederacion(createData);
                 addToast("Federación creada con éxito junto a su cuenta administradora", "success");
             }
             setShowModal(false);
             await fetchData();
         } catch (err) {
             console.error("Error saving federation", err);
-            const errorMsg = err.response?.data?.message || "Error desconocido al guardar la federación.";
+            const errorMsg = err.response?.data?.message || err.message || "Error desconocido al guardar la federación.";
             addToast(errorMsg, "error");
         }
     };
@@ -1196,6 +1232,20 @@ const SaaSManagement = () => {
                                                 >
                                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                                 </button>
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Confirmar Contraseña</label>
+                                            <div className="input-with-icon">
+                                                <Lock size={16} />
+                                                <input 
+                                                    type={showPassword ? "text" : "password"} 
+                                                    required={!isEditing}
+                                                    value={formData.confirmAdminPassword}
+                                                    onChange={(e) => setFormData({...formData, confirmAdminPassword: e.target.value})}
+                                                    placeholder="••••••••"
+                                                    className="password-input-modal"
+                                                />
                                             </div>
                                         </div>
                                     </>
