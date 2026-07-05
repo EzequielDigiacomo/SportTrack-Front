@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/AuthService';
+import { getDashboardPathForRole, getUserRole } from '../../utils/authHelpers';
 import './Login.css';
 
 const Login = () => {
@@ -17,15 +18,7 @@ const Login = () => {
     // Redirigir si ya está autenticado
     React.useEffect(() => {
         if (isAuthenticated && user?.rol) {
-            let path = '/';
-            const role = user.rol.trim().toLowerCase();
-            if (role === 'admin' || role === 'superadmin') path = '/super';
-            else if (role === 'club') path = '/club';
-            else if (role === 'largador') path = '/jueces/largador';
-            else if (role === 'cronometrista') path = '/jueces/llegada';
-            else if (role === 'juezcontrol') path = '/juez-control';
-            
-            navigate(path, { replace: true });
+            navigate(getDashboardPathForRole(user.rol), { replace: true });
         }
     }, [isAuthenticated, user, navigate]);
 
@@ -43,19 +36,8 @@ const Login = () => {
         try {
             const data = await AuthService.login(credentials);
             login(data, data.token);
-            
-            // Redirect based on role
-            let targetPath = '/';
-            if (data?.rol) {
-                const role = data.rol.trim().toLowerCase();
-                if (role === 'admin' || role === 'superadmin') targetPath = '/super';
-                else if (role === 'club') targetPath = '/club';
-                else if (role === 'largador') targetPath = '/jueces/largador';
-                else if (role === 'cronometrista') targetPath = '/jueces/llegada';
-                else if (role === 'juezcontrol') targetPath = '/juez-control';
-            }
-            
-            navigate(targetPath, { replace: true });
+
+            navigate(getDashboardPathForRole(getUserRole(data)), { replace: true });
             
         } catch (err) {
             const serverMsg = err.response?.data?.message;
