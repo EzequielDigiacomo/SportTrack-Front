@@ -41,9 +41,11 @@ export const AuthProvider = ({ children }) => {
 
     const normalizeUser = (data) => {
         if (!data) return null;
+        const rol = data.rol || data.Rol || data.rolFederacion || data.RolFederacion || data.role || data.Role || '';
         return {
             ...data,
-            rol: data.rol || data.Rol || data.role || data.Role || ''
+            rol,
+            token: data.token || data.Token,
         };
     };
 
