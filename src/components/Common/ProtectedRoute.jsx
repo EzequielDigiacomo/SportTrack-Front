@@ -43,7 +43,7 @@ const ProtectedRoute = ({ children, requiredRole, requiereControlesLive }) => {
 
     if (!isSuperAdmin) {
         const plan = extractPlanFromUser(user);
-        if (plan && !canAccessSportTrack(plan)) {
+        if (!canAccessSportTrack(plan)) {
             return <PlanGuard requiereSportTrack user={{ ...user, plan }}>{children}</PlanGuard>;
         }
         // Verificar acceso a controles en vivo (solo plan L)
