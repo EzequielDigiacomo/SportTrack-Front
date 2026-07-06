@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SupportService from '../../../services/SupportService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import { formatAuditAction, formatAuditDetail, fixAuditEncoding } from '../../../utils/auditHelpers';
 import SaaSManagement from './SaaSManagement';
 import BackupService from '../../../services/BackupService';
 import { useToast } from '../../../context/ToastContext';
@@ -168,7 +169,7 @@ const SoporteSection = () => {
                                                 <div className="log-main-info">
                                                     <span className="log-modulo">{log.modulo}</span>
                                                     <span className="log-message">
-                                                        {isError ? (detail.Error || log.detalle) : log.accion}
+                                                        {isError ? (detail.Error ? fixAuditEncoding(detail.Error) : formatAuditDetail(log)) : formatAuditAction(log.accion)}
                                                     </span>
                                                 </div>
                                                 <div className="log-meta">
@@ -208,7 +209,7 @@ const SoporteSection = () => {
                                                     {!isError && (
                                                         <div className="raw-detail">
                                                             <label>Detalle:</label>
-                                                            <pre>{typeof detail === 'object' ? JSON.stringify(detail, null, 2) : detail}</pre>
+                                                            <pre>{formatAuditDetail(log)}</pre>
                                                         </div>
                                                     )}
                                                 </div>

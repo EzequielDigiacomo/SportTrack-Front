@@ -32,6 +32,7 @@ import {
     getUserFederationId,
     clubBelongsToFederation,
 } from '../../utils/apiHelpers';
+import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -936,9 +937,10 @@ const AdminHome = () => {
                                             </td>
                                             <td className="action-cell">
                                                 <span className="action-text">
-                                                    <span className="hide-mobile">{log.accion}</span>
+                                                    <span className="hide-mobile">{formatAuditAction(log.accion)}</span>
                                                     <span className="show-mobile-inline">
                                                         {log.accion === 'LOGIN_SUCCESS' ? 'LGN_OK' : 
+                                                         log.accion === 'LOGIN_FAILED' ? 'LGN_FAIL' :
                                                          log.accion === 'LOGIN_BLOCKED' ? 'LGN_BLOK' : 
                                                          log.accion === 'ERROR_FATAL' ? 'ERR_FATAL' : 
                                                          log.accion === 'CREATE_ATHLETE' ? 'NEW_ATL' : 
@@ -948,10 +950,11 @@ const AdminHome = () => {
                                                 </span>
                                             </td>
                                             <td className="detail-cell">
-                                                <div className="detail-content" title={log.detalle}>
-                                                    {log.detalle?.length > 60 
-                                                        ? log.detalle.substring(0, 60) + '...' 
-                                                        : log.detalle}
+                                                <div className="detail-content" title={formatAuditDetail(log)}>
+                                                    {(() => {
+                                                        const detail = formatAuditDetail(log);
+                                                        return detail.length > 60 ? detail.substring(0, 60) + '...' : detail;
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
