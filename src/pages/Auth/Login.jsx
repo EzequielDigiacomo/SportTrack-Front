@@ -35,7 +35,8 @@ const Login = () => {
 
         try {
             const data = await AuthService.login(credentials);
-            login(data, data.token);
+            const token = data.token || data.Token;
+            login(data, token);
 
             navigate(getDashboardPathForRole(getUserRole(data)), { replace: true });
             

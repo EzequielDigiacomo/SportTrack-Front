@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }) => {
                 // Si falla (401), limpiamos cualquier rastro local
                 setUser(null);
                 localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+                localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
             } finally {
                 setLoading(false);
             }

@@ -10,10 +10,24 @@ const api = axios.create({
     },
 })
 
-// Interceptor de solicitud - El navegador enviará las cookies automáticamente
+const getStoredAuthToken = () => {
+    const direct = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    if (direct) return direct;
+
+    try {
+        const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (!userData) return null;
+        const parsed = JSON.parse(userData);
+        return parsed?.token || parsed?.Token || null;
+    } catch {
+        return null;
+    }
+};
+
+// Interceptor de solicitud - Bearer en header (cookie cross-origin puede fallar)
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+        const token = getStoredAuthToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -34,9 +48,9 @@ api.interceptors.response.use(
 
         // Manejar 401 No autorizado (Sesión expirada)
         if (error.response?.status === 401) {
-            localStorage.removeItem(STORAGE_KEYS.USER_DATA)
-            // Podríamos redirigir al login aquí si fuera necesario
-            return Promise.reject(error)
+            localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+            return Promise.reject(error);
         }
 
         // Handle other errors

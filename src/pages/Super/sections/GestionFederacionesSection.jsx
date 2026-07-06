@@ -148,6 +148,11 @@ const GestionFederacionesSection = () => {
 
     const handleCreateSubmit = async (e) => {
         e.preventDefault();
+        const userRole = (user?.rol || user?.RolFederacion || '').toLowerCase();
+        if (userRole !== 'superadmin') {
+            showAlert('error', 'Solo un SuperAdmin puede crear federaciones. Iniciá sesión con admin / admin123.');
+            return;
+        }
         if (createForm.adminPassword !== createForm.confirmAdminPassword) {
             showAlert('error', 'Las contraseñas del administrador no coinciden.');
             return;
@@ -171,7 +176,14 @@ const GestionFederacionesSection = () => {
             loadFederaciones();
         } catch (err) {
             console.error(err);
-            showAlert('error', 'Error al crear federación: ' + (err.response?.data?.message || err.message));
+            const status = err.status ?? err.response?.status;
+            let message = err.message || err.response?.data?.message;
+            if (status === 401) {
+                message = 'Sesión expirada o token inválido. Cerrá sesión, volvé a entrar como SuperAdmin (admin) e intentá de nuevo.';
+            } else if (status === 403) {
+                message = 'No tenés permisos de SuperAdmin para crear federaciones.';
+            }
+            showAlert('error', 'Error al crear federación: ' + (message || 'Error desconocido'));
         } finally {
             setSaving(false);
         }
