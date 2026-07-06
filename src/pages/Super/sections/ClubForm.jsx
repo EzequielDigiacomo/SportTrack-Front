@@ -8,7 +8,7 @@ const ESTADO_MATRICULA_OPTIONS = [
     { value: 3, label: 'Parcial' },
 ];
 
-const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, isSuperAdmin, planes }) => {
+const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, isSuperAdmin, planes, federaciones = [], showFederationSelect = false }) => {
     return (
         <div className="club-form-container fade-in">
             <div className="admin-form-card glass-effect">
@@ -42,6 +42,23 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                 />
                             </div>
                         </div>
+                        {showFederationSelect && (
+                            <div className="form-group" style={{ marginTop: '1rem' }}>
+                                <label>Federación *</label>
+                                <select
+                                    className="admin-select"
+                                    name="federacionId"
+                                    value={initialData.federacionId || ''}
+                                    onChange={(e) => onChange('federacionId', e.target.value ? parseInt(e.target.value) : '')}
+                                    required
+                                >
+                                    <option value="">Seleccionar Federación</option>
+                                    {federaciones.map(f => (
+                                        <option key={f.id} value={f.id}>{f.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                         {isSuperAdmin && (
                             <div className="form-group" style={{ marginTop: '1rem' }}>
                                 <label>Plan SaaS contratado</label>

@@ -9,13 +9,21 @@ import LoginGrid from './LoginGrid';
 import LoginForm from './LoginForm';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
+import {
+    withFederationScope,
+    clubBelongsToFederation,
+    getUserFederationId,
+    pick,
+} from '../../../utils/apiHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionLoginsSection = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
     const params = new URLSearchParams(location.search);
     const fedIdFromUrl = params.get('fedId');
+    const scopeFedId = fedIdFromUrl || getUserFederationId(user) || null;
 
     const [usuarios, setUsuarios] = useState([]);
     const [clubes, setClubes] = useState([]);
@@ -25,7 +33,6 @@ const GestionLoginsSection = () => {
     const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
-    const { user } = useAuth();
     
     // Confirm Dialog State
     const [confirmDialog, setConfirmDialog] = useState({
@@ -42,9 +49,10 @@ const GestionLoginsSection = () => {
 
     const loadData = async () => {
         try {
+            const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, scopeFedId);
             const [usersRes, clubesRes] = await Promise.all([
                 AuthService.getUsuarios(),
-                api.get(ENDPOINTS.CLUBES)
+                api.get(clubesUrl)
             ]);
             setUsuarios(usersRes);
             setClubes(clubesRes.data);
@@ -108,14 +116,15 @@ const GestionLoginsSection = () => {
             } else {
                 let finalClubId = null;
                 if (user?.rol === 'Admin') {
-                    finalClubId = user.clubId;
+                    finalClubId = user.clubId || null;
                 } else {
                     finalClubId = form.clubId ? parseInt(form.clubId) : null;
                 }
 
                 await AuthService.register({
                     ...form,
-                    clubId: finalClubId
+                    clubId: finalClubId,
+                    federacionId: getUserFederationId(user) || (fedIdFromUrl ? parseInt(fedIdFromUrl) : undefined),
                 });
                 showAlert('success', 'Usuario creado exitosamente');
             }
@@ -153,18 +162,20 @@ const GestionLoginsSection = () => {
     const filteredUsuarios = usuarios.filter(u => {
         if (!fedIdFromUrl) return true;
         const targetFedId = parseInt(fedIdFromUrl);
+        const userFedId = pick(u, 'federacionId', 'FederacionId');
+        if (userFedId) {
+            return String(userFedId) === String(targetFedId);
+        }
         if (u.clubId) {
-            const userClub = clubes.find(c => c.id === u.clubId);
-            return userClub && (userClub.id === targetFedId || userClub.parentClubId === targetFedId);
+            const userClub = clubes.find(c => pick(c, 'id', 'Id') === u.clubId);
+            return userClub && clubBelongsToFederation(userClub, targetFedId);
         }
         return false;
     });
 
-    // Filtrado de clubes para la creación de credenciales dentro del ámbito de esta federación
     const filteredClubes = clubes.filter(c => {
         if (!fedIdFromUrl) return true;
-        const targetFedId = parseInt(fedIdFromUrl);
-        return c.id === targetFedId || c.parentClubId === targetFedId;
+        return clubBelongsToFederation(c, parseInt(fedIdFromUrl));
     });
 
     return (

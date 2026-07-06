@@ -19,6 +19,7 @@ import ClubService from '../../../services/ClubService';
 import { useAuth } from '../../../context/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import timingSignalRService from '../../../services/TimingSignalRService';
+import { getClubFederationName } from '../../../utils/apiHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const PagosClubSection = () => {
@@ -340,7 +341,7 @@ const PagosClubSection = () => {
                                 <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                     <span style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Federación de Afiliación</span>
                                     <h4 style={{ margin: '6px 0 0 0', fontSize: '1.15rem', color: 'var(--color-text-primary)' }}>
-                                        {clubInfo?.parentClubNombre || 'Federación Ecuatoriana'}
+                                        {getClubFederationName(clubInfo) || 'Sin federación asignada'}
                                     </h4>
                                 </div>
                                 <div className="glass-effect" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>

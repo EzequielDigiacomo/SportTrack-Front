@@ -2,11 +2,14 @@ import axios from 'axios'
 import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants'
 
 // Create axios instance
+const CLIENT_APP = 'sporttrack';
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
+        'X-Client-App': CLIENT_APP,
     },
 })
 

@@ -20,6 +20,12 @@ import PagoService from '../../../services/PagoService';
 import RegistrarPagoModal from '../../../components/SharedSections/RegistrarPagoModal';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
+import {
+    getUserFederationId,
+    filterClubesByFederation,
+    getClubIdsForFederation,
+    getClubFederationName,
+} from '../../../utils/apiHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionPagosSection = () => {
@@ -103,11 +109,10 @@ const GestionPagosSection = () => {
 
     const loadClubes = async () => {
         const res = await api.get(ENDPOINTS.CLUBES);
-        // Filtrar según el rol (si es admin federativo, ve sub-clubes)
         const role = user?.rol?.trim().toLowerCase();
-        const fedId = user?.clubId;
+        const fedId = getUserFederationId(user);
         if (role === 'admin' && fedId) {
-            setClubes(res.data.filter(c => c.parentClubId === fedId || c.id === fedId));
+            setClubes(filterClubesByFederation(res.data, fedId));
         } else {
             setClubes(res.data);
         }
@@ -115,15 +120,11 @@ const GestionPagosSection = () => {
 
     const loadAtletas = async () => {
         const res = await api.get(ENDPOINTS.PARTICIPANTES.BASE);
-        // Filtrar atletas del propio club o federación
         const role = user?.rol?.trim().toLowerCase();
-        const fedId = user?.clubId;
+        const fedId = getUserFederationId(user);
         if (role === 'admin' && fedId) {
-            // Cargar todos los clubes para obtener los IDs pertenecientes a esta federación
             const resClubes = await api.get(ENDPOINTS.CLUBES);
-            const affiliatedClubIds = resClubes.data
-                .filter(c => c.parentClubId === fedId || c.id === fedId)
-                .map(c => c.id);
+            const affiliatedClubIds = getClubIdsForFederation(resClubes.data, fedId);
             setAtletas(res.data.filter(a => affiliatedClubIds.includes(a.clubId)));
         } else {
             setAtletas(res.data);
@@ -133,15 +134,11 @@ const GestionPagosSection = () => {
     const loadInscripciones = async () => {
         const res = await api.get(ENDPOINTS.INSCRIPCIONES.BASE);
         const role = user?.rol?.trim().toLowerCase();
-        const fedId = user?.clubId;
+        const fedId = getUserFederationId(user);
         if (role === 'admin' && fedId) {
-            // Cargar todos los clubes para obtener los IDs de los clubes afiliados
             const resClubes = await api.get(ENDPOINTS.CLUBES);
-            const affiliatedClubIds = resClubes.data
-                .filter(c => c.parentClubId === fedId || c.id === fedId)
-                .map(c => c.id);
-            
-            // Mapear nombres de club a IDs para buscar de forma robusta
+            const affiliatedClubIds = getClubIdsForFederation(resClubes.data, fedId);
+
             const clubNameToId = {};
             resClubes.data.forEach(c => {
                 if (c.nombre) {
@@ -149,7 +146,6 @@ const GestionPagosSection = () => {
                 }
             });
 
-            // Filtrar inscripciones cuyos atletas pertenecen a clubes de esta federación
             setInscripciones(res.data.filter(i => {
                 const clubName = i.clubNombre?.toLowerCase().trim();
                 const clubId = clubNameToId[clubName];
@@ -538,7 +534,7 @@ const GestionPagosSection = () => {
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--color-surface-hover)', textAlign: 'left' }}>
                                             <th style={{ padding: '1rem' }}>Club</th>
-                                            <th style={{ padding: '1rem' }}>Federación Madre</th>
+                                            <th style={{ padding: '1rem' }}>Federación</th>
                                             <th style={{ padding: '1rem' }}>Estado Afiliación</th>
                                             <th style={{ padding: '1rem' }}>Interruptor Rápido</th>
                                             <th style={{ padding: '1rem', textAlign: 'center' }}>Registrar Cobro</th>
@@ -561,7 +557,7 @@ const GestionPagosSection = () => {
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: '1rem' }}>
-                                                        {club.parentClubNombre || <span style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>Federación Raíz</span>}
+                                                        {getClubFederationName(club) || <span style={{ color: 'var(--color-accent-orange)', fontWeight: 600 }}>Sin federación</span>}
                                                     </td>
                                                     <td style={{ padding: '1rem' }}>
                                                         <span className={`badge-pill ${club.pagoAfiliacionAlDia ? 'positive' : 'negative'}`} style={{

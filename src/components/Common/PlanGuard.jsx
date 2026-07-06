@@ -1,13 +1,14 @@
 import React from 'react';
 import { ShieldOff, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { normalizePlan } from '../../utils/planHelpers';
 
 /**
  * PlanGuard: Muestra una pantalla de "Plan no compatible" si el usuario
  * no tiene acceso al sistema o feature según su plan SaaS.
  */
 const PlanGuard = ({ children, requiereSportTrack, requiereControlesLive, user }) => {
-    const plan = user?.plan;
+    const plan = normalizePlan(user?.plan || user?.Plan);
     const rol = user?.rol || user?.role || '';
     const isSuperAdmin = rol === 'SuperAdmin' || rol === 'SUPERADMIN';
 

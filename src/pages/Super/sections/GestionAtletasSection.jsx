@@ -1,26 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserPlus, ArrowLeft, Filter, Link2, X } from 'lucide-react';
+import api from '../../../services/api';
 import AtletaService from '../../../services/AtletaService';
-import ClubService from '../../../services/ClubService';
+import FederacionService from '../../../services/FederacionService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import SearchBox from '../../../components/Common/SearchBox';
 import CustomSelect from '../../../components/Common/CustomSelect';
 import AtletaGrid from './AtletaGrid';
 import AtletaForm from './AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
+import { useAuth } from '../../../context/AuthContext';
+import { ENDPOINTS } from '../../../utils/constants';
+import { withFederationScope, getClubFederationId, getUserFederationId, pick, filterClubesByFederation } from '../../../utils/apiHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionAtletasSection = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
     const params = new URLSearchParams(location.search);
     const clubIdFromUrl = params.get('clubId');
     const clubNombreFromUrl = params.get('clubNombre') ? decodeURIComponent(params.get('clubNombre')) : '';
     const fedIdFromUrl = params.get('fedId');
 
+    const scopeFedId = fedIdFromUrl || getUserFederationId(user) || null;
+
     const [atletas, setAtletas] = useState([]);
     const [clubes, setClubes] = useState([]);
+    const [federaciones, setFederaciones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
     const [selectedAtleta, setSelectedAtleta] = useState(null);
@@ -70,12 +78,20 @@ const GestionAtletasSection = () => {
 
     const loadData = async () => {
         try {
-            const [atletasData, clubesData] = await Promise.all([
+            const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, scopeFedId);
+            const [atletasData, clubesRes, federacionesData] = await Promise.all([
                 AtletaService.getAll(),
-                ClubService.getAll()
+                api.get(clubesUrl),
+                FederacionService.getAll(),
             ]);
+
+            const visibleFederaciones = scopeFedId
+                ? federacionesData.filter(f => String(f.id) === String(scopeFedId))
+                : federacionesData;
+
             setAtletas(atletasData);
-            setClubes(clubesData);
+            setClubes(clubesRes.data || []);
+            setFederaciones(visibleFederaciones);
         } catch (error) {
             showAlert('error', 'Error al cargar los datos del sistema.');
         } finally {
@@ -92,6 +108,14 @@ const GestionAtletasSection = () => {
     };
 
     const handleOpenCrear = () => {
+        const parsedClubId = clubIdFromUrl ? parseInt(clubIdFromUrl) : '';
+        const clubFromUrl = parsedClubId
+            ? clubes.find(c => pick(c, 'id', 'Id') === parsedClubId)
+            : null;
+        const defaultFedId = fedIdFromUrl
+            ? parseInt(fedIdFromUrl)
+            : (getClubFederationId(clubFromUrl) || (scopeFedId ? parseInt(scopeFedId) : ''));
+
         setForm({
             nombre: '',
             apellido: '',
@@ -103,9 +127,9 @@ const GestionAtletasSection = () => {
             fechaNacimiento: '',
             sexoId: 1,
             sexo: 1,
-            clubId: clubIdFromUrl ? parseInt(clubIdFromUrl) : '',
-            idClub: clubIdFromUrl ? parseInt(clubIdFromUrl) : '',
-            federacionId: fedIdFromUrl ? parseInt(fedIdFromUrl) : '',
+            clubId: parsedClubId,
+            idClub: parsedClubId,
+            federacionId: defaultFedId || '',
             pais: '',
             estadoPago: 0,
             presentoAptoMedico: false,
@@ -132,7 +156,9 @@ const GestionAtletasSection = () => {
             sexo: atleta.sexo || atleta.sexoId || 1,
             clubId: atleta.clubId || atleta.idClub || '',
             idClub: atleta.idClub || atleta.clubId || '',
-            federacionId: (atleta.clubId || atleta.idClub) ? (clubes.find(c => c.id === (atleta.clubId || atleta.idClub))?.parentClubId || '') : '',
+            federacionId: (atleta.clubId || atleta.idClub)
+                ? (getClubFederationId(clubes.find(c => pick(c, 'id', 'Id') === (atleta.clubId || atleta.idClub))) || '')
+                : (scopeFedId || ''),
             pais: atleta.pais || '',
             estadoPago: atleta.estadoPago ?? 0,
             presentoAptoMedico: atleta.presentoAptoMedico || false,
@@ -230,8 +256,8 @@ const GestionAtletasSection = () => {
             if (fedIdFromUrl) {
                 const targetFedId = parseInt(fedIdFromUrl);
                 if (atleta.clubId) {
-                    const athleteClub = clubes.find(c => c.id === atleta.clubId);
-                    fedMatch = athleteClub && (athleteClub.id === targetFedId || athleteClub.parentClubId === targetFedId);
+                    const athleteClub = clubes.find(c => pick(c, 'id', 'Id') === atleta.clubId);
+                    fedMatch = athleteClub && String(getClubFederationId(athleteClub)) === String(targetFedId);
                 } else {
                     // Atletas sin club (siempre visibles para poder ser asignados a clubes de esta federación)
                     fedMatch = true;
@@ -297,8 +323,7 @@ const GestionAtletasSection = () => {
                             options={[
                                 { value: '', label: 'Todos los Clubes' },
                                 { value: '__SIN_CLUB__', label: 'Sin Club asignado' },
-                                ...clubes
-                                    .filter(c => !fedIdFromUrl || c.id === parseInt(fedIdFromUrl) || c.parentClubId === parseInt(fedIdFromUrl))
+                                ...filterClubesByFederation(clubes, fedIdFromUrl)
                                     .map(c => ({ value: c.nombre, label: c.nombre }))
                             ]}
                         />
@@ -336,6 +361,7 @@ const GestionAtletasSection = () => {
                 <AtletaForm 
                     initialData={form}
                     clubes={clubes}
+                    federaciones={federaciones}
                     saving={saving}
                     isEditing={view === 'editar'}
                     onCancel={() => setView('lista')}
@@ -391,9 +417,8 @@ const GestionAtletasSection = () => {
                                 onChange={val => setAssignModal(prev => ({ ...prev, clubId: val }))}
                                 options={[
                                     { value: '', label: '-- Elegir un club --' },
-                                    ...clubes
-                                        .filter(c => c.parentClubId && (!fedIdFromUrl || c.parentClubId === parseInt(fedIdFromUrl)))
-                                        .map(c => ({ value: c.id, label: c.nombre }))
+                                    ...filterClubesByFederation(clubes, fedIdFromUrl)
+                                        .map(c => ({ value: pick(c, 'id', 'Id'), label: c.nombre }))
                                 ]}
                             />
                         </div>

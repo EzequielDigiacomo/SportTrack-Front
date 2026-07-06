@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
 import { getUserRole } from '../utils/authHelpers';
+import { extractPlanFromUser } from '../utils/planHelpers';
 import AuthService from '../services/AuthService';
 import timingSignalRService from '../services/TimingSignalRService';
 
@@ -16,16 +17,6 @@ export const AuthProvider = ({ children }) => {
                 // Intentamos validar la sesión contra el servidor (usa la Cookie HttpOnly)
                 const userData = await AuthService.validateSession();
                 const normalized = normalizeUser(userData);
-
-                // /auth/me no devuelve plan; lo restauramos del localStorage si existe
-                const stored = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-                if (stored) {
-                    try {
-                        const storedUser = JSON.parse(stored);
-                        if (storedUser.plan) normalized.plan = storedUser.plan;
-                    } catch (_) { /* ignorar */ }
-                }
-
                 setUser(normalized);
                 localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(normalized));
             } catch (e) {
@@ -44,10 +35,12 @@ export const AuthProvider = ({ children }) => {
     const normalizeUser = (data) => {
         if (!data) return null;
         const rol = getUserRole(data);
+        const plan = extractPlanFromUser(data);
         return {
             ...data,
             rol,
             token: data.token || data.Token,
+            plan,
         };
     };
 

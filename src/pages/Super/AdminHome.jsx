@@ -26,6 +26,12 @@ import { History, Clock, FileText, AlertCircle, User, AlertTriangle, Trophy, Che
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import ProgressionAudit from '../../components/Common/ProgressionAudit';
+import FederacionService from '../../services/FederacionService';
+import {
+    getClubFederationId,
+    getUserFederationId,
+    clubBelongsToFederation,
+} from '../../utils/apiHelpers';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -59,76 +65,84 @@ const AdminHome = () => {
         setLoading(true);
         try {
             if (isSuper && !id) {
-                // Cargar métricas globales para SuperAdmin
-                const [metricsData, logs, events, saasInfo, allClubs] = await Promise.all([
+                const [metricsData, logs, events, saasInfo, allClubs, federaciones] = await Promise.all([
                     SaaSService.getGlobalMetrics().catch(() => ({})),
                     SupportService.getLogs({ limit: 8 }).catch(() => []),
                     EventoService.getAll().catch(() => []),
                     SaaSService.getClubesStatus().catch(() => []),
-                    ClubService.getAll().catch(() => [])
+                    ClubService.getAll().catch(() => []),
+                    FederacionService.getAll().catch(() => []),
                 ]);
                 setGlobalStats({
                     ...metricsData,
                     uncompletedEvents: events.filter(e => e.estado !== 'Finalizado'),
                     saasExpirations: saasInfo.filter(s => s.fechaVencimientoPlan),
                     saasInfo: saasInfo,
-                    allClubs
+                    allClubs,
+                    federaciones,
                 });
                 setRecentLogs(logs);
             } else if (isSuper && id) {
-                // SuperAdmin viendo una federación específica → usar datos de SaaS
-                const [clubesStatus, events, allClubs] = await Promise.all([
+                const [clubesStatus, events, allClubs, federaciones] = await Promise.all([
                     SaaSService.getClubesStatus().catch(() => []),
                     EventoService.getAll().catch(() => []),
-                    ClubService.getAll().catch(() => [])
+                    ClubService.getAll().catch(() => []),
+                    FederacionService.getAll().catch(() => []),
                 ]);
-                
+
                 setGlobalStats(prev => ({
                     ...prev,
-                    allClubs: allClubs
+                    allClubs,
+                    federaciones,
                 }));
 
-                const fed = clubesStatus.find(f => String(f.clubId) === String(id));
-                if (fed) {
-                    setFedName(fed.clubNombre);
+                const fedFromApi = federaciones.find(f => String(f.id) === String(id));
+                const fedFromSaas = clubesStatus.find(f => String(f.clubId) === String(id));
+                if (fedFromApi) {
+                    setFedName(fedFromApi.nombre);
+                } else if (fedFromSaas) {
+                    setFedName(fedFromSaas.clubNombre);
+                }
+                if (fedFromSaas) {
                     setStats({
-                        eventos: fed.torneosActivosCount || 0,
+                        eventos: fedFromSaas.torneosActivosCount || 0,
                         programados: 0,
-                        clubes: fed.clubesAfiliadosCount || 0,
-                        atletas: fed.atletasRegistrados || 0
+                        clubes: fedFromSaas.clubesAfiliadosCount || 0,
+                        atletas: fedFromSaas.atletasRegistrados || 0
                     });
                 }
 
                 const targetFedId = Number(id);
                 const myEvents = events.filter(e => {
                     const club = allClubs.find(c => c.id === e.clubId);
-                    const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
-                    return parentFedId === targetFedId && e.estado !== 'Finalizado';
+                    const eventFedId = club ? getClubFederationId(club) : e.federacionId;
+                    return String(eventFedId) === String(targetFedId) && e.estado !== 'Finalizado';
                 });
                 setFedEvents(myEvents);
             } else {
-                // Admin normal: cargar sus propios datos
-                const [eventosRaw, clubesData] = await Promise.all([
+                const [eventosRaw, clubesData, federaciones] = await Promise.all([
                     EventoService.getAll(),
-                    ClubService.getAll()
+                    ClubService.getAll(),
+                    FederacionService.getAll().catch(() => []),
                 ]);
-                
+
                 setGlobalStats(prev => ({
                     ...prev,
-                    allClubs: clubesData
+                    allClubs: clubesData,
+                    federaciones,
                 }));
 
-                const targetFedId = Number(user.clubId);
+                const targetFedId = Number(getUserFederationId(user));
                 const myEvents = eventosRaw.filter(e => {
                     const club = clubesData.find(c => c.id === e.clubId);
-                    const parentFedId = club ? (club.parentClubId || club.id) : e.clubId;
-                    return parentFedId === targetFedId && e.estado !== 'Finalizado';
+                    const eventFedId = club ? getClubFederationId(club) : e.federacionId;
+                    return String(eventFedId) === String(targetFedId) && e.estado !== 'Finalizado';
                 });
                 setFedEvents(myEvents);
 
                 const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
                 const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
-                const subClubes = clubesData.filter(c => c.id !== user.clubId);
+                const subClubes = clubesData.filter(c => clubBelongsToFederation(c, targetFedId));
                 const totalAtletas = subClubes.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
                 setStats({
                     eventos: eventosData.length,
@@ -284,19 +298,12 @@ const AdminHome = () => {
 
     const federationColorMap = React.useMemo(() => {
         const map = {};
-        if (!globalStats?.allClubs) return map;
-        
-        // Filtrar todos los clubes raíz (federaciones)
-        const rootClubs = globalStats.allClubs
-            .filter(c => !c.parentClubId)
-            .sort((a, b) => a.id - b.id); // Ordenar por ID de forma consistente
-        
-        rootClubs.forEach((club, idx) => {
-            map[club.id] = FEDERATION_PALETTES[idx % FEDERATION_PALETTES.length];
+        const feds = globalStats?.federaciones || [];
+        [...feds].sort((a, b) => a.id - b.id).forEach((fed, idx) => {
+            map[fed.id] = FEDERATION_PALETTES[idx % FEDERATION_PALETTES.length];
         });
-        
         return map;
-    }, [globalStats?.allClubs]);
+    }, [globalStats?.federaciones]);
 
     const getFederationPalette = (fedId) => {
         if (!fedId) return FEDERATION_PALETTES[0];
@@ -307,13 +314,13 @@ const AdminHome = () => {
         if (!globalStats?.allClubs) return clubId;
         const club = globalStats.allClubs.find(c => c.id === clubId);
         if (!club) return clubId;
-        return club.parentClubId || club.id;
+        return getClubFederationId(club) || clubId;
     };
 
     const getFederationIdByName = (nombre) => {
-        if (!globalStats?.allClubs) return null;
-        const club = globalStats.allClubs.find(c => c.nombre.toLowerCase().trim() === nombre.toLowerCase().trim() && !c.parentClubId);
-        return club ? club.id : null;
+        const feds = globalStats?.federaciones || [];
+        const fed = feds.find(f => f.nombre.toLowerCase().trim() === nombre.toLowerCase().trim());
+        return fed ? fed.id : null;
     };
 
     if (loading) return <div className="loader-container"><div className="loader"></div></div>;

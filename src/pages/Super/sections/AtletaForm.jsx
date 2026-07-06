@@ -1,5 +1,6 @@
 import React from 'react';
 import { Save, ArrowLeft } from 'lucide-react';
+import { getClubFederationId, pick } from '../../../utils/apiHelpers';
 
 const SEXO_OPTIONS = [
     { value: 1, label: 'Masculino' },
@@ -16,7 +17,8 @@ const ESTADO_PAGO_OPTIONS = [
 
 const AtletaForm = ({ 
     initialData, 
-    clubes = [], 
+    clubes = [],
+    federaciones = [],
     onCancel, 
     onSubmit, 
     onChange, 
@@ -166,8 +168,8 @@ const AtletaForm = ({
                                         }}
                                     >
                                         <option value="">Seleccionar Federación</option>
-                                        {clubes.filter(c => !c.parentClubId).map(fed => (
-                                            <option key={fed.id || fed.idClub} value={fed.id || fed.idClub}>{fed.nombre}</option>
+                                        {federaciones.map(fed => (
+                                            <option key={fed.id} value={fed.id}>{fed.nombre}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -178,14 +180,20 @@ const AtletaForm = ({
                                         name="clubId"
                                         value={initialData.clubId || initialData.idClub || ''} 
                                         onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
-                                        disabled={!initialData.federacionId && clubes.some(c => !c.parentClubId)}
+                                        disabled={!initialData.federacionId && federaciones.length > 0}
                                     >
                                         <option value="">Sin Asignar (Agente Libre)</option>
                                         {clubes
-                                            .filter(c => c.parentClubId && (!initialData.federacionId || c.parentClubId === parseInt(initialData.federacionId)))
-                                            .map(club => (
-                                            <option key={club.id || club.idClub} value={club.id || club.idClub}>{club.nombre}</option>
-                                        ))}
+                                            .filter(c => {
+                                                const clubFedId = getClubFederationId(c);
+                                                return clubFedId && (!initialData.federacionId || String(clubFedId) === String(initialData.federacionId));
+                                            })
+                                            .map(club => {
+                                                const clubId = pick(club, 'id', 'Id', 'idClub', 'IdClub');
+                                                return (
+                                                    <option key={clubId} value={clubId}>{club.nombre}</option>
+                                                );
+                                            })}
                                     </select>
                                 </div>
                             </div>

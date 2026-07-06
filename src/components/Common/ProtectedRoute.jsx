@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import PlanGuard from './PlanGuard';
+import { canAccessSportTrack, extractPlanFromUser } from '../../utils/planHelpers';
 
 /**
  * ProtectedRoute: Redirige al login si el usuario no está autenticado
@@ -41,9 +42,9 @@ const ProtectedRoute = ({ children, requiredRole, requiereControlesLive }) => {
     const isSuperAdmin = rol === 'SuperAdmin' || rol === 'SUPERADMIN';
 
     if (!isSuperAdmin) {
-        // Verificar acceso general al sistema SportTrack
-        if (user?.plan && !user.plan.accesoSportTrack) {
-            return <PlanGuard requiereSportTrack user={user}>{children}</PlanGuard>;
+        const plan = extractPlanFromUser(user);
+        if (plan && !canAccessSportTrack(plan)) {
+            return <PlanGuard requiereSportTrack user={{ ...user, plan }}>{children}</PlanGuard>;
         }
         // Verificar acceso a controles en vivo (solo plan L)
         if (requiereControlesLive) {

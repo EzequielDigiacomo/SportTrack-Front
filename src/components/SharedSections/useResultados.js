@@ -8,6 +8,7 @@ import InscripcionService from '../../services/InscripcionService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
+import { getClubFederationId, getUserFederationId } from '../../utils/apiHelpers';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
     const { user } = useAuth();
@@ -135,10 +136,11 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             let data;
             if (user?.rol === 'Club' && user?.clubId) {
                 const club = await ClubService.getById(user.clubId);
-                const fedId = club?.parentClubId || club?.id;
+                const fedId = getClubFederationId(club);
                 data = await EventoService.getAll(fedId);
-            } else if (user?.rol === 'Admin' && user?.clubId) {
-                data = await EventoService.getAll(user.clubId);
+            } else if (user?.rol === 'Admin') {
+                const fedId = getUserFederationId(user);
+                data = await EventoService.getAll(fedId);
             } else {
                 data = await EventoService.getAll();
             }

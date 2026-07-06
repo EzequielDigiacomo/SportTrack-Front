@@ -1,6 +1,7 @@
 # Contexto del Proyecto SportTrack / SIGDEF
 
-> Documento de referencia para retomar trabajo sin re-leer todo el historial del chat.  
+> Documento de referencia compartido entre los **3 repositorios**.  
+> Copias: `SportTrack-Front/docs/`, `SportTrack-Sigdef/docs/`, `FrontSigdef/docs/`  
 > Última actualización: julio 2026.
 
 ---
@@ -9,14 +10,23 @@
 
 | Repo | Ruta local | Deploy | Rol |
 |------|------------|--------|-----|
-| **SportTrack-Sigdef** | `c:\Users\EZEQU\source\repos\SportTrack-Sigdef` | Render: `https://sporttrack-sigdef.onrender.com` | Backend unificado (regatas + SIGDEF) |
-| **SportTrack-Front** | `c:\Users\EZEQU\source\reposFront\SportTrack-Front` | Vercel: `https://sporttrack-fec.vercel.app` | Frontend competencias / eventos / jueces |
-| **FrontSigdef** | `c:\Users\EZEQU\source\reposFront\FrontSigdef` | Vercel (SIGDEF) | Frontend administración federación |
+| **SportTrack-Sigdef** | `c:\Users\EZEQU\source\repos\SportTrack-Sigdef` | Render: `https://sporttrack-sigdef.onrender.com` | Backend unificado (.NET 8): regatas + SIGDEF + SaaS |
+| **SportTrack-Front** | `c:\Users\EZEQU\source\reposFront\SportTrack-Front` | Vercel: `https://sporttrack-fec.vercel.app` | Frontend **competencias**: eventos, jueces, cronometraje, panel SuperAdmin SportTrack |
+| **FrontSigdef** | `c:\Users\EZEQU\source\reposFront\FrontSigdef` | Vercel (SIGDEF) | Frontend **administración federación**: atletas, clubes, delegados, SuperAdmin SaaS |
 
 **GitHub backend:** https://github.com/EzequielDigiacomo/SportTrack-Sigdef
 
-**BD compartida (PostgreSQL en Render):** `sporttrack_sigdef_db`  
-- Esquemas relevantes: `seguridad` (Usuarios), `regatas` (Fases, ReglasProgresion, etc.), catálogos compartidos.
+**BD compartida (PostgreSQL en Render):** `sporttrack_sigdef_db`
+
+| Esquema | Contenido |
+|---------|-----------|
+| `seguridad` | Usuarios, auth |
+| `regatas` | Eventos, Fases, Resultados, Inscripciones |
+| `federacion` | Federaciones, Clubes SIGDEF, AtletasFederacion, Delegados, etc. |
+| Catálogos | Botes, Categorías, Distancias, PlanesSaaS |
+| Público | Auditoria |
+
+**Principio:** un solo backend sirve a **ambos frontends**. Los frontends solo difieren en módulos expuestos y guards de plan.
 
 ---
 
@@ -24,58 +34,71 @@
 
 ### Backend (Render)
 - API base: `https://sporttrack-sigdef.onrender.com/api`
+- SignalR: `https://sporttrack-sigdef.onrender.com/hubs/timing`
 - Login: `POST /api/auth/login`
 - Health: `GET /api/health`, `GET /api/health/db`
-- Promover fases: `POST /api/fases/Promover/{eventoPruebaId}`
-- Auditoría progresión: `GET /api/fases/ProgresionAudit/{eventoPruebaId}`
 
 **Env Render (Web Service):**
-- `ConnectionStrings__DefaultConnection` — connection string Npgsql con SSL
-- Opcional: `DATABASE_URL` (Render) — `Program.cs` también lo lee vía `ResolveConnectionString`
-- Opcional: `TokenKey` — JWT (hay default en código)
+- `ConnectionStrings__DefaultConnection` — Npgsql con SSL
+- Opcional: `DATABASE_URL` — `Program.cs` lo lee vía `ResolveConnectionString`
+- Opcional: `TokenKey` — clave JWT (**debe ser la misma** en firma y validación)
 
-### Frontend SportTrack-Front (Vercel)
-- **Variable obligatoria:** `VITE_API_URL=https://sporttrack-sigdef.onrender.com/api`
-- **Importante:** las `VITE_*` se embeben en el build → cambiar env **requiere redeploy**
-- `.env.production` en repo ya apunta a Render (correcto)
-- `.env.local` es solo dev (proxy); **no** afecta producción
+### SportTrack-Front (Vercel)
+- **Obligatorio:** `VITE_API_URL=https://sporttrack-sigdef.onrender.com/api`
+- **Obligatorio:** `VITE_SIGNALR_HUB_URL=https://sporttrack-sigdef.onrender.com/hubs/timing`
+- Las `VITE_*` se embeben en el build → cambiar env **requiere redeploy**
+- `.env.production` en repo apunta a Render
+- `.env.local` solo dev (proxy Vite); no afecta producción
 
-### FrontSigdef
-- Actualizar `.env` a `https://sporttrack-sigdef.onrender.com/api` (antes apuntaba a `sporttrack-federaciones.onrender.com`)
+### FrontSigdef (Vercel)
+- **Obligatorio:** `VITE_API_URL=https://sporttrack-sigdef.onrender.com/api`
+- ⚠️ El `.env` local aún puede apuntar a `sporttrack-federaciones.onrender.com` (legacy) — **actualizar antes de deploy**
+- Stack: React 19 + Vite, fetch nativo (no axios), Capacitor Android opcional
+- Token en `localStorage` key `user` (objeto con `.token`)
 
 ---
 
-## 3. Autenticación — problemas resueltos y decisiones
+## 3. Autenticación
 
-### Síntoma original
-`Network Error` en login (`status: undefined`, `url: '/auth/login'`) desde Vercel.
+### Modelo
+- JWT en header `Authorization: Bearer {token}` + cookie HttpOnly `X-Access-Token` (5 h)
+- Cross-origin Vercel → Render: **cookies third-party suelen bloquearse** → el Bearer en localStorage es crítico
+- Roles backend (`RolFederacion`): `SuperAdmin`, `Admin`, `Club`, `Largador`, `Cronometrista`, `JuezControl`, `soporte_tecnico`
 
-### Causas encontradas (en orden)
-1. **Front:** `VITE_API_URL` mal escrita o ausente en Production → axios usaba `/api` relativo (dominio Vercel).
-2. **Back:** respuestas 401/500 **sin headers CORS** → el navegador bloqueaba → axios reportaba `Network Error`.
-3. **Back:** hash BCrypt del seed **nunca correspondía a `admin123`** (comentario incorrecto en código).
-4. **Front:** redirect post-login leía `data.rol` pero API devuelve `rolFederacion`.
+### Problemas resueltos
 
-### Fixes aplicados
+| # | Síntoma | Causa | Fix |
+|---|---------|-------|-----|
+| 1 | `Network Error` en login | `VITE_API_URL` ausente → axios pegaba al dominio Vercel | `.env.production` con URL Render |
+| 2 | `Network Error` en errores 401/500 | Respuestas sin CORS | `ExceptionMiddleware` inyecta headers CORS |
+| 3 | Login falla con hash “correcto” | Seed BCrypt no correspondía a `admin123` | Hash corregido en `SportTrackDbContext` |
+| 4 | Redirect post-login a `/` | API devuelve `rolFederacion`, front leía `rol` | `authHelpers.js` + `AuthContext` |
+| 5 | **401 en endpoints protegidos** (ej. crear federación) | `TokenService` y `Program.cs` usaban **defaults distintos** de `TokenKey` | Unificados en `TokenService.cs` |
+| 6 | **401 con token válido en localStorage** | JWT leía cookie vieja antes que Bearer | `Program.cs`: priorizar header `Authorization` |
 
-**Backend (`SportTrack-Sigdef`):**
-- `Middleware/ExceptionMiddleware.cs` — captura excepciones + aplica CORS en errores
-- `AuthService.cs` — verify BCrypt seguro; mensajes UTF-8 corregidos
-- `SportTrackDbContext.cs` — hash seed correcto para `admin123`:
-  ```
-  $2a$12$6ET.51wRwWnd/mscg3c8l.DcgbMBbQmVSqJ/pHpUcpNAPe4mzxoOS
-  ```
+### Fixes aplicados (detalle)
 
-**Frontend (`SportTrack-Front`):**
-- `.env.production` → URL Render
-- `src/utils/authHelpers.js` — `getUserRole()`, `getDashboardPathForRole()`
-- `Login.jsx` + `AuthContext.jsx` — mapeo `rolFederacion` → `rol`; redirect SuperAdmin → `/super`
+**Backend:**
+- `Middleware/ExceptionMiddleware.cs` — CORS en errores
+- `Auth/AuthService.cs` — BCrypt seguro
+- `Auth/TokenService.cs` — misma default key que `Program.cs`
+- `Program.cs` — JwtBearer prioriza Bearer sobre cookie
 
-### Credenciales
-- Seed: `admin` / `admin123` (rol `SuperAdmin`)
-- `superadmin` — crear/resetear en BD con el hash BCrypt de arriba
+**SportTrack-Front:**
+- `src/services/api.js` — token desde `AUTH_TOKEN` o `USER_DATA`; limpia ambos en 401
+- `src/pages/Auth/Login.jsx` — `data.token || data.Token`
+- `src/context/AuthContext.jsx` — limpia token en sesión inválida
+- `src/pages/Super/sections/GestionFederacionesSection.jsx` — guard SuperAdmin + mensajes 401/403
 
-**SQL reset superadmin:**
+**FrontSigdef:**
+- `src/context/AuthContext.jsx` — `Token`/`rolFederacion` fallback; jwt-decode para rol
+- `src/pages/SuperAdmin/SuperDashboard.jsx` — datos reales (sin mocks)
+- `src/pages/SuperAdmin/Auditoria.jsx` — `/support/logs`
+
+### Credenciales seed
+- `admin` / `admin123` → rol `SuperAdmin`
+
+**SQL reset password:**
 ```sql
 UPDATE seguridad."Usuarios"
 SET "PasswordHash" = '$2a$12$6ET.51wRwWnd/mscg3c8l.DcgbMBbQmVSqJ/pHpUcpNAPe4mzxoOS',
@@ -84,175 +107,277 @@ SET "PasswordHash" = '$2a$12$6ET.51wRwWnd/mscg3c8l.DcgbMBbQmVSqJ/pHpUcpNAPe4mzxo
 WHERE LOWER("Username") IN ('superadmin', 'admin');
 ```
 
-### Rutas protegidas (front)
-- SuperAdmin / Admin → `/super`
-- Club → `/club`
-- Jueces → `/jueces/largador`, `/jueces/llegada`, `/juez-control`
+### Rutas post-login
+
+| Rol | SportTrack-Front | FrontSigdef |
+|-----|------------------|-------------|
+| SuperAdmin | `/super` | `/superadmin` |
+| Admin (federación) | `/super` | `/dashboard` |
+| Club | `/club` | `/club` |
+| Largador | `/jueces/largador` | — |
+| Cronometrista | `/jueces/llegada` | — |
+| JuezControl | `/juez-control` | — |
 
 ---
 
-## 4. Sistema de progresión ICF
+## 4. API — endpoints clave por dominio
+
+### Auth
+| Método | Ruta | Auth | Notas |
+|--------|------|------|-------|
+| POST | `/auth/login` | No | Devuelve token + setea cookie |
+| GET | `/auth/me` | Sí | Valida sesión |
+| POST | `/auth/logout` | No | Borra cookie |
+
+### Regatas (SportTrack-Front)
+| Método | Ruta | Notas |
+|--------|------|-------|
+| GET/POST | `/fases/*` | Generar, Promover, BatchUpdate |
+| GET | `/fases/ProgresionAudit/{eventoPruebaId}` | Auditoría progresión ICF |
+| GET/POST | `/eventos`, `/inscripciones`, `/resultados` | CRUD competencias |
+| GET | `/participantes` | Filtrado por rol/club |
+
+### SIGDEF (FrontSigdef)
+| Método | Ruta | Auth | Notas |
+|--------|------|------|-------|
+| GET | `/Federaciones`, `/Federaciones/{id}` | Parcial | Listado público GET |
+| POST | `/Federaciones` | SuperAdmin | Alta simple |
+| PUT/DELETE | `/Federaciones/{id}` | SuperAdmin/Admin | |
+| GET/POST | `/Clubes`, `/Atleta`, `/DelegadoClub`, etc. | Según controller | Ver `Controllers/SIGDEF/*` |
+| GET | `/Participantes` | No `[Authorize]` | Filtra por rol en servicio |
+
+### SaaS / SuperAdmin
+| Método | Ruta | Rol | Notas |
+|--------|------|-----|-------|
+| GET | `/saas/planes` | Auth | Catálogo PlanesSaaS |
+| GET | `/saas/clubes-status` | SuperAdmin, Admin, soporte | Estado por federación |
+| GET | `/saas/global-metrics` | SuperAdmin, soporte | KPIs dashboard |
+| POST | `/saas/create-federacion` | **SuperAdmin** | Alta federación + admin |
+| PATCH | `/saas/clubes/{id}/toggle-activo` | SuperAdmin, Admin, soporte | |
+| POST | `/saas/asignar-plan` | SuperAdmin, Admin | |
+
+### Soporte / Auditoría
+| Método | Ruta | Rol | Notas |
+|--------|------|-----|-------|
+| GET | `/support/logs?limit=N` | SuperAdmin, admin, soporte_tecnico | Tabla `Auditoria` |
+| POST | `/support/frontend-error` | Anónimo | Reportes de crash front |
+
+---
+
+## 5. Sistema de progresión ICF (SportTrack-Front)
 
 ### Documento de referencia
 `SportTrack-Front/Documentacion/explicacion_sistema_progresion.md`
 
-Define planes **A–G** (10–72 botes), variantes **1 y 2**, reglas de clasificación y **tablas de carriles** (`4/H1 → L5`, `Next BT → L9`, etc.).
+Planes **A–G**, variantes **1 y 2**, tablas de carriles ICF.
 
-### Estado ANTES (legacy)
-- `PromoverFasesAsync` usaba reglas simplificadas + carriles **aleatorios** (`CrearFaseConResultados`)
-- `PlanProgresionAsignado` se guardaba pero **no se usaba**
-- Entidad `ReglaProgresion` en BD **sin uso**
-- Planes E/F/G incompletos; máx. 3 semifinales
-
-### Estado DESPUÉS (implementado)
-
-**Nuevos archivos backend:**
+### Implementación backend
 ```
 SportTrack-Sigdef.Controladores/Fase/Progression/
-├── ProgressionModels.cs      # SlotRule, BtSlotRule, ProgressionResult
-├── ProgressionEngine.cs      # PromoteFromEliminatoria / PromoteFromSemifinal
-└── ProgressionPlanRegistry.cs # Planes A1–G2 con tablas del doc
+├── ProgressionModels.cs
+├── ProgressionEngine.cs
+└── ProgressionPlanRegistry.cs   # Planes A1–G2 estáticos
 ```
 
-**Lógica:**
-- Al sortear heats: `DeterminarPlanProgresion(count)` → `A1`, `B2`, etc. (variante aleatoria 1|2)
-- Al **Promover Etapa**: motor ICF asigna carril exacto por heat+posición o BT (ordenado por tiempo)
-- Eliminatoria → crea SF + Final A (parcial) con carriles ICF
-- Semifinal → **fusiona** en Final A/B/C (no borra clasificados directos de heats)
-- Hasta **4 semifinales** (planes F/G) y **Final C** (planes D–G)
+- Sorteo heats: `DeterminarPlanProgresion(count)` → `A1`, `B2`, etc.
+- **Promover Etapa:** motor ICF asigna carril por heat+posición o BT
+- Hasta 4 semifinales (F/G) y Final C (D–G)
+- Sorteo inicial eliminatorias: carriles centrales (5,4,6,3,7,2,8,1,9); ICF exacto al **promover**
 
-**`PreGenerarSiguientesEtapasAsync`:**
-| Heats | Semis | Finales |
-|-------|-------|---------|
-| 2 | 1 | A |
-| 3 | 2 | A + B |
-| 4–6 | 3 | A + B |
-| 5+ | 3 | A + B + C |
-| 7–8 | 4 | A + B + C |
-
-**Nota:** sorteo inicial de eliminatorias sigue usando carriles centrales prioritarios (5,4,6,3,7,2,8,1,9). La distribución ICF exacta aplica al **promover** entre etapas.
-
-**API auditoría:** `GET /api/fases/ProgresionAudit/{eventoPruebaId}`
-
-**Front:**
+### Front SportTrack-Front
 - `FaseService.getProgresionAudit()`
-- `ProgressionAuditPage.jsx` consume API (fallback: `utils/ProgressionEngine.js`)
+- `ProgressionAuditPage.jsx` — API con fallback local `ProgressionEngine.js`
 
-### Flujo operativo para probar progresión
+### Flujo de prueba
 1. Generar fases (≥10 inscriptos)
-2. Cargar tiempos oficiales en **todas** las series de la etapa
-3. Finalizar fases / guardar tiempos
-4. **Promover Etapa**
-5. Verificar carriles en SF/Finales y en Auditoría de Progresión
+2. Tiempos oficiales en **todas** las series
+3. Finalizar / guardar tiempos
+4. Promover Etapa
+5. Verificar carriles + Auditoría de Progresión
 
 ---
 
-## 5. Estructura de código clave
+## 6. Dashboard SuperAdmin SIGDEF (FrontSigdef)
 
-### Backend — archivos importantes
+### Antes (incorrecto)
+`SuperDashboard.jsx` tenía **fallback a datos mock** si fallaba cualquier API:
+- 4 federaciones ficticias (FAC, FUC, Chile, Brasil)
+- 56 clubes, 1.540 atletas, $295.000 ARS
+- Gráfico SVG estático, planes hardcodeados, logs mock
+
+### Después (correcto)
+Consume APIs reales; **sin fallback mock** (muestra 0 o “Sin datos”):
+
+| Dato UI | Fuente API |
+|---------|------------|
+| Federaciones / clubes / atletas | `GET /saas/global-metrics` |
+| Ingresos mensuales, facturando | `global-metrics` (suma precios planes activos) |
+| Crecimiento atletas (gráfico) | `global-metrics.crecimientoMensual` (altas `AtletasFederados` últimos 6 meses) |
+| Distribución planes | `global-metrics.distribucionPlanes` |
+| Lista federaciones | `GET /saas/clubes-status` |
+| Actividad reciente | `GET /support/logs?limit=8` |
+
+`Auditoria.jsx` → `GET /support/logs?limit=100`
+
+**Requisito:** sesión SuperAdmin válida (401 si token inválido).
+
+### Backend — `GlobalMetricsDto` (campos)
+- `TotalFederaciones`, `TotalClubesAfiliados`, `TotalAtletasGlobales`
+- `IngresosMensuales`, `FederacionesFacturando`
+- `PorcentajeCrecimientoAtletas` (mes actual vs anterior)
+- `CrecimientoMensual[]`, `DistribucionPlanes[]`, `TopFederaciones[]`
+
+---
+
+## 7. Estructura de código por proyecto
+
+### SportTrack-Sigdef (backend)
+
+| Capa | Ruta | Contenido |
+|------|------|-----------|
+| API | `SportTrack-Sigdef/Controllers/` | Auth, Fases, Eventos, SaaS, SIGDEF, Support |
+| Lógica | `SportTrack-Sigdef.Controladores/` | Services, Progression, Federaciones, SaaS |
+| Datos | `SportTrack-Sigdef.AccesoDatos/` | DbContext, migrations |
+| Entidades | `SportTrack-Sigdef.Entidades/` | Modelos EF |
+
+**Archivos críticos:**
 | Archivo | Responsabilidad |
 |---------|-----------------|
-| `Program.cs` | CORS, JWT, migraciones auto, DI, ExceptionMiddleware |
-| `Controllers/Auth/AuthController.cs` | Login, cookie `X-Access-Token` |
-| `Controllers/FasesController.cs` | CRUD fases, Generar, Promover, Audit |
-| `Fase/FaseService.cs` | Sorteo, promoción ICF, cronograma |
-| `Fase/Progression/*` | Motor y reglas ICF |
-| `AccesoDatos/SportTrackDbContext.cs` | EF Core, seed admin, esquemas |
-| `Controllers/Clubes/ClubesController.cs` | API clubes SportTrack-Front |
-| `Controllers/SIGDEF/*` | Endpoints administración federación |
+| `Program.cs` | CORS, JWT, DI, migraciones auto, pipeline |
+| `Controllers/Auth/AuthController.cs` | Login, cookie, logout |
+| `Controllers/FasesController.cs` | Fases, Promover, ProgresionAudit |
+| `Controllers/SaaSController.cs` | Planes, métricas, create-federacion |
+| `Controllers/SupportController.cs` | Logs auditoría |
+| `Controllers/SIGDEF/*` | Atletas, Clubes, Delegados, etc. |
+| `Fase/FaseService.cs` + `Fase/Progression/*` | Motor regatas ICF |
+| `SaaS/SaaSService.cs` | Métricas globales, alta federación |
+| `AccesoDatos/SportTrackDbContext.cs` | Seed admin, esquemas |
 
-### Frontend SportTrack-Front — archivos importantes
+### SportTrack-Front
+
 | Archivo | Responsabilidad |
 |---------|-----------------|
-| `src/services/api.js` | Axios, baseURL, interceptors |
-| `src/utils/constants.js` | `VITE_API_URL`, endpoints |
+| `src/services/api.js` | Axios, Bearer, interceptors |
+| `src/utils/constants.js` | URLs, endpoints, storage keys |
 | `src/utils/authHelpers.js` | Rol y rutas dashboard |
-| `src/context/AuthContext.jsx` | Sesión, normalizeUser |
-| `src/pages/Auth/Login.jsx` | Login + redirect por rol |
-| `src/components/SharedSections/useResultados.js` | Promover, sortear, tiempos |
+| `src/context/AuthContext.jsx` | Sesión |
+| `src/components/Common/ProtectedRoute.jsx` | Guard rol + plan |
+| `src/components/Common/PlanGuard.jsx` | accesoSportTrack, controles live |
+| `src/pages/Super/Dashboard.jsx` | Panel SuperAdmin SportTrack |
+| `src/pages/Super/sections/GestionFederacionesSection.jsx` | CRUD federaciones SaaS |
+| `src/pages/Super/sections/SaaSManagement.jsx` | Gestión planes |
+| `src/pages/Super/sections/ProgressionAuditPage.jsx` | Auditoría ICF |
 | `src/services/FaseService.js` | API fases |
-| `vercel.json` | SPA rewrites (todo → index.html) |
+| `src/services/TimingSignalRService.js` | Hub timing tiempo real |
+| `vercel.json` | SPA rewrites |
 
-### Entidades BD compartidas (concepto)
-- **Comunes:** Participante, Club, Federacion, AtletaFederacion
-- **Regatas:** Evento, EventoPrueba, Etapa, Fase, Resultado, Inscripcion
-- **SIGDEF:** entidades federación propias separadas
+**Rutas principales:** `/`, `/login`, `/club/*`, `/super/*`, `/jueces/*`, `/juez-control/*`
 
----
+### FrontSigdef
 
-## 6. Decisiones de arquitectura tomadas
+| Archivo | Responsabilidad |
+|---------|-----------------|
+| `src/services/api.js` | Fetch wrapper, Bearer desde `user.token`, reescritura `/Club`→`/Clubes` |
+| `src/context/AuthContext.jsx` | Login, jwt-decode, roles mapeados |
+| `src/components/common/PlanGuard.jsx` | `requiereSigdef` |
+| `src/pages/SuperAdmin/SuperDashboard.jsx` | Consola Superadmin (KPIs reales) |
+| `src/pages/SuperAdmin/FederacionesManagement.jsx` | Gestión federaciones + planes |
+| `src/pages/SuperAdmin/FederacionesForm.jsx` | Alta/edición (`POST /saas/create-federacion`) |
+| `src/pages/SuperAdmin/Auditoria.jsx` | Bitácora |
+| `src/pages/FederacionAdmin/*` | Panel federación (atletas, clubes, delegados…) |
+| `src/pages/ClubAdmin/*` | Panel club |
+| `src/App.jsx` | Rutas `/dashboard`, `/club`, `/superadmin` |
 
-1. **Backend unificado** (`SportTrack-Sigdef`) reemplaza progresivamente `SportTrack-Federaciones` para frontends actuales.
-2. **CORS permisivo** en dev/pruebas (`SetIsOriginAllowed(origin => true)` + credentials).
-3. **ExceptionMiddleware antes de CORS** en pipeline, pero **inyecta headers CORS manualmente** en catch (crítico para cross-origin).
-4. **Plan ICF en código estático** (`ProgressionPlanRegistry`) en lugar de BD `ReglaProgresion` — más simple y alineado al doc; entidad BD queda para futuro.
-5. **IDs de plan:** `A1`, `B2`, etc. (alias `PlanA1` también resuelto). Antes era `Plan A1` con espacio.
-6. **Alta atleta unificada:** `IAltaAtletaService` — upsert Participante + AtletaFederacion (integrado en varios servicios).
-7. **Club dual:** `ClubesController` (SportTrack-Front) + rutas SIGDEF `ClubController`.
-
----
-
-## 7. SaaS / planes (contexto)
-
-- Planes SaaS en BD (`PlanesSaaS`) — SIGDEF/SportTrack/Pack Duo (S/M/L)
-- `PlanGuard.jsx` en front — verifica `accesoSportTrack`, controles live
-- SuperAdmin bypass de guards de plan
-- Gestión SaaS en `/super` (SaaSManagement)
+**Roles front mapeados:** `SUPERADMIN`, `FEDERACION`, `CLUB` (desde `rolFederacion` JWT)
 
 ---
 
-## 8. Deploy y git — estado habitual
+## 8. Decisiones de arquitectura
+
+1. **Backend unificado** reemplaza `SportTrack-Federaciones` (legacy).
+2. **CORS permisivo** + credentials para dev cross-origin.
+3. **ExceptionMiddleware** antes de CORS pero inyecta CORS en catch.
+4. **Progresión ICF en código** (`ProgressionPlanRegistry`), no en BD `ReglaProgresion`.
+5. **IDs plan:** `A1`, `B2` (alias `PlanA1` resuelto).
+6. **Alta atleta unificada:** `IAltaAtletaService` → Participante + AtletaFederacion.
+7. **Club dual:** `ClubesController` (SportTrack) + `SIGDEF/ClubController`.
+8. **Auth cross-origin:** Bearer en localStorage es fuente de verdad; cookie es complemento.
+9. **Dashboard SIGDEF:** nunca mock en producción; APIs `/saas/global-metrics` + `/saas/clubes-status`.
+
+---
+
+## 9. SaaS / planes
+
+- Tabla `PlanesSaaS`: SIGDEF/SportTrack/Pack Duo (S/M/L) con `Precio`, límites atletas/torneos
+- **SportTrack-Front** `PlanGuard`: `accesoSportTrack`, `accesoControlesLive` (solo plan L)
+- **FrontSigdef** `PlanGuard`: `requiereSigdef`
+- SuperAdmin bypass de guards de plan en ambos fronts
+- Gestión: SportTrack-Front `/super/saas` y `/super/federaciones`; FrontSigdef `/superadmin/federaciones`
+
+---
+
+## 10. Deploy
 
 ### Render (backend)
-- Push a `main` → auto-deploy
-- Verificar logs: migraciones, connection string
-- Cambios frecuentes sin push: `Program.cs` (DATABASE_URL), `HealthController`, progresión ICF
+- Push `main` → auto-deploy
+- Verificar logs: migraciones, connection string, JWT
+- Cambios recientes sin push: TokenKey unificado, global-metrics real, JwtBearer Bearer-first
 
-### Vercel (front)
-- Push a `main` → build con env de Production
-- Confirmar bundle JS nuevo (hash cambia, ej. `index-XXXX.js`)
-- Hard refresh (`Ctrl+Shift+R`) tras deploy
-
----
-
-## 9. Problemas pendientes / deuda técnica
-
-| Prioridad | Item | Notas |
-|-----------|------|-------|
-| Alta | **Push + deploy** backend con progresión ICF + ExceptionMiddleware | Sin deploy en Render no hay progresión ICF en prod |
-| Alta | **Push + deploy** front (authHelpers, auditoría, .env.production) | |
-| Media | Actualizar **FrontSigdef** `.env` al backend nuevo | |
-| Media | **Reset password** PostgreSQL si se expuso en chat | |
-| Media | Verificar **Plan F/G** en regata real (reglas BT complejas) | Probar con datos reales |
-| Baja | Usar entidad `ReglaProgresion` en BD o eliminar si no se usa | |
-| Baja | Encoding legacy en algunos logs/strings viejos del backend | |
-| Baja | `render_db_credentials.md` — no commitear secretos | |
-| Baja | Tests automatizados progresión ICF | No existen aún |
+### Vercel (fronts)
+- Push `main` → build con env Production
+- Confirmar hash JS nuevo tras deploy
+- Hard refresh (`Ctrl+Shift+R`)
+- **FrontSigdef:** verificar `VITE_API_URL` en dashboard Vercel (no solo `.env` local)
 
 ---
 
-## 10. Errores frecuentes y diagnóstico rápido
+## 11. Problemas pendientes / deuda técnica
+
+| Prioridad | Item | Repo |
+|-----------|------|------|
+| Alta | Push + deploy backend (JWT fix, global-metrics, progresión ICF) | Sigdef |
+| Alta | Push + deploy SportTrack-Front (auth, federaciones, auditoría) | Front |
+| Alta | Push + deploy FrontSigdef (dashboard real, auth, `.env` Vercel) | FrontSigdef |
+| Alta | Actualizar `VITE_API_URL` FrontSigdef en Vercel (sigue legacy en `.env` local) | FrontSigdef |
+| Media | Reset password PostgreSQL si se expuso | BD |
+| Media | Probar planes F/G progresión con regata real | Sigdef |
+| Media | Eventos/inscripciones en FrontSigdef (rutas comentadas en App.jsx) | FrontSigdef |
+| Baja | Entidad `ReglaProgresion` en BD — usar o eliminar | Sigdef |
+| Baja | Encoding legacy en strings backend | Sigdef |
+| Baja | Tests automatizados progresión ICF | Sigdef |
+| Baja | No commitear secretos (`render_db_credentials.md`, `.env`) | Todos |
+
+---
+
+## 12. Errores frecuentes y diagnóstico
 
 | Síntoma | Causa probable | Acción |
 |---------|----------------|--------|
-| `Network Error`, status undefined | URL API mal en build o CORS en error 500 | Ver `fullUrl` en consola; revisar CORS en respuesta |
-| Login OK pero va a `/` (home) | `rolFederacion` no mapeado a `rol` | Verificar `authHelpers.js` desplegado |
-| Contraseña incorrecta con hash “correcto” | Hash viejo en BD | SQL reset con hash BCrypt válido |
-| Promover falla “faltan resultados” | Alguna serie sin tiempo guardado | Finalizar/guardar todas las series |
-| Categorías OK, login no | Auth/Usuarios aparte de catálogos | Revisar tabla `seguridad.Usuarios` |
-| Bundle viejo en browser | Cache | Hard refresh o ventana incógnito |
+| `Network Error`, status undefined | URL API mal en build o CORS en 500 | Ver `fullUrl` en consola |
+| Login OK pero redirect incorrecto | `rolFederacion` no mapeado | `authHelpers.js` / AuthContext |
+| **401 en POST** (create-federacion, saas) | Token inválido, TokenKey distinto, cookie stale | Re-login; deploy backend JWT fix; verificar header Bearer |
+| **401 response.data vacío** | JwtBearer rechazó token | Cerrar sesión, volver a entrar como SuperAdmin |
+| Dashboard SIGDEF muestra 4 feds / $295k | Bundle viejo con mocks o API falló sin deploy nuevo | Deploy FrontSigdef + login SuperAdmin |
+| Contraseña incorrecta | Hash viejo en BD | SQL reset arriba |
+| Promover falla “faltan resultados” | Serie sin tiempo | Guardar todos los tiempos |
+| FrontSigdef pega a API vieja | `VITE_API_URL` legacy | Cambiar a `sporttrack-sigdef.onrender.com` |
+| Bundle viejo | Cache browser | Incógnito / hard refresh |
 
 ---
 
-## 11. Comandos útiles
+## 13. Comandos útiles
 
 ```powershell
 # Build backend
 cd c:\Users\EZEQU\source\repos\SportTrack-Sigdef
 dotnet build
 
-# Build front
+# Build SportTrack-Front
 cd c:\Users\EZEQU\source\reposFront\SportTrack-Front
+npm run build
+
+# Build FrontSigdef
+cd c:\Users\EZEQU\source\reposFront\FrontSigdef
 npm run build
 
 # Test login API
@@ -264,12 +389,23 @@ Invoke-WebRequest -Uri "https://sporttrack-sigdef.onrender.com/api/auth/login" `
 
 ---
 
-## 12. Commits recientes relevantes (referencia)
+## 14. Mapa mental — qué frontend usa qué
 
-- Front: `enviroments` — `.env.production`, PlanGuard, AuthContext, api.js logging
-- Front (local, verificar push): `authHelpers.js`, Login redirect, ProgressionAudit API
-- Back (local, verificar push): ExceptionMiddleware, AuthService bcrypt, progresión ICF completa
+```
+                    ┌─────────────────────────────┐
+                    │   SportTrack-Sigdef (API)    │
+                    │   PostgreSQL Render           │
+                    └──────────────┬──────────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+    ┌─────────▼─────────┐ ┌───────▼────────┐ ┌────────▼────────┐
+    │ SportTrack-Front  │ │  FrontSigdef   │ │  SignalR Hub    │
+    │ Regatas, jueces,  │ │  Atletas,      │ │  Timing live    │
+    │ tiempos, ICF      │ │  clubes, SaaS  │ │  (SportTrack)   │
+    └───────────────────┘ └────────────────┘ └─────────────────┘
+```
 
 ---
 
-*Este archivo debe actualizarse cuando cambien URLs, credenciales de deploy, o decisiones de arquitectura.*
+*Actualizar este archivo cuando cambien URLs, auth, APIs de métricas, o decisiones de arquitectura. Mantener sincronizado en los 3 repos.*
