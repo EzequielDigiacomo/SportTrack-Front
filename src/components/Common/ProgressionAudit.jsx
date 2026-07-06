@@ -39,7 +39,7 @@ const ProgressionAudit = ({ eventoPrueba, auditData }) => {
                 <td>{row.eliminatoria}</td>
                 <td>{row.semifinal}</td>
                 <td>{row.final}</td>
-                <td><span className="badge badge-light">{eventoPrueba?.planProgresionAsignado || '—'}</span></td>
+                <td><span className="badge badge-light">{row.plan || eventoPrueba?.planProgresionAsignado || '—'}</span></td>
               </tr>
             ))}
           </tbody>

@@ -18,6 +18,10 @@ const FaseService = {
         const response = await api.post(ENDPOINTS.FASES.PROMOVER(eventoPruebaId));
         return response.data;
     },
+    getProgresionAudit: async (eventoPruebaId) => {
+        const response = await api.get(`${ENDPOINTS.FASES.BASE}/ProgresionAudit/${eventoPruebaId}`);
+        return response.data;
+    },
     delete: async (id) => {
         await api.delete(`${ENDPOINTS.FASES.BASE}/${id}`);
     },

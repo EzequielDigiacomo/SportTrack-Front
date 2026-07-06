@@ -72,22 +72,35 @@ const ProgressionAuditPage = () => {
             const freshPruebas = await PruebaService.getByEvento(selectedEventoId);
             setPruebas((freshPruebas || []).sort((a,b) => new Date(a.fechaHora) - new Date(b.fechaHora)));
 
-            const [inscs, fs] = await Promise.all([
+            const [inscs, fs, auditFromApi] = await Promise.all([
                 InscripcionService.getByEventoPrueba(selectedPruebaId),
-                FaseService.getByEventoPrueba(selectedPruebaId)
+                FaseService.getByEventoPrueba(selectedPruebaId),
+                FaseService.getProgresionAudit(selectedPruebaId).catch(() => null)
             ]);
             
             const pruebaSeleccionada = (freshPruebas || []).find(p => String(p.id) === String(selectedPruebaId));
+            const planRaw = pruebaSeleccionada?.planProgresionAsignado || 'Sin Plan';
+            const planLabel = planRaw.startsWith('Plan') ? planRaw : (planRaw.match(/^[A-G]\d$/) ? `Plan ${planRaw}` : planRaw);
+
             if (pruebaSeleccionada) {
                 setEventoPruebaMetaData({
                     nombre: formatPruebaName(pruebaSeleccionada),
-                    planProgresionAsignado: pruebaSeleccionada.planProgresionAsignado || 'Sin Plan Asignado'
+                    planProgresionAsignado: planLabel
                 });
             }
 
-            // Usar el motor para parsear el estado actual de los atletas
-            const traceData = buildFactualProgression(inscs || [], fs || []);
-            setAuditData(traceData);
+            if (auditFromApi?.length) {
+                setAuditData(auditFromApi.map(row => ({
+                    atleta: row.atleta,
+                    eliminatoria: row.eliminatoria || '—',
+                    semifinal: row.semifinal || '—',
+                    final: row.final || '—',
+                    plan: row.plan ? (row.plan.startsWith('Plan') ? row.plan : `Plan ${row.plan}`) : planLabel
+                })));
+            } else {
+                const traceData = buildFactualProgression(inscs || [], fs || []);
+                setAuditData(traceData.map(row => ({ ...row, plan: planLabel })));
+            }
         } catch (err) {
             console.error("Error cargando datos de auditoría", err);
         } finally {
