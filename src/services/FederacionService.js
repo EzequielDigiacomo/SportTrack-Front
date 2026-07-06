@@ -1,11 +1,11 @@
 import api from './api';
 import { ENDPOINTS } from '../utils/constants';
-import { mapFederacionFromApi } from '../utils/apiHelpers';
+import { mapFederacionFromApi, normalizeFederacionesList } from '../utils/apiHelpers';
 
 const FederacionService = {
     getAll: async () => {
         const response = await api.get(ENDPOINTS.FEDERACIONES);
-        return (response.data || []).map(mapFederacionFromApi);
+        return normalizeFederacionesList(response.data);
     },
 
     getById: async (id) => {

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Save, ArrowLeft } from 'lucide-react';
+import FederacionService from '../../../services/FederacionService';
 import { getClubFederationId, pick } from '../../../utils/apiHelpers';
 
 const SEXO_OPTIONS = [
@@ -24,9 +25,40 @@ const AtletaForm = ({
     onChange, 
     saving, 
     isEditing,
-    hideClubSelect = false
+    hideClubSelect = false,
+    scopeFedId = null,
+    showFederationSelect = false,
 }) => {
     const today = new Date().toISOString().split('T')[0];
+    const [federacionesList, setFederacionesList] = useState(federaciones);
+    const effectiveFedId = initialData.federacionId || scopeFedId || '';
+
+    useEffect(() => {
+        if (!showFederationSelect) return undefined;
+
+        let cancelled = false;
+
+        const loadFederaciones = async () => {
+            try {
+                const data = await FederacionService.getAll();
+                if (cancelled) return;
+
+                const scoped = scopeFedId
+                    ? data.filter(f => String(f.id) === String(scopeFedId))
+                    : data;
+
+                setFederacionesList(scoped.length > 0 ? scoped : data);
+            } catch (err) {
+                console.error('Error cargando federaciones:', err);
+                if (!cancelled && federaciones.length > 0) {
+                    setFederacionesList(federaciones);
+                }
+            }
+        };
+
+        loadFederaciones();
+        return () => { cancelled = true; };
+    }, [scopeFedId, federaciones, showFederationSelect]);
 
     return (
         <div className="atleta-form-container fade-in">
@@ -155,24 +187,26 @@ const AtletaForm = ({
                         
                         {!hideClubSelect && (
                             <div className="form-row">
-                                <div className="form-group">
-                                    <label>Federación</label>
-                                    <select 
-                                        className="admin-select"
-                                        name="federacionId"
-                                        value={initialData.federacionId || ''} 
-                                        onChange={(e) => { 
-                                            onChange('federacionId', e.target.value); 
-                                            onChange('clubId', ''); 
-                                            onChange('idClub', ''); 
-                                        }}
-                                    >
-                                        <option value="">Seleccionar Federación</option>
-                                        {federaciones.map(fed => (
-                                            <option key={fed.id} value={fed.id}>{fed.nombre}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                {showFederationSelect && (
+                                    <div className="form-group">
+                                        <label>Federación</label>
+                                        <select 
+                                            className="admin-select"
+                                            name="federacionId"
+                                            value={initialData.federacionId || ''} 
+                                            onChange={(e) => { 
+                                                onChange('federacionId', e.target.value); 
+                                                onChange('clubId', ''); 
+                                                onChange('idClub', ''); 
+                                            }}
+                                        >
+                                            <option value="">Seleccionar Federación</option>
+                                            {federacionesList.map(fed => (
+                                                <option key={fed.id} value={fed.id}>{fed.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                                 <div className="form-group">
                                     <label>Club / Entidad</label>
                                     <select 
@@ -180,13 +214,13 @@ const AtletaForm = ({
                                         name="clubId"
                                         value={initialData.clubId || initialData.idClub || ''} 
                                         onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
-                                        disabled={!initialData.federacionId && federaciones.length > 0}
+                                        disabled={showFederationSelect && !effectiveFedId && federacionesList.length > 0}
                                     >
                                         <option value="">Sin Asignar (Agente Libre)</option>
                                         {clubes
                                             .filter(c => {
                                                 const clubFedId = getClubFederationId(c);
-                                                return clubFedId && (!initialData.federacionId || String(clubFedId) === String(initialData.federacionId));
+                                                return clubFedId && (!effectiveFedId || String(clubFedId) === String(effectiveFedId));
                                             })
                                             .map(club => {
                                                 const clubId = pick(club, 'id', 'Id', 'idClub', 'IdClub');

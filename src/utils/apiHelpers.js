@@ -41,12 +41,56 @@ export function isClubWithoutFederation(club) {
     return !getClubFederationId(club);
 }
 
+/** Asegura array aunque la API devuelva un solo objeto */
+export function ensureArray(data) {
+    if (data == null) return [];
+    return Array.isArray(data) ? data : [data];
+}
+
+/** Detecta entidad club (tiene federacionId) vs federación (tiene idFederacion) */
+export function isClubEntity(obj) {
+    if (!obj) return false;
+    const hasFedParent = pick(obj, 'federacionId', 'FederacionId', 'idFederacion', 'IdFederacion') != null
+        && pick(obj, 'idFederacion', 'IdFederacion') == null;
+    const hasClubFields = pick(obj, 'federacionNombre', 'FederacionNombre', 'cantidadAtletas', 'CantidadAtletas') != null;
+    return hasFedParent || hasClubFields;
+}
+
 /** Normaliza federación desde la API */
 export const mapFederacionFromApi = (f) => ({
     id: pick(f, 'idFederacion', 'IdFederacion', 'id', 'Id'),
     nombre: pick(f, 'nombre', 'Nombre') || 'Federación',
     sigla: pick(f, 'sigla', 'Sigla') || '',
 });
+
+/** Lista de federaciones desde GET /federaciones — excluye clubes mezclados por error */
+export function normalizeFederacionesList(raw) {
+    return ensureArray(raw)
+        .filter(f => !isClubEntity(f))
+        .map(mapFederacionFromApi)
+        .filter(f => f.id != null && f.id !== '');
+}
+
+/** Resuelve id de federación para scoping: URL > usuario > club del usuario > inferir de clubes */
+export function resolveScopeFederationId({ fedIdFromUrl, user, clubes = [] }) {
+    if (fedIdFromUrl != null && fedIdFromUrl !== '') return String(fedIdFromUrl);
+
+    const userFedId = getUserFederationId(user);
+    if (userFedId != null) return String(userFedId);
+
+    const userClubId = pick(user, 'clubId', 'ClubId', 'idClub', 'IdClub');
+    if (userClubId != null) {
+        const club = (clubes || []).find(c => String(pick(c, 'id', 'Id')) === String(userClubId));
+        const clubFedId = getClubFederationId(club);
+        if (clubFedId != null) return String(clubFedId);
+    }
+
+    // Fallback: si la API ya devolvió clubes scoped al tenant, inferir de la primera fila
+    const inferred = (clubes || []).map(getClubFederationId).find(id => id != null);
+    if (inferred != null) return String(inferred);
+
+    return null;
+}
 
 /** Filtra clubes por federación */
 export function filterClubesByFederation(clubes, fedId) {

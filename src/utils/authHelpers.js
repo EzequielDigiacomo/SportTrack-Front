@@ -11,6 +11,16 @@ export const getUserRole = (data) => {
     ).trim();
 };
 
+export const isSuperAdminUser = (user) => {
+    const role = getUserRole(user).toLowerCase();
+    return role === 'superadmin' || user?.username === 'soporte_tecnico';
+};
+
+export const isFederationAdminUser = (user) => {
+    const role = getUserRole(user).toLowerCase();
+    return role === 'admin';
+};
+
 export const getDashboardPathForRole = (role) => {
     const normalized = (role || '').toLowerCase();
     if (normalized === 'admin' || normalized === 'superadmin') return '/super';

@@ -10,11 +10,12 @@ import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
 import {
     withFederationScope,
-    getUserFederationId,
     clubBelongsToFederation,
     isClubWithoutFederation,
     pick,
+    resolveScopeFederationId,
 } from '../../../utils/apiHelpers';
+import { isSuperAdminUser } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionClubesSection = () => {
@@ -22,9 +23,8 @@ const GestionClubesSection = () => {
     const location = useLocation();
     const { user } = useAuth();
     const fedIdFromUrl = new URLSearchParams(location.search).get('fedId');
-    const scopeFedId = fedIdFromUrl || getUserFederationId(user) || null;
-
     const [clubes, setClubes] = useState([]);
+    const scopeFedId = resolveScopeFederationId({ fedIdFromUrl, user, clubes });
     const [federaciones, setFederaciones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
@@ -39,7 +39,7 @@ const GestionClubesSection = () => {
     const [showOrphans, setShowOrphans] = useState(false);
     const [planes, setPlanes] = useState([]);
 
-    const isSuper = user?.rol === 'SuperAdmin';
+    const isSuper = isSuperAdminUser(user);
 
     useEffect(() => {
         loadData();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserPlus, ArrowLeft, Filter, Link2, X } from 'lucide-react';
 import api from '../../../services/api';
@@ -12,19 +12,24 @@ import AtletaForm from './AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
 import { ENDPOINTS } from '../../../utils/constants';
-import { withFederationScope, getClubFederationId, getUserFederationId, pick, filterClubesByFederation } from '../../../utils/apiHelpers';
+import { withFederationScope, getClubFederationId, getUserFederationId, pick, filterClubesByFederation, resolveScopeFederationId } from '../../../utils/apiHelpers';
+import { isSuperAdminUser } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionAtletasSection = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
+    const isSuper = isSuperAdminUser(user);
     const params = new URLSearchParams(location.search);
     const clubIdFromUrl = params.get('clubId');
     const clubNombreFromUrl = params.get('clubNombre') ? decodeURIComponent(params.get('clubNombre')) : '';
     const fedIdFromUrl = params.get('fedId');
 
-    const scopeFedId = fedIdFromUrl || getUserFederationId(user) || null;
+    const scopeFedId = useMemo(
+        () => resolveScopeFederationId({ fedIdFromUrl, user, clubes }),
+        [fedIdFromUrl, user, clubes]
+    );
 
     const [atletas, setAtletas] = useState([]);
     const [clubes, setClubes] = useState([]);
@@ -70,7 +75,7 @@ const GestionAtletasSection = () => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [scopeFedId]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -362,6 +367,8 @@ const GestionAtletasSection = () => {
                     initialData={form}
                     clubes={clubes}
                     federaciones={federaciones}
+                    scopeFedId={scopeFedId}
+                    showFederationSelect={isSuper && !scopeFedId}
                     saving={saving}
                     isEditing={view === 'editar'}
                     onCancel={() => setView('lista')}

@@ -29,10 +29,11 @@ import ProgressionAudit from '../../components/Common/ProgressionAudit';
 import FederacionService from '../../services/FederacionService';
 import {
     getClubFederationId,
-    getUserFederationId,
     clubBelongsToFederation,
+    resolveScopeFederationId,
 } from '../../utils/apiHelpers';
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
+import { isSuperAdminUser } from '../../utils/authHelpers';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -59,7 +60,7 @@ const AdminHome = () => {
     });
 
     const role = user?.rol?.trim().toLowerCase();
-    const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
+    const isSuper = isSuperAdminUser(user);
     const isViewingSpecificFed = isSuper && id;
 
     const loadData = async () => {
@@ -133,17 +134,21 @@ const AdminHome = () => {
                     federaciones,
                 }));
 
-                const targetFedId = Number(getUserFederationId(user));
+                const targetFedId = resolveScopeFederationId({ user, clubes: clubesData });
+                const subClubes = targetFedId
+                    ? clubesData.filter(c => clubBelongsToFederation(c, targetFedId))
+                    : clubesData;
+
                 const myEvents = eventosRaw.filter(e => {
                     const club = clubesData.find(c => c.id === e.clubId);
                     const eventFedId = club ? getClubFederationId(club) : e.federacionId;
-                    return String(eventFedId) === String(targetFedId) && e.estado !== 'Finalizado';
+                    const matchesFed = !targetFedId || String(eventFedId) === String(targetFedId);
+                    return matchesFed && e.estado !== 'Finalizado';
                 });
                 setFedEvents(myEvents);
 
                 const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
                 const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
-                const subClubes = clubesData.filter(c => clubBelongsToFederation(c, targetFedId));
                 const totalAtletas = subClubes.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
                 setStats({
                     eventos: eventosData.length,
