@@ -8,6 +8,22 @@ import './ConfigurarPruebas.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import { pick } from '../../utils/apiHelpers';
+
+const parseEnabledIds = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    return value.split(',').map(s => s.trim()).filter(Boolean);
+};
+
+const filterByEnabledIds = (items, enabledCsv) => {
+    const enabled = parseEnabledIds(enabledCsv);
+    if (!enabled?.length) return items;
+    return items.filter(item => {
+        const id = pick(item, 'id', 'Id');
+        return enabled.includes(String(id));
+    });
+};
+
 const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
 
 const DISTANCIA_NAMES = {
@@ -76,27 +92,29 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
         const loadData = async () => {
             try {
                 const { default: FaseService } = await import('../../services/FaseService');
-                const [cats, bts, dists, actuals, live] = await Promise.all([
+                const [catsRes, btsRes, distsRes, actualsRes, liveRes] = await Promise.allSettled([
                     CategoriaService.getAll(),
                     BoteService.getAll(),
                     DistanciaService.getAll(),
                     PruebaService.getByEvento(evento.id),
-                    FaseService.getByEvento(evento.id).catch(() => [])
+                    FaseService.getByEvento(evento.id),
                 ]);
-                setCategorias(evento.categoriasHabilitadas 
-                    ? cats.filter(c => evento.categoriasHabilitadas.split(',').includes(c.id.toString()))
-                    : cats
-                );
-                setBotes(evento.botesHabilitados 
-                    ? bts.filter(b => evento.botesHabilitados.split(',').includes(b.id.toString()))
-                    : bts
-                );
-                setDistancias(evento.distanciasHabilitadas 
-                    ? dists.filter(d => evento.distanciasHabilitadas.split(',').includes(d.id.toString()))
-                    : dists
-                );
-                setPruebasActuales(actuals);
-                setFasesLive(live || []);
+
+                const cats = catsRes.status === 'fulfilled' ? catsRes.value : [];
+                const bts = btsRes.status === 'fulfilled' ? btsRes.value : [];
+                const dists = distsRes.status === 'fulfilled' ? distsRes.value : [];
+                const actuals = actualsRes.status === 'fulfilled' ? actualsRes.value : [];
+                const live = liveRes.status === 'fulfilled' ? liveRes.value : [];
+
+                if (actualsRes.status === 'rejected') {
+                    console.warn('[ConfigPruebas] No se pudieron cargar pruebas del evento:', actualsRes.reason);
+                }
+
+                setCategorias(filterByEnabledIds(cats, evento.categoriasHabilitadas));
+                setBotes(filterByEnabledIds(bts, evento.botesHabilitados));
+                setDistancias(filterByEnabledIds(dists, evento.distanciasHabilitadas));
+                setPruebasActuales(Array.isArray(actuals) ? actuals : []);
+                setFasesLive(Array.isArray(live) ? live : []);
                 if (evento) {
                     setGapEntrePruebas(evento.gapEntrePruebas || 10);
                     setUsarGapVariable(evento.usarGapVariable || false);

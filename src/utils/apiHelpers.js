@@ -106,6 +106,26 @@ export function athleteBelongsToFederation(atleta, clubes, fedId) {
     return club && String(getClubFederationId(club)) === String(fedId);
 }
 
+/** Id de federación en objetos evento (directo o vía club) */
+export function getEventFederationId(evento, clubes = []) {
+    const fedFromEvent = pick(evento, 'federacionId', 'FederacionId', 'idFederacion', 'IdFederacion');
+    if (fedFromEvent != null && fedFromEvent !== '') return fedFromEvent;
+
+    const clubId = pick(evento, 'clubId', 'ClubId', 'idClub', 'IdClub');
+    if (clubId == null || clubId === '') return null;
+
+    const club = (clubes || []).find(c => String(pick(c, 'id', 'Id')) === String(clubId));
+    return club ? getClubFederationId(club) : null;
+}
+
+/** Evento visible para la federación indicada */
+export function eventBelongsToFederation(evento, clubes, fedId, { trustApiScope = false } = {}) {
+    if (fedId == null || fedId === '') return true;
+    const eventFedId = getEventFederationId(evento, clubes);
+    if (eventFedId == null) return trustApiScope;
+    return String(eventFedId) === String(fedId);
+}
+
 /** Filtra clubes por federación */
 export function filterClubesByFederation(clubes, fedId) {
     if (fedId == null || fedId === '') return clubes;

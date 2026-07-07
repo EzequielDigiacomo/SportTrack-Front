@@ -32,6 +32,8 @@ import {
     getClubFederationId,
     clubBelongsToFederation,
     resolveScopeFederationId,
+    getEventFederationId,
+    eventBelongsToFederation,
 } from '../../utils/apiHelpers';
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 import { isSuperAdminUser } from '../../utils/authHelpers';
@@ -118,9 +120,8 @@ const AdminHome = () => {
 
                 const targetFedId = Number(id);
                 const myEvents = events.filter(e => {
-                    const club = allClubs.find(c => c.id === e.clubId);
-                    const eventFedId = club ? getClubFederationId(club) : e.federacionId;
-                    return String(eventFedId) === String(targetFedId) && e.estado !== 'Finalizado';
+                    if (e.estado === 'Finalizado') return false;
+                    return eventBelongsToFederation(e, allClubs, targetFedId);
                 });
                 setFedEvents(myEvents);
             } else {
@@ -146,10 +147,10 @@ const AdminHome = () => {
 
                 const myEvents = eventosRaw.filter(e => {
                     if (!isSuper && e.nombre?.toLowerCase().includes('control')) return false;
-                    const club = clubesData.find(c => c.id === e.clubId);
-                    const eventFedId = club ? getClubFederationId(club) : e.federacionId;
-                    const matchesFed = !targetFedId || String(eventFedId) === String(targetFedId);
-                    return matchesFed && e.estado !== 'Finalizado';
+                    if (e.estado === 'Finalizado') return false;
+                    return eventBelongsToFederation(e, clubesData, targetFedId, {
+                        trustApiScope: !isSuper,
+                    });
                 });
                 setFedEvents(myEvents);
 
