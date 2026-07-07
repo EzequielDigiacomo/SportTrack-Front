@@ -92,6 +92,20 @@ export function resolveScopeFederationId({ fedIdFromUrl, user, clubes = [] }) {
     return null;
 }
 
+/** Id de club en objetos atleta/participante */
+export function getAtletaClubId(atleta) {
+    return pick(atleta, 'clubId', 'ClubId', 'idClub', 'IdClub') ?? null;
+}
+
+/** Atleta pertenece a la federación (por club o agente libre visible en su fed) */
+export function athleteBelongsToFederation(atleta, clubes, fedId) {
+    if (fedId == null || fedId === '') return true;
+    const clubId = getAtletaClubId(atleta);
+    if (clubId == null || clubId === '' || clubId === 0) return true;
+    const club = (clubes || []).find(c => String(pick(c, 'id', 'Id')) === String(clubId));
+    return club && String(getClubFederationId(club)) === String(fedId);
+}
+
 /** Filtra clubes por federación */
 export function filterClubesByFederation(clubes, fedId) {
     if (fedId == null || fedId === '') return clubes;

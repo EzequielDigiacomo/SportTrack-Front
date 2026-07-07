@@ -12,7 +12,7 @@ import AtletaForm from './AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
 import { ENDPOINTS } from '../../../utils/constants';
-import { withFederationScope, getClubFederationId, getUserFederationId, pick, filterClubesByFederation, resolveScopeFederationId } from '../../../utils/apiHelpers';
+import { withFederationScope, getClubFederationId, pick, filterClubesByFederation, resolveScopeFederationId, athleteBelongsToFederation } from '../../../utils/apiHelpers';
 import { isSuperAdminUser } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
@@ -26,14 +26,17 @@ const GestionAtletasSection = () => {
     const clubNombreFromUrl = params.get('clubNombre') ? decodeURIComponent(params.get('clubNombre')) : '';
     const fedIdFromUrl = params.get('fedId');
 
+    const [atletas, setAtletas] = useState([]);
+    const [clubes, setClubes] = useState([]);
+    const [federaciones, setFederaciones] = useState([]);
+
     const scopeFedId = useMemo(
         () => resolveScopeFederationId({ fedIdFromUrl, user, clubes }),
         [fedIdFromUrl, user, clubes]
     );
 
-    const [atletas, setAtletas] = useState([]);
-    const [clubes, setClubes] = useState([]);
-    const [federaciones, setFederaciones] = useState([]);
+    const effectiveFedId = scopeFedId || fedIdFromUrl || null;
+
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
     const [selectedAtleta, setSelectedAtleta] = useState(null);
@@ -256,18 +259,8 @@ const GestionAtletasSection = () => {
                 clubMatch = !selectedClub || atleta.clubNombre === selectedClub;
             }
 
-            // Scoping por federación
-            let fedMatch = true;
-            if (fedIdFromUrl) {
-                const targetFedId = parseInt(fedIdFromUrl);
-                if (atleta.clubId) {
-                    const athleteClub = clubes.find(c => pick(c, 'id', 'Id') === atleta.clubId);
-                    fedMatch = athleteClub && String(getClubFederationId(athleteClub)) === String(targetFedId);
-                } else {
-                    // Atletas sin club (siempre visibles para poder ser asignados a clubes de esta federación)
-                    fedMatch = true;
-                }
-            }
+            // Scoping por federación (URL o usuario Admin)
+            const fedMatch = athleteBelongsToFederation(atleta, clubes, effectiveFedId);
 
             return nameMatch && clubMatch && fedMatch;
         })
@@ -328,7 +321,7 @@ const GestionAtletasSection = () => {
                             options={[
                                 { value: '', label: 'Todos los Clubes' },
                                 { value: '__SIN_CLUB__', label: 'Sin Club asignado' },
-                                ...filterClubesByFederation(clubes, fedIdFromUrl)
+                                ...filterClubesByFederation(clubes, effectiveFedId)
                                     .map(c => ({ value: c.nombre, label: c.nombre }))
                             ]}
                         />
@@ -424,7 +417,7 @@ const GestionAtletasSection = () => {
                                 onChange={val => setAssignModal(prev => ({ ...prev, clubId: val }))}
                                 options={[
                                     { value: '', label: '-- Elegir un club --' },
-                                    ...filterClubesByFederation(clubes, fedIdFromUrl)
+                                    ...filterClubesByFederation(clubes, effectiveFedId)
                                         .map(c => ({ value: pick(c, 'id', 'Id'), label: c.nombre }))
                                 ]}
                             />

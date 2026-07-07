@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import ClubService from '../../services/ClubService';
+import AtletaService from '../../services/AtletaService';
 import SaaSService from '../../services/SaaSService';
 import SupportService from '../../services/SupportService';
 import { History, Clock, FileText, AlertCircle, User, AlertTriangle, Trophy, CheckCircle2, XCircle } from 'lucide-react';
@@ -42,6 +43,7 @@ const AdminHome = () => {
     const [stats, setStats] = useState({ eventos: 0, programados: 0, clubes: 0, atletas: 0 });
     const [globalStats, setGlobalStats] = useState(null);
     const [fedName, setFedName] = useState('');
+    const [scopeFedId, setScopeFedId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [recentLogs, setRecentLogs] = useState([]);
     const [fedEvents, setFedEvents] = useState([]);
@@ -122,10 +124,11 @@ const AdminHome = () => {
                 });
                 setFedEvents(myEvents);
             } else {
-                const [eventosRaw, clubesData, federaciones] = await Promise.all([
+                const [eventosRaw, clubesData, federaciones, atletasData] = await Promise.all([
                     EventoService.getAll(),
                     ClubService.getAll(),
                     FederacionService.getAll().catch(() => []),
+                    AtletaService.getAll().catch(() => []),
                 ]);
 
                 setGlobalStats(prev => ({
@@ -135,11 +138,14 @@ const AdminHome = () => {
                 }));
 
                 const targetFedId = resolveScopeFederationId({ user, clubes: clubesData });
+                setScopeFedId(targetFedId);
+
                 const subClubes = targetFedId
                     ? clubesData.filter(c => clubBelongsToFederation(c, targetFedId))
                     : clubesData;
 
                 const myEvents = eventosRaw.filter(e => {
+                    if (!isSuper && e.nombre?.toLowerCase().includes('control')) return false;
                     const club = clubesData.find(c => c.id === e.clubId);
                     const eventFedId = club ? getClubFederationId(club) : e.federacionId;
                     const matchesFed = !targetFedId || String(eventFedId) === String(targetFedId);
@@ -147,14 +153,12 @@ const AdminHome = () => {
                 });
                 setFedEvents(myEvents);
 
-                const eventosData = isSuper ? eventosRaw : eventosRaw.filter(e => !e.nombre.toLowerCase().includes('control'));
-                const eventosProgramados = eventosData.filter(e => e.estado === 'Programado').length;
-                const totalAtletas = subClubes.reduce((acc, club) => acc + (club.cantidadAtletas || 0), 0);
+                const atletasList = Array.isArray(atletasData) ? atletasData : [];
                 setStats({
-                    eventos: eventosData.length,
-                    programados: eventosProgramados,
+                    eventos: myEvents.length,
+                    programados: myEvents.filter(e => e.estado === 'Programado').length,
                     clubes: subClubes.length,
-                    atletas: totalAtletas
+                    atletas: atletasList.length,
                 });
             }
         } catch (err) {
@@ -1057,6 +1061,8 @@ const AdminHome = () => {
     const navTo = (path) => {
         if (isViewingSpecificFed) {
             navigate(`${path}?fedId=${id}`);
+        } else if (scopeFedId) {
+            navigate(`${path}?fedId=${scopeFedId}`);
         } else {
             navigate(path);
         }
@@ -1121,7 +1127,9 @@ const AdminHome = () => {
             </div>
             {/* Planificador Anual Interactivo (Brandeado con los colores de la Federación) */}
             {(() => {
-                const targetFedId = isViewingSpecificFed ? Number(id) : Number(user.clubId);
+                const targetFedId = isViewingSpecificFed
+                    ? Number(id)
+                    : Number(scopeFedId || user?.federacionId || user?.FederacionId || 0);
                 const palette = getFederationPalette(targetFedId);
 
                 const currentYear = new Date().getFullYear();

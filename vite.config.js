@@ -7,9 +7,8 @@ export default defineConfig(({ mode }) => {
   // Carga las variables de entorno (incluye .env.local si existe)
   const env = loadEnv(mode, process.cwd(), '')
 
-  // Si VITE_API_TARGET está definido (ej: en .env.local) lo usamos,
-  // si no, usamos el backend local de desarrollo.
-  const apiTarget = env.VITE_API_TARGET || 'https://localhost:7156'
+  // Render en dev si VITE_API_TARGET está en .env.development / .env.local
+  const apiTarget = env.VITE_API_TARGET || 'https://sporttrack-sigdef.onrender.com'
   const isRemote = apiTarget.includes('onrender.com') || (apiTarget.startsWith('https://') && !apiTarget.includes('localhost'))
 
   console.log(`\n🎯 Proxy target: ${apiTarget}\n`)

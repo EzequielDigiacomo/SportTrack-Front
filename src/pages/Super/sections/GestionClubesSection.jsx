@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, ArrowLeft, Link2, X } from 'lucide-react';
 import api from '../../../services/api';
@@ -24,8 +24,11 @@ const GestionClubesSection = () => {
     const { user } = useAuth();
     const fedIdFromUrl = new URLSearchParams(location.search).get('fedId');
     const [clubes, setClubes] = useState([]);
-    const scopeFedId = resolveScopeFederationId({ fedIdFromUrl, user, clubes });
     const [federaciones, setFederaciones] = useState([]);
+    const scopeFedId = useMemo(
+        () => resolveScopeFederationId({ fedIdFromUrl, user, clubes }),
+        [fedIdFromUrl, user, clubes]
+    );
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
     const [selectedClub, setSelectedClub] = useState(null);
@@ -41,21 +44,16 @@ const GestionClubesSection = () => {
 
     const isSuper = isSuperAdminUser(user);
 
-    useEffect(() => {
-        loadData();
-        if (isSuper) loadPlanes();
-    }, [showOrphans, scopeFedId]);
-
-    const loadPlanes = async () => {
+    const loadPlanes = useCallback(async () => {
         try {
             const res = await api.get(ENDPOINTS.SAAS.PLANES);
             setPlanes(res.data);
         } catch (e) {
             console.error('Error loading plans:', e);
         }
-    };
+    }, []);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             setLoading(true);
             const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, scopeFedId);
@@ -66,7 +64,7 @@ const GestionClubesSection = () => {
 
             const todos = clubesRes.data || [];
             const visibleFeds = scopeFedId
-                ? feds.filter(f => String(f.id) === String(scopeFedId))
+                ? feds.filter(fed => String(fed.id) === String(scopeFedId))
                 : feds;
 
             let filtrados = todos;
@@ -86,7 +84,12 @@ const GestionClubesSection = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [scopeFedId, isSuper, showOrphans, showAlert]);
+
+    useEffect(() => {
+        loadData();
+        if (isSuper) loadPlanes();
+    }, [loadData, loadPlanes, isSuper]);
 
     const handleOpenCrear = () => {
         setForm({

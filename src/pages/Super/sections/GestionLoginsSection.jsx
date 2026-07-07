@@ -12,9 +12,10 @@ import { useAuth } from '../../../context/AuthContext';
 import {
     withFederationScope,
     clubBelongsToFederation,
-    getUserFederationId,
     pick,
+    resolveScopeFederationId,
 } from '../../../utils/apiHelpers';
+import { isSuperAdminUser } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionLoginsSection = () => {
@@ -23,10 +24,9 @@ const GestionLoginsSection = () => {
     const { user } = useAuth();
     const params = new URLSearchParams(location.search);
     const fedIdFromUrl = params.get('fedId');
-    const scopeFedId = fedIdFromUrl || getUserFederationId(user) || null;
-
-    const [usuarios, setUsuarios] = useState([]);
     const [clubes, setClubes] = useState([]);
+    const scopeFedId = resolveScopeFederationId({ fedIdFromUrl, user, clubes });
+    const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'editarPerfil'
     const [selectedUser, setSelectedUser] = useState(null);
