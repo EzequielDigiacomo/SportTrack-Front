@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants'
+import { getStoredAuthToken } from '../utils/authHelpers'
 
 // Create axios instance
 const CLIENT_APP = 'sporttrack';
@@ -12,20 +13,6 @@ const api = axios.create({
         'X-Client-App': CLIENT_APP,
     },
 })
-
-const getStoredAuthToken = () => {
-    const direct = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-    if (direct) return direct;
-
-    try {
-        const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-        if (!userData) return null;
-        const parsed = JSON.parse(userData);
-        return parsed?.token || parsed?.Token || null;
-    } catch {
-        return null;
-    }
-};
 
 // Interceptor de solicitud - Bearer en header (cookie cross-origin puede fallar)
 api.interceptors.request.use(

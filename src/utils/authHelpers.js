@@ -1,3 +1,20 @@
+import { STORAGE_KEYS } from './constants';
+
+/** Token JWT para API y SignalR (misma fuente que api.js). */
+export const getStoredAuthToken = () => {
+    const direct = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    if (direct) return direct;
+
+    try {
+        const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (!userData) return null;
+        const parsed = JSON.parse(userData);
+        return parsed?.token || parsed?.Token || null;
+    } catch {
+        return null;
+    }
+};
+
 export const getUserRole = (data) => {
     if (!data) return '';
     return (

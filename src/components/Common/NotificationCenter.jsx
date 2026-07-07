@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import './NotificationCenter.css';
 
 import { useAuth } from '../../context/AuthContext';
+import { getUserRole } from '../../utils/authHelpers';
 
 const NotificationCenter = ({ isAdmin }) => {
     const { user } = useAuth();
@@ -15,12 +16,11 @@ const NotificationCenter = ({ isAdmin }) => {
     useEffect(() => {
         if (!isAdmin) return;
 
-        const setup = async () => {
-            try {
-                await timingSignalRService.connect();
+        let cancelled = false;
 
-                // 1. Escuchar regatas que entran en revisión (terminadas por el cronometrista)
-                timingSignalRService.onGlobalRaceInReview((fase) => {
+        // 1. Escuchar regatas que entran en revisión (terminadas por el cronometrista)
+        timingSignalRService.onGlobalRaceInReview((fase) => {
+            if (cancelled) return;
                     setNotifications(prev => {
                         // Evitar duplicados
                         if (prev.some(n => n.id === fase.id)) return prev;
@@ -31,59 +31,70 @@ const NotificationCenter = ({ isAdmin }) => {
                             type: 'review'
                         }, ...prev];
                     });
-                });
+        });
 
-                // 2. Escuchar regatas que se oficializan (para quitarlas de la lista si estaban)
-                timingSignalRService.onGlobalRaceOfficialized((faseId) => {
-                    setNotifications(prev => prev.filter(n => String(n.id) !== String(faseId)));
-                });
+        // 2. Escuchar regatas que se oficializan (para quitarlas de la lista si estaban)
+        timingSignalRService.onGlobalRaceOfficialized((faseId) => {
+            if (cancelled) return;
+            setNotifications(prev => prev.filter(n => String(n.id) !== String(faseId)));
+        });
 
-                // 3. Escuchar inicios de regata (opcional, para alerta general)
-                timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
-                    // Si el juez ya está viendo esta regata (basado en la URL), no mostramos la notificación
-                    const params = new URLSearchParams(window.location.search);
-                    const currentFaseId = params.get('faseId');
-                    
-                    if (String(currentFaseId) === String(faseId)) {
-                        return;
-                    }
+        // 3. Escuchar inicios de regata (opcional, para alerta general)
+        timingSignalRService.onGlobalRaceStarted(({ faseId }) => {
+            if (cancelled) return;
+            const params = new URLSearchParams(window.location.search);
+            const currentFaseId = params.get('faseId');
+            
+            if (String(currentFaseId) === String(faseId)) {
+                return;
+            }
 
-                    setNotifications(prev => [
-                        {
-                            id: faseId,
-                            title: `¡Regata Iniciada!`,
-                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            type: 'start'
-                        },
-                        ...prev
-                    ]);
-                });
+            setNotifications(prev => [
+                {
+                    id: faseId,
+                    title: `¡Regata Iniciada!`,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    type: 'start'
+                },
+                ...prev
+            ]);
+        });
 
-                // 4. Escuchar solicitudes de cambio de estado de pago de clubes
-                timingSignalRService.onPaymentStatusChangeRequested(({ clubNombre, clubId, motive }) => {
-                    setNotifications(prev => {
-                        // Evitar duplicados por id de notificación único por club
-                        const notifId = `pay_${clubId}_${Date.now()}`;
-                        return [
-                            {
-                                id: notifId,
-                                title: `Solicitud de Pago: ${clubNombre}`,
-                                desc: motive,
-                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                type: 'payment',
-                                clubId: clubId
-                            },
-                            ...prev
-                        ];
-                    });
-                });
+        // 4. Escuchar solicitudes de cambio de estado de pago de clubes
+        timingSignalRService.onPaymentStatusChangeRequested(({ clubNombre, clubId, motive }) => {
+            if (cancelled) return;
+            const notifId = `pay_${clubId}_${Date.now()}`;
+            setNotifications(prev => [
+                {
+                    id: notifId,
+                    title: `Solicitud de Pago: ${clubNombre}`,
+                    desc: motive,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    type: 'payment',
+                    clubId: clubId
+                },
+                ...prev
+            ]);
+        });
+
+        const setup = async () => {
+            try {
+                const userName = user?.username || user?.nombre || 'Admin';
+                const role = getUserRole(user) || 'Admin';
+                await timingSignalRService.connect(null, null, userName, role);
             } catch (err) {
-                console.error("[NotifCenter] SignalR Setup Error:", err);
+                if (!cancelled) {
+                    console.warn("[NotifCenter] SignalR setup error:", err);
+                }
             }
         };
 
         setup();
-    }, [isAdmin]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isAdmin, user?.username, user?.nombre]);
 
     if (!isAdmin) return null;
 

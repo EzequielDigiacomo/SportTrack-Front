@@ -57,9 +57,9 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            timingSignalRService.disconnect();
+            await timingSignalRService.disconnect();
         } catch (e) {
-            console.error("Error al desconectar SignalR en el cierre de sesión", e);
+            console.warn("Error al desconectar SignalR en el cierre de sesión", e);
         }
 
         // Limpiamos el estado local INMEDIATAMENTE

@@ -1,12 +1,23 @@
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../utils/constants';
+import { getStoredAuthToken } from '../utils/authHelpers';
+
+function resolveHubUrl() {
+    const fromEnv = import.meta.env.VITE_SIGNALR_HUB_URL;
+    if (fromEnv?.startsWith('http')) return fromEnv;
+    if (fromEnv?.startsWith('/')) return fromEnv;
+    return `${API_BASE_URL.replace(/\/api\/?$/, '')}/hubs/timing`;
+}
 
 class TimingSignalRService {
     constructor() {
         this.connection = null;
         this.currentFaseId = null;
+        this.currentEventoId = null;
         this.serverOffset = 0;
         this.connectionPromise = null;
+        this._connectGeneration = 0;
+        this._intentionalDisconnect = false;
         this._stateCallbacks = [];
         this.userName = "Usuario";
         this.role = "Espectador";
@@ -24,6 +35,7 @@ class TimingSignalRService {
         this._globalRaceOfficializedCallback = null;
         this._lapRecordedCallback = null;
         this._paymentCallback = null;
+        this._handlersRegistered = false;
     }
 
     onStateChange(callback) {
@@ -47,191 +59,198 @@ class TimingSignalRService {
         return this.connection.state;
     }
 
-    async waitForConnection(timeoutMs = 5000) {
+    async waitForConnection(timeoutMs = 8000) {
         if (!this.connection) return false;
         if (this.connection.state === signalR.HubConnectionState.Connected) return true;
 
         const start = Date.now();
         while (Date.now() - start < timeoutMs) {
+            if (this._intentionalDisconnect) return false;
             if (this.connection.state === signalR.HubConnectionState.Connected) {
                 return true;
             }
+            if (this.connection.state === signalR.HubConnectionState.Disconnected) {
+                return false;
+            }
             await new Promise(r => setTimeout(r, 100));
         }
-        return false;
+        return this.connection.state === signalR.HubConnectionState.Connected;
+    }
+
+    _ensureConnectionHandlers() {
+        if (!this.connection || this._handlersRegistered) return;
+
+        this.connection.on("paymentStatusChangeRequested", (data) => {
+            if (this._paymentCallback) this._paymentCallback(data);
+        });
+        this.connection.on("paymentstatuschangerequested", (data) => {
+            if (this._paymentCallback) this._paymentCallback(data);
+        });
+
+        this.connection.on("RacePresenceUpdated", (presenceList) => {
+            if (this._presenceCallback) this._presenceCallback(presenceList);
+        });
+
+        this.connection.on("EventPresenceUpdated", (presenceList) => {
+            if (this._eventPresenceCallback) this._eventPresenceCallback(presenceList);
+        });
+
+        this.connection.on("RaceStarted", (id, sTime) => {
+            const serverDate = new Date(sTime);
+            if (this._raceStartedCallback) this._raceStartedCallback(id, serverDate);
+        });
+
+        this.connection.on("RaceReset", (id) => {
+            if (this._raceResetCallback) this._raceResetCallback(id);
+        });
+
+        this.connection.on("RaceFinished", (id) => {
+            if (this._raceFinishedCallback) this._raceFinishedCallback(id);
+        });
+
+        this.connection.on("TimeReceived", (resultadoId, timeStr, ms) => {
+            if (this._timeReceivedCallback) this._timeReceivedCallback(resultadoId, timeStr, ms);
+        });
+
+        this.connection.on("GlobalResultStatusUpdated", (resId, status) => {
+            if (this._globalResultStatusUpdatedCallback) this._globalResultStatusUpdatedCallback(resId, status);
+        });
+
+        const handleGlobalRaceStarted = (faseId, serverTime) => {
+            if (this._globalRaceStartedCallback) this._globalRaceStartedCallback({ faseId, serverTime });
+        };
+        this.connection.on("globalRaceStarted", handleGlobalRaceStarted);
+        this.connection.on("globalracestarted", handleGlobalRaceStarted);
+
+        const handleGlobalRaceInReview = (fase) => {
+            if (this._globalRaceInReviewCallback) this._globalRaceInReviewCallback(fase);
+        };
+        this.connection.on("globalRaceInReview", handleGlobalRaceInReview);
+        this.connection.on("globalraceinreview", handleGlobalRaceInReview);
+
+        const handleGlobalRaceOfficialized = (faseId) => {
+            if (this._globalRaceOfficializedCallback) this._globalRaceOfficializedCallback(faseId);
+        };
+        this.connection.on("globalRaceOfficialized", handleGlobalRaceOfficialized);
+        this.connection.on("globalraceofficialized", handleGlobalRaceOfficialized);
+
+        this.connection.on("LapRecorded", (resultadoId, time) => {
+            if (this._lapRecordedCallback) this._lapRecordedCallback(resultadoId, time);
+        });
+
+        this.connection.onreconnecting(() => {
+            this._notifyStateChange("Reconnecting");
+        });
+
+        this.connection.onreconnected(async () => {
+            this._notifyStateChange("Connected");
+            await this.syncClock();
+            if (this.currentEventoId) {
+                try {
+                    await this.connection.invoke("JoinEventGroup", this.currentEventoId.toString(), this.userName, this.role);
+                } catch (err) {
+                    console.warn("[SignalR] Error re-joining event group after reconnect:", err);
+                }
+            }
+            if (this.currentFaseId) {
+                try {
+                    await this.connection.invoke("JoinRaceGroup", this.currentFaseId, this.userName, this.role);
+                } catch (err) {
+                    console.warn("[SignalR] Error re-joining race group after reconnect:", err);
+                }
+            }
+        });
+
+        this.connection.onclose((error) => {
+            if (this._intentionalDisconnect) {
+                return;
+            }
+            if (error) {
+                console.warn("[SignalR] Connection closed:", error);
+            }
+            this._notifyStateChange("Disconnected");
+        });
+
+        this._handlersRegistered = true;
+    }
+
+    _createConnection() {
+        const hubUrl = resolveHubUrl();
+        this.connection = new signalR.HubConnectionBuilder()
+            .withUrl(hubUrl, {
+                accessTokenFactory: () => getStoredAuthToken() || '',
+                skipNegotiation: false
+            })
+            .configureLogging(signalR.LogLevel.Warning)
+            .withAutomaticReconnect()
+            .build();
+        this._handlersRegistered = false;
+        this._ensureConnectionHandlers();
     }
 
     async connect(eventoId = null, faseId = null, userName = null, role = null) {
         this.userName = userName || this.userName || "Usuario";
         this.role = role || this.role || "Espectador";
 
-        // Si ya hay una operación en curso, esperamos
         if (this.connectionPromise) {
             await this.connectionPromise;
         }
 
+        const generation = ++this._connectGeneration;
+
         this.connectionPromise = (async () => {
             try {
-                const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/timing';
+                if (this._intentionalDisconnect || generation !== this._connectGeneration) {
+                    return;
+                }
 
                 if (!this.connection) {
-                    this.connection = new signalR.HubConnectionBuilder()
-                        .withUrl(hubUrl, {
-                            accessTokenFactory: () => localStorage.getItem('sporttrack_auth_token'),
-                            skipNegotiation: false
-                        })
-                        .configureLogging(signalR.LogLevel.Warning)
-                        .withAutomaticReconnect()
-                        .build();
-
-                    // Registrar todos los handlers de manera permanente ANTES de iniciar
-                    this.connection.on("paymentStatusChangeRequested", (data) => {
-                        if (this._paymentCallback) this._paymentCallback(data);
-                    });
-                    this.connection.on("paymentstatuschangerequested", (data) => {
-                        if (this._paymentCallback) this._paymentCallback(data);
-                    });
-
-                    this.connection.on("RacePresenceUpdated", (presenceList) => {
-                        console.log("[SignalR] Race Presence Updated:", presenceList);
-                        if (this._presenceCallback) this._presenceCallback(presenceList);
-                    });
-
-                    this.connection.on("EventPresenceUpdated", (presenceList) => {
-                        console.log("[SignalR] Event Presence Updated:", presenceList);
-                        if (this._eventPresenceCallback) this._eventPresenceCallback(presenceList);
-                    });
-
-                    this.connection.on("RaceStarted", (id, sTime) => {
-                        console.log("[SignalR] Race Started:", id, sTime);
-                        const serverDate = new Date(sTime);
-                        if (this._raceStartedCallback) this._raceStartedCallback(id, serverDate);
-                    });
-
-                    this.connection.on("RaceReset", (id) => {
-                        console.log("[SignalR] Race Reset:", id);
-                        if (this._raceResetCallback) this._raceResetCallback(id);
-                    });
-
-                    this.connection.on("RaceFinished", (id) => {
-                        console.log("[SignalR] Race Finished:", id);
-                        if (this._raceFinishedCallback) this._raceFinishedCallback(id);
-                    });
-
-                    this.connection.on("TimeReceived", (resultadoId, timeStr, ms) => {
-                        console.log("[SignalR] Time Received:", resultadoId, timeStr, ms);
-                        if (this._timeReceivedCallback) this._timeReceivedCallback(resultadoId, timeStr, ms);
-                    });
-
-                    this.connection.on("GlobalResultStatusUpdated", (resId, status) => {
-                        console.log("[SignalR] Result Status Updated:", resId, status);
-                        if (this._globalResultStatusUpdatedCallback) this._globalResultStatusUpdatedCallback(resId, status);
-                    });
-
-                    const handleGlobalRaceStarted = (faseId, serverTime) => {
-                        console.log("[SignalR] Global Race Started:", faseId, serverTime);
-                        if (this._globalRaceStartedCallback) this._globalRaceStartedCallback({ faseId, serverTime });
-                    };
-                    this.connection.on("globalRaceStarted", handleGlobalRaceStarted);
-                    this.connection.on("globalracestarted", handleGlobalRaceStarted);
-
-                    const handleGlobalRaceInReview = (fase) => {
-                        console.log("[SignalR] Global Race In Review:", fase);
-                        if (this._globalRaceInReviewCallback) this._globalRaceInReviewCallback(fase);
-                    };
-                    this.connection.on("globalRaceInReview", handleGlobalRaceInReview);
-                    this.connection.on("globalraceinreview", handleGlobalRaceInReview);
-
-                    const handleGlobalRaceOfficialized = (faseId) => {
-                        console.log("[SignalR] Global Race Officialized:", faseId);
-                        if (this._globalRaceOfficializedCallback) this._globalRaceOfficializedCallback(faseId);
-                    };
-                    this.connection.on("globalRaceOfficialized", handleGlobalRaceOfficialized);
-                    this.connection.on("globalraceofficialized", handleGlobalRaceOfficialized);
-
-                    this.connection.on("LapRecorded", (resultadoId, time) => {
-                        if (this._lapRecordedCallback) this._lapRecordedCallback(resultadoId, time);
-                    });
-
-                    // Notificaciones de reconexión para la UI
-                    this.connection.onreconnecting((error) => {
-                        console.warn("[SignalR] Reconnecting due to error:", error);
-                        this._notifyStateChange("Reconnecting");
-                    });
-
-                    this.connection.onreconnected(async (connectionId) => {
-                        console.log("[SignalR] Reconnected successfully. Re-joining groups and syncing clock.");
-                        this._notifyStateChange("Connected");
-                        await this.syncClock();
-                        if (this.currentEventoId) {
-                            try {
-                                await this.connection.invoke("JoinEventGroup", this.currentEventoId.toString(), this.userName, this.role);
-                            } catch (err) {
-                                console.error("[SignalR] Error re-joining event group after reconnect:", err);
-                            }
-                        }
-                        if (this.currentFaseId) {
-                            try {
-                                await this.connection.invoke("JoinRaceGroup", this.currentFaseId, this.userName, this.role);
-                            } catch (err) {
-                                console.error("[SignalR] Error re-joining race group after reconnect:", err);
-                            }
-                        }
-                    });
-
-                    this.connection.onclose((error) => {
-                        console.error("[SignalR] Connection closed:", error);
-                        this._notifyStateChange("Disconnected");
-                    });
+                    this._createConnection();
                 }
 
-                // Iniciar si está desconectado
-                if (this.connection.state === signalR.HubConnectionState.Disconnected) {
+                const state = this.connection.state;
+
+                if (state === signalR.HubConnectionState.Disconnected) {
                     this._notifyStateChange("Connecting");
                     await this.connection.start();
+                    if (generation !== this._connectGeneration || this._intentionalDisconnect) {
+                        return;
+                    }
                     this._notifyStateChange("Connected");
                     await this.syncClock();
-                } else if (this.connection.state === signalR.HubConnectionState.Reconnecting || this.connection.state === signalR.HubConnectionState.Connecting) {
-                    // Si está en reconexión o conectando, esperamos a que termine
-                    const connected = await this.waitForConnection(4000);
-                    if (!connected) {
-                        // Si se queda trabado en reconexión, forzamos un stop y restart completo
-                        console.warn("[SignalR] Connection stuck. Forcing restart.");
-                        this._notifyStateChange("Connecting");
-                        try {
-                            await this.connection.stop();
-                        } catch {}
-                        await this.connection.start();
-                        this._notifyStateChange("Connected");
-                        await this.syncClock();
-                    } else {
-                        this._notifyStateChange("Connected");
+                } else if (
+                    state === signalR.HubConnectionState.Reconnecting ||
+                    state === signalR.HubConnectionState.Connecting
+                ) {
+                    const connected = await this.waitForConnection();
+                    if (!connected || generation !== this._connectGeneration) {
+                        return;
                     }
+                    this._notifyStateChange("Connected");
                 }
 
-                // Si pedimos un evento específico, nos unimos siempre para asegurar presencia a nivel de evento
+                if (this.connection.state !== signalR.HubConnectionState.Connected) {
+                    return;
+                }
+
                 if (eventoId) {
-                    if (this.connection.state === signalR.HubConnectionState.Connected) {
-                        console.log(`[SignalR] Joining event group: event_${eventoId} for user ${this.userName} (${this.role})`);
-                        await this.connection.invoke("JoinEventGroup", eventoId.toString(), this.userName, this.role);
-                        this.currentEventoId = eventoId.toString();
-                    }
+                    await this.connection.invoke("JoinEventGroup", eventoId.toString(), this.userName, this.role);
+                    this.currentEventoId = eventoId.toString();
                 } else {
                     this.currentEventoId = null;
                 }
 
-                // Si pedimos una fase específica, nos unimos siempre para asegurar presencia a nivel de carrera
                 if (faseId) {
-                    if (this.connection.state === signalR.HubConnectionState.Connected) {
-                        console.log(`[SignalR] Joining race group: race_${faseId} for user ${this.userName} (${this.role})`);
-                        await this.connection.invoke("JoinRaceGroup", faseId.toString(), this.userName, this.role);
-                        this.currentFaseId = faseId.toString();
-                    }
+                    await this.connection.invoke("JoinRaceGroup", faseId.toString(), this.userName, this.role);
+                    this.currentFaseId = faseId.toString();
                 } else {
                     this.currentFaseId = null;
                 }
             } catch (err) {
-                console.error("[SignalR] Connection Error:", err);
+                if (this._intentionalDisconnect || err?.name === 'AbortError') {
+                    return;
+                }
+                console.warn("[SignalR] Connection error:", err);
             } finally {
                 this.connectionPromise = null;
             }
@@ -241,7 +260,7 @@ class TimingSignalRService {
     }
 
     async syncClock() {
-        if (!this.connection) return;
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
         
         const SAMPLES = 5;
         const offsets = [];
@@ -249,32 +268,30 @@ class TimingSignalRService {
         for (let i = 0; i < SAMPLES; i++) {
             const start = Date.now();
             try {
-                // Invocamos el método que ahora retorna el valor directamente
                 const serverTimeStr = await this.connection.invoke("GetServerTime");
                 const end = Date.now();
                 
                 const latency = (end - start) / 2;
                 const serverDate = new Date(serverTimeStr);
                 
-                // Offset = Tiempo Real Server - Tiempo Local Cliente
                 const offset = (serverDate.getTime() + latency) - end;
                 offsets.push(offset);
                 
-                // Pequeña espera entre muestras
                 await new Promise(r => setTimeout(r, 100));
             } catch (err) {
-                console.error("[Sync] Sample error:", err);
+                if (!this._intentionalDisconnect) {
+                    console.warn("[Sync] Sample error:", err);
+                }
+                break;
             }
         }
 
         if (offsets.length > 0) {
-            // Usamos la mediana para ignorar picos de red
             offsets.sort((a, b) => a - b);
             this.serverOffset = offsets[Math.floor(offsets.length / 2)];
         }
     }
 
-    // Retorna la hora "del servidor" calculada localmente
     getSyncedNow() {
         return new Date(Date.now() + this.serverOffset);
     }
@@ -284,22 +301,20 @@ class TimingSignalRService {
         await this.connection.invoke("JoinRaceGroup", faseId.toString(), this.userName, this.role);
     }
 
-    // Métodos de acción ultra-rápidos vía WebSocket
     async requestStartRace(faseId) {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
-            await this.connect(faseId);
+            await this.connect(null, faseId);
         }
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             throw new Error("No hay conexión activa con el servidor de tiempos");
         }
-        // Capturamos la hora EXACTA del click (ajustada al servidor)
         const startTime = this.getSyncedNow();
         await this.connection.invoke("RequestStartRace", parseInt(faseId), startTime.toISOString());
     }
 
     async requestResetRace(faseId) {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
-            await this.connect(faseId);
+            await this.connect(null, faseId);
         }
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             throw new Error("No hay conexión activa con el servidor de tiempos");
@@ -310,7 +325,7 @@ class TimingSignalRService {
     async sendTime(faseId, resultadoId, timeStr, ms) {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             try {
-                await this.connect(faseId);
+                await this.connect(null, faseId);
             } catch {}
         }
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
@@ -389,12 +404,27 @@ class TimingSignalRService {
         }
     }
 
-    disconnect() {
-        if (this.connection) {
-            this.connection.stop();
-            this.connection = null;
-            this.currentFaseId = null;
+    async disconnect() {
+        this._connectGeneration++;
+        this._intentionalDisconnect = true;
+        this.connectionPromise = null;
+
+        const conn = this.connection;
+        this.connection = null;
+        this.currentFaseId = null;
+        this.currentEventoId = null;
+        this._handlersRegistered = false;
+
+        if (conn) {
+            try {
+                await conn.stop();
+            } catch {
+                // Cierre intencional durante handshake: ignorar
+            }
         }
+
+        this._notifyStateChange("Disconnected");
+        this._intentionalDisconnect = false;
     }
 }
 
