@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, ArrowLeft, Link2, X } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import api from '../../../services/api';
+import AuthService from '../../../services/AuthService';
 import FederacionService from '../../../services/FederacionService';
 import { ENDPOINTS } from '../../../utils/constants';
 import ClubGrid from './ClubGrid';
@@ -11,7 +12,6 @@ import { useAuth } from '../../../context/AuthContext';
 import {
     withFederationScope,
     clubBelongsToFederation,
-    isClubWithoutFederation,
     pick,
     resolveScopeFederationId,
 } from '../../../utils/apiHelpers';
@@ -35,11 +35,10 @@ const GestionClubesSection = () => {
     const [form, setForm] = useState({
         nombre: '', sigla: '', siglas: '', email: '', telefono: '',
         ubicacion: '', direccion: '', estadoMatricula: 0, federacionId: '',
+        crearCuentaLogin: true, loginUsername: '', loginPassword: '', loginConfirmPassword: '',
     });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
-    const [assignFedModal, setAssignFedModal] = useState({ show: false, club: null, federacionId: '' });
-    const [showOrphans, setShowOrphans] = useState(false);
     const [planes, setPlanes] = useState([]);
 
     const isSuper = isSuperAdminUser(user);
@@ -70,10 +69,6 @@ const GestionClubesSection = () => {
             let filtrados = todos;
             if (scopeFedId) {
                 filtrados = todos.filter(c => clubBelongsToFederation(c, scopeFedId));
-            } else if (isSuper) {
-                filtrados = showOrphans
-                    ? todos.filter(c => isClubWithoutFederation(c))
-                    : todos.filter(c => !isClubWithoutFederation(c));
             }
 
             setFederaciones(visibleFeds);
@@ -84,7 +79,7 @@ const GestionClubesSection = () => {
         } finally {
             setLoading(false);
         }
-    }, [scopeFedId, isSuper, showOrphans, showAlert]);
+    }, [scopeFedId, showAlert]);
 
     useEffect(() => {
         loadData();
@@ -107,6 +102,10 @@ const GestionClubesSection = () => {
             fechaAltaPlan: '',
             fechaVencimientoPlan: '',
             bloqueadoPorFaltaDePago: false,
+            crearCuentaLogin: true,
+            loginUsername: '',
+            loginPassword: '',
+            loginConfirmPassword: '',
         });
         setView('crear');
     };
@@ -135,32 +134,6 @@ const GestionClubesSection = () => {
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleAssignFederation = async () => {
-        if (!assignFedModal.federacionId || !assignFedModal.club) return;
-        setSaving(true);
-        try {
-            const club = assignFedModal.club;
-            const clubId = pick(club, 'id', 'Id');
-            await api.put(`${ENDPOINTS.CLUBES}/${clubId}`, {
-                nombre: club.nombre,
-                sigla: club.sigla,
-                email: club.email,
-                telefono: club.telefono,
-                direccion: club.direccion,
-                ubicacion: club.ubicacion,
-                activo: club.activo !== false,
-                federacionId: parseInt(assignFedModal.federacionId),
-            });
-            showAlert('success', `Club "${club.nombre}" vinculado correctamente.`);
-            setAssignFedModal({ show: false, club: null, federacionId: '' });
-            loadData();
-        } catch (err) {
-            showAlert('error', 'Error al vincular: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const buildClubPayload = () => {
         const fedId = scopeFedId
             ? parseInt(scopeFedId)
@@ -175,7 +148,6 @@ const GestionClubesSection = () => {
             ubicacion: form.ubicacion || form.direccion,
             activo: form.activo !== false,
             federacionId: fedId,
-            planSaaSId: form.planSaaSId || null,
             frecuenciaPago: form.frecuenciaPago,
             fechaAltaPlan: form.fechaAltaPlan || null,
             fechaVencimientoPlan: form.fechaVencimientoPlan || null,
@@ -193,13 +165,53 @@ const GestionClubesSection = () => {
                 await api.put(`${ENDPOINTS.CLUBES}/${clubId}`, payload);
                 showAlert('success', 'Club actualizado');
             } else {
-                if (!payload.federacionId && isSuper) {
+                if (!payload.federacionId) {
                     showAlert('error', 'Debe seleccionar una federación para el club.');
                     setSaving(false);
                     return;
                 }
-                await api.post(ENDPOINTS.CLUBES, payload);
-                showAlert('success', 'Club registrado correctamente en la federación.');
+
+                if (form.crearCuentaLogin !== false) {
+                    if (!form.loginUsername?.trim()) {
+                        showAlert('error', 'Ingresá el usuario de acceso para el club.');
+                        setSaving(false);
+                        return;
+                    }
+                    if (!form.loginPassword || form.loginPassword.length < 6) {
+                        showAlert('error', 'La contraseña debe tener al menos 6 caracteres.');
+                        setSaving(false);
+                        return;
+                    }
+                    if (form.loginPassword !== form.loginConfirmPassword) {
+                        showAlert('error', 'Las contraseñas de acceso no coinciden.');
+                        setSaving(false);
+                        return;
+                    }
+                }
+
+                const response = await api.post(ENDPOINTS.CLUBES, payload);
+                const newClubId = pick(response.data, 'id', 'Id');
+
+                if (form.crearCuentaLogin !== false && newClubId) {
+                    try {
+                        const fedId = payload.federacionId
+                            ?? pick(response.data, 'federacionId', 'FederacionId');
+                        await AuthService.register({
+                            username: form.loginUsername.trim(),
+                            password: form.loginPassword,
+                            email: form.email?.trim() || `${form.loginUsername.trim()}@sporttrack.local`,
+                            telefono: form.telefono || undefined,
+                            clubId: parseInt(newClubId, 10),
+                            federacionId: fedId != null ? parseInt(fedId, 10) : undefined,
+                            rol: 'Club',
+                        });
+                        showAlert('success', 'Club y cuenta de acceso creados correctamente.');
+                    } catch (regErr) {
+                        showAlert('error', `Club creado, pero falló la cuenta de acceso: ${regErr.response?.data?.message || regErr.message}. Podés vincularla desde Logins.`);
+                    }
+                } else {
+                    showAlert('success', 'Club registrado. Podés crear su login desde Gestión de Logins.');
+                }
             }
             setView('lista');
             loadData();
@@ -237,16 +249,6 @@ const GestionClubesSection = () => {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {isSuper && !scopeFedId && view === 'lista' && (
-                        <label className="flex-row gap-xs" style={{ cursor: 'pointer', fontSize: '0.9rem', color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '20px' }}>
-                            <input
-                                type="checkbox"
-                                checked={showOrphans}
-                                onChange={e => setShowOrphans(e.target.checked)}
-                            />
-                            Ver clubes sin federación
-                        </label>
-                    )}
                     {view === 'lista' && (
                         <button className="btn-admin-primary" onClick={handleOpenCrear}>
                             <Plus size={20} /> {scopeFedId ? 'Nuevo Club Afiliado' : 'Nuevo Club'}
@@ -262,7 +264,6 @@ const GestionClubesSection = () => {
                         showFederation={!scopeFedId}
                         onEdit={handleOpenEditar}
                         onViewAtletas={(c) => navigate(`/super/atletas?clubId=${pick(c, 'id', 'Id')}&clubNombre=${encodeURIComponent(c.nombre)}${scopeFedId ? `&fedId=${scopeFedId}` : ''}`)}
-                        onAssignParent={(club) => setAssignFedModal({ show: true, club, federacionId: '' })}
                     />
                 )
             ) : (
@@ -278,62 +279,6 @@ const GestionClubesSection = () => {
                     federaciones={federaciones}
                     showFederationSelect={isSuper && !scopeFedId && view === 'crear'}
                 />
-            )}
-
-            {assignFedModal.show && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 1000, backdropFilter: 'blur(4px)'
-                }}>
-                    <div className="glass-effect" style={{
-                        background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '420px',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                <Link2 size={20} style={{ color: 'var(--color-accent-orange)' }} />
-                                <h3 style={{ margin: 0 }}>Vincular a Federación</h3>
-                            </div>
-                            <button onClick={() => setAssignFedModal({ show: false, club: null, federacionId: '' })}
-                                style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                            Asignar el club <strong style={{ color: 'var(--color-text)' }}>{assignFedModal.club?.nombre}</strong> a una federación.
-                        </p>
-                        <div className="form-group">
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-                                Seleccionar Federación
-                            </label>
-                            <select
-                                className="admin-select"
-                                value={assignFedModal.federacionId}
-                                onChange={e => setAssignFedModal(prev => ({ ...prev, federacionId: e.target.value }))}
-                                style={{ width: '100%' }}
-                            >
-                                <option value="">-- Elegir Federación --</option>
-                                {federaciones.map(f => (
-                                    <option key={f.id} value={f.id}>{f.nombre}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
-                            <button className="btn-admin-secondary"
-                                onClick={() => setAssignFedModal({ show: false, club: null, federacionId: '' })}>
-                                Cancelar
-                            </button>
-                            <button className="btn-admin-primary"
-                                disabled={!assignFedModal.federacionId || saving}
-                                onClick={handleAssignFederation}
-                                style={{ background: 'var(--color-accent-orange)', borderColor: 'var(--color-accent-orange)' }}>
-                                {saving ? 'Vinculando...' : 'Confirmar Vínculo'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
             )}
         </div>
     );

@@ -71,6 +71,8 @@ export function normalizeFederacionesList(raw) {
         .filter(f => f.id != null && f.id !== '');
 }
 
+import { isSuperAdminUser } from './authHelpers';
+
 /** Resuelve id de federación para scoping: URL > usuario > club del usuario > inferir de clubes */
 export function resolveScopeFederationId({ fedIdFromUrl, user, clubes = [] }) {
     if (fedIdFromUrl != null && fedIdFromUrl !== '') return String(fedIdFromUrl);
@@ -85,7 +87,9 @@ export function resolveScopeFederationId({ fedIdFromUrl, user, clubes = [] }) {
         if (clubFedId != null) return String(clubFedId);
     }
 
-    // Fallback: si la API ya devolvió clubes scoped al tenant, inferir de la primera fila
+    // SuperAdmin sin fed en URL: vista global, no inferir de la lista de clubes
+    if (isSuperAdminUser(user)) return null;
+
     const inferred = (clubes || []).map(getClubFederationId).find(id => id != null);
     if (inferred != null) return String(inferred);
 
@@ -130,6 +134,76 @@ export function eventBelongsToFederation(evento, clubes, fedId, { trustApiScope 
 export function filterClubesByFederation(clubes, fedId) {
     if (fedId == null || fedId === '') return clubes;
     return (clubes || []).filter(c => clubBelongsToFederation(c, fedId));
+}
+
+/** Nombre de federación por id en lista normalizada */
+export function getFederationNameById(federaciones, fedId) {
+    if (fedId == null || fedId === '') return null;
+    const fed = (federaciones || []).find(f => String(f.id) === String(fedId));
+    return fed?.nombre || null;
+}
+
+/** Federación de un atleta (vía club o campo directo) */
+export function getAtletaFederationName(atleta, clubes = [], federaciones = []) {
+    const direct = pick(atleta, 'federacionNombre', 'FederacionNombre');
+    if (direct) return direct;
+
+    const clubId = getAtletaClubId(atleta);
+    if (clubId != null && clubId !== '') {
+        const club = (clubes || []).find(c => String(pick(c, 'id', 'Id')) === String(clubId));
+        const fromClub = club ? getClubFederationName(club) : null;
+        if (fromClub) return fromClub;
+        const fedId = club ? getClubFederationId(club) : null;
+        if (fedId != null) return getFederationNameById(federaciones, fedId) || `ID ${fedId}`;
+    }
+    return '—';
+}
+
+/** Federación de un usuario/login */
+export function getUsuarioFederationName(usuario, clubes = [], federaciones = []) {
+    const direct = pick(usuario, 'federacionNombre', 'FederacionNombre');
+    if (direct) return direct;
+
+    const fedId = pick(usuario, 'federacionId', 'FederacionId');
+    if (fedId != null && fedId !== '') {
+        return getFederationNameById(federaciones, fedId) || `ID ${fedId}`;
+    }
+
+    const clubId = pick(usuario, 'clubId', 'ClubId', 'idClub', 'IdClub');
+    if (clubId != null && clubId !== '') {
+        const club = (clubes || []).find(c => String(pick(c, 'id', 'Id')) === String(clubId));
+        const fromClub = club ? getClubFederationName(club) : null;
+        if (fromClub) return fromClub;
+        const clubFedId = club ? getClubFederationId(club) : null;
+        if (clubFedId != null) return getFederationNameById(federaciones, clubFedId) || `ID ${clubFedId}`;
+    }
+
+    const rol = pick(usuario, 'rol', 'rolFederacion', 'RolFederacion');
+    if (rol === 'SuperAdmin' || rol === 'soporte_tecnico') return 'Global';
+
+    return '—';
+}
+
+/** Federación de un evento (directo o vía club) */
+export function getEventFederationName(evento, clubes = [], federaciones = []) {
+    const direct = pick(evento, 'federacionNombre', 'FederacionNombre');
+    if (direct) return direct;
+
+    const fedId = getEventFederationId(evento, clubes);
+    if (fedId != null && fedId !== '') {
+        return getFederationNameById(federaciones, fedId) || `ID ${fedId}`;
+    }
+    return '—';
+}
+
+/** Federación asociada a un username (auditoría / logs) */
+export function getFederationNameForUsername(username, usuarios = [], clubes = [], federaciones = []) {
+    if (!username) return '—';
+    const normalized = String(username).toLowerCase();
+    const user = (usuarios || []).find(u => String(u.username || '').toLowerCase() === normalized);
+    if (user) return getUsuarioFederationName(user, clubes, federaciones);
+    if (normalized === 'anónimo' || normalized === 'anonimo') return '—';
+    return '—';
 }
 
 /** Obtiene ids de clubes de una federación */

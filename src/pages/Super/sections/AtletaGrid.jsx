@@ -1,8 +1,8 @@
 import React from 'react';
-import { Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Link2, User, Building2, AlertTriangle } from 'lucide-react';
+import { Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Link2, User, Building2, AlertTriangle, Globe } from 'lucide-react';
 import EmptyState from '../../../components/Common/EmptyState';
 
-const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, requestSort }) => {
+const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, requestSort, showFederation = false }) => {
 
     const getSortIcon = (key) => {
         if (sortConfig.key !== key) return <ArrowUpDown size={14} />;
@@ -39,6 +39,11 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                                     {!atleta.clubNombre && <AlertTriangle size={11} />} {atleta.clubNombre || 'Sin Club'}
                                 </span>
                             </span>
+                            {showFederation && (
+                                <span className="evento-native-meta" style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <Globe size={13} className="text-primary" /> {atleta.federacionNombre || '—'}
+                                </span>
+                            )}
                         </div>
                         <div className="evento-native-actions">
                             {!atleta.clubNombre && onAssignClub && (
@@ -64,6 +69,11 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                             <th className="sortable" onClick={() => requestSort('dni')}>
                                 DNI <span className="sort-icon">{getSortIcon('dni')}</span>
                             </th>
+                            {showFederation && (
+                                <th className="sortable" onClick={() => requestSort('federacionNombre')}>
+                                    Federación <span className="sort-icon">{getSortIcon('federacionNombre')}</span>
+                                </th>
+                            )}
                             <th className="sortable" onClick={() => requestSort('clubNombre')}>
                                 Club <span className="sort-icon">{getSortIcon('clubNombre')}</span>
                             </th>
@@ -84,6 +94,13 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                                     <div style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>{atleta.email || 'Sin email'}</div>
                                 </td>
                                 <td>{atleta.dni || '—'}</td>
+                                {showFederation && (
+                                    <td>
+                                        <span className="chip chip-ecu-yellow" style={{ fontSize: '0.75rem' }}>
+                                            {atleta.federacionNombre || '—'}
+                                        </span>
+                                    </td>
+                                )}
                                 <td>
                                     <span className={`chip ${atleta.clubNombre ? 'chip-ecu-blue' : 'chip-ecu-red'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                         {!atleta.clubNombre && <AlertTriangle size={12} />} {atleta.clubNombre || 'Sin Club'}

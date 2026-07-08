@@ -249,7 +249,9 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
-                    hideClubSelect={true}
+                    hideClubSelect
+                    showClubSelect={false}
+                    fixedClubLabel={user?.clubNombre || user?.ClubNombre || 'Mi club'}
                 />
             )}
 

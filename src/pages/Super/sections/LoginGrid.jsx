@@ -1,5 +1,7 @@
 import { Key, Power, PowerOff, User, Mail, Phone, Building2, Edit } from 'lucide-react';
 
+const getLoginRole = (u) => u?.rol || u?.rolFederacion || u?.RolFederacion || '';
+
 const ROL_LABEL = {
     'Admin':         { label: 'Admin',          color: '#ef4444' },
     'Club':          { label: 'Club',            color: '#22c55e' },
@@ -49,7 +51,7 @@ const EstadoBadge = ({ activo }) => (
     </span>
 );
 
-const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) => {
+const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, showFederation = false }) => {
     return (
         <div className="login-grid-container fade-in">
             {/* Mobile View */}
@@ -61,7 +63,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                             <h4>
                                 {u.username}
                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                    <RolBadge rol={u.rol} />
+                                    <RolBadge rol={getLoginRole(u)} />
                                     <EstadoBadge activo={u.activo} />
                                 </div>
                             </h4>
@@ -76,6 +78,11 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                                     <Building2 size={14} className="text-secondary" /> (Sin institución)
                                 </p>
                             )}
+                            {showFederation && (
+                                <p style={{ color: '#000000', fontSize: '0.85rem' }}>
+                                    Federación: {u.federacionNombre || '—'}
+                                </p>
+                            )}
                             {u.telefono && <p style={{ color: '#000000' }}><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
                         </div>
                         <div className="card-actions-row">
@@ -85,7 +92,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                             <button className="btn-icon-view" onClick={() => onEditPassword(u)} title="Cambiar Contraseña">
                                 <Key size={16} />
                             </button>
-                            {ROLES_TOGGLABLES.includes(u.rol) && (
+                            {ROLES_TOGGLABLES.includes(getLoginRole(u)) && (
                                 <button
                                     onClick={() => onToggleActivo(u)}
                                     title={u.activo === false ? 'Habilitar cuenta' : 'Deshabilitar cuenta'}
@@ -113,6 +120,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                         <tr>
                             <th>Estado</th>
                             <th>Usuario</th>
+                            {showFederation && <th>Federación</th>}
                             <th>Institución a la que pertenece</th>
                             <th>Email</th>
                             <th>Rol</th>
@@ -128,6 +136,13 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                                 <td style={{ fontWeight: 'bold', color: u.activo === false ? '#64748b' : 'inherit' }}>
                                     {u.username}
                                 </td>
+                                {showFederation && (
+                                    <td>
+                                        <span className="chip chip-ecu-yellow" style={{ fontSize: '0.75rem' }}>
+                                            {u.federacionNombre || '—'}
+                                        </span>
+                                    </td>
+                                )}
                                 <td style={{ color: '#000000' }}>
                                     {u.clubNombre ? (
                                         <span style={{ fontWeight: '800' }}>{u.clubNombre}</span>
@@ -137,7 +152,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                                     {u.telefono && <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
                                 </td>
                                 <td>{u.email || '—'}</td>
-                                <td><RolBadge rol={u.rol} /></td>
+                                <td><RolBadge rol={getLoginRole(u)} /></td>
                                 <td className="actions-cell" style={{ textAlign: 'center' }}>
                                     <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
                                         <button
@@ -155,7 +170,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo }) 
                                             <Key size={16} />
                                         </button>
 
-                                        {ROLES_TOGGLABLES.includes(u.rol) && (
+                                        {ROLES_TOGGLABLES.includes(getLoginRole(u)) && (
                                             <button
                                                 onClick={() => onToggleActivo(u)}
                                                 title={u.activo === false ? 'Habilitar cuenta' : 'Deshabilitar cuenta temporalmente'}

@@ -9,7 +9,8 @@ const EventGrid = ({
     onEdit, 
     onDelete, 
     onCopyLink,
-    isAdmin
+    isAdmin,
+    showFederation = false,
 }) => {
     if (!eventos || eventos.length === 0) {
         return <EmptyState message="No hay eventos creados aún" description="Pulsa en '+ Nuevo Evento' para comenzar." />;
@@ -29,6 +30,11 @@ const EventGrid = ({
                             </span>
                             <div className="evento-native-tags">
                                 <StatusBadge estado={ev.estado} />
+                                {showFederation && (
+                                    <span className="chip chip-ecu-yellow" style={{ fontSize: '0.7rem' }}>
+                                        {ev.federacionNombre || '—'}
+                                    </span>
+                                )}
                                 <span className={`inscripciones-tag ${ev.inscripcionesAbiertas ? 'open' : 'closed'}`}>
                                     {ev.inscripcionesAbiertas ? <Unlock size={12} /> : <Lock size={12} />}
                                     {ev.inscripcionesAbiertas ? 'Abiertas' : 'Cerradas'}
@@ -55,6 +61,7 @@ const EventGrid = ({
                     <thead>
                         <tr>
                             <th>Evento</th>
+                            {showFederation && <th>Federación</th>}
                             <th>Organizador</th>
                             <th>Fecha</th>
                             <th>Ubicación</th>
@@ -67,6 +74,13 @@ const EventGrid = ({
                         {eventos.map(ev => (
                             <tr key={ev.id}>
                                 <td><strong>{ev.nombre}</strong></td>
+                                {showFederation && (
+                                    <td>
+                                        <span className="chip chip-ecu-yellow" style={{ fontSize: '0.75rem' }}>
+                                            {ev.federacionNombre || '—'}
+                                        </span>
+                                    </td>
+                                )}
                                 <td>
                                     <span className="chip chip-ecu-blue" style={{ fontSize: '0.75rem' }}>
                                         {ev.clubNombre || 'Federación'}

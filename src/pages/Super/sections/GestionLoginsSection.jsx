@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, ArrowLeft } from 'lucide-react';
 import AuthService from '../../../services/AuthService';
 import api from '../../../services/api';
+import FederacionService from '../../../services/FederacionService';
 import { ENDPOINTS } from '../../../utils/constants';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import LoginGrid from './LoginGrid';
@@ -12,10 +13,13 @@ import { useAuth } from '../../../context/AuthContext';
 import {
     withFederationScope,
     clubBelongsToFederation,
+    filterClubesByFederation,
+    getUserFederationId,
     pick,
     resolveScopeFederationId,
+    getUsuarioFederationName,
 } from '../../../utils/apiHelpers';
-import { isSuperAdminUser } from '../../../utils/authHelpers';
+import { isSuperAdminUser, isFederationAdminUser } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionLoginsSection = () => {
@@ -24,38 +28,54 @@ const GestionLoginsSection = () => {
     const { user } = useAuth();
     const params = new URLSearchParams(location.search);
     const fedIdFromUrl = params.get('fedId');
+
+    const isSuper = isSuperAdminUser(user);
+    const isFedAdmin = isFederationAdminUser(user);
+
     const [clubes, setClubes] = useState([]);
-    const scopeFedId = resolveScopeFederationId({ fedIdFromUrl, user, clubes });
+    const [federaciones, setFederaciones] = useState([]);
+    const scopeFedId = useMemo(
+        () => resolveScopeFederationId({ fedIdFromUrl, user, clubes }),
+        [fedIdFromUrl, user, clubes]
+    );
+    const effectiveFedId = scopeFedId || fedIdFromUrl || null;
+
     const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'editarPerfil'
+    const [view, setView] = useState('lista');
     const [selectedUser, setSelectedUser] = useState(null);
-    const [form, setForm] = useState({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
+    const [form, setForm] = useState({
+        username: '', password: '', confirmPassword: '', email: '', clubId: '',
+        federacionId: '', rol: 'Club', newPassword: '', confirmNewPassword: '',
+        nombre: '', apellido: '', dni: '', telefono: '',
+    });
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
-    
-    // Confirm Dialog State
+
     const [confirmDialog, setConfirmDialog] = useState({
         isOpen: false,
         title: '',
         message: '',
         type: 'warning',
-        onConfirm: null
+        onConfirm: null,
     });
-
-    useEffect(() => { 
-        loadData(); 
-    }, []);
 
     const loadData = async () => {
         try {
-            const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, scopeFedId);
-            const [usersRes, clubesRes] = await Promise.all([
+            setLoading(true);
+            const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, effectiveFedId);
+            const [usersRes, clubesRes, federacionesData] = await Promise.all([
                 AuthService.getUsuarios(),
-                api.get(clubesUrl)
+                api.get(clubesUrl),
+                FederacionService.getAll().catch(() => []),
             ]);
             setUsuarios(usersRes);
-            setClubes(clubesRes.data);
+            setClubes(clubesRes.data || []);
+            setFederaciones(
+                effectiveFedId
+                    ? federacionesData.filter(f => String(f.id) === String(effectiveFedId))
+                    : federacionesData
+            );
         } catch (e) {
             showAlert('error', 'Error al cargar datos');
         } finally {
@@ -63,25 +83,57 @@ const GestionLoginsSection = () => {
         }
     };
 
+    useEffect(() => {
+        loadData();
+    }, [effectiveFedId]);
+
     const handleOpenCrear = () => {
-        setForm({ username: '', password: '', confirmPassword: '', email: '', clubId: '', rol: 'Club', newPassword: '', confirmNewPassword: '', nombre: '', apellido: '', dni: '', telefono: '' });
+        setForm({
+            username: '', password: '', confirmPassword: '', email: '', clubId: '',
+            federacionId: effectiveFedId || '',
+            rol: 'Club', newPassword: '', confirmNewPassword: '',
+            nombre: '', apellido: '', dni: '', telefono: '',
+        });
         setView('crear');
     };
 
-    const handleOpenEditar = (user) => {
-        setSelectedUser(user);
-        setForm({ username: user.username, newPassword: '', confirmNewPassword: '', nombre: user.nombre || '', apellido: user.apellido || '' });
+    const handleOpenEditar = (loginUser) => {
+        setSelectedUser(loginUser);
+        setForm({
+            username: loginUser.username,
+            newPassword: '', confirmNewPassword: '',
+            nombre: loginUser.nombre || '', apellido: loginUser.apellido || '',
+        });
         setView('editar');
     };
 
-    const handleOpenEditarPerfil = (user) => {
-        setSelectedUser(user);
-        setForm({ username: user.username, email: user.email || '', nombre: user.nombre || '', apellido: user.apellido || '', dni: user.dni || '', telefono: user.telefono || '' });
+    const handleOpenEditarPerfil = (loginUser) => {
+        setSelectedUser(loginUser);
+        setForm({
+            username: loginUser.username,
+            email: loginUser.email || '',
+            nombre: loginUser.nombre || '',
+            apellido: loginUser.apellido || '',
+            dni: loginUser.dni || '',
+            telefono: loginUser.telefono || '',
+        });
         setView('editarPerfil');
     };
 
     const handleFieldChange = (name, value) => {
-        setForm(prev => ({ ...prev, [name]: value }));
+        setForm(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === 'federacionId') {
+                next.clubId = '';
+            }
+            return next;
+        });
+    };
+
+    const resolveFederacionIdForRegister = () => {
+        if (form.federacionId) return parseInt(form.federacionId);
+        if (effectiveFedId) return parseInt(effectiveFedId);
+        return getUserFederationId(user) || undefined;
     };
 
     const handleSubmit = async (e) => {
@@ -97,6 +149,10 @@ const GestionLoginsSection = () => {
                 showAlert('error', 'Las contraseñas no coinciden');
                 return;
             }
+            if (form.rol === 'Club' && !form.clubId) {
+                showAlert('error', 'Seleccioná el club al que vincular esta credencial.');
+                return;
+            }
         }
 
         setSaving(true);
@@ -110,21 +166,21 @@ const GestionLoginsSection = () => {
                     apellido: form.apellido,
                     dni: form.dni,
                     telefono: form.telefono,
-                    email: form.email
+                    email: form.email,
                 });
                 showAlert('success', 'Perfil actualizado correctamente');
             } else {
-                let finalClubId = null;
-                if (user?.rol === 'Admin') {
-                    finalClubId = user.clubId || null;
-                } else {
-                    finalClubId = form.clubId ? parseInt(form.clubId) : null;
-                }
-
                 await AuthService.register({
-                    ...form,
-                    clubId: finalClubId,
-                    federacionId: getUserFederationId(user) || (fedIdFromUrl ? parseInt(fedIdFromUrl) : undefined),
+                    username: form.username,
+                    password: form.password,
+                    email: form.email,
+                    telefono: form.telefono,
+                    nombre: form.nombre,
+                    apellido: form.apellido,
+                    dni: form.dni,
+                    clubId: form.clubId ? parseInt(form.clubId) : null,
+                    federacionId: resolveFederacionIdForRegister(),
+                    rol: form.rol,
                 });
                 showAlert('success', 'Usuario creado exitosamente');
             }
@@ -137,46 +193,51 @@ const GestionLoginsSection = () => {
         }
     };
 
-    const handleToggleActivo = async (user) => {
-        const accion = user.activo ? 'deshabilitar' : 'habilitar';
+    const handleToggleActivo = async (loginUser) => {
+        const accion = loginUser.activo ? 'deshabilitar' : 'habilitar';
         setConfirmDialog({
             isOpen: true,
-            title: user.activo ? 'Deshabilitar Cuenta' : 'Habilitar Cuenta',
-            message: `¿Confirmar ${accion} la cuenta de "${user.username}"?`,
-            type: user.activo ? 'warning' : 'info',
+            title: loginUser.activo ? 'Deshabilitar Cuenta' : 'Habilitar Cuenta',
+            message: `¿Confirmar ${accion} la cuenta de "${loginUser.username}"?`,
+            type: loginUser.activo ? 'warning' : 'info',
             onConfirm: async () => {
                 try {
-                    await AuthService.toggleActivo(user.id);
-                    // Actualizar estado local optimistamente
-                    setUsuarios(prev => prev.map(u => u.id === user.id ? { ...u, activo: !u.activo } : u));
-                    showAlert('success', `Cuenta "${user.username}" ${user.activo ? 'deshabilitada' : 'habilitada'} correctamente.`);
+                    await AuthService.toggleActivo(loginUser.id);
+                    setUsuarios(prev => prev.map(u => u.id === loginUser.id ? { ...u, activo: !u.activo } : u));
+                    showAlert('success', `Cuenta "${loginUser.username}" ${loginUser.activo ? 'deshabilitada' : 'habilitada'} correctamente.`);
                 } catch (err) {
                     showAlert('error', 'Error al cambiar el estado: ' + (err.response?.data?.message || err.message));
                 }
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-            }
+            },
         });
     };
 
-    // Filtrado de usuarios según la federación seleccionada en la URL (si viene del dashboard de una federación específica)
-    const filteredUsuarios = usuarios.filter(u => {
-        if (!fedIdFromUrl) return true;
-        const targetFedId = parseInt(fedIdFromUrl);
+    const usuariosConFederacion = useMemo(
+        () => usuarios.map(u => ({
+            ...u,
+            federacionNombre: getUsuarioFederationName(u, clubes, federaciones),
+        })),
+        [usuarios, clubes, federaciones]
+    );
+
+    const filteredUsuarios = usuariosConFederacion.filter(u => {
+        if (!effectiveFedId) return true;
         const userFedId = pick(u, 'federacionId', 'FederacionId');
         if (userFedId) {
-            return String(userFedId) === String(targetFedId);
+            return String(userFedId) === String(effectiveFedId);
         }
         if (u.clubId) {
-            const userClub = clubes.find(c => pick(c, 'id', 'Id') === u.clubId);
-            return userClub && clubBelongsToFederation(userClub, targetFedId);
+            const userClub = clubes.find(c => String(pick(c, 'id', 'Id')) === String(u.clubId));
+            return userClub && clubBelongsToFederation(userClub, effectiveFedId);
         }
         return false;
     });
 
-    const filteredClubes = clubes.filter(c => {
-        if (!fedIdFromUrl) return true;
-        return clubBelongsToFederation(c, parseInt(fedIdFromUrl));
-    });
+    const clubsForForm = useMemo(() => {
+        const fedFilter = form.federacionId || effectiveFedId;
+        return filterClubesByFederation(clubes, fedFilter);
+    }, [clubes, form.federacionId, effectiveFedId]);
 
     return (
         <div className="admin-section-container fade-in">
@@ -184,8 +245,8 @@ const GestionLoginsSection = () => {
 
             <div className="section-header-row mb-lg">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                    <button 
-                        className="btn-admin-secondary" 
+                    <button
+                        className="btn-admin-secondary"
                         onClick={() => view === 'lista' ? navigate(-1) : setView('lista')}
                         title="Volver"
                         style={{ padding: '0', width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0 }}
@@ -194,7 +255,9 @@ const GestionLoginsSection = () => {
                     </button>
                     <div>
                         <h1 style={{ margin: 0 }}>Gestión de Logins</h1>
-                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>Administrá las credenciales de acceso para los clubes.</p>
+                        <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>
+                            Administrá las credenciales y vinculalas a los clubes de la federación.
+                        </p>
                     </div>
                 </div>
                 {view === 'lista' && (
@@ -206,20 +269,24 @@ const GestionLoginsSection = () => {
 
             {view === 'lista' ? (
                 loading ? <div className="loader-container"><div className="loader"></div></div> : (
-                    <LoginGrid 
-                        usuarios={filteredUsuarios} 
+                    <LoginGrid
+                        usuarios={filteredUsuarios}
                         onEditPassword={handleOpenEditar}
                         onEditProfile={handleOpenEditarPerfil}
                         onToggleActivo={handleToggleActivo}
+                        showFederation={isSuper && !effectiveFedId}
                     />
                 )
             ) : (
-                <LoginForm 
+                <LoginForm
                     initialData={form}
-                    clubes={filteredClubes}
+                    clubes={clubsForForm}
+                    federaciones={federaciones}
                     saving={saving}
                     isEditing={view === 'editar'}
                     isEditingProfile={view === 'editarPerfil'}
+                    showFederationSelect={isSuper && !effectiveFedId}
+                    showClubSelect={(isSuper || isFedAdmin) && form.rol === 'Club'}
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}

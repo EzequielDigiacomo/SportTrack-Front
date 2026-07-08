@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,9 +16,11 @@ import ConfigurarPruebasModal from './ConfigurarPruebasModal';
 import GestionResultadosSection from './GestionResultadosSection';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import ClubService from '../../services/ClubService';
+import FederacionService from '../../services/FederacionService';
 import EventGrid from './EventGrid';
 import EventForm from './EventForm';
 import { useAlert } from '../../hooks/useAlert';
+import { getEventFederationName } from '../../utils/apiHelpers';
 import './AdminSections.css';
 
 const GestionEventosSection = () => {
@@ -34,6 +36,7 @@ const GestionEventosSection = () => {
     const [activeSubView, setActiveSubView] = useState(null); // 'startlist', 'resultados'
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [clubes, setClubes] = useState([]);
+    const [federaciones, setFederaciones] = useState([]);
     const [allCategorias, setAllCategorias] = useState([]);
     const [allBotes, setAllBotes] = useState([]);
     const [allDistancias, setAllDistancias] = useState([]);
@@ -77,6 +80,7 @@ const GestionEventosSection = () => {
     useEffect(() => {
         loadEventos();
         loadClubes();
+        if (isSuperAdmin) loadFederaciones();
         loadConfigData();
 
         const handlePopState = (e) => {
@@ -132,6 +136,23 @@ const GestionEventosSection = () => {
             console.error("Error al cargar clubes", e);
         }
     };
+
+    const loadFederaciones = async () => {
+        try {
+            const data = await FederacionService.getAll();
+            setFederaciones(data || []);
+        } catch (e) {
+            console.error("Error al cargar federaciones", e);
+        }
+    };
+
+    const eventosConFederacion = useMemo(
+        () => eventos.map(ev => ({
+            ...ev,
+            federacionNombre: getEventFederationName(ev, clubes, federaciones),
+        })),
+        [eventos, clubes, federaciones]
+    );
 
     const loadConfigData = async () => {
         try {
@@ -302,12 +323,13 @@ const GestionEventosSection = () => {
                         <div className="loader-container"><div className="loader"></div></div>
                     ) : (
                         <EventGrid
-                            eventos={eventos}
+                            eventos={eventosConFederacion}
                             onOpenDashboard={handleOpenDashboard}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
                             onCopyLink={handleCopyLiveLink}
                             isAdmin={isAdmin}
+                            showFederation={isSuperAdmin}
                         />
                     )}
                 </div>

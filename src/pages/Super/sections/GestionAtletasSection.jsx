@@ -12,19 +12,23 @@ import AtletaForm from './AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
 import { ENDPOINTS } from '../../../utils/constants';
-import { withFederationScope, getClubFederationId, pick, filterClubesByFederation, resolveScopeFederationId, athleteBelongsToFederation } from '../../../utils/apiHelpers';
-import { isSuperAdminUser } from '../../../utils/authHelpers';
+import { withFederationScope, getClubFederationId, pick, filterClubesByFederation, resolveScopeFederationId, athleteBelongsToFederation, getAtletaFederationName } from '../../../utils/apiHelpers';
+import { isSuperAdminUser, isFederationAdminUser } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionAtletasSection = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
-    const isSuper = isSuperAdminUser(user);
     const params = new URLSearchParams(location.search);
     const clubIdFromUrl = params.get('clubId');
     const clubNombreFromUrl = params.get('clubNombre') ? decodeURIComponent(params.get('clubNombre')) : '';
     const fedIdFromUrl = params.get('fedId');
+
+    const isSuper = isSuperAdminUser(user);
+    const isFedAdmin = isFederationAdminUser(user);
+    const showFederationInForm = isSuper && !fedIdFromUrl;
+    const showClubInForm = isSuper || isFedAdmin;
 
     const [atletas, setAtletas] = useState([]);
     const [clubes, setClubes] = useState([]);
@@ -93,7 +97,7 @@ const GestionAtletasSection = () => {
                 FederacionService.getAll(),
             ]);
 
-            const visibleFederaciones = scopeFedId
+            const visibleFederaciones = (scopeFedId && !isSuper)
                 ? federacionesData.filter(f => String(f.id) === String(scopeFedId))
                 : federacionesData;
 
@@ -247,7 +251,15 @@ const GestionAtletasSection = () => {
         }
     };
 
-    const filteredAtletas = atletas
+    const atletasConFederacion = useMemo(
+        () => atletas.map(a => ({
+            ...a,
+            federacionNombre: getAtletaFederationName(a, clubes, federaciones),
+        })),
+        [atletas, clubes, federaciones]
+    );
+
+    const filteredAtletas = atletasConFederacion
         .filter(atleta => {
             const searchLower = searchTerm.toLowerCase();
             const searchableText = `${atleta.nombre} ${atleta.apellido} ${atleta.dni} ${atleta.email || ''} ${atleta.categoriaNombre || ''}`.toLowerCase();
@@ -344,6 +356,7 @@ const GestionAtletasSection = () => {
                             onAssignClub={(atleta) => setAssignModal({ show: true, atleta, clubId: '' })}
                             sortConfig={sortConfig}
                             requestSort={requestSort}
+                            showFederation={isSuper && !effectiveFedId}
                         />
                         
                         {filteredAtletas.length > rowsPerPage && (
@@ -361,7 +374,8 @@ const GestionAtletasSection = () => {
                     clubes={clubes}
                     federaciones={federaciones}
                     scopeFedId={scopeFedId}
-                    showFederationSelect={isSuper && !scopeFedId}
+                    showFederationSelect={showFederationInForm}
+                    showClubSelect={showClubInForm}
                     saving={saving}
                     isEditing={view === 'editar'}
                     onCancel={() => setView('lista')}

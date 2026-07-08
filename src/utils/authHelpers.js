@@ -38,6 +38,11 @@ export const isFederationAdminUser = (user) => {
     return role === 'admin';
 };
 
+export const isClubUser = (user) => {
+    const role = getUserRole(user).toLowerCase();
+    return role === 'club';
+};
+
 export const getDashboardPathForRole = (role) => {
     const normalized = (role || '').toLowerCase();
     if (normalized === 'admin' || normalized === 'superadmin') return '/super';

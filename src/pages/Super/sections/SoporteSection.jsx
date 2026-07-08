@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import SupportService from '../../../services/SupportService';
+import AuthService from '../../../services/AuthService';
+import FederacionService from '../../../services/FederacionService';
+import api from '../../../services/api';
+import { ENDPOINTS } from '../../../utils/constants';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import { formatAuditAction, formatAuditDetail, fixAuditEncoding } from '../../../utils/auditHelpers';
+import { getFederationNameForUsername } from '../../../utils/apiHelpers';
 import SaaSManagement from './SaaSManagement';
 import BackupService from '../../../services/BackupService';
 import { useToast } from '../../../context/ToastContext';
@@ -29,6 +34,9 @@ import './SoporteSection.css';
 const SoporteSection = () => {
     const [activeTab, setActiveTab] = useState('logs'); // 'logs' | 'saas'
     const [logs, setLogs] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
+    const [clubes, setClubes] = useState([]);
+    const [federaciones, setFederaciones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedLog, setExpandedLog] = useState(null);
     const [confirmClear, setConfirmClear] = useState(false);
@@ -53,14 +61,30 @@ const SoporteSection = () => {
     const loadLogs = async () => {
         setLoading(true);
         try {
-            const data = await SupportService.getLogs({ limit: 150 });
+            const [data, usersRes, clubesRes, federacionesData] = await Promise.all([
+                SupportService.getLogs({ limit: 150 }),
+                AuthService.getUsuarios().catch(() => []),
+                api.get(ENDPOINTS.CLUBES).catch(() => ({ data: [] })),
+                FederacionService.getAll().catch(() => []),
+            ]);
             setLogs(data);
+            setUsuarios(usersRes || []);
+            setClubes(clubesRes.data || []);
+            setFederaciones(federacionesData || []);
         } catch (err) {
             console.error("Error al cargar logs", err);
         } finally {
             setLoading(false);
         }
     };
+
+    const logsConFederacion = useMemo(
+        () => logs.map(log => ({
+            ...log,
+            federacionNombre: getFederationNameForUsername(log.usuario, usuarios, clubes, federaciones),
+        })),
+        [logs, usuarios, clubes, federaciones]
+    );
 
     useEffect(() => {
         if (activeTab === 'logs') {
@@ -86,10 +110,11 @@ const SoporteSection = () => {
         }
     };
 
-    const filteredLogs = logs.filter(log => 
+    const filteredLogs = logsConFederacion.filter(log => 
         log.modulo.toLowerCase().includes(filter.toLowerCase()) ||
         log.detalle.toLowerCase().includes(filter.toLowerCase()) ||
-        log.accion.toLowerCase().includes(filter.toLowerCase())
+        log.accion.toLowerCase().includes(filter.toLowerCase()) ||
+        (log.federacionNombre || '').toLowerCase().includes(filter.toLowerCase())
     );
 
     return (
@@ -139,7 +164,7 @@ const SoporteSection = () => {
                         <Search size={18} className="search-icon" />
                         <input 
                             type="text" 
-                            placeholder="Filtrar por módulo, error o acción..." 
+                            placeholder="Filtrar por módulo, federación, error o acción..." 
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                         />
@@ -173,6 +198,9 @@ const SoporteSection = () => {
                                                     </span>
                                                 </div>
                                                 <div className="log-meta">
+                                                    <span className="log-fed-pill" title="Federación del usuario">
+                                                        <GlobeIcon size={12} /> {log.federacionNombre || '—'}
+                                                    </span>
                                                     <span className="log-device-pill" title={log.userAgent}>
                                                         {parseUserAgent(log.userAgent).isMobile ? <Smartphone size={14} /> : <Monitor size={14} />}
                                                         {parseUserAgent(log.userAgent).os}
@@ -189,6 +217,9 @@ const SoporteSection = () => {
                                                     <div className="details-grid">
                                                         <div className="detail-field">
                                                             <label>Acción:</label> <span>{log.accion}</span>
+                                                        </div>
+                                                        <div className="detail-field">
+                                                            <label>Federación:</label> <span>{log.federacionNombre || '—'}</span>
                                                         </div>
                                                         <div className="detail-field">
                                                             <label>IP del Cliente:</label> <span>{log.ip}</span>

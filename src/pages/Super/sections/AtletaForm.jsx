@@ -28,6 +28,8 @@ const AtletaForm = ({
     hideClubSelect = false,
     scopeFedId = null,
     showFederationSelect = false,
+    showClubSelect = true,
+    fixedClubLabel = null,
 }) => {
     const today = new Date().toISOString().split('T')[0];
     const [federacionesList, setFederacionesList] = useState(federaciones);
@@ -185,11 +187,11 @@ const AtletaForm = ({
                             />
                         </div>
                         
-                        {!hideClubSelect && (
+                        {(showFederationSelect || showClubSelect || fixedClubLabel) && (
                             <div className="form-row">
                                 {showFederationSelect && (
                                     <div className="form-group">
-                                        <label>Federación</label>
+                                        <label>Federación *</label>
                                         <select 
                                             className="admin-select"
                                             name="federacionId"
@@ -199,6 +201,7 @@ const AtletaForm = ({
                                                 onChange('clubId', ''); 
                                                 onChange('idClub', ''); 
                                             }}
+                                            required
                                         >
                                             <option value="">Seleccionar Federación</option>
                                             {federacionesList.map(fed => (
@@ -207,29 +210,49 @@ const AtletaForm = ({
                                         </select>
                                     </div>
                                 )}
-                                <div className="form-group">
-                                    <label>Club / Entidad</label>
-                                    <select 
-                                        className="admin-select"
-                                        name="clubId"
-                                        value={initialData.clubId || initialData.idClub || ''} 
-                                        onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
-                                        disabled={showFederationSelect && !effectiveFedId && federacionesList.length > 0}
-                                    >
-                                        <option value="">Sin Asignar (Agente Libre)</option>
-                                        {clubes
-                                            .filter(c => {
-                                                const clubFedId = getClubFederationId(c);
-                                                return clubFedId && (!effectiveFedId || String(clubFedId) === String(effectiveFedId));
-                                            })
-                                            .map(club => {
-                                                const clubId = pick(club, 'id', 'Id', 'idClub', 'IdClub');
-                                                return (
-                                                    <option key={clubId} value={clubId}>{club.nombre}</option>
-                                                );
-                                            })}
-                                    </select>
-                                </div>
+                                {fixedClubLabel && (
+                                    <div className="form-group">
+                                        <label>Club</label>
+                                        <input
+                                            className="admin-input"
+                                            type="text"
+                                            value={fixedClubLabel}
+                                            readOnly
+                                            disabled
+                                        />
+                                    </div>
+                                )}
+                                {showClubSelect && !hideClubSelect && (
+                                    <div className="form-group">
+                                        <label>Club / Entidad</label>
+                                        <select 
+                                            className="admin-select"
+                                            name="clubId"
+                                            value={initialData.clubId || initialData.idClub || ''} 
+                                            onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
+                                            disabled={showFederationSelect && !effectiveFedId}
+                                        >
+                                            <option value="">Sin Asignar (Agente Libre)</option>
+                                            {clubes
+                                                .filter(c => {
+                                                    const clubFedId = getClubFederationId(c);
+                                                    if (showFederationSelect) {
+                                                        return clubFedId && effectiveFedId && String(clubFedId) === String(effectiveFedId);
+                                                    }
+                                                    if (scopeFedId) {
+                                                        return clubFedId && String(clubFedId) === String(scopeFedId);
+                                                    }
+                                                    return Boolean(clubFedId);
+                                                })
+                                                .map(club => {
+                                                    const clubId = pick(club, 'id', 'Id', 'idClub', 'IdClub');
+                                                    return (
+                                                        <option key={clubId} value={clubId}>{club.nombre}</option>
+                                                    );
+                                                })}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

@@ -2,11 +2,26 @@ import React, { useState } from 'react';
 import { Save, Eye, EyeOff, User } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/Common/CustomSelect';
+import { pick } from '../../../utils/apiHelpers';
+import { isSuperAdminUser } from '../../../utils/authHelpers';
 
 const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
 
-const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, isEditing, isEditingProfile }) => {
+const LoginForm = ({
+    initialData,
+    clubes = [],
+    federaciones = [],
+    onCancel,
+    onSubmit,
+    onChange,
+    saving,
+    isEditing,
+    isEditingProfile,
+    showFederationSelect = false,
+    showClubSelect = false,
+}) => {
     const { user } = useAuth();
+    const isSuper = isSuperAdminUser(user);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -42,20 +57,63 @@ const LoginForm = ({ initialData, clubes, onCancel, onSubmit, onChange, saving, 
                                     />
                                 </div>
 
-                                {user?.rol === 'SuperAdmin' && (
+                                {showFederationSelect && (
                                     <div className="form-group fade-in">
-                                        <label>Club / Federación Correspondiente *</label>
-                                        <CustomSelect 
+                                        <label>Federación *</label>
+                                        <CustomSelect
+                                            className="admin-select"
+                                            name="federacionId"
+                                            value={initialData.federacionId || ''}
+                                            onChange={(val) => onChange('federacionId', val)}
+                                            required
+                                            placeholder="Seleccionar Federación..."
+                                            options={federaciones.map(f => ({
+                                                value: f.id,
+                                                label: f.nombre,
+                                            }))}
+                                        />
+                                    </div>
+                                )}
+
+                                {showClubSelect && (
+                                    <div className="form-group fade-in">
+                                        <label>Club a vincular *</label>
+                                        <CustomSelect
                                             className="admin-select"
                                             name="clubId"
-                                            value={initialData.clubId} 
+                                            value={initialData.clubId || ''}
                                             onChange={(val) => onChange('clubId', val)}
-                                            required={true}
-                                            placeholder="Seleccionar Club..."
+                                            required
+                                            placeholder={clubes.length ? 'Seleccionar Club...' : 'No hay clubes en esta federación'}
                                             options={clubes.map(c => ({
-                                                value: c.id, 
-                                                label: c.nombre
+                                                value: pick(c, 'id', 'Id'),
+                                                label: c.nombre,
                                             }))}
+                                        />
+                                        {clubes.length === 0 && (
+                                            <small style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem' }}>
+                                                Registrá primero un club en esa federación o elegí otra federación.
+                                            </small>
+                                        )}
+                                    </div>
+                                )}
+
+                                {isSuper && initialData.rol !== 'Club' && (
+                                    <div className="form-group fade-in">
+                                        <label>Club asociado (opcional)</label>
+                                        <CustomSelect
+                                            className="admin-select"
+                                            name="clubId"
+                                            value={initialData.clubId || ''}
+                                            onChange={(val) => onChange('clubId', val)}
+                                            placeholder="Sin club específico"
+                                            options={[
+                                                { value: '', label: 'Sin club específico' },
+                                                ...clubes.map(c => ({
+                                                    value: pick(c, 'id', 'Id'),
+                                                    label: c.nombre,
+                                                })),
+                                            ]}
                                         />
                                     </div>
                                 )}

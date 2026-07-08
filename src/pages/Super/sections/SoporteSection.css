@@ -116,6 +116,16 @@
     gap: 5px;
 }
 
+.log-fed-pill {
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(234, 179, 8, 0.12);
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    color: var(--color-accent-yellow, #eab308);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .log-details {
     padding: var(--spacing-lg);
     background: rgba(0, 0, 0, 0.2);

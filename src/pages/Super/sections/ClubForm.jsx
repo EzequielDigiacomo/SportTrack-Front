@@ -133,6 +133,71 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                         </div>
                     </div>
 
+                    {!isEditing && (
+                        <div className="form-section">
+                            <h4>Acceso al Sistema</h4>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 1rem 0' }}>
+                                Creá las credenciales para que el club ingrese a su panel de gestión.
+                            </p>
+                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <input
+                                    type="checkbox"
+                                    id="crearCuentaLogin"
+                                    checked={initialData.crearCuentaLogin !== false}
+                                    onChange={(e) => onChange('crearCuentaLogin', e.target.checked)}
+                                />
+                                <label htmlFor="crearCuentaLogin" style={{ marginBottom: 0, cursor: 'pointer' }}>
+                                    Crear cuenta de login para este club
+                                </label>
+                            </div>
+                            {initialData.crearCuentaLogin !== false && (
+                                <>
+                                    <div className="form-group">
+                                        <label>Usuario de acceso *</label>
+                                        <input
+                                            className="admin-input"
+                                            type="text"
+                                            name="loginUsername"
+                                            value={initialData.loginUsername || ''}
+                                            onChange={(e) => onChange('loginUsername', e.target.value)}
+                                            required={initialData.crearCuentaLogin !== false}
+                                            placeholder="ej: club_ecuador_norte"
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Contraseña *</label>
+                                            <input
+                                                className="admin-input"
+                                                type="password"
+                                                name="loginPassword"
+                                                value={initialData.loginPassword || ''}
+                                                onChange={(e) => onChange('loginPassword', e.target.value)}
+                                                required={initialData.crearCuentaLogin !== false}
+                                                minLength={6}
+                                                autoComplete="new-password"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Confirmar contraseña *</label>
+                                            <input
+                                                className="admin-input"
+                                                type="password"
+                                                name="loginConfirmPassword"
+                                                value={initialData.loginConfirmPassword || ''}
+                                                onChange={(e) => onChange('loginConfirmPassword', e.target.value)}
+                                                required={initialData.crearCuentaLogin !== false}
+                                                minLength={6}
+                                                autoComplete="new-password"
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     <div className="form-footer-actions">
                         <button type="button" className="btn-admin-secondary" onClick={onCancel}>Cancelar</button>
                         <button type="submit" className="btn-admin-primary" disabled={saving}>

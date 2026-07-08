@@ -8,7 +8,31 @@ const AuthService = {
     },
 
     register: async (userData) => {
-        const response = await api.post(ENDPOINTS.AUTH.REGISTER, userData);
+        const clubId = userData.clubId != null && userData.clubId !== ''
+            ? parseInt(userData.clubId, 10)
+            : null;
+        const federacionId = userData.federacionId != null && userData.federacionId !== ''
+            ? parseInt(userData.federacionId, 10)
+            : null;
+        const rolFederacion = userData.rolFederacion || userData.rol || 'Club';
+
+        if (String(rolFederacion).toLowerCase() === 'club' && (!clubId || Number.isNaN(clubId))) {
+            throw new Error('Un login de club debe estar vinculado a un club.');
+        }
+
+        const payload = {
+            username: userData.username,
+            password: userData.password,
+            email: userData.email,
+            telefono: userData.telefono,
+            nombre: userData.nombre,
+            apellido: userData.apellido,
+            dni: userData.dni,
+            clubId: clubId && !Number.isNaN(clubId) ? clubId : null,
+            federacionId: federacionId && !Number.isNaN(federacionId) ? federacionId : null,
+            rolFederacion,
+        };
+        const response = await api.post(ENDPOINTS.AUTH.REGISTER, payload);
         return response.data;
     },
 
