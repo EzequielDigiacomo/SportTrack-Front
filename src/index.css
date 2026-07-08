@@ -130,12 +130,12 @@
 
 [data-theme='light'] {
   /* Neutral Colors - Light Mode (Clean & Elegant) */
-  --color-bg-primary: #f8fafc; /* slate-50 */
-  --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f1f5f9; /* slate-100 */
+  --color-bg-primary: #e2e8f0; /* Soft cool grey background */
+  --color-bg-secondary: #f1f5f9;
+  --color-bg-tertiary: #cbd5e1;
   --color-surface: #ffffff;
   --color-surface-hover: #f1f5f9;
-  --color-border: #e2e8f0; /* slate-200 */
+  --color-border: #cbd5e1;
   --color-calendar-cell-border: rgba(15, 23, 42, 0.22);
   --color-calendar-cell-bg: rgba(15, 23, 42, 0.02);
   

@@ -630,3 +630,432 @@
     background: rgba(255, 255, 255, 0.1);
     border-color: var(--color-primary-light);
 }
+
+/* ── ESTILOS ADICIONALES PARA TABS Y CONTACTO ── */
+
+.pricing-tabs-wrapper {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 3.5rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.pricing-tab-btn {
+    padding: 0.8rem 1.8rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(26, 48, 85, 0.25);
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pricing-tab-btn.active-sigdef {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);
+}
+
+.pricing-tab-btn.active-sporttrack {
+    background: linear-gradient(135deg, #0070f3 0%, #3291ff 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 8px 20px rgba(0, 112, 243, 0.25);
+}
+
+.pricing-tab-btn.active-duo {
+    background: linear-gradient(135deg, #10b981 0%, #0070f3 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 8px 20px rgba(61, 170, 148, 0.25);
+}
+
+/* Botón cápsula verde */
+.btn-acc-green {
+  background-color: #10b981 !important;
+  color: #0b0f19 !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 0.75rem 2rem !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+  text-decoration: none !important;
+}
+
+.btn-acc-green:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+  filter: brightness(1.1);
+}
+
+/* Botón cápsula azul */
+.btn-acc-blue {
+  background-color: #0070f3 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 0.75rem 2rem !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 112, 243, 0.35) !important;
+  text-decoration: none !important;
+}
+
+.btn-acc-blue:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 112, 243, 0.55) !important;
+  filter: brightness(1.1);
+}
+
+/* Botón cápsula bordeado */
+.btn-acc-outline {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  color: #f8fafc !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  padding: 0.75rem 2rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.3s ease !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  text-decoration: none !important;
+}
+
+.btn-acc-outline:hover {
+  border-color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+.btn-acc-outline-blue:hover {
+  border-color: #0070f3 !important;
+  background-color: rgba(0, 112, 243, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+/* Checkmarks color */
+.icon-check-green {
+  color: #10b981 !important;
+  flex-shrink: 0;
+}
+
+.icon-check-blue {
+  color: #0070f3 !important;
+  flex-shrink: 0;
+}
+
+/* ── SECCIÓN PONETE EN CONTACTO ── */
+.contacto-section {
+    padding: 6rem 0;
+    position: relative;
+    background: rgba(17, 24, 39, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.contacto-title-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.contacto-title-wrapper h2 {
+    font-size: 3rem;
+    font-weight: 850;
+    color: #ffffff;
+    margin: 0;
+    line-height: 1.15;
+}
+
+.contacto-title-wrapper h2 span {
+    color: #0070f3;
+}
+
+.contacto-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 3rem;
+    align-items: start;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.contacto-direct-card {
+    background-color: rgba(17, 24, 39, 0.75);
+    border: 1px solid rgba(0, 112, 243, 0.2);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    text-align: left;
+}
+
+.contacto-direct-card h4 {
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.contacto-direct-icon-wrapper {
+    background-color: rgba(0, 112, 243, 0.1);
+    color: #0070f3;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 112, 243, 0.2);
+}
+
+.contacto-detail-group {
+    margin-bottom: 1.5rem;
+}
+.contacto-detail-group:last-child {
+    margin-bottom: 0;
+}
+
+.contacto-detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.contacto-detail-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.contacto-form-card {
+    background-color: rgba(17, 24, 39, 0.75);
+    border: 1px solid rgba(0, 112, 243, 0.2);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    text-align: left;
+}
+
+.contacto-form-card h4 {
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.contacto-form-icon-wrapper {
+    background-color: rgba(0, 112, 243, 0.1);
+    color: #0070f3;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 112, 243, 0.2);
+}
+
+.contacto-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.contacto-form-group label {
+    color: #cbd5e1;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.contact-input-dark {
+    background: rgba(13, 22, 36, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1rem !important;
+    color: #ffffff !important;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    margin-bottom: 1.25rem;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.contact-input-dark:focus {
+    outline: none !important;
+    border-color: #0070f3 !important;
+    background: rgba(13, 22, 36, 0.8) !important;
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15) !important;
+}
+
+/* Quitar check de CSS */
+.feature-list li::before {
+    display: none !important;
+}
+
+.app-line-decorator {
+    width: 60px;
+    height: 4px;
+    background-color: #0070f3;
+    border-radius: 2px;
+    margin-top: 1rem;
+}
+
+/* ── MODO CLARO: ACCENTOS Y CONTRASTE DE PRECIOS Y CONTACTO ── */
+
+[data-theme='light'] {
+    --text-muted: var(--color-text-secondary, #334155);
+    --text-main: var(--color-text-primary, #0f172a);
+}
+
+[data-theme='light'] .contacto-section {
+    background: rgba(15, 23, 42, 0.02) !important;
+}
+
+[data-theme='light'] .contacto-title-wrapper h2 {
+    color: #0f172a !important;
+}
+
+[data-theme='light'] .contacto-title-wrapper h2 span {
+    color: #0070f3 !important;
+}
+
+[data-theme='light'] .contacto-title-wrapper p {
+    color: #334155 !important;
+}
+
+[data-theme='light'] .pricing-section .section-header h2 {
+    color: #0f172a !important;
+}
+
+[data-theme='light'] .pricing-section .section-header span {
+    color: #64748b !important;
+}
+
+[data-theme='light'] .pricing-section h3 {
+    color: #0f172a !important;
+}
+
+[data-theme='light'] .pricing-section p {
+    color: #334155 !important;
+}
+
+/* Forzar que las tarjetas de precios sean oscuras en modo claro para contraste premium (igual que contacto) */
+[data-theme='light'] .pricing-card {
+    background-color: rgba(17, 24, 39, 0.85) !important;
+    border: 1px solid rgba(0, 112, 243, 0.25) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme='light'] .pricing-card.featured {
+    border: 2px solid #0070f3 !important;
+    background-color: rgba(17, 24, 39, 0.9) !important;
+    box-shadow: 0 20px 45px rgba(0, 112, 243, 0.2) !important;
+}
+
+/* Asegurar legibilidad del texto dentro de las tarjetas oscuras en modo claro */
+[data-theme='light'] .pricing-card h3 {
+    color: #ffffff !important;
+}
+
+[data-theme='light'] .pricing-card .plan-limits {
+    color: #94a3b8 !important;
+}
+
+[data-theme='light'] .pricing-card .plan-price {
+    color: #ffffff !important;
+}
+
+[data-theme='light'] .pricing-card .plan-price span {
+    color: #64748b !important;
+}
+
+[data-theme='light'] .pricing-card .plan-features li {
+    color: #cbd5e1 !important;
+}
+
+[data-theme='light'] .pricing-card .plan-icon-wrapper {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme='light'] .pricing-card:not(.featured) .plan-icon-wrapper {
+    color: #94a3b8 !important;
+}
+
+/* Forzar que las tarjetas de características (feature-card) sean oscuras en modo claro */
+[data-theme='light'] .feature-card {
+    background-color: rgba(17, 24, 39, 0.85) !important;
+    border: 1px solid rgba(0, 112, 243, 0.25) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme='light'] .feature-card:hover {
+    background-color: rgba(17, 24, 39, 0.95) !important;
+    border-color: #0070f3 !important;
+    box-shadow: 0 20px 45px rgba(0, 112, 243, 0.2) !important;
+}
+
+/* Asegurar legibilidad del texto de las tarjetas de características en modo claro */
+[data-theme='light'] .feature-card h3 {
+    color: #ffffff !important;
+}
+
+[data-theme='light'] .feature-card p {
+    color: #cbd5e1 !important;
+}
+
+[data-theme='light'] .feature-icon-wrapper {
+    background: rgba(0, 150, 255, 0.15) !important;
+    color: #3291ff !important;
+}
+
+[data-theme='light'] .feature-card:hover .feature-icon-wrapper {
+    color: #ffffff !important;
+    background: var(--gradient-primary) !important;
+}
+
+/* Opcional: Forzar que la tarjeta de Último Evento también sea oscura para mantener consistencia */
+[data-theme='light'] .ultimo-evento-card {
+    background-color: rgba(17, 24, 39, 0.85) !important;
+    border: 1px solid rgba(0, 112, 243, 0.25) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme='light'] .ultimo-evento-card h2 {
+    color: #ffffff !important;
+}
+
+[data-theme='light'] .ultimo-evento-card .evento-meta {
+    color: #94a3b8 !important;
+}
