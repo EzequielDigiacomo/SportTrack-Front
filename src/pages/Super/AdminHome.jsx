@@ -1104,7 +1104,7 @@ const AdminHome = () => {
             <div className="admin-home-header">
                 {isViewingSpecificFed && (
                     <button 
-                        onClick={() => navigate('/super/saas')}
+                        onClick={() => navigate(-1)}
                         style={{ 
                             display: 'flex', alignItems: 'center', gap: '6px',
                             background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
@@ -1113,7 +1113,7 @@ const AdminHome = () => {
                             marginBottom: '1rem'
                         }}
                     >
-                        <ArrowLeft size={16} /> Volver a Suscripciones
+                        <ArrowLeft size={16} /> Volver
                     </button>
                 )}
                 <h1 className="gradient-text">

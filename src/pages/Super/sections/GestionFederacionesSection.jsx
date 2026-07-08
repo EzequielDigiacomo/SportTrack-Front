@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Globe, Mail, Phone, Edit, Trash2, ShieldCheck, ShieldAlert, Award, X, Calendar } from 'lucide-react';
+import { Plus, ArrowLeft, Globe, Mail, Phone, Edit, Trash2, ShieldCheck, ShieldAlert, X, Calendar, LayoutDashboard, Award, Building2, Users } from 'lucide-react';
 import api from '../../../services/api';
+import SaaSService from '../../../services/SaaSService';
+import { pick } from '../../../utils/apiHelpers';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
 import '../../../components/SharedSections/AdminSections.css';
@@ -68,12 +70,26 @@ const GestionFederacionesSection = () => {
     const loadFederaciones = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/Federaciones');
-            const data = res.data || res || [];
-            const mapped = data.map(f => ({
-                ...f,
-                id: f.idFederacion
-            }));
+            const [federacionesRes, saasStatus] = await Promise.all([
+                api.get('/Federaciones'),
+                SaaSService.getClubesStatus().catch(() => []),
+            ]);
+            const data = federacionesRes.data || federacionesRes || [];
+            const saasByFedId = Object.fromEntries(
+                (saasStatus || []).map(s => [String(pick(s, 'clubId', 'ClubId')), s])
+            );
+
+            const mapped = data.map(f => {
+                const fedId = pick(f, 'idFederacion', 'IdFederacion', 'id', 'Id');
+                const saas = saasByFedId[String(fedId)] || {};
+                return {
+                    ...f,
+                    id: fedId,
+                    planNombre: pick(saas, 'planNombre', 'PlanNombre') || 'Sin plan',
+                    cantidadClubes: pick(saas, 'clubesAfiliadosCount', 'ClubesAfiliadosCount') ?? 0,
+                    cantidadAtletas: pick(saas, 'atletasRegistrados', 'AtletasRegistrados') ?? 0,
+                };
+            });
             setFederaciones(mapped);
         } catch (e) {
             console.error("Error loading federations:", e);
@@ -81,6 +97,10 @@ const GestionFederacionesSection = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleOpenDashboard = (fed) => {
+        navigate(`/super/federacion/${fed.id}`);
     };
 
     const handleOpenCrear = () => {
@@ -278,7 +298,7 @@ const GestionFederacionesSection = () => {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         justifyContent: 'space-between',
-                                        minHeight: '220px',
+                                        minHeight: '240px',
                                         background: 'rgba(255,255,255,0.03)'
                                     }}>
                                         <div>
@@ -304,33 +324,91 @@ const GestionFederacionesSection = () => {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(3, 1fr)',
+                                                gap: '0.45rem',
+                                                marginBottom: '0.75rem',
+                                            }}>
+                                                <div style={{
+                                                    padding: '0.45rem 0.5rem',
+                                                    borderRadius: '8px',
+                                                    background: 'rgba(234, 179, 8, 0.1)',
+                                                    border: '1px solid rgba(234, 179, 8, 0.2)',
+                                                    textAlign: 'center',
+                                                }}>
+                                                    <Award size={13} style={{ color: '#eab308', marginBottom: '2px' }} />
+                                                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>Plan</div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={fed.planNombre}>
+                                                        {fed.planNombre}
+                                                    </div>
+                                                </div>
+                                                <div style={{
+                                                    padding: '0.45rem 0.5rem',
+                                                    borderRadius: '8px',
+                                                    background: 'rgba(59, 130, 246, 0.1)',
+                                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                                    textAlign: 'center',
+                                                }}>
+                                                    <Building2 size={13} style={{ color: '#60a5fa', marginBottom: '2px' }} />
+                                                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>Clubes</div>
+                                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text)' }}>{fed.cantidadClubes}</div>
+                                                </div>
+                                                <div style={{
+                                                    padding: '0.45rem 0.5rem',
+                                                    borderRadius: '8px',
+                                                    background: 'rgba(16, 185, 129, 0.1)',
+                                                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                                                    textAlign: 'center',
+                                                }}>
+                                                    <Users size={13} style={{ color: '#34d399', marginBottom: '2px' }} />
+                                                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>Atletas</div>
+                                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text)' }}>{fed.cantidadAtletas}</div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Mail size={14} />
-                                                    <span>{fed.email || 'Sin email'}</span>
+                                                    <Mail size={13} />
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fed.email || 'Sin email'}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Phone size={14} />
+                                                    <Phone size={13} />
                                                     <span>{fed.telefono || 'Sin teléfono'}</span>
                                                 </div>
                                                 {fed.direccion && (
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <Globe size={14} />
-                                                        <span>{fed.direccion}</span>
+                                                        <Globe size={13} />
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fed.direccion}</span>
                                                     </div>
                                                 )}
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Calendar size={14} />
-                                                    <span>Inicio: {formatDate(fed.fechaAltaPlan)}</span>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <Calendar size={14} />
-                                                    <span>Vence: {formatDate(fed.fechaVencimientoPlan)}</span>
+                                                    <Calendar size={13} />
+                                                    <span>Vigencia: {formatDate(fed.fechaAltaPlan)} → {formatDate(fed.fechaVencimientoPlan)}</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                                        <button
+                                            type="button"
+                                            className="btn-admin-primary"
+                                            onClick={() => handleOpenDashboard(fed)}
+                                            style={{
+                                                width: '100%',
+                                                marginBottom: '0.75rem',
+                                                padding: '0.45rem 0.75rem',
+                                                fontSize: '0.82rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.4rem',
+                                            }}
+                                            title="Abrir dashboard de la federación"
+                                        >
+                                            <LayoutDashboard size={15} /> Ver Dashboard
+                                        </button>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.85rem' }}>
                                             <button 
                                                 onClick={() => handleToggleStatus(fed)}
                                                 style={{
