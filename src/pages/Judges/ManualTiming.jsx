@@ -29,6 +29,7 @@ const ManualTiming = () => {
                         viewMode="tiempos"
                         defaultTab="resultados"
                         isEmbedded={false}
+                        isManualTiming
                     />
                 </div>
 

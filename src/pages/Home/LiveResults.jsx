@@ -331,11 +331,11 @@ const LiveResults = () => {
         };
     }, [selectedPrueba, refreshResultsCounter]);
 
-    const handleDownloadPDF = (mode = 'current') => {
+    const handleDownloadPDF = async (mode = 'current') => {
         if (!selectedPrueba || !fases.length) return;
 
         try {
-            const eventoNombre = evento?.nombre || evento?.Nombre || 'Evento';
+            const eventoExport = evento || 'Evento';
             const pruebaNombre = [
                 selectedPrueba.prueba?.categoria?.nombre,
                 selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.bote?.nombre,
@@ -384,7 +384,7 @@ const LiveResults = () => {
             if (!fasesToExport.length) { alert('No hay fases para el filtro seleccionado'); return; }
 
             const enriched = fasesToExport.map(enrichFase);
-            PdfExportService.exportGrupo(enriched, eventoNombre, pruebaNombre, mode === 'current' ? enriched[0]?.nombreFase : mode);
+            await PdfExportService.exportGrupo(enriched, eventoExport, pruebaNombre, mode === 'current' ? enriched[0]?.nombreFase : mode);
         } catch (err) {
             console.error('Error generating PDF:', err);
             alert('Error al generar el PDF.');

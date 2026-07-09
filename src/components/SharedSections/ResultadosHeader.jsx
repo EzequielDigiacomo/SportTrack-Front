@@ -134,7 +134,7 @@ const ResultadosHeader = ({
                                     onClick={() => {
                                         const ev = eventos.find(e => String(e.id) === String(selectedEvento));
                                         import('../../services/PdfExportService').then(m => {
-                                            m.default.exportRegattaSchedule(cronograma, ev?.nombre || 'Evento');
+                                            m.default.exportRegattaSchedule(cronograma, ev || 'Evento');
                                         });
                                     }}
                                 >
@@ -146,7 +146,7 @@ const ResultadosHeader = ({
                                     onClick={() => {
                                         const ev = eventos.find(e => String(e.id) === String(selectedEvento));
                                         import('../../services/PdfExportService').then(m => {
-                                            m.default.exportCronogramaCompleto(cronograma, ev?.nombre || 'Evento');
+                                            m.default.exportCronogramaCompleto(cronograma, ev || 'Evento');
                                         });
                                     }}
                                 >

@@ -19,7 +19,7 @@ import { getPromotionStatus } from '../../utils/promotionHelpers';
 import { applyPositionsToTiemposLocales } from '../../utils/resultadosHelpers';
 import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 
-const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode }) => {
+const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode, isManualTiming = false }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [showPdfMenu, setShowPdfMenu] = useState(false);
@@ -329,34 +329,52 @@ const handleResultChange = (id, field, val) => {
     });
 };
 
-const eventoNombre = eventos.find(e => String(e.id) === String(selectedEvento))?.nombre || 'Evento';
+const handleStatusChange = (id, status) => {
+    setTiemposLocales(prev => {
+        const next = {
+            ...prev,
+            [id]: {
+                ...prev[id],
+                estadoCanto: status,
+                ...(status !== 'Pendiente' ? { tiempoOficial: '' } : {})
+            }
+        };
+        if (faseSeleccionada?.resultados) {
+            return applyPositionsToTiemposLocales(faseSeleccionada.resultados, next);
+        }
+        return next;
+    });
+};
+
+const eventoActual = eventos.find(e => String(e.id) === String(selectedEvento));
+const eventoNombre = eventoActual?.nombre || 'Evento';
 const pruebaNombre = pruebas.find(p => String(p.id) === String(selectedPrueba))?.nombre || 'Prueba';
 const etiquetasEtapas = Object.keys(agrupadoPorEtapa);
 
-const handleExportFase = () => {
+const handleExportFase = async () => {
     if (!faseSeleccionada) return;
-    PdfExportService.exportFase(faseSeleccionada, eventoNombre, pruebaNombre);
+    await PdfExportService.exportFase(faseSeleccionada, eventoActual || eventoNombre, pruebaNombre);
     setShowPdfMenu(false);
 };
 
-const handleExportGrupo = (etapa) => {
+const handleExportGrupo = async (etapa) => {
     const fasesDelGrupo = agrupadoPorEtapa[etapa] || [];
-    PdfExportService.exportGrupo(fasesDelGrupo, eventoNombre, pruebaNombre, etapa);
+    await PdfExportService.exportGrupo(fasesDelGrupo, eventoActual || eventoNombre, pruebaNombre, etapa);
     setShowPdfMenu(false);
 };
 
-const handleExportPrueba = () => {
-    PdfExportService.exportPrueba(fases, eventoNombre, pruebaNombre);
+const handleExportPrueba = async () => {
+    await PdfExportService.exportPrueba(fases, eventoActual || eventoNombre, pruebaNombre);
     setShowPdfMenu(false);
 };
 
-const handleExportRegattaSchedule = () => {
-    PdfExportService.exportRegattaSchedule(cronograma, eventoNombre);
+const handleExportRegattaSchedule = async () => {
+    await PdfExportService.exportRegattaSchedule(cronograma, eventoActual || eventoNombre);
     setShowPdfMenu(false);
 };
 
-const handleExportStartListCompleto = () => {
-    PdfExportService.exportCronogramaCompleto(cronograma, eventoNombre);
+const handleExportStartListCompleto = async () => {
+    await PdfExportService.exportCronogramaCompleto(cronograma, eventoActual || eventoNombre);
     setShowPdfMenu(false);
 };
 
@@ -919,6 +937,7 @@ return (
                                     fase={faseSeleccionada}
                                     tiemposLocales={tiemposLocales}
                                     onResultChange={handleResultChange}
+                                    onStatusChange={isManualTiming ? handleStatusChange : undefined}
                                     isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') ? false : isLocked}
                                     isSuccess={saveSuccess}
                                     isAdmin={isAdmin}
@@ -932,7 +951,7 @@ return (
                                                     PLAN BRONCE: CARGA MANUAL HABILITADA
                                                 </span>
                                             )}
-                                            {viewMode === 'tiempos' && !isBronce && (
+                                            {viewMode === 'tiempos' && !isBronce && !isManualTiming && (
                                                 <button
                                                     className="btn-admin-secondary"
                                                     onClick={handleSimulateResults}

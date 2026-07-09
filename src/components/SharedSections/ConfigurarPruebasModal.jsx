@@ -381,7 +381,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.8rem' }}>
                                                 <button 
                                                     className="btn-admin-secondary" 
-                                                    onClick={() => PdfExportService.exportProgramaInicial(itemsFinales, evento?.nombre || 'Evento')}
+                                                    onClick={() => PdfExportService.exportProgramaInicial(itemsFinales, evento || 'Evento')}
                                                     style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                                                 >
                                                     📥 Exportar Programa PDF

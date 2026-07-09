@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import ClubService from '../../services/ClubService';
@@ -9,12 +9,13 @@ import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
 import { getClubFederationId, getUserFederationId } from '../../utils/apiHelpers';
-import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking } from '../../utils/resultadosHelpers';
+import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
     const { user } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(() => localStorage.getItem('results_selected_evento') || preselectedEventoId || '');
     const [pruebas, setPruebas] = useState([]);
@@ -35,30 +36,39 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     // so the useEffect below can apply the intended filtro instead of resetting to 'Todas'.
     const pendingFiltro = useRef(null);
 
-    // Deep-linking via query params
+    // Deep-linking: respeta ?faseId= solo si coincide con la prueba activa; si no, limpia la URL.
     useEffect(() => {
-        if (cronograma.length > 0) {
-            const params = new URLSearchParams(location.search);
-            const faseId = params.get('faseId');
-            const urlTab = params.get('tab');
-            
-            if (faseId) {
-                const f = cronograma.find(x => String(x.id) === String(faseId));
-                if (f) {
-                    if (String(f.eventoPruebaId) !== String(selectedPrueba)) {
-                        handleSelectRegata(f);
+        if (cronograma.length === 0) return;
+        const params = new URLSearchParams(location.search);
+        const faseId = params.get('faseId');
+        const urlTab = params.get('tab');
+
+        if (faseId) {
+            const f = cronograma.find(x => String(x.id) === String(faseId));
+            if (f) {
+                const pid = f.eventoPruebaId || f.EventoPruebaId;
+                if (!selectedPrueba || String(pid) === String(selectedPrueba)) {
+                    pendingFiltro.current = f.nombreFase;
+                    if (String(pid) !== String(selectedPrueba)) {
+                        setSelectedPrueba(String(pid));
                     } else {
-                        // Si ya estamos en la prueba correcta, pero queremos cambiar de serie/fase
                         setFiltroVisualFase(f.nombreFase);
                     }
+                } else {
+                    params.delete('faseId');
+                    const search = params.toString();
+                    navigate(
+                        { pathname: location.pathname, search: search ? `?${search}` : '' },
+                        { replace: true }
+                    );
                 }
             }
-
-            if (urlTab) {
-                setCurrentTab(urlTab);
-            }
         }
-    }, [cronograma, selectedPrueba, location.search]);
+
+        if (urlTab) {
+            setCurrentTab(urlTab);
+        }
+    }, [cronograma, location.search, selectedPrueba, navigate, location.pathname]);
 
     useEffect(() => {
         loadEventos();
@@ -221,7 +231,8 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                         posicion: r.posicion || '',
                         carril: r.carril || '',
                         participanteNombre: r.participanteNombre || '',
-                        clubSigla: r.clubSigla || ''
+                        clubSigla: r.clubSigla || '',
+                        estadoCanto: normalizeEstadoCantoFromBackend(r.estado)
                     };
                 });
             });
@@ -451,11 +462,12 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
                 resultsToSave.push({
                     id: parseInt(id),
-                    tiempoOficial: t,
+                    tiempoOficial: excluded ? null : t,
                     posicion: excluded ? null : (positionMap[parseInt(id)] || null),
                     carril: c,
                     participanteNombre: n,
-                    clubSigla: s
+                    clubSigla: s,
+                    estado: mapEstadoCantoToBackend(estado)
                 });
             }
 
@@ -472,7 +484,8 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                     posicion: r.posicion ? parseInt(r.posicion) : null,
                     carril: r.carril ? parseInt(r.carril) : null,
                     participanteNombre: r.participanteNombre || null,
-                    clubSigla: r.clubSigla || null
+                    clubSigla: r.clubSigla || null,
+                    estado: r.estado || null
                 }));
 
                 setMessage(`⏳ Enviando ${dto.length} resultados de ${fase.nombreFase}...`);
@@ -662,6 +675,27 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         setSelectedPrueba(fase.eventoPruebaId);
     };
 
+    /** Cambio manual de prueba: limpia faseId obsoleto en la URL para no volver a la prueba anterior. */
+    const handleSelectPrueba = useCallback((pruebaId) => {
+        const params = new URLSearchParams(location.search);
+        const faseId = params.get('faseId');
+
+        if (faseId) {
+            const f = cronograma.find(x => String(x.id) === String(faseId));
+            const fasePruebaId = f?.eventoPruebaId || f?.EventoPruebaId;
+            if (!f || String(fasePruebaId) !== String(pruebaId)) {
+                params.delete('faseId');
+                const search = params.toString();
+                navigate(
+                    { pathname: location.pathname, search: search ? `?${search}` : '' },
+                    { replace: true }
+                );
+            }
+        }
+
+        setSelectedPrueba(pruebaId || '');
+    }, [cronograma, location.pathname, location.search, navigate]);
+
     const handleUpdateFaseDetails = async (id, details) => {
         setSaving(true);
         try {
@@ -679,7 +713,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
     return {
         eventos, selectedEvento, setSelectedEvento,
-        pruebas, selectedPrueba, setSelectedPrueba,
+        pruebas, selectedPrueba, setSelectedPrueba: handleSelectPrueba,
         currentTab, setCurrentTab,
         inscriptos, fases, cronograma,
         loading, saving, isLocked, message, setMessage,

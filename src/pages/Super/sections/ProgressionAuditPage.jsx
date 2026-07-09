@@ -6,6 +6,7 @@ import { PruebaService } from '../../../services/ConfigService';
 import FaseService from '../../../services/FaseService';
 import InscripcionService from '../../../services/InscripcionService';
 import { buildFactualProgression } from '../../../utils/ProgressionEngine';
+import { formatPruebaName } from '../../../utils/pruebaLabelUtils';
 import { useAuth } from '../../../context/AuthContext';
 
 const ProgressionAuditPage = () => {
@@ -18,17 +19,6 @@ const ProgressionAuditPage = () => {
     const [loading, setLoading] = useState(false);
     const [auditData, setAuditData] = useState([]);
     const [eventoPruebaMetaData, setEventoPruebaMetaData] = useState(null);
-
-    const formatPruebaName = (pr) => {
-        if (pr.nombre) return pr.nombre;
-        const inner = pr.prueba || pr;
-        if (!inner) return `Prueba #${pr.id}`;
-        const catName = inner.categoria?.nombre || 'Cat';
-        const botName = inner.bote?.tipo || 'Bote';
-        const distName = inner.distancia?.metros ? `${inner.distancia.metros}m` : 'Dist';
-        const sexName = inner.sexoNombre || 'Mixto';
-        return `${catName} - ${botName} - ${distName} - ${sexName}`;
-    };
 
     // 1. Cargar Eventos
     useEffect(() => {
@@ -84,7 +74,7 @@ const ProgressionAuditPage = () => {
 
             if (pruebaSeleccionada) {
                 setEventoPruebaMetaData({
-                    nombre: formatPruebaName(pruebaSeleccionada),
+                    nombre: formatPruebaName(pruebaSeleccionada, { forceBuild: true }),
                     planProgresionAsignado: planLabel
                 });
             }
@@ -162,7 +152,7 @@ const ProgressionAuditPage = () => {
                         >
                             <option value="">-- Elige una Prueba --</option>
                             {pruebas.map(pr => (
-                                <option key={pr.id} value={pr.id}>{formatPruebaName(pr)}</option>
+                                <option key={pr.id} value={pr.id}>{formatPruebaName(pr, { forceBuild: true })}</option>
                             ))}
                         </select>
                     </div>

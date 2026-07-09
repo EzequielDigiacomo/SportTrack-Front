@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
 import { computePositionsForPhase, isExcludedFromRanking, timeToMs } from '../../utils/resultadosHelpers';
-import { formatRaceTime } from '../../utils/raceTimeUtils';
+import { formatRaceTime, isMeaningfulRaceTime } from '../../utils/raceTimeUtils';
 
 const formatDiff = (diffMs) => {
     if (diffMs === null || diffMs <= 0) return '-';
@@ -28,10 +28,17 @@ const isBoteK4 = (fase) => {
     return name.toUpperCase().includes('4');
 };
 
+const normalizeEstadoCanto = (estado) => {
+    if (!estado || estado === 'Pendiente') return 'Pendiente';
+    if (estado === 'Descalificado') return 'DSQ';
+    return estado;
+};
+
 const ResultadosTable = ({ 
     fase, 
     tiemposLocales, 
-    onResultChange, 
+    onResultChange,
+    onStatusChange,
     isLocked,
     isSuccess,
     isAdmin = true
@@ -39,6 +46,14 @@ const ResultadosTable = ({
     if (!fase) return null;
 
     const computedPositions = computePositionsForPhase(fase.resultados, tiemposLocales);
+
+    const phaseHasMeaningfulTimes = (fase.resultados || []).some(r => {
+        const local = tiemposLocales[r.id] || {};
+        const time = local.tiempoOficial !== undefined ? local.tiempoOficial : r.tiempoOficial;
+        return isMeaningfulRaceTime(time);
+    });
+
+    const sortByCarril = (a, b) => (a.carril || 99) - (b.carril || 99);
 
     const getDisplayPosition = (res) => {
         const local = tiemposLocales[res.id] || {};
@@ -50,12 +65,13 @@ const ResultadosTable = ({
     // Si no es admin, mostramos el formato "Live Results" (vista de consulta premium y simple)
     if (!isAdmin) {
         const sorted = [...fase.resultados].sort((a, b) => {
+            if (!phaseHasMeaningfulTimes) return sortByCarril(a, b);
             const posA = getDisplayPosition(a);
             const posB = getDisplayPosition(b);
             if (posA && posB) return posA - posB;
             if (posA) return -1;
             if (posB) return 1;
-            return (a.carril || 99) - (b.carril || 99);
+            return sortByCarril(a, b);
         });
 
         const lider = sorted.find(r => getDisplayPosition(r) === 1);
@@ -151,6 +167,8 @@ const ResultadosTable = ({
     }
 
     const sortedResultados = [...fase.resultados].sort((a, b) => {
+        if (!phaseHasMeaningfulTimes) return sortByCarril(a, b);
+
         const localA = tiemposLocales[a.id] || {};
         const localB = tiemposLocales[b.id] || {};
         
@@ -160,7 +178,6 @@ const ResultadosTable = ({
         const hasStatusA = isExcludedFromRanking(statusA);
         const hasStatusB = isExcludedFromRanking(statusB);
 
-        // Los que tienen estado especial (DNS/DNF/DSQ) van al final
         if (hasStatusA && !hasStatusB) return 1;
         if (!hasStatusA && hasStatusB) return -1;
         
@@ -171,10 +188,10 @@ const ResultadosTable = ({
         if (pA) return -1;
         if (pB) return 1;
 
-        // Si no hay posición, ordenamos por tiempo
         const tA = timeToMs(localA.tiempoOficial || a.tiempoOficial) ?? 9999999;
         const tB = timeToMs(localB.tiempoOficial || b.tiempoOficial) ?? 9999999;
-        return tA - tB;
+        if (tA !== tB) return tA - tB;
+        return sortByCarril(a, b);
     });
 
     return (
@@ -189,7 +206,7 @@ const ResultadosTable = ({
                         <th style={{ width: '60px' }}>CARRIL</th>
                         <th>PARTICIPANTE</th>
                         <th>CLUB</th>
-                        <th style={{ width: '150px' }}>TIEMPO / ESTADO</th>
+                        <th style={{ width: onStatusChange ? '220px' : '150px' }}>TIEMPO / ESTADO</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -201,7 +218,7 @@ const ResultadosTable = ({
                         const displayNombre = local.participanteNombre !== undefined ? local.participanteNombre : (res.participanteNombre || '');
                         const displayClub = local.clubSigla !== undefined ? local.clubSigla : (res.clubSigla || '');
                         
-                        const status = local.estadoCanto || res.estado;
+                        const status = normalizeEstadoCanto(local.estadoCanto || res.estado);
                         const isSpecialStatus = status && !['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(status);
 
                         const isOfficial = res.tiempoOficial && res.tiempoOficial !== '';
@@ -257,19 +274,49 @@ const ResultadosTable = ({
                                     />
                                 </td>
                                 <td className="col-tiempo">
-                                    {isSpecialStatus ? (
-                                        <span className={`status-badge-judge ${status.toLowerCase()}`}>{status}</span>
-                                    ) : (
-                                        <input 
-                                            type="text"
-                                            placeholder="00:00.000"
-                                            className="admin-input-small"
-                                            value={displayTime}
-                                            onChange={(e) => onResultChange(res.id, 'tiempoOficial', e.target.value)}
-                                            disabled={isLocked}
-                                            style={{ fontFamily: 'JetBrains Mono, monospace', textAlign: 'center' }}
-                                        />
-                                    )}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+                                        {isSpecialStatus ? (
+                                            <span className={`status-badge-judge ${status.toLowerCase()}`}>{status}</span>
+                                        ) : (
+                                            <input 
+                                                type="text"
+                                                placeholder="00:00.000"
+                                                className="admin-input-small"
+                                                value={displayTime}
+                                                onChange={(e) => onResultChange(res.id, 'tiempoOficial', e.target.value)}
+                                                disabled={isLocked}
+                                                style={{ fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', width: '100%' }}
+                                            />
+                                        )}
+                                        {onStatusChange && (
+                                            <div className="status-quick-actions">
+                                                <button
+                                                    type="button"
+                                                    className={`btn-status-toggle dns ${status === 'DNS' ? 'active' : ''}`}
+                                                    onClick={() => onStatusChange(res.id, status === 'DNS' ? 'Pendiente' : 'DNS')}
+                                                    disabled={isLocked}
+                                                >
+                                                    DNS
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`btn-status-toggle dnf ${status === 'DNF' ? 'active' : ''}`}
+                                                    onClick={() => onStatusChange(res.id, status === 'DNF' ? 'Pendiente' : 'DNF')}
+                                                    disabled={isLocked}
+                                                >
+                                                    DNF
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`btn-status-toggle dsq ${status === 'DSQ' ? 'active' : ''}`}
+                                                    onClick={() => onStatusChange(res.id, status === 'DSQ' ? 'Pendiente' : 'DSQ')}
+                                                    disabled={isLocked}
+                                                >
+                                                    DSQ
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         );

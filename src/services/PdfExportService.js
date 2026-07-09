@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatRaceTime } from '../utils/raceTimeUtils';
+import { formatRaceTime, isMeaningfulRaceTime } from '../utils/raceTimeUtils';
+import { getPdfLogo, fitLogoDimensions } from '../utils/pdfLogoLoader';
 
 // ─── Lookup tables ────────────────────────────────────────────────────────────
 const CATEGORIA_NAMES = {
@@ -71,108 +72,198 @@ const getCrew = (r, fase) => {
 // ─── Shared layout constants ──────────────────────────────────────────────────
 const PW       = 210;   // A4 portrait width mm
 const PH       = 297;   // A4 portrait height mm
-const MARGIN   = 10;    // left/right page margin
-const BAND_H   = 12;    // top header band height
+const MARGIN   = 10;    // margen mínimo lateral
+const BAND_H   = 24;    // top header band height (más alto)
 const FOOTER_H = 5;     // bottom footer area
-const GRID_W   = PW - MARGIN * 2;  // 190mm usable width
+const TABLE_W  = 186;   // ancho de grilla (más grande, centrada)
+const TABLE_MARGIN = (PW - TABLE_W) / 2;
+const GRID_W   = TABLE_W;
+const LOGO_MAX_H = 17;
+const LOGO_MAX_W = 22;
+
+const formatEventoFecha = (fecha, fechaFin) => {
+    if (!fecha) return '';
+    const opts = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const d1 = new Date(fecha);
+    if (Number.isNaN(d1.getTime())) return '';
+    const s1 = d1.toLocaleDateString('es-AR', opts);
+    if (fechaFin) {
+        const d2 = new Date(fechaFin);
+        if (!Number.isNaN(d2.getTime()) && d2.toDateString() !== d1.toDateString()) {
+            return `${s1} — ${d2.toLocaleDateString('es-AR', opts)}`;
+        }
+    }
+    return s1;
+};
+
+const normalizeEventoInfo = (eventoOrName) => {
+    if (!eventoOrName || typeof eventoOrName === 'string') {
+        return { nombre: eventoOrName || 'Evento', fechaLabel: '', organizador: '' };
+    }
+    const nombre = eventoOrName.nombre || eventoOrName.Nombre || 'Evento';
+    const fecha = eventoOrName.fecha || eventoOrName.Fecha;
+    const fechaFin = eventoOrName.fechaFin || eventoOrName.FechaFin;
+    const organizador = eventoOrName.federacionNombre || eventoOrName.FederacionNombre
+        || eventoOrName.clubNombre || eventoOrName.ClubNombre || '';
+    return {
+        nombre,
+        fechaLabel: formatEventoFecha(fecha, fechaFin),
+        organizador,
+    };
+};
 
 // ─── Shared drawing helpers ───────────────────────────────────────────────────
 
-/** Dark header band across the top of each page */
-const drawBand = (doc, title, subtitle, pageNum, totalPages) => {
-    doc.setFillColor(35, 35, 35);
+/** Encabezado con logo, evento, fecha, organizador y paginación */
+const drawBand = (doc, eventoInfo, subtitle, pageNum, totalPages, logo) => {
+    doc.setFillColor(148, 148, 153);
     doc.rect(0, 0, PW, BAND_H, 'F');
-    doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(255, 255, 255);
-    doc.text('SportTrack', MARGIN, BAND_H - 3.5);
-    doc.setFontSize(7.5); doc.setFont(undefined, 'normal'); doc.setTextColor(210, 210, 210);
-    doc.text(`${title}${subtitle ? '  —  ' + subtitle : ''}`, MARGIN + 28, BAND_H - 3.5);
-    doc.setFontSize(6.5); doc.setTextColor(170, 170, 170);
+
+    let textLeft = MARGIN + 4;
+
+    if (logo?.dataUrl) {
+        const { width: logoW, height: logoH } = fitLogoDimensions(logo, LOGO_MAX_H, LOGO_MAX_W);
+        const logoX = MARGIN;
+        const logoY = (BAND_H - logoH) / 2;
+        doc.addImage(logo.dataUrl, 'PNG', logoX, logoY, logoW, logoH);
+        textLeft = logoX + logoW + 5;
+    }
+
+    doc.setFontSize(10.5);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(28, 28, 32);
+    doc.text(
+        `${eventoInfo.nombre}${subtitle ? '  —  ' + subtitle : ''}`,
+        textLeft,
+        9.5,
+        { maxWidth: PW - textLeft - MARGIN - 42 }
+    );
+
+    const metaParts = [];
+    if (eventoInfo.fechaLabel) metaParts.push(`Fecha: ${eventoInfo.fechaLabel}`);
+    if (eventoInfo.organizador) metaParts.push(`Organiza: ${eventoInfo.organizador}`);
+
+    if (metaParts.length) {
+        doc.setFontSize(7.2);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(52, 52, 58);
+        doc.text(metaParts.join('   ·   '), textLeft, 16, { maxWidth: PW - textLeft - MARGIN - 42 });
+    }
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(72, 72, 78);
     doc.text(
         `${new Date().toLocaleString('es-AR')}   ·   Pág. ${pageNum}/${totalPages}`,
-        PW - MARGIN, BAND_H - 3.5, { align: 'right' }
+        PW - MARGIN,
+        10,
+        { align: 'right' }
     );
 };
 
 /** Small footer text */
-const drawFooter = (doc, eventoNombre) => {
-    doc.setFontSize(6); doc.setTextColor(150, 150, 150); doc.setFont(undefined, 'normal');
-    doc.text(`SportTrack · ${eventoNombre}`, PW / 2, PH - 2, { align: 'center' });
+const drawFooter = (doc, eventoInfo) => {
+    doc.setFontSize(6); doc.setTextColor(120, 120, 120); doc.setFont(undefined, 'normal');
+    const org = eventoInfo.organizador ? `${eventoInfo.organizador} · ` : '';
+    doc.text(`${org}${eventoInfo.nombre}`, PW / 2, PH - 2, { align: 'center' });
 };
 
 /** Dashed horizontal rule between stacked grids */
 const drawSeparator = (doc, y) => {
     doc.setDrawColor(190, 190, 190); doc.setLineWidth(0.15);
     doc.setLineDashPattern([1.5, 1.5], 0);
-    doc.line(MARGIN, y, PW - MARGIN, y);
+    doc.line(TABLE_MARGIN, y, PW - TABLE_MARGIN, y);
     doc.setLineDashPattern([], 0);
 };
 
 /** Two-line grid title block (bold line + gray sub-line + thin rule) */
 const drawGridTitle = (doc, line1, line2, y) => {
     doc.setFontSize(8.5); doc.setFont(undefined, 'bold'); doc.setTextColor(0, 0, 0);
-    doc.text(line1, MARGIN, y + 4.5);
+    doc.text(line1, TABLE_MARGIN, y + 4.5);
     doc.setFontSize(6.5); doc.setFont(undefined, 'normal'); doc.setTextColor(80, 80, 80);
-    if (line2) doc.text(line2, MARGIN, y + 9);
+    if (line2) doc.text(line2, TABLE_MARGIN, y + 9);
     doc.setDrawColor(80, 80, 80); doc.setLineWidth(0.25);
-    doc.line(MARGIN, y + 10.5, PW - MARGIN, y + 10.5);
+    doc.line(TABLE_MARGIN, y + 10.5, PW - TABLE_MARGIN, y + 10.5);
 };
 
 /** Shared autoTable styles for B&W printing */
+const tableLayout = () => ({
+    tableWidth: TABLE_W,
+    margin: { left: TABLE_MARGIN, right: TABLE_MARGIN },
+});
+
 const tableStyles = (isResults = false) => ({
     theme: 'plain',
     styles: {
-        fontSize: 8,
-        cellPadding: { top: 1, bottom: 1, left: 2, right: 1 },
+        fontSize: 8.5,
+        cellPadding: { top: 1.4, bottom: 1.4, left: 2.5, right: 2 },
         overflow: 'ellipsize',
         textColor: [10, 10, 10],
         lineColor: [170, 170, 170],
         lineWidth: 0.15,
+        halign: 'left',
     },
     headStyles: {
         fillColor: [220, 220, 220],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
-        fontSize: 7,
-        cellPadding: { top: 1.2, bottom: 1.2, left: 2, right: 1 },
+        fontSize: 7.5,
+        cellPadding: { top: 1.5, bottom: 1.5, left: 2.5, right: 2 },
         lineColor: [110, 110, 110],
         lineWidth: 0.2,
+        halign: 'center',
     },
-    alternateRowStyles: { fillColor: [248, 248, 248] },
+    alternateRowStyles: { fillColor: [215, 215, 218] },
     columnStyles: isResults
         ? {
-            0: { halign: 'center', cellWidth: 12, fontStyle: 'bold' }, // Pos
-            1: { halign: 'center', cellWidth: 14 },                     // Carril
-            4: { halign: 'center', cellWidth: 28, fontStyle: 'bold' },  // Tiempo
+            0: { halign: 'center', cellWidth: 12, fontStyle: 'bold' },
+            1: { halign: 'center', cellWidth: 14 },
+            4: { halign: 'center', cellWidth: 28, fontStyle: 'bold' },
           }
         : {
-            0: { halign: 'center', cellWidth: 12, fontStyle: 'bold' }, // Carril
-            2: { cellWidth: 50 },                                        // Club
+            0: { halign: 'center', cellWidth: 12, fontStyle: 'bold' },
+            2: { cellWidth: 50 },
           },
-    tableWidth: GRID_W,
-    margin: { left: MARGIN, right: MARGIN },
+    ...tableLayout(),
 });
 
 // ─── Build rows ───────────────────────────────────────────────────────────────
 
+const sortByCarril = (a, b) => (Number(a.carril) || 99) - (Number(b.carril) || 99);
+
+const sortResultadosForExport = (resultados) => {
+    const list = resultados || [];
+    const hasMeaningfulTimes = list.some(r => isMeaningfulRaceTime(r.tiempoOficial));
+
+    if (!hasMeaningfulTimes) {
+        return [...list].sort(sortByCarril);
+    }
+
+    return [...list].sort((a, b) => {
+        const pA = a.posicion || 99;
+        const pB = b.posicion || 99;
+        if (pA !== pB) return pA - pB;
+        return sortByCarril(a, b);
+    });
+};
+
 /** Start list rows: [carril, atleta, club] sorted by carril */
 const buildStartRows = (fase) => {
     if (!fase.resultados?.length) return [['-', 'A definir', '-']];
-    return [...fase.resultados]
-        .sort((a, b) => (a.carril || 99) - (b.carril || 99))
+    return sortResultadosForExport(fase.resultados)
         .map(r => [r.carril ?? '-', getCrew(r, fase), r.clubNombre || r.clubSigla || '-']);
 };
 
-/** Result rows: [pos, carril, atleta, club, tiempo] sorted by position */
+/** Result rows: [pos, carril, atleta, club, tiempo] — por carril pre-largada, por posición post-carrera */
 const buildResultRows = (fase) => {
     if (!fase.resultados?.length) return [['-', '-', 'Sin resultados', '-', '-']];
-    return [...fase.resultados]
-        .sort((a, b) => (a.posicion || 99) - (b.posicion || 99))
+    const hasMeaningfulTimes = fase.resultados.some(r => isMeaningfulRaceTime(r.tiempoOficial));
+    return sortResultadosForExport(fase.resultados)
         .map(r => [
-            r.posicion || '-',
+            hasMeaningfulTimes && r.posicion ? r.posicion : '-',
             r.carril   || '-',
             getCrew(r, fase),
             r.clubNombre || r.clubSigla || '-',
-            formatRaceTime(r.tiempoOficial),
+            formatRaceTime(r.tiempoOficial) || '-',
         ]);
 };
 
@@ -194,7 +285,7 @@ const estimateGridH = (fase, isResults) => {
  * A grid is NEVER split — if it doesn't fit on the remaining space, a new page
  * is started.  mode: 'startList' | 'results'
  */
-const renderStackedPages = (doc, fases, eventoNombre, docTitle, docSubtitle, mode = 'startList') => {
+const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode = 'startList', logo) => {
     const GRID_GAP   = 6;    // vertical gap between grids
     const CONTENT_TOP = BAND_H + MARGIN;
     const BOTTOM_LIMIT = PH - FOOTER_H - 4;
@@ -219,16 +310,15 @@ const renderStackedPages = (doc, fases, eventoNombre, docTitle, docSubtitle, mod
     let firstOnPage = true;
 
     const startNewPage = () => {
-        drawFooter(doc, eventoNombre);
+        drawFooter(doc, eventoInfo);
         doc.addPage();
         currentPage++;
         currentY   = CONTENT_TOP;
         firstOnPage = true;
-        drawBand(doc, eventoNombre, `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`, currentPage, totalPages);
+        drawBand(doc, eventoInfo, `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`, currentPage, totalPages, logo);
     };
 
-    // Draw band for page 1
-    drawBand(doc, eventoNombre, `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`, 1, totalPages);
+    drawBand(doc, eventoInfo, `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`, 1, totalPages, logo);
 
     fases.forEach((fase) => {
         globalIdx++;
@@ -268,7 +358,7 @@ const renderStackedPages = (doc, fases, eventoNombre, docTitle, docSubtitle, mod
         currentY = doc.lastAutoTable.finalY + GRID_GAP;
     });
 
-    drawFooter(doc, eventoNombre);
+    drawFooter(doc, eventoInfo);
 };
 
 
@@ -276,42 +366,52 @@ const renderStackedPages = (doc, fases, eventoNombre, docTitle, docSubtitle, mod
 const PdfExportService = {
 
     /** Single fase — results format */
-    exportFase: (fase, eventoNombre, pruebaNombre) => {
+    exportFase: async (fase, eventoOrName, pruebaNombre) => {
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, [fase], eventoNombre, pruebaNombre, fase.nombreFase, 'results', 4);
-        doc.save(`${eventoNombre}_${fase.nombreFase}_Resultados.pdf`.replace(/\s+/g, '_'));
+        renderStackedPages(doc, [fase], eventoInfo, pruebaNombre, fase.nombreFase, 'results', logo);
+        doc.save(`${eventoInfo.nombre}_${fase.nombreFase}_Resultados.pdf`.replace(/\s+/g, '_'));
     },
 
     /** Group of fases (e.g. all heats) — results format */
-    exportGrupo: (fases, eventoNombre, pruebaNombre, grupoLabel) => {
+    exportGrupo: async (fases, eventoOrName, pruebaNombre, grupoLabel) => {
         if (!fases?.length) return;
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, fases, eventoNombre, pruebaNombre, grupoLabel, 'results', 4);
-        doc.save(`${eventoNombre}_${grupoLabel}_Resultados.pdf`.replace(/\s+/g, '_'));
+        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, grupoLabel, 'results', logo);
+        doc.save(`${eventoInfo.nombre}_${grupoLabel}_Resultados.pdf`.replace(/\s+/g, '_'));
     },
 
     /** All fases of a prueba — results format */
-    exportPrueba: (fases, eventoNombre, pruebaNombre) => {
+    exportPrueba: async (fases, eventoOrName, pruebaNombre) => {
         if (!fases?.length) return;
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, fases, eventoNombre, pruebaNombre, 'Resultados Completos', 'results', 4);
-        doc.save(`${eventoNombre}_${pruebaNombre}_Completo.pdf`.replace(/\s+/g, '_'));
+        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, 'Resultados Completos', 'results', logo);
+        doc.save(`${eventoInfo.nombre}_${pruebaNombre}_Completo.pdf`.replace(/\s+/g, '_'));
     },
 
     /** Full event start list — 4 grids per page, 1 column */
-    exportCronogramaCompleto: (cronograma, eventoNombre) => {
+    exportCronogramaCompleto: async (cronograma, eventoOrName) => {
         if (!cronograma?.length) return;
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, cronograma, eventoNombre, 'Start List', '', 'startList', 4);
-        doc.save(`${eventoNombre}_StartList.pdf`.replace(/\s+/g, '_'));
+        renderStackedPages(doc, cronograma, eventoInfo, 'Start List', '', 'startList', logo);
+        doc.save(`${eventoInfo.nombre}_StartList.pdf`.replace(/\s+/g, '_'));
     },
 
     /** Provisional program table (schedule overview — stays as a summary table) */
-    exportProgramaInicial: (items, eventoNombre) => {
+    exportProgramaInicial: async (items, eventoOrName) => {
         if (!items?.length) return;
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const totalPages = 1;
-        drawBand(doc, eventoNombre, 'Programa Provisorio', 1, totalPages);
+        drawBand(doc, eventoInfo, 'Programa Provisorio', 1, totalPages, logo);
 
         const rows = items.map((it, idx) => {
             const isF = it.tipo === 'fase';
@@ -340,25 +440,31 @@ const PdfExportService = {
 
         autoTable(doc, {
             startY: BAND_H + MARGIN,
-            head: [['#', 'Hora', 'Categoría', 'Fase', 'Bote', 'Dist.', 'Rama', 'Ins.']],
+            head: [['#', 'Hora', 'Categoría', 'Fase', 'Bote', 'Dist.', 'Sexo', 'Ins.']],
             body: rows,
             ...tableStyles(false),
             columnStyles: {
-                0: { halign: 'center', cellWidth: 10 },
-                1: { halign: 'center', cellWidth: 22, fontStyle: 'bold' },
-                7: { halign: 'center', cellWidth: 12 },
+                0: { halign: 'center', cellWidth: 11 },
+                1: { halign: 'center', cellWidth: 24, fontStyle: 'bold' },
+                2: { cellWidth: 42 },
+                3: { cellWidth: 28 },
+                4: { halign: 'center', cellWidth: 16 },
+                5: { halign: 'center', cellWidth: 18 },
+                6: { halign: 'center', cellWidth: 22 },
+                7: { halign: 'center', cellWidth: 25 },
             },
-            tableWidth: GRID_W,
-            margin: { left: MARGIN, right: MARGIN },
+            ...tableLayout(),
         });
 
-        drawFooter(doc, eventoNombre);
-        doc.save(`${eventoNombre}_Programa_Provisorio.pdf`.replace(/\s+/g, '_'));
+        drawFooter(doc, eventoInfo);
+        doc.save(`${eventoInfo.nombre}_Programa_Provisorio.pdf`.replace(/\s+/g, '_'));
     },
 
     /** General Event Schedule overview (without start lists/competitors) */
-    exportRegattaSchedule: (cronograma, eventoNombre) => {
+    exportRegattaSchedule: async (cronograma, eventoOrName) => {
         if (!cronograma?.length) return;
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         
         const rows = [...cronograma]
@@ -383,30 +489,29 @@ const PdfExportService = {
 
         autoTable(doc, {
             startY: BAND_H + MARGIN,
-            head: [['#', 'Etapa / Fase', 'Categoría', 'Bote', 'Dist.', 'Rama', 'Horario']],
+            head: [['#', 'Etapa / Fase', 'Categoría', 'Bote', 'Dist.', 'Sexo', 'Horario']],
             body: rows,
             ...tableStyles(false),
             columnStyles: {
-                0: { halign: 'center', cellWidth: 10 },
-                1: { cellWidth: 35 },
-                2: { cellWidth: 45 },
-                3: { halign: 'center', cellWidth: 15 },
-                4: { halign: 'center', cellWidth: 20 },
-                5: { halign: 'center', cellWidth: 20 },
-                6: { halign: 'center', cellWidth: 20, fontStyle: 'bold' },
+                0: { halign: 'center', cellWidth: 11 },
+                1: { cellWidth: 38 },
+                2: { cellWidth: 52 },
+                3: { halign: 'center', cellWidth: 16 },
+                4: { halign: 'center', cellWidth: 22 },
+                5: { halign: 'center', cellWidth: 22 },
+                6: { halign: 'center', cellWidth: 25, fontStyle: 'bold' },
             },
-            tableWidth: GRID_W,
-            margin: { left: MARGIN, right: MARGIN },
+            ...tableLayout(),
         });
 
         const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i);
-            drawBand(doc, eventoNombre, 'Regatta Schedule', i, totalPages);
-            drawFooter(doc, eventoNombre);
+            drawBand(doc, eventoInfo, 'Regatta Schedule', i, totalPages, logo);
+            drawFooter(doc, eventoInfo);
         }
 
-        doc.save(`${eventoNombre}_Regatta_Schedule.pdf`.replace(/\s+/g, '_'));
+        doc.save(`${eventoInfo.nombre}_Regatta_Schedule.pdf`.replace(/\s+/g, '_'));
     },
 };
 

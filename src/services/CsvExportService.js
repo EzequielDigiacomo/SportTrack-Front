@@ -2,7 +2,7 @@
  * Utility to export race results to CSV format.
  * Optimized for Excel and general purpose data analysis.
  */
-import { formatRaceTime } from '../utils/raceTimeUtils';
+import { formatRaceTime, isMeaningfulRaceTime } from '../utils/raceTimeUtils';
 
 const CsvExportService = {
     /**
@@ -34,11 +34,15 @@ const CsvExportService = {
 
         fases.forEach(fase => {
             // Ordenar resultados por posición para que el CSV sea legible
+            const hasMeaningfulTimes = fase.resultados.some(r => isMeaningfulRaceTime(r.tiempoOficial));
             const sortedResults = [...fase.resultados].sort((a, b) => {
+                if (!hasMeaningfulTimes) {
+                    return (Number(a.carril) || 99) - (Number(b.carril) || 99);
+                }
                 if (a.posicion && b.posicion) return a.posicion - b.posicion;
                 if (a.posicion) return -1;
                 if (b.posicion) return 1;
-                return (a.carril || 0) - (b.carril || 0);
+                return (Number(a.carril) || 99) - (Number(b.carril) || 99);
             });
             
             sortedResults.forEach(r => {

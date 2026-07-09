@@ -32,6 +32,12 @@ export const formatRaceTimeFromMs = (ms) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
 };
 
+/** Tiempo registrado real (excluye placeholder 00:00.000 pre-largada). */
+export const isMeaningfulRaceTime = (timeStr) => {
+    const ms = timeToMs(timeStr);
+    return ms !== null && ms > 0;
+};
+
 /** Normaliza cualquier tiempo del backend/cronómetro al formato mm:ss.SSS */
 export const formatRaceTime = (timeStr) => {
     if (!timeStr || timeStr === '') return '';
