@@ -61,7 +61,15 @@ export const ENDPOINTS = {
         STATUS: '/saas/clubes-status',
         TOGGLE_ACTIVO: (id) => `/saas/clubes/${id}/toggle-activo`,
         METRICS: '/saas/global-metrics',
-    }
+    },
+
+    // Mensajes privados
+    MENSAJES: {
+        HILOS: '/mensajes/hilos',
+        HILO: (id) => `/mensajes/hilos/${id}`,
+        RESPONDER: (id) => `/mensajes/hilos/${id}/responder`,
+        LEER: (id) => `/mensajes/hilos/${id}/leer`,
+    },
 }
 
 // Application Constants

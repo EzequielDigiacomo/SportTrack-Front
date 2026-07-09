@@ -16,6 +16,7 @@ import ControlesSection from '../ClubAdmin/sections/ControlesSection';
 import GestionPagosSection from './sections/GestionPagosSection';
 import ProgressionAuditPage from './sections/ProgressionAuditPage';
 import GestionFederacionesSection from './sections/GestionFederacionesSection';
+import MensajesSection from '../Shared/MensajesSection';
 
 
 import { 
@@ -32,7 +33,8 @@ import {
     Cloud,
     CreditCard,
     FileText,
-    Globe
+    Globe,
+    Mail
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -40,6 +42,7 @@ import './AdminDashboard.css';
 const NAV_ITEMS = [
     { id: 'inicio', path: '', icon: <LayoutDashboard size={20} />, label: 'Inicio', exact: true },
     { id: 'federaciones', path: 'federaciones', icon: <Globe size={20} />, label: 'Federaciones' },
+    { id: 'mensajes', path: 'mensajes', icon: <Mail size={20} />, label: 'Mensajes', superOnly: true },
     { id: 'atletas', path: 'atletas', icon: <Users size={20} />, label: 'Atletas' },
     { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
@@ -99,7 +102,7 @@ const SuperDashboard = () => {
         const isBronce = user?.plan?.nombre?.toLowerCase() === 'bronce';
 
         // Módulos EXCLUSIVOS para SuperAdmin
-        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'configuracion' || item.id === 'federaciones') {
+        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'configuracion' || item.id === 'federaciones' || item.superOnly) {
             return isSuper;
         }
 
@@ -175,6 +178,7 @@ const SuperDashboard = () => {
                         <Route path="auditoria" element={<ProgressionAuditPage />} />
                         <Route path="configuracion" element={<ConfiguracionSection />} />
                         <Route path="federaciones/*" element={<GestionFederacionesSection />} />
+                        <Route path="mensajes" element={<MensajesSection modo="super" />} />
                         <Route path="saas" element={<SaaSManagement />} />
                         <Route path="federacion/:id" element={<AdminHome />} />
                         <Route path="soporte" element={<SoporteSection />} />
