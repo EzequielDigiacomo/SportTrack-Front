@@ -65,6 +65,10 @@ export function normalizePlan(rawPlan) {
     };
 }
 
+export function canAccessControlesLive(plan) {
+    return !!normalizePlan(plan)?.accesoControlesLive;
+}
+
 export function canAccessSportTrack(plan) {
     return !!normalizePlan(plan)?.accesoSportTrack;
 }

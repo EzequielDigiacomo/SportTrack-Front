@@ -2,6 +2,8 @@
  * Utility to export race results to CSV format.
  * Optimized for Excel and general purpose data analysis.
  */
+import { formatRaceTime } from '../utils/raceTimeUtils';
+
 const CsvExportService = {
     /**
      * Exports a group of phases to a single CSV file.
@@ -53,7 +55,7 @@ const CsvExportService = {
                     r.participanteNombre || '-',
                     crew,
                     r.clubNombre || r.clubSigla || '-',
-                    r.tiempoOficial || '-',
+                    formatRaceTime(r.tiempoOficial) || '-',
                     r.estado || 'Pendiente',
                     fase.viento || '-',
                     fase.agua || '-',

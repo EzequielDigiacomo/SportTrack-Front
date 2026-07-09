@@ -4,6 +4,7 @@ import { Plus, ArrowLeft } from 'lucide-react';
 import AuthService from '../../../services/AuthService';
 import api from '../../../services/api';
 import FederacionService from '../../../services/FederacionService';
+import SaaSService from '../../../services/SaaSService';
 import { ENDPOINTS } from '../../../utils/constants';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import LoginGrid from './LoginGrid';
@@ -20,7 +21,38 @@ import {
     getUsuarioFederationName,
 } from '../../../utils/apiHelpers';
 import { isSuperAdminUser, isFederationAdminUser } from '../../../utils/authHelpers';
+import { canAccessControlesLive, normalizePlan } from '../../../utils/planHelpers';
 import '../../../components/SharedSections/AdminSections.css';
+
+const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
+
+const enrichFederacionesWithPlan = (federacionesData, saasStatus, planes) => {
+    const saasByFedId = Object.fromEntries(
+        (saasStatus || []).map(s => [String(pick(s, 'clubId', 'ClubId')), s])
+    );
+    const planesById = Object.fromEntries(
+        (planes || []).map(p => [String(pick(p, 'id', 'Id')), p])
+    );
+
+    return (federacionesData || []).map(f => {
+        const fedId = pick(f, 'id', 'Id', 'idFederacion', 'IdFederacion');
+        const saas = saasByFedId[String(fedId)] || {};
+        const planSaaSId = pick(saas, 'planSaaSId', 'PlanSaaSId');
+        const planNombre = pick(saas, 'planNombre', 'PlanNombre') || 'Sin plan';
+        const planRaw = planSaaSId != null ? planesById[String(planSaaSId)] : null;
+        const plan = normalizePlan(planRaw || { id: planSaaSId, nombre: planNombre });
+
+        return {
+            ...f,
+            id: fedId,
+            nombre: pick(f, 'nombre', 'Nombre') || f.nombre,
+            planSaaSId,
+            planNombre: plan?.nombre || planNombre,
+            plan,
+            accesoControlesLive: canAccessControlesLive(plan),
+        };
+    });
+};
 
 const GestionLoginsSection = () => {
     const navigate = useNavigate();
@@ -64,17 +96,20 @@ const GestionLoginsSection = () => {
         try {
             setLoading(true);
             const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, effectiveFedId);
-            const [usersRes, clubesRes, federacionesData] = await Promise.all([
+            const [usersRes, clubesRes, federacionesData, saasStatus, planes] = await Promise.all([
                 AuthService.getUsuarios(),
                 api.get(clubesUrl),
                 FederacionService.getAll().catch(() => []),
+                SaaSService.getClubesStatus().catch(() => []),
+                SaaSService.getPlanes().catch(() => []),
             ]);
+            const enrichedFeds = enrichFederacionesWithPlan(federacionesData, saasStatus, planes);
             setUsuarios(usersRes);
             setClubes(clubesRes.data || []);
             setFederaciones(
                 effectiveFedId
-                    ? federacionesData.filter(f => String(f.id) === String(effectiveFedId))
-                    : federacionesData
+                    ? enrichedFeds.filter(f => String(f.id) === String(effectiveFedId))
+                    : enrichedFeds
             );
         } catch (e) {
             showAlert('error', 'Error al cargar datos');
@@ -125,9 +160,23 @@ const GestionLoginsSection = () => {
             const next = { ...prev, [name]: value };
             if (name === 'federacionId') {
                 next.clubId = '';
+                if (ROLES_JUEZ.includes(next.rol)) {
+                    const fed = federaciones.find(f => String(f.id) === String(value));
+                    if (!fed?.accesoControlesLive) next.rol = 'Club';
+                }
             }
             return next;
         });
+    };
+
+    const resolvePlanForForm = () => {
+        const fedId = form.federacionId || effectiveFedId;
+        if (fedId) {
+            const fed = federaciones.find(f => String(f.id) === String(fedId));
+            return fed?.plan ?? null;
+        }
+        if (!isSuper) return normalizePlan(user?.plan);
+        return null;
     };
 
     const resolveFederacionIdForRegister = () => {
@@ -152,6 +201,17 @@ const GestionLoginsSection = () => {
             if (form.rol === 'Club' && !form.clubId) {
                 showAlert('error', 'Seleccioná el club al que vincular esta credencial.');
                 return;
+            }
+            if (ROLES_JUEZ.includes(form.rol)) {
+                const fedId = form.federacionId || effectiveFedId;
+                if (isSuper && !fedId) {
+                    showAlert('error', 'Seleccioná la federación antes de crear un usuario juez.');
+                    return;
+                }
+                if (!canAccessControlesLive(resolvePlanForForm())) {
+                    showAlert('error', 'La federación seleccionada no tiene plan con controles en vivo (Largador/Cronometrista).');
+                    return;
+                }
             }
         }
 
@@ -282,6 +342,7 @@ const GestionLoginsSection = () => {
                     initialData={form}
                     clubes={clubsForForm}
                     federaciones={federaciones}
+                    effectiveFedId={effectiveFedId}
                     saving={saving}
                     isEditing={view === 'editar'}
                     isEditingProfile={view === 'editarPerfil'}

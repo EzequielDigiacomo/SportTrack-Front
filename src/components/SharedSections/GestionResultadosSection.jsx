@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { formatTime } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,9 @@ import CsvExportService from '../../services/CsvExportService';
 import timingSignalRService from '../../services/TimingSignalRService';
 // import FaseDetailsForm from './FaseDetailsForm';
 import './GestionResultados.css';
+import { getPromotionStatus } from '../../utils/promotionHelpers';
+import { applyPositionsToTiemposLocales } from '../../utils/resultadosHelpers';
+import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 
 const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode }) => {
     const navigate = useNavigate();
@@ -34,7 +37,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase,
         handleGenerarManual,
         handleRecalcularCronograma, handleSelectRegata,
         loadDatosPrueba, setMessage,
@@ -49,6 +52,32 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const [isManualMode, setIsManualMode] = useState(false);
     const [manualPlacements, setManualPlacements] = useState({});
     const [isNominaCollapsed, setIsNominaCollapsed] = useState(false);
+
+    const seedingStatus = useMemo(() => {
+        const N = inscriptos.length;
+        const requiredSeeds = N > 9 ? Math.ceil(N / 9) : 0;
+        const currentSeeds = inscriptos.filter(i => i.esCabezaDeSerie).length;
+        const needsSeeds = requiredSeeds > 0;
+        return {
+            N,
+            requiredSeeds,
+            currentSeeds,
+            needsSeeds,
+            isComplete: !needsSeeds || currentSeeds === requiredSeeds,
+            missing: Math.max(0, requiredSeeds - currentSeeds),
+        };
+    }, [inscriptos]);
+
+    const seedsBlockingSorteo = seedingStatus.needsSeeds && !seedingStatus.isComplete;
+
+    const promotionStatus = useMemo(
+        () => getPromotionStatus(
+            fases,
+            inscriptos.length,
+            filtroVisualFase === 'Todas' ? null : filtroVisualFase
+        ),
+        [fases, inscriptos.length, filtroVisualFase]
+    );
 
     const [activeJudges, setActiveJudges] = useState([]);
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
@@ -143,10 +172,16 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 3. RECIBIR TIEMPOS EN VIVO (CARRIL POR CARRIL)
                 timingSignalRService.onTimeReceived((resId, timeStr, ms) => {
-                    setTiemposLocales(prev => ({
-                        ...prev,
-                        [resId]: { ...prev[resId], tiempoOficial: timeStr }
-                    }));
+                    setTiemposLocales(prev => {
+                        const next = {
+                            ...prev,
+                            [resId]: { ...prev[resId], tiempoOficial: timeStr }
+                        };
+                        if (faseSeleccionadaParaSync?.resultados) {
+                            return applyPositionsToTiemposLocales(faseSeleccionadaParaSync.resultados, next);
+                        }
+                        return next;
+                    });
                 });
 
                 // 4. Fin de carrera
@@ -175,10 +210,16 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
                 // 7. Status Update (DNS/DNF/DSQ)
                 timingSignalRService.onResultStatusUpdated((resId, status) => {
-                    setTiemposLocales(prev => ({
-                        ...prev,
-                        [resId]: { ...prev[resId], estadoCanto: status }
-                    }));
+                    setTiemposLocales(prev => {
+                        const next = {
+                            ...prev,
+                            [resId]: { ...prev[resId], estadoCanto: status }
+                        };
+                        if (faseSeleccionadaParaSync?.resultados) {
+                            return applyPositionsToTiemposLocales(faseSeleccionadaParaSync.resultados, next);
+                        }
+                        return next;
+                    });
                 });
 
             } catch (err) {
@@ -197,13 +238,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
     // Funciones movidas arriba
 
-const formatTimer = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const milliseconds = Math.floor(ms % 1000);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
-};
+const formatTimer = (ms) => formatRaceTimeFromMs(ms);
 
 
 const handleSimulateResults = () => {
@@ -229,14 +264,15 @@ const handleSimulateResults = () => {
     // Ordenar por tiempo y asignar posiciones
     baseResults.sort((a, b) => a.totalMs - b.totalMs);
 
-    baseResults.forEach((res, idx) => {
+    baseResults.forEach((res) => {
         tls[res.id] = {
-            tiempoOficial: res.tiempoStr,
-            posicion: idx + 1
+            ...(tls[res.id] || {}),
+            tiempoOficial: res.tiempoStr
         };
     });
 
-    setTiemposLocales(tls);
+    const tlsConPosiciones = applyPositionsToTiemposLocales(faseSeleccionada.resultados, tls);
+    setTiemposLocales(tlsConPosiciones);
     setMessage(`✅ Simulación completada para ${faseSeleccionada.nombreFase}.`);
 };
 
@@ -281,10 +317,16 @@ const handleApplyManualGeneration = () => {
 
 
 const handleResultChange = (id, field, val) => {
-    setTiemposLocales(prev => ({
-        ...prev,
-        [id]: { ...prev[id], [field]: val }
-    }));
+    setTiemposLocales(prev => {
+        const next = {
+            ...prev,
+            [id]: { ...prev[id], [field]: val }
+        };
+        if (faseSeleccionada?.resultados) {
+            return applyPositionsToTiemposLocales(faseSeleccionada.resultados, next);
+        }
+        return next;
+    });
 };
 
 const eventoNombre = eventos.find(e => String(e.id) === String(selectedEvento))?.nombre || 'Evento';
@@ -448,11 +490,20 @@ return (
                             </div>
                             
                             <div className="flex-row gap-md">
+                                {isAdmin && seedingStatus.needsSeeds && (
+                                    <div className={`seeding-counter-badge ${seedingStatus.isComplete ? 'complete' : 'incomplete'}`}>
+                                        <Star size={14} fill={seedingStatus.isComplete ? 'currentColor' : 'none'} />
+                                        <span>{seedingStatus.currentSeeds}/{seedingStatus.requiredSeeds} cabezas de serie</span>
+                                    </div>
+                                )}
                                 {isAdmin && (
                                     <button
                                         className="btn-admin-action primary"
                                         onClick={handleSortearCarriles}
-                                        disabled={saving || isManualMode}
+                                        disabled={saving || isManualMode || seedsBlockingSorteo}
+                                        title={seedsBlockingSorteo
+                                            ? `Seleccioná ${seedingStatus.missing} cabeza(s) de serie más para generar heats`
+                                            : ''}
                                     >
                                         <RotateCcw size={16} /> {fases.length > 0 ? 'Regenerar Sorteo' : 'Generar Heats'}
                                     </button>
@@ -500,6 +551,10 @@ return (
                                     <button
                                         className="btn-admin-action accent"
                                         onClick={handleApplyManualGeneration}
+                                        disabled={seedsBlockingSorteo}
+                                        title={seedsBlockingSorteo
+                                            ? `Seleccioná ${seedingStatus.missing} cabeza(s) de serie más antes de aplicar`
+                                            : ''}
                                     >
                                         🚀 Aplicar
                                     </button>
@@ -539,8 +594,8 @@ return (
                         </div>
 
                         {isAdmin && inscriptos.length > 0 && (
-                            <div className="inscriptos-seeding-panel glass-effect p-md mb-lg" style={{ borderRadius: 'var(--radius-lg)', position: 'relative' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNominaCollapsed ? '0' : '1.5rem' }}>
+                            <div className={`inscriptos-seeding-panel glass-effect p-md mb-lg ${seedsBlockingSorteo ? 'seeding-incomplete' : ''}`} style={{ borderRadius: 'var(--radius-lg)', position: 'relative' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNominaCollapsed ? '0' : '1rem' }}>
                                     <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary-light)' }}>
                                         Nómina de Inscritos y Siembra
                                     </h3>
@@ -556,6 +611,36 @@ return (
 
                                 {!isNominaCollapsed && (
                                     <div className="fade-in">
+                                        {seedingStatus.needsSeeds && (
+                                            <div className={`seeding-status-banner ${seedingStatus.isComplete ? 'complete' : 'incomplete'}`}>
+                                                {seedingStatus.isComplete ? (
+                                                    <>
+                                                        <Star size={16} fill="currentColor" />
+                                                        <span>
+                                                            Siembra completa: {seedingStatus.currentSeeds} de {seedingStatus.requiredSeeds} cabezas de serie seleccionadas.
+                                                            Ya podés generar los heats.
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="seeding-warning-icon">⚠</span>
+                                                        <span>
+                                                            Con <strong>{seedingStatus.N} inscritos</strong> necesitás marcar{' '}
+                                                            <strong>{seedingStatus.requiredSeeds} cabezas de serie</strong> (1 cada 9 atletas).
+                                                            Llevas <strong>{seedingStatus.currentSeeds}</strong> — faltan{' '}
+                                                            <strong>{seedingStatus.missing}</strong> para poder sortear.
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                        {!seedingStatus.needsSeeds && seedingStatus.N > 0 && (
+                                            <div className="seeding-status-banner info">
+                                                <span>
+                                                    Con {seedingStatus.N} inscritos no se requieren cabezas de serie. Podés generar heats directamente.
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="admin-table-wrapper" style={{ maxHeight: '300px', borderRadius: 'var(--radius-md)' }}>
                                             <table className="admin-table">
                                                 <thead>
@@ -643,8 +728,18 @@ return (
                                             </table>
                                         </div>
                                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-dim)', marginTop: '1rem', fontStyle: 'italic' }}>
-                                            * Se debe marcar 1 cabeza de serie por cada 9 atletas para armar los heats correctamente.
-                                            El sistema ubicará automáticamente a los cabezas de serie en el Carril 5 de cada serie.
+                                            {seedingStatus.needsSeeds ? (
+                                                <>
+                                                    * Marcá exactamente {seedingStatus.requiredSeeds} cabeza{seedingStatus.requiredSeeds !== 1 ? 's' : ''} de serie
+                                                    ({seedingStatus.currentSeeds}/{seedingStatus.requiredSeeds} seleccionadas).
+                                                    El sistema ubicará automáticamente a los cabezas de serie en el Carril 5 de cada serie.
+                                                </>
+                                            ) : (
+                                                <>
+                                                    * Con 9 o menos inscritos no hace falta sembrar cabezas de serie.
+                                                    El sistema ubicará automáticamente a los cabezas de serie en el Carril 5 de cada serie cuando corresponda.
+                                                </>
+                                            )}
                                         </p>
                                     </div>
                                 )}
@@ -744,11 +839,13 @@ return (
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-                                {fases.length > 0 && (isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && (
+                                {fases.length > 0 && (isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && promotionStatus.showButton && (
                                     <button
                                         className="btn-admin-action success"
                                         onClick={handlePromoverEtapa}
                                         disabled={saving}
+                                        title={promotionStatus.message}
+                                        style={!promotionStatus.canPromote ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
                                     >
                                         🏆 Promover Etapa
                                     </button>
@@ -778,6 +875,18 @@ return (
                             </div>
                         </div>
 
+                        {promotionStatus.showBanner && promotionStatus.message && (
+                            <div className={`promotion-status-banner ${promotionStatus.canPromote ? 'ready' : 'pending'}`}>
+                                {promotionStatus.canPromote ? '✅' : '⚠️'} {promotionStatus.message}
+                            </div>
+                        )}
+
+                        {promotionStatus.hintWhenHidden && (
+                            <div className="promotion-status-banner info">
+                                ℹ️ {promotionStatus.hintWhenHidden}
+                            </div>
+                        )}
+
 
                         {faseSeleccionada ? (
                             <div className="resultados-main-card glass-effect p-md">
@@ -800,18 +909,9 @@ return (
                                         <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
                                             <span style={{ color: '#10b981', fontWeight: 600 }}>
                                                 {faseSeleccionada.estado === "Pendiente de Validación"
-                                                    ? '🏁 Serie completada por cronometrista. Lista para validación oficial.'
+                                                    ? '🏁 Serie completada por cronometrista. Revisá los tiempos y usá «Guardar y Hacer Oficial» abajo.'
                                                     : '✅ Resultados oficiales publicados.'}
                                             </span>
-                                            {faseSeleccionada.estado === "Pendiente de Validación" && (
-                                                <button
-                                                    className="btn-admin-primary"
-                                                    onClick={() => handleFinalizarFase(faseSeleccionada.id)}
-                                                    style={{ background: '#10b981', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', fontWeight: 700 }}
-                                                >
-                                                    ✅ Validar y Hacer Oficial
-                                                </button>
-                                            )}
                                         </div>
                                     )
                                 )}
@@ -853,10 +953,23 @@ return (
                                         </div>
                                         <button
                                             className="btn-admin-primary"
-                                            onClick={handleSaveTiempos}
+                                            onClick={() => {
+                                                const pendingValidation = faseSeleccionada.estado === 'Pendiente de Validación'
+                                                    || faseSeleccionada.estado === 'PendienteValidacion';
+                                                handleSaveTiempos(faseSeleccionada.id, pendingValidation);
+                                            }}
                                             disabled={saving}
+                                            style={
+                                                (faseSeleccionada.estado === 'Pendiente de Validación' || faseSeleccionada.estado === 'PendienteValidacion')
+                                                    ? { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }
+                                                    : undefined
+                                            }
                                         >
-                                            💾 {saving ? 'Guardando...' : 'Guardar Tiempos Oficiales'}
+                                            💾 {saving
+                                                ? 'Procesando...'
+                                                : (faseSeleccionada.estado === 'Pendiente de Validación' || faseSeleccionada.estado === 'PendienteValidacion')
+                                                    ? 'Guardar y Hacer Oficial'
+                                                    : 'Guardar Tiempos Oficiales'}
                                         </button>
                                     </div>
                                 )}

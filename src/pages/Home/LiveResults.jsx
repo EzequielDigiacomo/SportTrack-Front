@@ -10,25 +10,7 @@ import PdfExportService from '../../services/PdfExportService';
 import ThemeToggle from '../../components/Common/ThemeToggle';
 import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import './LiveResults.css';
-
-// Convierte "mm:ss.ms" o "hh:mm:ss.ms" a milisegundos
-const timeToMs = (time) => {
-    if (!time) return null;
-    const clean = time.split('.')[0]; // quitar milisegundos decimales para simplificar
-    const parts = time.split(':');
-    try {
-        if (parts.length === 3) {
-            const [hh, mm, rest] = parts;
-            const [ss, ms = '0'] = rest.split('.');
-            return (parseInt(hh) * 3600000) + (parseInt(mm) * 60000) + (parseInt(ss) * 1000) + parseInt(ms.padEnd(3, '0').slice(0, 3));
-        } else if (parts.length === 2) {
-            const [mm, rest] = parts;
-            const [ss, ms = '0'] = rest.split('.');
-            return (parseInt(mm) * 60000) + (parseInt(ss) * 1000) + parseInt(ms.padEnd(3, '0').slice(0, 3));
-        }
-    } catch { return null; }
-    return null;
-};
+import { formatRaceTime, timeToMs } from '../../utils/raceTimeUtils';
 
 // Formatea una diferencia en ms como "+Xs" o "+m:ss"
 const formatDiff = (diffMs) => {
@@ -858,7 +840,8 @@ const LiveResults = () => {
                                                                         );
                                                                     }
 
-                                                                    return (r.tiempoOficial || r.TiempoOficial)?.split('.')[0] || '--:--';
+                                                                    const rawTime = r.tiempoOficial || r.TiempoOficial;
+                                                                    return rawTime ? formatRaceTime(rawTime) : '--:--.---';
                                                                 })()}
                                                             </td>
                                                             <td className="diff-cell">

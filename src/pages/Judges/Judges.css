@@ -668,6 +668,15 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.checkin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .checkin-header h3 {
@@ -705,6 +714,43 @@
 
 .btn-reset-list:active:not(:disabled) {
     transform: scale(0.95);
+}
+
+.btn-refresh-sync {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: #60a5fa;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-refresh-sync:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.55);
+    color: #93c5fd;
+}
+
+.btn-refresh-sync:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-refresh-sync:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.race-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .checkin-grid {
@@ -1755,7 +1801,9 @@
     padding: 12px 16px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
     font-size: 0.85rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1764,6 +1812,14 @@
     border-radius: 8px;
     margin-bottom: 15px;
     animation: slide-down-banner 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.connection-state-alert-bar .btn-refresh-sync {
+    flex-shrink: 0;
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 600;
 }
 
 .connection-state-alert-bar.reconnecting {

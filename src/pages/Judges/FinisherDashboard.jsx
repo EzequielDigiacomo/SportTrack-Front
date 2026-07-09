@@ -12,6 +12,8 @@ import FaseService from '../../services/FaseService';
 import ResultadoService from '../../services/ResultadoService';
 import { useAlert } from '../../hooks/useAlert';
 import timingSignalRService from '../../services/TimingSignalRService';
+import { getJudgeDisplayName, mapFasesFromApi } from '../../utils/judgeDashboardHelpers';
+import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -56,6 +58,7 @@ const FinisherDashboard = () => {
     const { addToast } = useToast();
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
     const [activeJudges, setActiveJudges] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         const unsubscribe = timingSignalRService.onStateChange((state) => {
@@ -81,19 +84,7 @@ const FinisherDashboard = () => {
         if (!selectedEvento) return;
         const loadFases = async () => {
             const data = await FaseService.getByEvento(selectedEvento.id);
-            const mapped = data.map(f => ({
-                ...f,
-                resultados: f.resultados?.map(r => ({
-                    ...r,
-                    estadoCanto: r.estado === 'Descalificado' ? 'DSQ' : r.estado
-                }))
-            }));
-            const sorted = mapped.sort((a, b) => {
-                const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
-                const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
-                return dateA.localeCompare(dateB);
-            });
-            setFases(sorted);
+            setFases(mapFasesFromApi(data));
         };
         if (selectedEvento) {
             loadFases();
@@ -363,12 +354,7 @@ const FinisherDashboard = () => {
         return (h * 3600000) + (m * 60000) + (s * 1000) + ms;
     };
 
-    const formatTimer = (ms) => {
-        const m = Math.floor((ms % 3600000) / 60000);
-        const s = Math.floor((ms % 60000) / 1000);
-        const mil = ms % 1000;
-        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(mil).padStart(3, '0')}`;
-    };
+    const formatTimer = (ms) => formatRaceTimeFromMs(ms);
 
     const startLocalTimer = (sTime) => {
         setIsRaceRunning(true);
@@ -383,6 +369,66 @@ const FinisherDashboard = () => {
     const stopLocalTimer = () => {
         setIsRaceRunning(false);
         if (timerRef.current) clearInterval(timerRef.current);
+    };
+
+    const handleRefresh = async () => {
+        if (!selectedEvento) {
+            addToast('Seleccioná un evento primero', 'warning');
+            return;
+        }
+
+        const currentFaseId = selectedFase?.id;
+        setRefreshing(true);
+        try {
+            const data = await FaseService.getByEvento(selectedEvento.id);
+            const sorted = mapFasesFromApi(data);
+            setFases(sorted);
+
+            let freshFase = currentFaseId
+                ? sorted.find(f => String(f.id) === String(currentFaseId))
+                : null;
+
+            if (currentFaseId) {
+                const resultData = await ResultadoService.getByFase(currentFaseId);
+                const formattedData = resultData.map(r => ({
+                    ...r,
+                    estadoCanto: r.estado === 'Descalificado' ? 'DSQ' : r.estado,
+                    tiempoOficial: r.tiempoOficial,
+                    msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
+                    status: r.tiempoOficial ? 'finished' : 'pending'
+                }));
+                setResultados(formattedData.sort((a, b) => a.carril - b.carril));
+
+                if (freshFase) {
+                    setSelectedFase(freshFase);
+                    if (freshFase.estado === 'En Carrera' && freshFase.fechaHoraInicioReal) {
+                        const parsed = new Date(freshFase.fechaHoraInicioReal).getTime();
+                        if (!isNaN(parsed)) startLocalTimer(parsed);
+                    } else if (freshFase.estado !== 'En Carrera') {
+                        stopLocalTimer();
+                        setElapsedTime(0);
+                        setStartTime(null);
+                    }
+                }
+            }
+
+            setRawTimes([]);
+
+            await timingSignalRService.disconnect();
+            await timingSignalRService.connect(
+                selectedEvento.id,
+                currentFaseId || null,
+                getJudgeDisplayName(user, 'Cronometrista'),
+                'Cronometrista'
+            );
+
+            addToast('Datos y conexión actualizados', 'success');
+        } catch (err) {
+            console.error('Error al refrescar:', err);
+            addToast('No se pudo refrescar. Reintentá.', 'error');
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     // --- ACCESOS DIRECTOS POR TECLADO ---
@@ -572,13 +618,33 @@ const FinisherDashboard = () => {
 
         {['Reconnecting', 'Connecting'].includes(connectionState) && (
             <div className="connection-state-alert-bar reconnecting" style={{ margin: '15px 15px 0 15px', width: 'auto' }}>
-                <RefreshCw className="spin animate-spin" size={14} style={{ marginRight: '8px' }} />
-                <span>⚠️ Conexión inestable. Intentando restablecer la sincronización con el largador...</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <RefreshCw className="spin animate-spin" size={14} />
+                    Conexión inestable. Intentando restablecer la sincronización con el largador...
+                </span>
+                <button
+                    type="button"
+                    className="btn-refresh-sync"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                >
+                    <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                    {refreshing ? 'Refrescando...' : 'Refrescar'}
+                </button>
             </div>
         )}
         {connectionState === 'Disconnected' && (
             <div className="connection-state-alert-bar disconnected" style={{ margin: '15px 15px 0 15px', width: 'auto' }}>
-                <span>⚠️ Sin conexión en tiempo real. No recibirás notificaciones de largada hasta recuperar la señal.</span>
+                <span>Sin conexión en tiempo real. No recibirás notificaciones de largada hasta recuperar la señal.</span>
+                <button
+                    type="button"
+                    className="btn-refresh-sync"
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                >
+                    <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                    {refreshing ? 'Refrescando...' : 'Refrescar'}
+                </button>
             </div>
         )}
         <div className={`finisher-dashboard ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -621,8 +687,18 @@ const FinisherDashboard = () => {
             
             <header className="finisher-header glass-effect">
                 <div className="header-info">
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                    <div className="race-header-actions" style={{ marginBottom: '12px' }}>
                         <div className="badge-live blue">MODO CRONOMETRISTA</div>
+                        <button
+                            type="button"
+                            className="btn-refresh-sync"
+                            onClick={handleRefresh}
+                            disabled={refreshing || loading || !selectedEvento}
+                            title="Recargar datos y reconectar con el servidor"
+                        >
+                            <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                            <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
+                        </button>
                     </div>
                     {selectedFase ? (() => {
                         const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
@@ -710,6 +786,18 @@ const FinisherDashboard = () => {
                 <main className="finisher-main glass-effect">
                     {selectedFase ? (
                         <div className="quick-controls-panel">
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                                <button
+                                    type="button"
+                                    className="btn-refresh-sync"
+                                    onClick={handleRefresh}
+                                    disabled={refreshing || loading}
+                                    title="Recargar tiempos y reconectar con el servidor"
+                                >
+                                    <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                                    <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
+                                </button>
+                            </div>
                             <div className="lane-buttons-grid">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
                                     const res = resultados.find(r => r.carril === num);

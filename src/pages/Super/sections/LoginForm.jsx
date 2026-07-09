@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Save, Eye, EyeOff, User } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/Common/CustomSelect';
 import { pick } from '../../../utils/apiHelpers';
 import { isSuperAdminUser } from '../../../utils/authHelpers';
+import { canAccessControlesLive, normalizePlan } from '../../../utils/planHelpers';
 
 const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
 
@@ -11,6 +12,7 @@ const LoginForm = ({
     initialData,
     clubes = [],
     federaciones = [],
+    effectiveFedId = null,
     onCancel,
     onSubmit,
     onChange,
@@ -25,10 +27,39 @@ const LoginForm = ({
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const planNombre = user?.plan?.nombre?.toLowerCase() || 'bronce';
-    const isBronce = planNombre === 'bronce';
+    const targetFedId = initialData.federacionId || effectiveFedId || '';
+
+    const federationPlan = useMemo(() => {
+        if (targetFedId) {
+            const fed = federaciones.find(f => String(f.id) === String(targetFedId));
+            if (fed?.plan) return normalizePlan(fed.plan);
+            if (fed?.planSaaSId || fed?.planNombre) {
+                return normalizePlan({
+                    id: fed.planSaaSId,
+                    nombre: fed.planNombre,
+                });
+            }
+        }
+        if (!isSuper) return normalizePlan(user?.plan);
+        return null;
+    }, [targetFedId, federaciones, isSuper, user?.plan]);
+
+    const judgeRolesEnabled = isSuper
+        ? (targetFedId ? canAccessControlesLive(federationPlan) : false)
+        : canAccessControlesLive(federationPlan ?? user?.plan);
+
+    const judgeDisabledLabel = !targetFedId && showFederationSelect
+        ? '(Seleccioná federación primero)'
+        : '(Exclusivo plan L)';
 
     const isJuezRole = ROLES_JUEZ.includes(initialData.rol);
+
+    useEffect(() => {
+        if (!isEditing && !isEditingProfile && isJuezRole && !judgeRolesEnabled) {
+            onChange('rol', 'Club');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [judgeRolesEnabled, isJuezRole, isEditing, isEditingProfile]);
     
     return (
         <div className="login-form-container fade-in">
@@ -39,23 +70,6 @@ const LoginForm = ({
                             {/* ── 1. Rol y Permisos (primero — condiciona el resto del form) ── */}
                             <div className="form-section">
                                 <h4>Rol y Permisos</h4>
-                                <div className="form-group">
-                                    <label>Tipo de Usuario / Rol *</label>
-                                    <CustomSelect 
-                                        className="admin-select"
-                                        name="rol"
-                                        value={initialData.rol} 
-                                        onChange={(val) => onChange('rol', val)}
-                                        required={true}
-                                        options={[
-                                            { value: 'Club', label: 'Club (Representante)' },
-                                            { value: 'Largador', label: `Juez: Largador ${isBronce ? '(Exclusivo Plata/Oro)' : ''}`, disabled: isBronce },
-                                            { value: 'Cronometrista', label: `Juez: Cronometrista ${isBronce ? '(Exclusivo Plata/Oro)' : ''}`, disabled: isBronce },
-                                            { value: 'JuezControl', label: `Juez de Control ${isBronce ? '(Exclusivo Plata/Oro)' : ''}`, disabled: isBronce },
-                                            { value: 'Admin', label: 'Administrador (Acceso Total)' }
-                                        ]}
-                                    />
-                                </div>
 
                                 {showFederationSelect && (
                                     <div className="form-group fade-in">
@@ -69,11 +83,39 @@ const LoginForm = ({
                                             placeholder="Seleccionar Federación..."
                                             options={federaciones.map(f => ({
                                                 value: f.id,
-                                                label: f.nombre,
+                                                label: f.planNombre
+                                                    ? `${f.nombre} — ${f.planNombre}`
+                                                    : f.nombre,
                                             }))}
                                         />
+                                        {targetFedId && federationPlan && (
+                                            <small style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', display: 'block', marginTop: '0.35rem' }}>
+                                                Plan: <strong>{federationPlan.nombre || 'Sin plan'}</strong>
+                                                {judgeRolesEnabled
+                                                    ? ' · Controles en vivo habilitados'
+                                                    : ' · Sin acceso a Largador/Cronometrista/Juez de Control'}
+                                            </small>
+                                        )}
                                     </div>
                                 )}
+
+                                <div className="form-group">
+                                    <label>Tipo de Usuario / Rol *</label>
+                                    <CustomSelect 
+                                        className="admin-select"
+                                        name="rol"
+                                        value={initialData.rol} 
+                                        onChange={(val) => onChange('rol', val)}
+                                        required={true}
+                                        options={[
+                                            { value: 'Club', label: 'Club (Representante)' },
+                                            { value: 'Largador', label: `Juez: Largador ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
+                                            { value: 'Cronometrista', label: `Juez: Cronometrista ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
+                                            { value: 'JuezControl', label: `Juez de Control ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
+                                            { value: 'Admin', label: 'Administrador (Acceso Total)' }
+                                        ]}
+                                    />
+                                </div>
 
                                 {showClubSelect && (
                                     <div className="form-group fade-in">

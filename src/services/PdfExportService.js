@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatRaceTime } from '../utils/raceTimeUtils';
 
 // ─── Lookup tables ────────────────────────────────────────────────────────────
 const CATEGORIA_NAMES = {
@@ -17,20 +18,6 @@ const DISTANCIA_NAMES = {
 const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
-const formatTime = (timeStr) => {
-    if (!timeStr || timeStr === '') return '-';
-    try {
-        const parts = timeStr.split(':');
-        if (parts.length === 3) {
-            const [h, m, sFull] = parts;
-            const [s, ms] = sFull.split('.');
-            const msShort = (ms || '00').substring(0, 2);
-            const totalMin = parseInt(h) * 60 + parseInt(m);
-            return `${String(totalMin).padStart(2, '0')}:${s.padStart(2, '0')}.${msShort}`;
-        }
-    } catch {}
-    return timeStr;
-};
 
 const getPruebaInfo = (faseOrPrueba) => {
     // Works with a fase object (from cronograma) or a plain prueba object
@@ -185,7 +172,7 @@ const buildResultRows = (fase) => {
             r.carril   || '-',
             getCrew(r, fase),
             r.clubNombre || r.clubSigla || '-',
-            formatTime(r.tiempoOficial),
+            formatRaceTime(r.tiempoOficial),
         ]);
 };
 

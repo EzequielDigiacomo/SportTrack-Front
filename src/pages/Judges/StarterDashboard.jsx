@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
+import { getJudgeDisplayName, mapFasesFromApi } from '../../utils/judgeDashboardHelpers';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
@@ -45,6 +46,7 @@ const StarterDashboard = () => {
     const [startingStatus, setStartingStatus] = useState(null); // 'connecting' | 'starting' | 'resetting' | 'fallback_http' | 'success' | 'success_reset' | 'error'
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
     const [activeJudges, setActiveJudges] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
 
     const isTimekeeperConnected = activeJudges.some(j => {
         const role = (j.role || j.Role || '').toLowerCase();
@@ -77,20 +79,7 @@ const StarterDashboard = () => {
         const loadFases = async () => {
             try {
                 const data = await FaseService.getByEvento(selectedEvento.id);
-                // Mapear estado del backend a estadoCanto del frontend
-                const mapped = data.map(f => ({
-                    ...f,
-                    resultados: f.resultados?.map(r => ({
-                        ...r,
-                        estadoCanto: r.estado === 'Descalificado' ? 'DSQ' : r.estado
-                    }))
-                }));
-                const sorted = mapped.sort((a, b) => {
-                    const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
-                    const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
-                    return dateA.localeCompare(dateB);
-                });
-                setFases(sorted);
+                setFases(mapFasesFromApi(data));
             } catch (err) {
                 console.error("Error loading fases:", err);
             }
@@ -216,6 +205,50 @@ const StarterDashboard = () => {
             timingSignalRService.disconnect();
         };
     }, [selectedEvento?.id, selectedFase?.id]);
+
+    const handleRefresh = async () => {
+        if (!selectedEvento) {
+            addToast('Seleccioná un evento primero', 'warning');
+            return;
+        }
+
+        const currentFaseId = selectedFase?.id;
+        setRefreshing(true);
+        try {
+            const data = await FaseService.getByEvento(selectedEvento.id);
+            const sorted = mapFasesFromApi(data);
+            setFases(sorted);
+
+            if (currentFaseId) {
+                const fresh = sorted.find(f => String(f.id) === String(currentFaseId));
+                if (fresh) setSelectedFase(fresh);
+            }
+
+            await timingSignalRService.disconnect();
+            if (currentFaseId) {
+                await timingSignalRService.connect(
+                    selectedEvento.id,
+                    currentFaseId,
+                    getJudgeDisplayName(user, 'Largador'),
+                    'Largador'
+                );
+            } else {
+                await timingSignalRService.connect(
+                    selectedEvento.id,
+                    null,
+                    getJudgeDisplayName(user, 'Largador'),
+                    'Largador'
+                );
+            }
+
+            addToast('Datos y conexión actualizados', 'success');
+        } catch (err) {
+            console.error('Error al refrescar:', err);
+            addToast('No se pudo refrescar. Reintentá.', 'error');
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const handleStartRace = async () => {
         if (!selectedFase) return;
@@ -518,6 +551,16 @@ const StarterDashboard = () => {
                             <div className="header-left-actions">
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
                                     <div className="badge-live">MODO LARGADOR</div>
+                                    <button
+                                        type="button"
+                                        className="btn-refresh-sync"
+                                        onClick={handleRefresh}
+                                        disabled={refreshing || loading || !selectedEvento}
+                                        title="Recargar datos y reconectar con el servidor"
+                                    >
+                                        <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                                        <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
+                                    </button>
                                 </div>
                                 {(() => {
                                     const p = selectedFase?.prueba?.prueba || selectedFase?.etapa?.eventoPrueba?.prueba || selectedFase?.eventoPrueba?.prueba;
@@ -550,16 +593,28 @@ const StarterDashboard = () => {
                             <div className="athletes-checkin">
                                 <div className="checkin-header">
                                     <h3><Users size={20} /> Atletas en Carriles</h3>
-                                    <button 
-                                        type="button" 
-                                        className="btn-reset-list"
-                                        onClick={handleResetAllStatuses}
-                                        title="Restablecer todos los carriles al estado original (Pendiente)"
-                                        disabled={loading || selectedFase.estado !== 'Programada'}
-                                    >
-                                        <RotateCcw size={14} />
-                                        <span>Restablecer Lista</span>
-                                    </button>
+                                    <div className="checkin-header-actions">
+                                        <button
+                                            type="button"
+                                            className="btn-refresh-sync"
+                                            onClick={handleRefresh}
+                                            disabled={refreshing || loading}
+                                            title="Recargar atletas y reconectar con el servidor"
+                                        >
+                                            <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                                            <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className="btn-reset-list"
+                                            onClick={handleResetAllStatuses}
+                                            title="Restablecer todos los carriles al estado original (Pendiente)"
+                                            disabled={loading || selectedFase.estado !== 'Programada'}
+                                        >
+                                            <RotateCcw size={14} />
+                                            <span>Restablecer Lista</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="checkin-grid">
                                     {(selectedFase.resultados || []).sort((a,b) => a.carril - b.carril).map(r => (

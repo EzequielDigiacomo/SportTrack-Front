@@ -9,6 +9,8 @@ import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
 import { getClubFederationId, getUserFederationId } from '../../utils/apiHelpers';
+import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking } from '../../utils/resultadosHelpers';
+import { getPromotionStatus } from '../../utils/promotionHelpers';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
     const { user } = useAuth();
@@ -306,6 +308,21 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     };
 
     const handlePromoverEtapa = async () => {
+        const status = getPromotionStatus(
+            fases,
+            inscriptos.length,
+            filtroVisualFase === 'Todas' ? null : filtroVisualFase
+        );
+
+        if (!status.canPromote) {
+            setMessage(`⚠️ ${status.message || 'No se puede promover en este momento.'}`);
+            return;
+        }
+
+        if (!window.confirm(`¿Promover ${status.etapaNombre || 'la etapa'} y generar la siguiente ronda?`)) {
+            return;
+        }
+
         setSaving(true);
         try {
             await FaseService.promover(selectedPrueba);
@@ -389,79 +406,86 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         return null;
     };
 
-    const handleSaveTiempos = async () => {
+    const handleSaveTiempos = async (faseId, finalize = false) => {
+        if (!faseId) {
+            setMessage('⚠️ Seleccioná una fase para guardar.');
+            return;
+        }
+
+        const fase = fases.find(f => String(f.id) === String(faseId));
+        if (!fase?.resultados?.length) {
+            setMessage('⚠️ La fase seleccionada no tiene resultados.');
+            return;
+        }
+
+        if (finalize) {
+            if (!window.confirm('¿Guardar los tiempos y publicar esta serie como resultados oficiales?')) {
+                return;
+            }
+        }
+
         setSaving(true);
-        setMessage('⏳ Iniciando guardado...');
+        setMessage(finalize ? '⏳ Guardando y oficializando...' : '⏳ Iniciando guardado...');
         try {
+            const tiemposConPosiciones = applyPositionsToTiemposLocales(fase.resultados, tiemposLocales);
+            setTiemposLocales(tiemposConPosiciones);
+
+            const positionMap = computePositionsForPhase(fase.resultados, tiemposConPosiciones);
+            const faseResultIds = new Set(fase.resultados.map(r => String(r.id)));
+
             const resultsToSave = [];
-            const ids = Object.keys(tiemposLocales);
-            
-            for (const id of ids) {
-                const item = tiemposLocales[id];
+            for (const id of Object.keys(tiemposConPosiciones)) {
+                if (!faseResultIds.has(String(id))) continue;
+
+                const item = tiemposConPosiciones[id];
                 if (!item) continue;
 
                 const t = item.tiempoOficial;
-                const p = item.posicion;
                 const c = item.carril;
                 const n = item.participanteNombre;
                 const s = item.clubSigla;
-                
-                // Solo procesar si tiene alguna modificación
-                if (t === undefined && p === undefined && c === undefined && n === undefined && s === undefined) continue;
+                const estado = item.estadoCanto;
+                const excluded = isExcludedFromRanking(estado);
 
-                let totalMs = 99999999;
-                if (t) {
-                    const parts = String(t).split(':');
-                    if (parts.length === 2) {
-                        const [m, sFull] = parts;
-                        const [s, ms] = (sFull || '0').split('.');
-                        totalMs = (parseInt(m) * 60000) + (parseInt(s) * 1000) + (parseInt((ms || '0').substring(0,3).padEnd(3,'0')));
-                    }
-                }
+                if (t === undefined && c === undefined && n === undefined && s === undefined && !excluded) continue;
 
                 resultsToSave.push({
                     id: parseInt(id),
                     tiempoOficial: t,
-                    posicion: p,
+                    posicion: excluded ? null : (positionMap[parseInt(id)] || null),
                     carril: c,
                     participanteNombre: n,
-                    clubSigla: s,
-                    totalMs
+                    clubSigla: s
                 });
             }
 
-            if (resultsToSave.length === 0) {
-                setMessage('⚠️ No hay datos nuevos para guardar.');
+            if (resultsToSave.length === 0 && !finalize) {
+                setMessage('⚠️ No hay datos nuevos para guardar en esta serie.');
                 setSaving(false);
                 return;
             }
 
-            // Si el usuario no puso posiciones, las calculamos por tiempo
-            const needsPositions = resultsToSave.some(r => !r.posicion);
-            if (needsPositions) {
-                resultsToSave.sort((a,b) => a.totalMs - b.totalMs);
-                resultsToSave.forEach((r, idx) => {
-                    if (!r.posicion) r.posicion = idx + 1;
-                });
+            if (resultsToSave.length > 0) {
+                const dto = resultsToSave.map(r => ({
+                    id: r.id,
+                    tiempoOficial: r.tiempoOficial ? parseTimeToTimeSpan(r.tiempoOficial) : null,
+                    posicion: r.posicion ? parseInt(r.posicion) : null,
+                    carril: r.carril ? parseInt(r.carril) : null,
+                    participanteNombre: r.participanteNombre || null,
+                    clubSigla: r.clubSigla || null
+                }));
+
+                setMessage(`⏳ Enviando ${dto.length} resultados de ${fase.nombreFase}...`);
+                await ResultadoService.batchUpdate(dto);
             }
 
-            const dto = resultsToSave.map(r => ({
-                id: r.id,
-                tiempoOficial: r.tiempoOficial ? parseTimeToTimeSpan(r.tiempoOficial) : null,
-                posicion: r.posicion ? parseInt(r.posicion) : null,
-                carril: r.carril ? parseInt(r.carril) : null,
-                participanteNombre: r.participanteNombre || null,
-                clubSigla: r.clubSigla || null
-            }));
-
-            setMessage(`⏳ Enviando ${dto.length} resultados...`);
-            await ResultadoService.batchUpdate(dto);
+            if (finalize) {
+                await FaseService.finalizar(faseId);
+            }
             
-            // Efecto visual de éxito
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
 
-            // Bloquear la prueba localmente
             const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
             if (!locked.includes(selectedPrueba)) {
                 locked.push(selectedPrueba);
@@ -470,7 +494,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
             const esFinal = fases.some(f => 
                 f.nombreFase.toLowerCase().includes('final') && 
-                f.resultados.some(r => dto.some(d => d.id === r.id))
+                f.resultados.some(r => resultsToSave.some(d => d.id === r.id))
             );
             
             if (esFinal) {
@@ -483,9 +507,16 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
             setIsLocked(true);
             await loadDatosPrueba(selectedPrueba);
-            setMessage(esFinal ? '🔒 PRUEBA SELLADA: Resultados finales oficiales guardados.' : '✅ Tiempos guardados correctamente.');
+
+            if (finalize) {
+                setMessage('✅ Tiempos guardados y serie oficializada correctamente.');
+            } else {
+                setMessage(esFinal ? '🔒 PRUEBA SELLADA: Resultados finales oficiales guardados.' : '✅ Tiempos guardados correctamente.');
+            }
         } catch (err) {
-            setMessage('❌ Error interno al procesar.');
+            setMessage(finalize
+                ? '❌ Error al guardar u oficializar: ' + (err.response?.data?.message || err.message)
+                : '❌ Error interno al procesar.');
         } finally {
             setSaving(false);
         }

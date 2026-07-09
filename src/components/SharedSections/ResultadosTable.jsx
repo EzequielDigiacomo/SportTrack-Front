@@ -1,22 +1,7 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
-
-const timeToMs = (time) => {
-    if (!time) return null;
-    const parts = time.split(':');
-    try {
-        if (parts.length === 3) {
-            const [hh, mm, rest] = parts;
-            const [ss, ms = '0'] = rest.split('.');
-            return (parseInt(hh) * 3600000) + (parseInt(mm) * 60000) + (parseInt(ss) * 1000) + parseInt(ms.padEnd(3, '0').slice(0, 3));
-        } else if (parts.length === 2) {
-            const [mm, rest] = parts;
-            const [ss, ms = '0'] = rest.split('.');
-            return (parseInt(mm) * 60000) + (parseInt(ss) * 1000) + parseInt(ms.padEnd(3, '0').slice(0, 3));
-        }
-    } catch { return null; }
-    return null;
-};
+import { computePositionsForPhase, isExcludedFromRanking, timeToMs } from '../../utils/resultadosHelpers';
+import { formatRaceTime } from '../../utils/raceTimeUtils';
 
 const formatDiff = (diffMs) => {
     if (diffMs === null || diffMs <= 0) return '-';
@@ -27,31 +12,9 @@ const formatDiff = (diffMs) => {
     return `+${m}:${s}`;
 };
 
-const formatTime = (timeStr) => {
-    if (!timeStr || timeStr === '') return '';
-    try {
-        const parts = timeStr.split(':');
-        if (parts.length === 3) {
-            const [h, m, sFull] = parts;
-            const [s, ms] = (sFull || '00.000').split('.');
-            const msShort = (ms || '0').substring(0, 3).padEnd(3, '0');
-            
-            const totalMin = (parseInt(h) * 60) + parseInt(m);
-            return `${String(totalMin).padStart(2, '0')}:${s.padStart(2, '0')}.${msShort}`;
-        }
-        if (timeStr.includes('.') && !timeStr.includes(':')) {
-             return timeStr;
-        }
-        return timeStr;
-    } catch {
-        return timeStr;
-    }
-};
-
 const getSoloApellido = (nombreCompleto) => {
     if (!nombreCompleto) return "-";
     const parts = nombreCompleto.trim().split(' ');
-    // Retornamos el último elemento (el apellido)
     return parts[parts.length - 1];
 };
 
@@ -75,24 +38,27 @@ const ResultadosTable = ({
 }) => {
     if (!fase) return null;
 
+    const computedPositions = computePositionsForPhase(fase.resultados, tiemposLocales);
+
+    const getDisplayPosition = (res) => {
+        const local = tiemposLocales[res.id] || {};
+        const estado = local.estadoCanto || res.estado;
+        if (isExcludedFromRanking(estado)) return '';
+        return computedPositions[res.id] || '';
+    };
+
     // Si no es admin, mostramos el formato "Live Results" (vista de consulta premium y simple)
     if (!isAdmin) {
         const sorted = [...fase.resultados].sort((a, b) => {
-            const localA = tiemposLocales[a.id] || {};
-            const localB = tiemposLocales[b.id] || {};
-            const posA = localA.posicion !== undefined ? localA.posicion : a.posicion;
-            const posB = localB.posicion !== undefined ? localB.posicion : b.posicion;
+            const posA = getDisplayPosition(a);
+            const posB = getDisplayPosition(b);
             if (posA && posB) return posA - posB;
             if (posA) return -1;
             if (posB) return 1;
             return (a.carril || 99) - (b.carril || 99);
         });
 
-        const lider = sorted.find(r => {
-            const localR = tiemposLocales[r.id] || {};
-            const pos = localR.posicion !== undefined ? localR.posicion : r.posicion;
-            return pos === 1;
-        });
+        const lider = sorted.find(r => getDisplayPosition(r) === 1);
         const liderTime = lider ? (tiemposLocales[lider.id]?.tiempoOficial !== undefined ? tiemposLocales[lider.id]?.tiempoOficial : lider.tiempoOficial) : null;
         const liderMs = liderTime ? timeToMs(liderTime) : null;
 
@@ -115,9 +81,9 @@ const ResultadosTable = ({
                     <tbody>
                         {sorted.map((res, index) => {
                             const local = tiemposLocales[res.id] || {};
-                            const pos = local.posicion !== undefined ? local.posicion : (res.posicion || '');
+                            const pos = getDisplayPosition(res);
                             const timeStr = local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial;
-                            const displayTime = formatTime(timeStr);
+                            const displayTime = formatRaceTime(timeStr);
                             const status = local.estadoCanto || res.estado;
                             const isSpecialStatus = status && !['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(status);
 
@@ -184,24 +150,6 @@ const ResultadosTable = ({
         );
     }
 
-    const parseTimeToMs = (timeStr) => {
-        if (!timeStr) return 9999999;
-        try {
-            const parts = timeStr.split(':');
-            if (parts.length === 3) {
-                const [h, m, sFull] = parts;
-                const [s, ms] = (sFull || '0').split('.');
-                return (parseInt(h) * 3600000) + (parseInt(m) * 60000) + (parseInt(s) * 1000) + parseInt((ms || '0').substring(0, 3));
-            }
-            if (timeStr.includes(':') && timeStr.includes('.')) {
-                const [m, sFull] = timeStr.split(':');
-                const [s, ms] = sFull.split('.');
-                return (parseInt(m) * 60000) + (parseInt(s) * 1000) + parseInt((ms || '0').substring(0, 3));
-            }
-            return 9999999;
-        } catch { return 9999999; }
-    };
-
     const sortedResultados = [...fase.resultados].sort((a, b) => {
         const localA = tiemposLocales[a.id] || {};
         const localB = tiemposLocales[b.id] || {};
@@ -209,23 +157,23 @@ const ResultadosTable = ({
         const statusA = localA.estadoCanto || a.estado;
         const statusB = localB.estadoCanto || b.estado;
         
-        const hasStatusA = statusA && !['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(statusA);
-        const hasStatusB = statusB && !['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(statusB);
+        const hasStatusA = isExcludedFromRanking(statusA);
+        const hasStatusB = isExcludedFromRanking(statusB);
 
         // Los que tienen estado especial (DNS/DNF/DSQ) van al final
         if (hasStatusA && !hasStatusB) return 1;
         if (!hasStatusA && hasStatusB) return -1;
         
-        const pA = localA.posicion || a.posicion;
-        const pB = localB.posicion || b.posicion;
+        const pA = getDisplayPosition(a);
+        const pB = getDisplayPosition(b);
         
         if (pA && pB) return pA - pB;
         if (pA) return -1;
         if (pB) return 1;
 
         // Si no hay posición, ordenamos por tiempo
-        const tA = parseTimeToMs(localA.tiempoOficial || a.tiempoOficial);
-        const tB = parseTimeToMs(localB.tiempoOficial || b.tiempoOficial);
+        const tA = timeToMs(localA.tiempoOficial || a.tiempoOficial) ?? 9999999;
+        const tB = timeToMs(localB.tiempoOficial || b.tiempoOficial) ?? 9999999;
         return tA - tB;
     });
 
@@ -247,8 +195,8 @@ const ResultadosTable = ({
                 <tbody>
                     {sortedResultados.map(res => {
                         const local = tiemposLocales[res.id] || {};
-                        const displayTime = formatTime(local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial);
-                        const displayPos = local.posicion !== undefined ? local.posicion : (res.posicion || '');
+                        const displayTime = formatRaceTime(local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial);
+                        const displayPos = getDisplayPosition(res);
                         const displayCarril = local.carril !== undefined ? local.carril : (res.carril || '');
                         const displayNombre = local.participanteNombre !== undefined ? local.participanteNombre : (res.participanteNombre || '');
                         const displayClub = local.clubSigla !== undefined ? local.clubSigla : (res.clubSigla || '');
@@ -268,9 +216,10 @@ const ResultadosTable = ({
                                             type="number"
                                             className="admin-input-small"
                                             value={displayPos}
-                                            onChange={(e) => onResultChange(res.id, 'posicion', e.target.value)}
+                                            readOnly
                                             disabled={isLocked}
-                                            style={{ textAlign: 'center', width: '50px' }}
+                                            title="La posición se calcula automáticamente según el tiempo"
+                                            style={{ textAlign: 'center', width: '50px', background: 'rgba(255,255,255,0.05)' }}
                                         />
                                     )}
                                 </td>
@@ -313,12 +262,12 @@ const ResultadosTable = ({
                                     ) : (
                                         <input 
                                             type="text"
-                                            placeholder="00:00.00"
+                                            placeholder="00:00.000"
                                             className="admin-input-small"
                                             value={displayTime}
                                             onChange={(e) => onResultChange(res.id, 'tiempoOficial', e.target.value)}
                                             disabled={isLocked}
-                                            style={{ fontFamily: 'monospace', textAlign: 'center' }}
+                                            style={{ fontFamily: 'JetBrains Mono, monospace', textAlign: 'center' }}
                                         />
                                     )}
                                 </td>

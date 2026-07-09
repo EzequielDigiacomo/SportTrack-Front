@@ -87,6 +87,39 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
         return 1;
     };
 
+    const getSelectionBoatStatus = (atletas, maxReq) => {
+        if (!atletas?.length) {
+            return { hasSelection: false, isComplete: true, missingInLastBoat: 0 };
+        }
+        const remainder = atletas.length % maxReq;
+        return {
+            hasSelection: true,
+            isComplete: remainder === 0,
+            missingInLastBoat: remainder === 0 ? 0 : maxReq - remainder,
+        };
+    };
+
+    const getPruebaSelectionStatus = (ep) => {
+        const atletas = selectionsMap[ep.id] || [];
+        const maxReq = getMaxTripulantes(ep.prueba?.bote?.tipo);
+        return { ...getSelectionBoatStatus(atletas, maxReq), maxReq, atletas };
+    };
+
+    const currentSelectionStatus = selectedPrueba
+        ? getPruebaSelectionStatus(selectedPrueba)
+        : { hasSelection: false, isComplete: true, missingInLastBoat: 0, maxReq: 1 };
+
+    const hasAnyIncompleteSelection = Object.keys(selectionsMap).some(pId => {
+        const atletas = selectionsMap[pId];
+        if (!atletas?.length) return false;
+        const ep = pruebasHabilitadas.find(ph => String(ph.id) === String(pId));
+        if (!ep) return false;
+        const maxReq = getMaxTripulantes(ep.prueba.bote?.tipo);
+        return atletas.length % maxReq !== 0;
+    });
+
+    const pruebasConSeleccionPendiente = Object.keys(selectionsMap).filter(k => selectionsMap[k]?.length > 0);
+
     const handleSelectPrueba = (ep) => {
         setSelectedPrueba(ep);
         setMsg(null);
@@ -234,14 +267,22 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                         <h4>1. Elegir Prueba</h4>
                         <div className="pruebas-habilitadas-grid">
                             {loading ? <div className="loader"></div> : (
-                                pruebasHabilitadas.length > 0 ? pruebasHabilitadas.map(ep => (
+                                pruebasHabilitadas.length > 0 ? pruebasHabilitadas.map(ep => {
+                                    const pruebaStatus = getPruebaSelectionStatus(ep);
+                                    const isIncomplete = pruebaStatus.hasSelection && !pruebaStatus.isComplete;
+                                    return (
                                         <div
                                             key={ep.id}
-                                            className={`prueba-selector-card glass-effect ${selectedPrueba?.id === ep.id ? 'active' : ''}`}
+                                            className={`prueba-selector-card glass-effect ${selectedPrueba?.id === ep.id ? 'active' : ''} ${isIncomplete ? 'incomplete-selection' : ''}`}
                                             onClick={() => handleSelectPrueba(ep)}
                                         >
+                                            {isIncomplete && (
+                                                <div className="incomplete-warning-badge" title={`Faltan ${pruebaStatus.missingInLastBoat} tripulante(s) para completar el bote`}>
+                                                    ⚠
+                                                </div>
+                                            )}
                                             {(selectionsMap[ep.id]?.length > 0) && (
-                                                <div className="selection-count-badge">
+                                                <div className={`selection-count-badge ${isIncomplete ? 'incomplete' : ''}`}>
                                                     {selectionsMap[ep.id].length}
                                                 </div>
                                             )}
@@ -268,7 +309,8 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                                                 </div>
                                             </div>
                                         </div>
-                                )) : <p>No hay pruebas habilitadas para inscribirse.</p>
+                                    );
+                                }) : <p>No hay pruebas habilitadas para inscribirse.</p>
                             )}
                         </div>
                     </div>
@@ -459,16 +501,26 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
 
                 <div className="modal-footer">
                     <div className="selection-summary flex-column">
+                        {currentSelectionStatus.hasSelection && !currentSelectionStatus.isComplete && selectedPrueba && (
+                            <div className="incomplete-selection-banner">
+                                ⚠ Hay un bote incompleto: faltan {currentSelectionStatus.missingInLastBoat} tripulante(s) para completar la tripulación ({maxRequired} por bote).
+                            </div>
+                        )}
                         {selectedAtletas.length > 0 && selectedPrueba && (
                             <div className="boat-selection-preview">
                                 {Array.from({ length: Math.ceil(selectedAtletas.length / maxRequired) }).map((_, bIdx) => {
                                     const chunk = selectedAtletas.slice(bIdx * maxRequired, (bIdx + 1) * maxRequired);
                                     const upcomingLabel = String.fromCharCode(65 + inscripcionesActualesCount + bIdx);
+                                    const isBoatIncomplete = chunk.length < maxRequired;
                                     return (
-                                        <div key={bIdx} className="preview-boat-card">
+                                        <div key={bIdx} className={`preview-boat-card ${isBoatIncomplete ? 'incomplete' : 'complete'}`}>
                                             <span className="badge-refuerzo">Nuevo Bote {upcomingLabel}</span>
-                                            <span className="preview-crew">{chunk.map(a => a.nombre).join(', ')}</span>
-                                            {chunk.length < maxRequired && <span className="hint-text ml-sm">(Faltan {maxRequired - chunk.length})</span>}
+                                            <span className="preview-crew">{chunk.map(a => a.nombre).join(', ') || '—'}</span>
+                                            {isBoatIncomplete && (
+                                                <span className="incomplete-boat-warning">
+                                                    ⚠ Faltan {maxRequired - chunk.length} tripulante(s)
+                                                </span>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -479,52 +531,58 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                         <button className="btn-admin-secondary" onClick={onClose}>Cerrar</button>
                         
                         {/* Botón de Confirmar Todo (Solo si hay múltiples pruebas con selecciones) */}
-                        {Object.keys(selectionsMap).filter(k => selectionsMap[k]?.length > 0).length > 1 && (
+                        {pruebasConSeleccionPendiente.length > 1 && (
                             <button 
                                 className="btn-admin-primary"
                                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }}
-                                disabled={saving || !pagoAfiliacionAlDia}
+                                disabled={saving || !pagoAfiliacionAlDia || hasAnyIncompleteSelection}
+                                title={hasAnyIncompleteSelection ? 'Completá todos los botes antes de confirmar' : ''}
                                 onClick={async () => {
-                                    setSaving(true);
-                                    const pruebasConSeleccion = Object.keys(selectionsMap).filter(k => selectionsMap[k]?.length > 0);
-                                    let exitos = 0;
-                                    
-                                    for (const pId of pruebasConSeleccion) {
-                                        const ep = pruebasHabilitadas.find(ph => String(ph.id) === String(pId));
-                                        if (!ep) continue;
-                                        
-                                        const atletas = selectionsMap[pId];
-                                        const maxReq = getMaxTripulantes(ep.prueba.bote?.tipo);
-                                        
-                                        if (atletas.length % maxReq === 0) {
-                                            // Lógica de guardado simplificada para el loop
-                                            for (let i = 0; i < atletas.length; i += maxReq) {
-                                                const trip = atletas.slice(i, i + maxReq);
-                                                const payload = {
-                                                    eventoPruebaId: parseInt(pId),
-                                                    numeroCompetidor: `BOTE-${Math.floor(Math.random() * 10000)}`,
-                                                    participanteId: trip[0].id
-                                                };
-                                                if (maxReq > 1) {
-                                                    payload.tripulantes = trip.slice(1).map((a, idx) => ({
-                                                        participanteId: a.id,
-                                                        posicionEnBote: idx + 2
-                                                    }));
-                                                }
-                                                await InscripcionService.create(payload);
-                                            }
-                                            exitos++;
-                                        }
+                                    if (hasAnyIncompleteSelection) {
+                                        setMsg({ type: 'error', text: 'Hay pruebas con botes incompletos. Completá cada tripulación antes de confirmar.' });
+                                        return;
                                     }
-                                    
-                                    setMsg({ type: 'success', text: `¡Se confirmaron inscripciones para ${exitos} pruebas correctamente!` });
-                                    setSelectionsMap({});
-                                    setSelectedPrueba(null); // Volver al inicio del modal
-                                    await loadInscripcionesClub();
-                                    setSaving(false);
-                                    
-                                    // Limpiar mensaje después de un tiempo
-                                    setTimeout(() => setMsg(null), 3000);
+                                    setSaving(true);
+                                    const pruebasConSeleccion = pruebasConSeleccionPendiente;
+                                    let exitos = 0;
+                                    try {
+                                        for (const pId of pruebasConSeleccion) {
+                                            const ep = pruebasHabilitadas.find(ph => String(ph.id) === String(pId));
+                                            if (!ep) continue;
+                                            
+                                            const atletas = selectionsMap[pId];
+                                            const maxReq = getMaxTripulantes(ep.prueba.bote?.tipo);
+                                            
+                                            if (atletas.length % maxReq === 0) {
+                                                for (let i = 0; i < atletas.length; i += maxReq) {
+                                                    const trip = atletas.slice(i, i + maxReq);
+                                                    const payload = {
+                                                        eventoPruebaId: parseInt(pId),
+                                                        numeroCompetidor: `BOTE-${Math.floor(Math.random() * 10000)}`,
+                                                        participanteId: trip[0].id
+                                                    };
+                                                    if (maxReq > 1) {
+                                                        payload.tripulantes = trip.slice(1).map((a, idx) => ({
+                                                            participanteId: a.id,
+                                                            posicionEnBote: idx + 2
+                                                        }));
+                                                    }
+                                                    await InscripcionService.create(payload);
+                                                }
+                                                exitos++;
+                                            }
+                                        }
+                                        
+                                        setMsg({ type: 'success', text: `¡Se confirmaron inscripciones para ${exitos} pruebas correctamente!` });
+                                        setSelectionsMap({});
+                                        setSelectedPrueba(null);
+                                        await loadInscripcionesClub();
+                                        setTimeout(() => setMsg(null), 3000);
+                                    } catch (err) {
+                                        setMsg({ type: 'error', text: 'Error al inscribir: ' + err.message });
+                                    } finally {
+                                        setSaving(false);
+                                    }
                                 }}
                             >
                                 ✅ Confirmar TODAS las Pendientes
@@ -532,8 +590,21 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                         )}
 
                         <button
-                            className={`btn-admin-primary ${(botesDisponibles === 0 && selectedAtletas.length === 0) ? 'disabled' : ''}`}
-                            disabled={!selectedPrueba || selectedAtletas.length === 0 || saving || inscripcionesCerradas || botesDisponibles === 0 || !pagoAfiliacionAlDia}
+                            className={`btn-admin-primary ${(botesDisponibles === 0 && selectedAtletas.length === 0) || (currentSelectionStatus.hasSelection && !currentSelectionStatus.isComplete) ? 'disabled' : ''}`}
+                            disabled={
+                                !selectedPrueba ||
+                                selectedAtletas.length === 0 ||
+                                saving ||
+                                inscripcionesCerradas ||
+                                botesDisponibles === 0 ||
+                                !pagoAfiliacionAlDia ||
+                                (currentSelectionStatus.hasSelection && !currentSelectionStatus.isComplete)
+                            }
+                            title={
+                                currentSelectionStatus.hasSelection && !currentSelectionStatus.isComplete
+                                    ? `Faltan ${currentSelectionStatus.missingInLastBoat} tripulante(s) para completar el bote`
+                                    : ''
+                            }
                             onClick={handleConfirmInscripcion}
                         >
                             {inscripcionesCerradas ? "Inscripciones Cerradas" : (saving ? "Procesando..." : `Confirmar ${selectedPrueba?.prueba?.categoria?.nombre || ''}`)}

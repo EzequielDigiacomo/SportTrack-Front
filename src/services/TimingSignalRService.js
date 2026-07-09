@@ -35,6 +35,7 @@ class TimingSignalRService {
         this._globalRaceOfficializedCallback = null;
         this._lapRecordedCallback = null;
         this._paymentCallback = null;
+        this._resultadoActualizadoCallback = null;
         this._handlersRegistered = false;
     }
 
@@ -137,6 +138,14 @@ class TimingSignalRService {
         this.connection.on("LapRecorded", (resultadoId, time) => {
             if (this._lapRecordedCallback) this._lapRecordedCallback(resultadoId, time);
         });
+
+        const handleResultadoActualizado = (eventoPruebaId, resultado) => {
+            if (this._resultadoActualizadoCallback) {
+                this._resultadoActualizadoCallback(eventoPruebaId, resultado);
+            }
+        };
+        this.connection.on("ResultadoActualizado", handleResultadoActualizado);
+        this.connection.on("resultadoactualizado", handleResultadoActualizado);
 
         this.connection.onreconnecting(() => {
             this._notifyStateChange("Reconnecting");
@@ -389,6 +398,10 @@ class TimingSignalRService {
 
     onGlobalResultStatusUpdated(callback) {
         this._globalResultStatusUpdatedCallback = callback;
+    }
+
+    onResultadoActualizado(callback) {
+        this._resultadoActualizadoCallback = callback;
     }
 
     onPaymentStatusChangeRequested(callback) {
