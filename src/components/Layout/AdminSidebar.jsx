@@ -90,7 +90,10 @@ const AdminSidebar = ({
                         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                         onClick={onNavClick}
                     >
-                        <span className="nav-icon">{item.icon}</span>
+                        <span className="nav-icon nav-icon-with-dot">
+                            {item.icon}
+                            {item.showDot && <span className="nav-unread-dot" aria-label="Mensajes sin leer" />}
+                        </span>
                         <span className="nav-label">{item.label}</span>
                     </NavLink>
                 ))}

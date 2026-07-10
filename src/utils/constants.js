@@ -67,8 +67,12 @@ export const ENDPOINTS = {
     MENSAJES: {
         HILOS: '/mensajes/hilos',
         HILO: (id) => `/mensajes/hilos/${id}`,
+        MASIVO: '/mensajes/hilos/masivo',
+        CAMPANAS: '/mensajes/campanas',
+        CAMPANA: (id) => `/mensajes/campanas/${id}`,
         RESPONDER: (id) => `/mensajes/hilos/${id}/responder`,
         LEER: (id) => `/mensajes/hilos/${id}/leer`,
+        NO_LEIDOS: '/mensajes/no-leidos/count',
     },
 }
 

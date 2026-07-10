@@ -92,19 +92,23 @@ Módulo **tipo email** (no chat en vivo): mensajes persistidos, **historial por 
 
 ---
 
-### Fase 2 — Admin y Club (1:1 completo)
+### Fase 2 — Admin y Club (1:1 completo) ✅
+
+**Estado:** Implementado (jul 2026).
 
 **Backend:** Admin→Club, Club→Admin (misma federación).
 
 **Frontend:**
 - Props `modoAdmin` / `modoClub` en `MensajesSection`
-- Rutas `/admin/mensajes`, `/club/mensajes`
+- Rutas `/super/mensajes` (Admin), `/club/mensajes`
 
 **Cierre:** 3 roles con mensajería 1:1; aislamiento entre usuarios del mismo rol.
 
 ---
 
-### Fase 3 — Envío masivo + campañas
+### Fase 3 — Envío masivo + campañas ✅
+
+**Estado:** Implementado (jul 2026).
 
 **Backend:** `CampanaEnvio`, `POST /hilos/masivo`, `GET /campanas`, `GET /campanas/{id}`.
 
@@ -114,11 +118,13 @@ Módulo **tipo email** (no chat en vivo): mensajes persistidos, **historial por 
 
 ---
 
-### Fase 4 — Badge de no leídos
+### Fase 4 — Badge de no leídos ✅
+
+**Estado:** Implementado (jul 2026) — puntito rojo delicado.
 
 **Backend:** `GET /no-leidos/count`
 
-**Frontend:** `useUnreadMessages.js` (poll 90 s), badge en 3 sidebars.
+**Frontend:** `useUnreadMessages.js` (poll 90 s), puntito en sidebar Admin/SuperAdmin y card Club.
 
 **Cierre:** badge sube/baja; si falla API, app no crashea.
 

@@ -1,0 +1,86 @@
+.dest-multi {
+    border: 1px solid var(--color-surface-hover);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-tertiary);
+    overflow: hidden;
+}
+
+.dest-multi-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--color-surface-hover);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.dest-multi-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.dest-multi-actions button {
+    background: transparent;
+    border: 1px solid var(--color-surface-hover);
+    color: var(--color-text-primary);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.55rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.dest-multi-actions button:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dest-multi-list {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.dest-multi-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: none;
+    border-bottom: 1px solid var(--color-surface-hover);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    text-align: left;
+}
+
+.dest-multi-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.dest-multi-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.85rem 0.45rem 1.75rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--color-text-primary);
+}
+
+.dest-multi-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.dest-multi-item small {
+    color: var(--color-text-muted);
+}
+
+.dest-multi-empty {
+    padding: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    border: 1px dashed var(--color-surface-hover);
+    border-radius: var(--radius-md);
+}

@@ -13,13 +13,16 @@ import PerfilClubSection from './sections/PerfilClubSection';
 import PagosClubSection from './sections/PagosClubSection';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
-import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer, DollarSign, ShieldAlert } from 'lucide-react';
+import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer, DollarSign, ShieldAlert, Mail } from 'lucide-react';
+import MensajesSection from '../Shared/MensajesSection';
+import useUnreadMessages from '../../hooks/useUnreadMessages';
 import './Dashboard.css';
  
 const ClubDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
+    const { hasUnread } = useUnreadMessages(true);
     const isRoot = location.pathname === '/club' || location.pathname === '/club/';
     const [clubName, setClubName] = useState('');
     const [stats, setStats] = useState({ athletes: 0, events: 0 });
@@ -273,12 +276,13 @@ const ClubDashboard = () => {
  
             <div className="dashboard-content-area">
                 <Routes>
-                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} user={user} pagoAfiliacionAlDia={pagoAfiliacionAlDia} />} />
+                    <Route index element={<DashboardMenu navigate={navigate} stats={stats} recentActivity={recentActivity} user={user} pagoAfiliacionAlDia={pagoAfiliacionAlDia} hasUnreadMessages={hasUnread} />} />
                     <Route path="atletas" element={<AtletasSection pagoAfiliacionAlDia={pagoAfiliacionAlDia} />} />
                     <Route path="eventos" element={<EventosSection pagoAfiliacionAlDia={pagoAfiliacionAlDia} />} />
                     <Route path="controles" element={<ControlesSection />} />
                     <Route path="perfil" element={<PerfilClubSection />} />
                     <Route path="pagos" element={<PagosClubSection />} />
+                    <Route path="mensajes" element={<MensajesSection modo="club" />} />
                     {/* <Route path="organizar/*" element={<GestionEventosSection />} /> */}
                     <Route path="resultados" element={<GestionResultadosSection />} />
                 </Routes>
@@ -287,7 +291,7 @@ const ClubDashboard = () => {
     );
 };
 
-const DashboardMenu = ({ navigate, stats, recentActivity, user, pagoAfiliacionAlDia }) => (
+const DashboardMenu = ({ navigate, stats, recentActivity, user, pagoAfiliacionAlDia, hasUnreadMessages }) => (
     <div className="dashboard-menu-container fade-in">
         <div className="dashboard-grid mb-xl">
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('atletas')}>
@@ -311,18 +315,19 @@ const DashboardMenu = ({ navigate, stats, recentActivity, user, pagoAfiliacionAl
                 <p className="card-label">{pagoAfiliacionAlDia ? 'Afiliación Anual Al Día' : 'Afiliación Pendiente'}</p>
             </div>
  
-            {/* user?.rol === 'Admin' && (
-                <div className="dashboard-card glass-effect clickable" onClick={() => navigate('organizar')}>
-                    <div className="card-icon" style={{ color: '#10B981' }}><LayoutTemplate size={40} /></div>
-                    <h3>Organizar Evento</h3>
-                    <p className="card-label">Crear y gestionar regatas</p>
-                </div>
-            ) */}
- 
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('resultados')}>
                 <div className="card-icon" style={{ color: 'var(--color-accent-orange)' }}><Trophy size={40} /></div>
                 <h3>Resultados</h3>
                 <p className="card-label">Carga de tiempos y Start List</p>
+            </div>
+
+            <div className="dashboard-card glass-effect clickable" onClick={() => navigate('mensajes')}>
+                <div className="card-icon card-icon-with-dot" style={{ color: '#60a5fa' }}>
+                    <Mail size={40} />
+                    {hasUnreadMessages && <span className="card-unread-dot" aria-label="Mensajes sin leer" />}
+                </div>
+                <h3>Mensajes</h3>
+                <p className="card-label">Comunicación con la federación</p>
             </div>
 
             {user?.rol === 'Admin' && (

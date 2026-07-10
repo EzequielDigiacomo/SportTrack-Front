@@ -17,6 +17,7 @@ import GestionPagosSection from './sections/GestionPagosSection';
 import ProgressionAuditPage from './sections/ProgressionAuditPage';
 import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
+import useUnreadMessages from '../../hooks/useUnreadMessages';
 
 
 import { 
@@ -42,7 +43,7 @@ import './AdminDashboard.css';
 const NAV_ITEMS = [
     { id: 'inicio', path: '', icon: <LayoutDashboard size={20} />, label: 'Inicio', exact: true },
     { id: 'federaciones', path: 'federaciones', icon: <Globe size={20} />, label: 'Federaciones' },
-    { id: 'mensajes', path: 'mensajes', icon: <Mail size={20} />, label: 'Mensajes', superOnly: true },
+    { id: 'mensajes', path: 'mensajes', icon: <Mail size={20} />, label: 'Mensajes' },
     { id: 'atletas', path: 'atletas', icon: <Users size={20} />, label: 'Atletas' },
     { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
@@ -62,6 +63,7 @@ const SuperDashboard = () => {
     const navigate = useNavigate();
     const role = user?.rol?.trim().toLowerCase();
     const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
+    const { hasUnread } = useUnreadMessages(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(isSuper); // Siempre abierto por defecto para SuperAdmin
     const timeoutRef = useRef(null);
     const inactivityRef = useRef(null);
@@ -112,7 +114,11 @@ const SuperDashboard = () => {
         }
 
         return true;
-    });
+    }).map(item => (
+        item.id === 'mensajes'
+            ? { ...item, showDot: hasUnread }
+            : item
+    ));
 
     useEffect(() => {
         return () => {
@@ -178,7 +184,7 @@ const SuperDashboard = () => {
                         <Route path="auditoria" element={<ProgressionAuditPage />} />
                         <Route path="configuracion" element={<ConfiguracionSection />} />
                         <Route path="federaciones/*" element={<GestionFederacionesSection />} />
-                        <Route path="mensajes" element={<MensajesSection modo="super" />} />
+                        <Route path="mensajes" element={<MensajesSection modo={isSuper ? 'super' : 'admin'} />} />
                         <Route path="saas" element={<SaaSManagement />} />
                         <Route path="federacion/:id" element={<AdminHome />} />
                         <Route path="soporte" element={<SoporteSection />} />

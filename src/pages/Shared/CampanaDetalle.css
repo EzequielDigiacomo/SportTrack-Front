@@ -1,0 +1,121 @@
+.campana-detalle {
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.campana-detalle-header h3 {
+    margin: 0 0 0.35rem;
+    color: var(--color-text-primary);
+}
+
+.campana-detalle-header p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.campana-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.campana-stats span {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-secondary);
+}
+
+.campana-cuerpo {
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-surface-hover);
+    background: var(--color-bg-tertiary);
+}
+
+.campana-cuerpo strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--color-text-primary);
+}
+
+.campana-cuerpo p {
+    margin: 0 0 0.5rem;
+    white-space: pre-wrap;
+    color: var(--color-text-primary);
+    line-height: 1.45;
+}
+
+.campana-cuerpo small {
+    color: var(--color-text-muted);
+}
+
+.campana-hilos-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.campana-hilos-head,
+.campana-hilos-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.65rem 0.75rem;
+}
+
+.campana-hilos-head {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-surface-hover);
+}
+
+.campana-hilos-row {
+    border: 1px solid var(--color-surface-hover);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.campana-hilos-row strong {
+    color: var(--color-text-primary);
+}
+
+.campana-hilos-row small {
+    color: var(--color-text-muted);
+}
+
+.campana-estado {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.campana-estado .ok {
+    color: #34d399;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.campana-estado .pending {
+    color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+@media (max-width: 700px) {
+    .campana-hilos-head,
+    .campana-hilos-row {
+        grid-template-columns: 1fr;
+    }
+}

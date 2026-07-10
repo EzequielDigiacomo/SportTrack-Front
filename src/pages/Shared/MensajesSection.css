@@ -5,6 +5,54 @@
     min-height: calc(100vh - 120px);
 }
 
+.mensajes-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mensajes-tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-surface-hover);
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.mensajes-tabs button.active {
+    background: rgba(var(--color-primary-rgb), 0.15);
+    border-color: rgba(var(--color-primary-rgb), 0.35);
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.mensajes-modo-envio {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mensajes-modo-envio button {
+    flex: 1;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-surface-hover);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.mensajes-modo-envio button.active {
+    border-color: rgba(var(--color-primary-rgb), 0.4);
+    color: var(--color-text-primary);
+    font-weight: 700;
+}
+
 .mensajes-layout {
     display: grid;
     grid-template-columns: minmax(280px, 340px) 1fr;

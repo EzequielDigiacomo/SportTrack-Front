@@ -51,6 +51,25 @@
     margin-bottom: var(--spacing-sm);
 }
 
+.card-icon-with-dot {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-unread-dot {
+    position: absolute;
+    top: 2px;
+    right: -2px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
+    pointer-events: none;
+}
+
 .card-label {
     font-size: 0.9rem;
     color: var(--color-text-muted);

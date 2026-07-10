@@ -277,6 +277,25 @@
 
 .nav-icon { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; }
 
+.nav-icon-with-dot {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-unread-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 2px var(--color-bg-secondary, #0f172a);
+    pointer-events: none;
+}
+
 .sidebar-logout {
     margin-top: auto;
     padding: 0.7rem var(--spacing-md);
