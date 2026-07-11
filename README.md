@@ -2,6 +2,14 @@
 
 SportTrack es la plataforma pública y administrativa para la gestión en tiempo real de competencias de remo y canotaje. Este repositorio contiene el código fuente de la interfaz de usuario (Frontend), diseñada para ofrecer una experiencia rápida, moderna y responsiva.
 
+## Documentación
+
+➡️ **Toda la documentación está en [`docs/`](./docs/README.md)**  
+(guías, casos de uso, criterios, técnico, entrega, referencia).
+
+> Padrón federativo SIGDEF (tutores, accesos, clubes): ver repo **FrontSigdef** → `docs/`.  
+> API: **SportTrack-Sigdef** → `docs/`.
+
 ---
 
 ## ✨ Características de la Plataforma
