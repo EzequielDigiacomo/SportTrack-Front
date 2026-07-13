@@ -635,11 +635,11 @@
         font-size: 0.9rem !important;
     }
 
-    .resultados-table-wrapper .admin-table thead {
+    .resultados-table-wrapper:not(.live-results-view) .admin-table thead {
         display: none;
     }
 
-    .resultados-table-wrapper .admin-table tr {
+    .resultados-table-wrapper:not(.live-results-view) .admin-table tr {
         display: grid !important;
         grid-template-columns: 50px 1fr !important;
         grid-template-areas: 
@@ -655,7 +655,7 @@
         align-items: center !important;
     }
 
-    .resultados-table-wrapper .admin-table td {
+    .resultados-table-wrapper:not(.live-results-view) .admin-table td {
         display: block !important;
         padding: 0 !important;
         border: none !important;
@@ -664,12 +664,12 @@
         background: transparent !important;
     }
 
-    .col-pos { 
+    .resultados-table-wrapper:not(.live-results-view) .col-pos { 
         grid-area: pos; 
         display: flex !important;
         align-items: center;
     }
-    .col-carril { 
+    .resultados-table-wrapper:not(.live-results-view) .col-carril { 
         grid-area: carril; 
         font-size: 1rem;
         color: var(--color-primary-light);
@@ -677,26 +677,26 @@
         align-items: center;
         font-weight: 800;
     }
-    .col-carril::before {
+    .resultados-table-wrapper:not(.live-results-view) .col-carril::before {
         content: 'CARRIL:';
         font-size: 0.65rem;
         margin-right: 6px;
         color: var(--color-text-dim);
     }
-    .col-atleta { 
+    .resultados-table-wrapper:not(.live-results-view) .col-atleta { 
         grid-area: atleta; 
         text-align: left;
         border-bottom: 1px solid rgba(255,255,255,0.05) !important;
         padding-bottom: 8px !important;
         margin-bottom: 2px !important;
     }
-    .col-club { 
+    .resultados-table-wrapper:not(.live-results-view) .col-club { 
         grid-area: club; 
         display: flex !important;
         align-items: center;
         justify-content: flex-end;
     }
-    .col-tiempo { 
+    .resultados-table-wrapper:not(.live-results-view) .col-tiempo { 
         grid-area: tiempo; 
         display: flex !important;
         justify-content: flex-end;
@@ -841,4 +841,429 @@
     background: rgba(59, 130, 246, 0.1);
     border: 1px solid rgba(59, 130, 246, 0.25);
     color: #93c5fd;
+}
+
+/* ── Header resultados (clases nuevas) ── */
+.resultados-header-section {
+    padding: 1.5rem 2rem;
+    margin-bottom: 2.5rem;
+}
+
+.resultados-header-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.resultados-field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.regata-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.regata-pdf-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.btn-pdf-mini {
+    padding: 0 8px !important;
+    font-size: 10px !important;
+    height: 20px !important;
+    border-radius: 4px !important;
+    background: rgba(255,255,255,0.05) !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+}
+
+.resultados-header-status {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.resultados-status-left {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-pill strong {
+    color: white;
+}
+
+.control-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.control-title-row .admin-title {
+    margin: 0;
+}
+
+.control-title-row .btn-admin-secondary {
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.control-page-subtitle {
+    margin-top: 0.5rem;
+}
+
+/* ── CONTROL / RESULTADOS MOBILE ── */
+@media (max-width: 1000px) {
+    .control-mobile-ready .control-page-header {
+        margin-bottom: 0.5rem;
+    }
+
+    .control-mobile-ready .control-page-header .admin-title {
+        font-size: 1.05rem;
+        line-height: 1.25;
+    }
+
+    .control-mobile-ready .control-page-subtitle {
+        display: none;
+    }
+
+    .control-mobile-ready .resultados-header-section.glass-effect,
+    .control-mobile-ready .action-bar-premium.glass-effect,
+    .control-mobile-ready .fase-card.glass-effect {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+        background: var(--color-bg-secondary, #12141e) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .control-mobile-ready .resultados-header-section {
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+        border-radius: 10px;
+    }
+
+    .control-mobile-ready .resultados-header-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .control-mobile-ready .resultados-field-label {
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+    }
+
+    .control-mobile-ready .admin-select {
+        min-height: 44px;
+        font-size: 0.95rem;
+        border-radius: 8px;
+    }
+
+    .control-mobile-ready .btn-pdf-mini {
+        height: 28px !important;
+        font-size: 0.65rem !important;
+        padding: 0 8px !important;
+    }
+
+    .control-mobile-ready .resultados-header-status {
+        margin-top: 10px;
+        padding-top: 10px;
+        gap: 8px;
+    }
+
+    .control-mobile-ready .status-pill {
+        font-size: 0.75rem;
+        background: rgba(255,255,255,0.05);
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+
+    .control-mobile-ready .status-pill strong {
+        font-size: 0.85rem;
+    }
+
+    .control-mobile-ready .admin-tabs-nav-modern {
+        display: flex;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .control-mobile-ready .admin-tabs-nav-modern .tab-link {
+        flex: 1;
+        min-height: 40px;
+        font-size: 0.8rem;
+        border-radius: 8px;
+        justify-content: center;
+    }
+
+    .control-mobile-ready .action-bar-premium {
+        padding: 10px !important;
+        border-radius: 10px;
+        margin-bottom: 10px !important;
+        gap: 8px !important;
+        flex-wrap: wrap !important;
+        height: auto !important;
+    }
+
+    .control-mobile-ready .info-badge-modern {
+        font-size: 0.8rem;
+    }
+
+    .control-mobile-ready .promotion-status-banner {
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        font-size: 0.78rem;
+        line-height: 1.35;
+        border-radius: 8px;
+    }
+
+    /* Cards de resultados admin (no live) más compactas */
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .admin-table tr {
+        gap: 8px 8px !important;
+        padding: 10px !important;
+        margin-bottom: 8px !important;
+        border-radius: 8px !important;
+    }
+
+    .control-mobile-ready .atleta-names {
+        font-size: 0.85rem;
+    }
+
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .col-carril {
+        font-size: 0.85rem !important;
+    }
+
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .col-carril::before {
+        font-size: 0.6rem;
+        margin-right: 4px;
+    }
+
+    .control-mobile-ready .chip {
+        font-size: 0.65rem !important;
+        padding: 1px 5px !important;
+    }
+
+    .control-mobile-ready .fase-card {
+        padding: 10px !important;
+        border-radius: 10px;
+        margin-bottom: 8px;
+    }
+
+    .control-mobile-ready .fase-card h4 {
+        font-size: 0.95rem;
+    }
+
+    .control-mobile-ready .badge-time {
+        font-size: 0.7rem;
+    }
+
+    /* FaseCard table → filas compactas en mobile */
+    .control-mobile-ready .fase-card .admin-table.mini-table thead {
+        display: none;
+    }
+
+    .control-mobile-ready .fase-card .admin-table.mini-table tr {
+        display: grid;
+        grid-template-columns: 36px 1fr auto;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .control-mobile-ready .fase-card .admin-table.mini-table tr:last-child {
+        border-bottom: none;
+    }
+
+    .control-mobile-ready .fase-card .admin-table.mini-table td {
+        border: none;
+        padding: 0;
+        font-size: 0.82rem;
+    }
+
+    .control-mobile-ready .fase-card .admin-table.mini-table td:first-child {
+        font-size: 0.9rem;
+        color: #60a5fa;
+    }
+
+    /* ── Grilla de resultados Control: pos + tiempos en una fila ── */
+    .resultados-table-wrapper.live-results-view {
+        margin-bottom: 0.75rem;
+    }
+
+    .resultados-table-wrapper.live-results-view .live-results-fase-title,
+    .live-results-fase-title {
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: 0.3rem;
+        margin-bottom: 0.45rem;
+        font-size: 0.9rem;
+    }
+
+    .live-results-fase-title span {
+        color: var(--color-primary-light);
+    }
+
+    .resultados-table-wrapper.live-results-view .live-results-table thead {
+        display: none !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .live-result-row {
+        display: grid !important;
+        grid-template-columns: 26px 26px minmax(0, 1fr) auto !important;
+        grid-template-areas: "pos carril atleta tiempo" !important;
+        gap: 4px 6px !important;
+        padding: 6px 8px !important;
+        margin-bottom: 4px !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        border-radius: 6px !important;
+        align-items: center !important;
+        min-height: 36px !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .live-result-row td {
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+        border: none !important;
+        width: auto !important;
+        height: auto !important;
+        background: transparent !important;
+        margin: 0 !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .col-pos {
+        grid-area: pos !important;
+        justify-content: center !important;
+        font-size: 0.75rem !important;
+        font-weight: 800 !important;
+        color: #94a3b8 !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .col-carril {
+        grid-area: carril !important;
+        justify-content: center !important;
+        font-size: 0.8rem !important;
+        font-weight: 800 !important;
+        color: #60a5fa !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .col-carril::before {
+        content: none !important;
+        display: none !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .col-atleta {
+        grid-area: atleta !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin: 0 !important;
+        min-width: 0;
+        display: block !important;
+    }
+
+    .live-atleta-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        min-width: 0;
+    }
+
+    .live-atleta-name {
+        color: #fff !important;
+        font-size: 0.72rem !important;
+        font-weight: 650 !important;
+        line-height: 1.15 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+    }
+
+    .live-tripulacion-tag {
+        display: none !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .col-club,
+    .resultados-table-wrapper.live-results-view .col-diff {
+        display: none !important;
+    }
+
+    .resultados-table-wrapper.live-results-view .col-tiempo {
+        grid-area: tiempo !important;
+        justify-content: flex-end !important;
+        font-size: 0.78rem !important;
+        font-weight: 800 !important;
+        color: #fff !important;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        min-width: 70px;
+    }
+
+    .resultados-table-wrapper.live-results-view .live-time:empty::after {
+        content: '—';
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .resultados-table-wrapper.live-results-view .live-time:not(:empty) {
+        color: #fff;
+        font-weight: 800;
+    }
+
+    .resultados-table-wrapper.live-results-view .pos-num:empty::after {
+        content: '·';
+        color: #475569;
+    }
+
+    .resultados-table-wrapper.live-results-view .trophy.gold { color: #eab308; }
+    .resultados-table-wrapper.live-results-view .trophy.silver { color: #94a3b8; }
+    .resultados-table-wrapper.live-results-view .trophy.bronze { color: #cd7f32; }
+
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .admin-table tr {
+        gap: 6px 8px !important;
+        padding: 8px 10px !important;
+        margin-bottom: 6px !important;
+        border-radius: 8px !important;
+    }
+
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .col-pos input,
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .col-carril input {
+        width: 40px !important;
+        height: 30px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .control-mobile-ready .resultados-table-wrapper:not(.live-results-view) .col-tiempo input {
+        width: 96px !important;
+        height: 30px !important;
+        font-size: 0.8rem !important;
+    }
 }

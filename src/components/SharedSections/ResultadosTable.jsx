@@ -79,11 +79,11 @@ const ResultadosTable = ({
         const liderMs = liderTime ? timeToMs(liderTime) : null;
 
         return (
-            <div className="resultados-table-wrapper fade-in" style={{ marginBottom: '2.5rem' }}>
-                <h3 style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-                    Fase: <span style={{ color: 'var(--color-primary-light)' }}>{fase.nombreFase}</span>
+            <div className="resultados-table-wrapper live-results-view fade-in">
+                <h3 className="live-results-fase-title">
+                    Fase: <span>{fase.nombreFase}</span>
                 </h3>
-                <table className="admin-table">
+                <table className="admin-table live-results-table">
                     <thead>
                         <tr>
                             <th style={{ width: '60px' }}>POS</th>
@@ -105,57 +105,52 @@ const ResultadosTable = ({
 
                             const tMs = timeStr ? timeToMs(timeStr) : null;
                             const diff = (pos !== 1 && liderMs && tMs) ? tMs - liderMs : null;
+                            const names = res.tripulantes && res.tripulantes.length > 0 
+                                ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)]
+                                : [res.participanteNombre];
+                            const displayNames = isBoteK4(fase)
+                                ? names.map(n => getSoloApellido(n)).join(' - ')
+                                : names.join(' - ');
 
                             return (
-                                <tr key={res.id} className={pos === 1 ? 'row-official-saved' : ''} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                                    <td className="col-pos" style={{ fontWeight: 'bold', textAlign: 'center' }}>
+                                <tr
+                                    key={res.id}
+                                    className={`live-result-row ${pos === 1 ? 'row-official-saved' : ''} ${(pos || displayTime || (diff != null && !isSpecialStatus) || isSpecialStatus) ? 'has-meta' : ''}`}
+                                >
+                                    <td className="col-pos">
                                         {pos === 1 ? (
-                                            <Trophy size={16} style={{ color: '#eab308', display: 'inline' }} />
+                                            <Trophy size={14} className="trophy gold" />
                                         ) : pos === 2 ? (
-                                            <Trophy size={16} style={{ color: '#94a3b8', display: 'inline' }} />
+                                            <Trophy size={14} className="trophy silver" />
                                         ) : pos === 3 ? (
-                                            <Trophy size={16} style={{ color: '#cd7f32', display: 'inline' }} />
+                                            <Trophy size={14} className="trophy bronze" />
                                         ) : (
-                                            pos || '—'
+                                            <span className="pos-num">{pos || ''}</span>
                                         )}
                                     </td>
-                                    <td className="col-carril text-center" style={{ fontWeight: 'bold' }}>
+                                    <td className="col-carril">
                                         {res.carril || '-'}
                                     </td>
                                     <td className="col-atleta">
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <strong style={{ color: 'white', fontSize: '1.05rem' }}>
-                                                {(() => {
-                                                    const names = res.tripulantes && res.tripulantes.length > 0 
-                                                        ? [res.participanteNombre, ...res.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)]
-                                                        : [res.participanteNombre];
-                                                    
-                                                    if (isBoteK4(fase)) {
-                                                        return names.map(n => getSoloApellido(n)).join(' - ');
-                                                    } else {
-                                                        return names.join(' - ');
-                                                    }
-                                                })()}
-                                            </strong>
+                                        <div className="live-atleta-block">
+                                            <strong className="live-atleta-name">{displayNames}</strong>
                                             {res.tripulantes && res.tripulantes.length > 0 && (
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: '2px', letterSpacing: '0.5px' }}>
-                                                    TRIPULACIÓN COMPLETA
-                                                </span>
+                                                <span className="live-tripulacion-tag">TRIPULACIÓN</span>
                                             )}
                                         </div>
                                     </td>
                                     <td className="col-club">
                                         <span className="chip chip-ecu-blue">{res.clubSigla}</span>
                                     </td>
-                                    <td className="col-tiempo" style={{ fontWeight: 'bold', color: 'white' }}>
+                                    <td className="col-tiempo">
                                         {isSpecialStatus ? (
                                             <span className={`status-badge-judge ${status.toLowerCase()}`}>{status}</span>
                                         ) : (
-                                            displayTime || '—'
+                                            <span className="live-time">{displayTime || ''}</span>
                                         )}
                                     </td>
-                                    <td className="col-diff" style={{ color: 'var(--color-text-dim)', fontSize: '0.9rem' }}>
-                                        {isSpecialStatus ? '—' : formatDiff(diff)}
+                                    <td className="col-diff">
+                                        {!isSpecialStatus && diff != null ? formatDiff(diff) : ''}
                                     </td>
                                 </tr>
                             );

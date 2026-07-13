@@ -41,7 +41,8 @@ const StarterDashboard = () => {
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    // En mobile el cronograma arranca cerrado para priorizar la prueba activa
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth <= 1000);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [startingStatus, setStartingStatus] = useState(null); // 'connecting' | 'starting' | 'resetting' | 'fallback_http' | 'success' | 'success_reset' | 'error'
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
@@ -439,34 +440,53 @@ const StarterDashboard = () => {
                     
                     const isTkLinked = !!connectedTimekeeper;
                     const isControlLinked = !!connectedControl;
+                    const isSelfLinked = !!selectedEvento;
                     
                     return (
                         <div className="judges-sync-card" title="Estado de Enlace de Jueces">
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">LARGADOR</span>
-                                <span className={`sync-user-pill ${selectedEvento ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                            {/* Vista desktop: nombres completos */}
+                            <div className="sync-desktop-row">
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">LARGADOR</span>
+                                    <span className={`sync-user-pill ${isSelfLinked ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                                </div>
+                                <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
+                                    <Link2 size={16} style={isControlLinked ? undefined : { strokeDasharray: '3,3' }} />
+                                </div>
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">CONTROL</span>
+                                    {connectedControl ? (
+                                        <span className="sync-user-pill connected">{controlName.toUpperCase()}</span>
+                                    ) : (
+                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                    )}
+                                </div>
+                                <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
+                                    <Link2 size={16} style={isTkLinked ? undefined : { strokeDasharray: '3,3' }} />
+                                </div>
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">MESA DE LLEGADA</span>
+                                    {connectedTimekeeper ? (
+                                        <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
+                                    ) : (
+                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                    )}
+                                </div>
                             </div>
-                            <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
-                                {isControlLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
-                            </div>
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">CONTROL</span>
-                                {connectedControl ? (
-                                    <span className="sync-user-pill connected">{controlName.toUpperCase()}</span>
-                                ) : (
-                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                )}
-                            </div>
-                            <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
-                                {isTkLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
-                            </div>
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">MESA DE LLEGADA</span>
-                                {connectedTimekeeper ? (
-                                    <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
-                                ) : (
-                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                )}
+                            {/* Vista mobile: solo indicadores */}
+                            <div className="sync-mobile-dots" aria-label="Estado de enlace">
+                                <div className={`sync-dot-item ${isSelfLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Larg.</span>
+                                </div>
+                                <div className={`sync-dot-item ${isControlLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Ctrl</span>
+                                </div>
+                                <div className={`sync-dot-item ${isTkLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Lleg.</span>
+                                </div>
                             </div>
                         </div>
                     );
@@ -475,41 +495,55 @@ const StarterDashboard = () => {
             document.getElementById('global-sync-bar-portal-target')
         )}
 
-        <div className="starter-dashboard fade-in">
+        <div className="starter-dashboard fade-in starter-mobile-ready">
             {['Reconnecting', 'Connecting'].includes(connectionState) && (
                 <div className="connection-state-alert-bar reconnecting">
-                    <RefreshCw className="spin animate-spin" size={14} style={{ marginRight: '8px' }} />
-                    <span>⚠️ Conexión inestable. El sistema se está auto-sincronizando... por favor, espere antes de largar.</span>
+                    <RefreshCw className="spin animate-spin" size={14} />
+                    <span className="alert-text-full">Conexión inestable. Espere antes de largar.</span>
+                    <span className="alert-text-short">Reconectando…</span>
                 </div>
             )}
             {connectionState === 'Disconnected' && (
                 <div className="connection-state-alert-bar disconnected">
-                    <span>⚠️ Sin conexión en tiempo real. Se usará el canal de respaldo HTTP al largar.</span>
+                    <span className="alert-text-full">Sin tiempo real — se usará HTTP al largar.</span>
+                    <span className="alert-text-short">Sin señal · HTTP</span>
                 </div>
             )}
-            <aside className={`starter-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
-                    <h3 style={{ margin: 0, flex: 1 }}><Clock size={18} /> Próximas Pruebas</h3>
-                    <button 
-                        className="btn-collapse"
-                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    >
-                        {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
-                    </button>
-                </div>
+
+            <aside className={`starter-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : 'expanded'}`}>
+                <button
+                    type="button"
+                    className="cronograma-toggle-bar"
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                >
+                    <span className="cronograma-toggle-left">
+                        <Clock size={16} />
+                        <span>Cronograma</span>
+                        <span className="cronograma-count">{fases.length}</span>
+                    </span>
+                    <span className="cronograma-toggle-right">
+                        {selectedFase && (
+                            <span className="cronograma-current-chip">
+                                #{selectedFase.nroPrueba || (fases.findIndex(x => x.id === selectedFase.id) + 1)}
+                            </span>
+                        )}
+                        <span className="btn-collapse">{isSidebarCollapsed ? 'Abrir' : 'Cerrar'}</span>
+                    </span>
+                </button>
+
                 {!isSidebarCollapsed && (
-                    <div className="selection-stack">
+                    <div className="selection-stack cronograma-panel">
                         <div className="mobile-event-selector">
-                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px', display: 'block' }}>Evento:</label>
+                            <label>Evento</label>
                             <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
                                 <option value="">Seleccionar Evento...</option>
                                 {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                             </select>
                         </div>
 
-                        <div className="sidebar-section-header">
-                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Cronograma ({fases.length}):</label>
-                            <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
+                        <div className="sidebar-section-header desktop-only-toggle">
+                            <label>Lista ({fases.length})</label>
+                            <button type="button" className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
                                 {isCompact ? <Layout size={14} /> : <Grid size={14} />}
                             </button>
                         </div>
@@ -521,7 +555,6 @@ const StarterDashboard = () => {
                                     className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`}
                                     onClick={() => {
                                         setSelectedFase(f);
-                                        // Auto-collapse on mobile selection
                                         if (window.innerWidth <= 1000) setIsSidebarCollapsed(true);
                                     }}
                                 >
@@ -531,9 +564,9 @@ const StarterDashboard = () => {
                                         const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
                                         const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (f.categoriaNombre || 'Sin Categoría');
                                         return (
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{catName}</span>
-                                                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{f.nombreFase}</span>
+                                            <div className="prueba-item-detail">
+                                                <span className="prueba-item-cat">{catName}</span>
+                                                <span className="prueba-item-fase">{f.nombreFase}</span>
                                             </div>
                                         );
                                     })()}
@@ -549,17 +582,17 @@ const StarterDashboard = () => {
                     <div className="race-control glass-effect">
                         <header className="race-header">
                             <div className="header-left-actions">
-                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
-                                    <div className="badge-live">MODO LARGADOR</div>
+                                <div className="race-header-toolbar">
+                                    <div className="badge-live">LARGADOR</div>
                                     <button
                                         type="button"
                                         className="btn-refresh-sync"
                                         onClick={handleRefresh}
                                         disabled={refreshing || loading || !selectedEvento}
-                                        title="Recargar datos y reconectar con el servidor"
+                                        title="Recargar datos y reconectar"
                                     >
                                         <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
-                                        <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
+                                        <span className="btn-refresh-label">{refreshing ? '…' : 'Refrescar'}</span>
                                     </button>
                                 </div>
                                 {(() => {
@@ -568,13 +601,12 @@ const StarterDashboard = () => {
                                     const boteName = p ? (BOTE_NAMES[p.bote?.id] || p.bote?.nombre) : (selectedFase?.boteTipo || selectedFase?.tipoBote || 'Sin Bote');
                                     const distName = p ? (DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm') : (selectedFase?.distancia ? selectedFase.distancia + 'm' : '0m');
                                     const timeName = formatTime(selectedFase?.fechaHoraProgramada);
+                                    const raceNum = selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '');
                                     
                                     return (
                                         <div className="race-header-info">
                                             <h2>
-                                                <span className="race-id-prefix">
-                                                    #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
-                                                </span>
+                                                <span className="race-id-prefix">#{raceNum}</span>
                                                 {' '}{catName}
                                             </h2>
                                             <div className="race-meta">
@@ -587,32 +619,50 @@ const StarterDashboard = () => {
                                     );
                                 })()}
                             </div>
+
+                            <div className="quick-nav-footer race-nav-top">
+                                <button 
+                                    type="button"
+                                    className="btn-nav-step" 
+                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) <= 0}
+                                    onClick={() => {
+                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
+                                        if (idx > 0) setSelectedFase(fases[idx - 1]);
+                                    }}
+                                >
+                                    <ArrowLeft size={16} /> <span className="nav-label">Ant.</span>
+                                </button>
+                                <span className="nav-index">
+                                    {fases.findIndex(f => f.id === selectedFase?.id) + 1}/{fases.length}
+                                </span>
+                                <button 
+                                    type="button"
+                                    className="btn-nav-step" 
+                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) >= fases.length - 1}
+                                    onClick={() => {
+                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
+                                        if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
+                                    }}
+                                >
+                                    <span className="nav-label">Sig.</span> <ArrowRight size={16} />
+                                </button>
+                            </div>
                         </header>
 
                         <div className="fase-details">
                             <div className="athletes-checkin">
                                 <div className="checkin-header">
-                                    <h3><Users size={20} /> Atletas en Carriles</h3>
+                                    <h3><Users size={18} /> Carriles</h3>
                                     <div className="checkin-header-actions">
-                                        <button
-                                            type="button"
-                                            className="btn-refresh-sync"
-                                            onClick={handleRefresh}
-                                            disabled={refreshing || loading}
-                                            title="Recargar atletas y reconectar con el servidor"
-                                        >
-                                            <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
-                                            <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
-                                        </button>
                                         <button 
                                             type="button" 
                                             className="btn-reset-list"
                                             onClick={handleResetAllStatuses}
-                                            title="Restablecer todos los carriles al estado original (Pendiente)"
+                                            title="Restablecer todos los carriles a Pendiente"
                                             disabled={loading || selectedFase.estado !== 'Programada'}
                                         >
                                             <RotateCcw size={14} />
-                                            <span>Restablecer Lista</span>
+                                            <span>Restablecer</span>
                                         </button>
                                     </div>
                                 </div>
@@ -620,25 +670,28 @@ const StarterDashboard = () => {
                                     {(selectedFase.resultados || []).sort((a,b) => a.carril - b.carril).map(r => (
                                         <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
                                             <span className="lane-badge">{r.carril}</span>
-                                            <span className="athlete-name">
-                                                {r.tripulantes && r.tripulantes.length > 0 
-                                                    ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].join(' - ')
-                                                    : r.participanteNombre
-                                                }
-                                            </span>
-                                            <span className="club-tag-full">{r.clubNombre}</span>
+                                            <div className="athlete-info-block">
+                                                <span className="athlete-name">
+                                                    {r.tripulantes && r.tripulantes.length > 0 
+                                                        ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].join(' - ')
+                                                        : r.participanteNombre
+                                                    }
+                                                </span>
+                                                <span className="club-tag-full">{r.clubNombre}</span>
+                                            </div>
                                             <div className="status-quick-actions">
-                                                <button className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}>DNS</button>
-                                                <button className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}>DNF</button>
-                                                <button className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}>DSQ</button>
+                                                <button type="button" className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}>DNS</button>
+                                                <button type="button" className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}>DNF</button>
+                                                <button type="button" className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}>DSQ</button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="control-actions">
+                            <div className="control-actions starter-sticky-actions">
                                 <button 
+                                    type="button"
                                     className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''} ${connectionState !== 'Connected' ? 'connection-lost' : ''} ${connectionState === 'Connected' && !isTimekeeperConnected ? 'no-timekeeper' : ''}`}
                                     onClick={handleStartRace}
                                     disabled={selectedFase.estado !== 'Programada' || loading || connectionState !== 'Connected' || !isTimekeeperConnected}
@@ -647,70 +700,50 @@ const StarterDashboard = () => {
                                         connectionState === 'Connected' ? (
                                             !isTimekeeperConnected ? (
                                                 <>
-                                                    <Users size={48} />
+                                                    <Users size={32} className="start-icon" />
                                                     <span>ESPERANDO LLEGADA</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Play size={48} fill="currentColor" />
-                                                    <span>LARGAR CARRERA</span>
+                                                    <Play size={32} fill="currentColor" className="start-icon" />
+                                                    <span>LARGAR</span>
                                                 </>
                                             )
                                         ) : ['Reconnecting', 'Connecting'].includes(connectionState) ? (
                                             <>
-                                                <RefreshCw size={48} className="spin animate-spin" />
-                                                <span>ESPERE SEÑAL...</span>
+                                                <RefreshCw size={32} className="spin animate-spin start-icon" />
+                                                <span>ESPERE SEÑAL…</span>
                                             </>
                                         ) : (
                                             <>
-                                                <RefreshCw size={48} />
+                                                <RefreshCw size={32} className="start-icon" />
                                                 <span>SIN CONEXIÓN</span>
                                             </>
                                         )
                                     ) : (
                                         <>
-                                            <Activity size={48} className={selectedFase.estado === 'En Carrera' ? 'pulse' : ''} />
+                                            <Activity size={32} className={`start-icon ${selectedFase.estado === 'En Carrera' ? 'pulse' : ''}`} />
                                             <span>{selectedFase.estado.toUpperCase()}</span>
                                         </>
                                     )}
                                 </button>
                                 {(selectedFase.estado === 'En Carrera' || selectedFase.estado === 'Pendiente de Validación') && (
-                                    <button className="btn-reset-starter" onClick={handleResetRace} disabled={loading}>
-                                        <RefreshCw size={20} /> <span>REINICIAR</span>
+                                    <button type="button" className="btn-reset-starter" onClick={handleResetRace} disabled={loading}>
+                                        <RefreshCw size={18} /> <span>REINICIAR</span>
                                     </button>
                                 )}
-                            </div>
-                            
-                            {/* Navegación Rápida */}
-                            <div className="quick-nav-footer">
-                                <button 
-                                    className="btn-nav-step" 
-                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) <= 0}
-                                    onClick={() => {
-                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
-                                        if (idx > 0) setSelectedFase(fases[idx - 1]);
-                                    }}
-                                >
-                                    <ArrowLeft size={16} /> Anterior
-                                </button>
-                                <span className="nav-index">
-                                    Prueba {fases.findIndex(f => f.id === selectedFase?.id) + 1} de {fases.length}
-                                </span>
-                                <button 
-                                    className="btn-nav-step" 
-                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) >= fases.length - 1}
-                                    onClick={() => {
-                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
-                                        if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
-                                    }}
-                                >
-                                    Siguiente <ArrowRight size={16} />
-                                </button>
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="empty-msg">Seleccione una carrera del cronograma</div>
+                    <div className="empty-msg">
+                        <p>Abrí el cronograma y elegí una prueba</p>
+                        {isSidebarCollapsed && (
+                            <button type="button" className="btn-collapse empty-open-cronograma" onClick={() => setIsSidebarCollapsed(false)}>
+                                Abrir cronograma
+                            </button>
+                        )}
+                    </div>
                 )}
             </main>
             {confirmDialog.isOpen && (

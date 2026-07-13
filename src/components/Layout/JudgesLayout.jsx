@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import '../../pages/Super/AdminDashboard.css';
+import '../../pages/Judges/Judges.css';
 
 const NAV_ITEMS = [
     { id: 'inicio', path: '/super', icon: <LayoutDashboard size={20} />, label: 'Inicio Admin' },
@@ -163,7 +164,7 @@ const JudgesLayout = ({ children }) => {
             <main className="admin-main" style={!isAdmin ? { marginLeft: 0, width: '100%' } : {}}>
                 {/* Portal target for the Global Sync Bar */}
                 <div id="global-sync-bar-portal-target"></div>
-                <div className="admin-content-wrapper" style={!isAdmin ? { padding: '1rem' } : {}}>
+                <div className={`admin-content-wrapper ${!isAdmin ? 'judges-content-mobile' : ''}`}>
                     {children}
                 </div>
             </main>

@@ -178,6 +178,16 @@
     flex-direction: column;
 }
 
+.judges-content-mobile {
+    padding: 1rem;
+}
+
+@media (max-width: 1000px) {
+    .judges-content-mobile {
+        padding: 0.5rem;
+    }
+}
+
 .judges-top-header {
     display: flex;
     align-items: center;
@@ -1431,6 +1441,7 @@
     .btn-nav-step span { display: none; }
     .btn-nav-step { padding: 10px; }
 }
+.btn-status-toggle.active.dns { background: #64748b; color: white; border-color: #94a3b8; }
 .btn-status-toggle.active.dnf { background: #f59e0b; color: white; border-color: #fbbf24; }
 .btn-status-toggle.active.dsq { background: #ef4444; color: white; border-color: #f87171; }
 
@@ -1962,5 +1973,753 @@
     0% { opacity: 0.85; }
     50% { opacity: 0.5; }
     100% { opacity: 0.85; }
+}
+
+/* ── Starter: estructura nueva (desktop defaults) ── */
+.sync-desktop-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.sync-mobile-dots {
+    display: none;
+}
+
+.alert-text-short {
+    display: none;
+}
+
+.cronograma-toggle-bar {
+    display: none;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.prueba-item-detail {
+    display: flex;
+    flex-direction: column;
+}
+
+.prueba-item-cat {
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.prueba-item-fase {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.race-header-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.athlete-info-block {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.race-nav-top {
+    display: none;
+}
+
+.empty-open-cronograma {
+    margin-top: 12px;
+    padding: 10px 16px !important;
+    font-size: 0.9rem !important;
+}
+
+.mobile-event-selector label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+    display: block;
+}
+
+/* ── STARTER MOBILE REDESIGN (≤1000px) ── */
+@media (max-width: 1000px) {
+    .admin-layout.no-sidebar .admin-content-wrapper {
+        padding: 0.5rem !important;
+    }
+
+    .admin-layout.no-sidebar .admin-main {
+        padding-top: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+    }
+
+    .judges-top-header {
+        padding: 0.5rem 0.75rem;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: var(--color-bg-primary, #0a0c14);
+    }
+
+    .mobile-user-pill {
+        display: none;
+    }
+
+    .global-sync-bar {
+        padding: 6px 8px;
+        top: 56px;
+        position: sticky;
+        z-index: 999;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: var(--color-bg-secondary, #12141e);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .judges-sync-card {
+        padding: 4px 10px;
+        gap: 0;
+        border-radius: 8px;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        background: transparent;
+        border: none;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .judges-sync-card:hover {
+        background: transparent;
+        border-color: transparent;
+    }
+
+    .sync-desktop-row {
+        display: none;
+    }
+
+    .sync-mobile-dots {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        width: 100%;
+    }
+
+    .sync-dot-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .sync-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .sync-dot-item.on .sync-dot {
+        background: #34d399;
+        box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+    }
+
+    .sync-dot-item.off .sync-dot {
+        background: #f87171;
+        opacity: 0.85;
+    }
+
+    .sync-dot-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        color: #94a3b8;
+    }
+
+    .sync-dot-item.on .sync-dot-label {
+        color: #34d399;
+    }
+
+    .sync-dot-item.off .sync-dot-label {
+        color: #f87171;
+    }
+
+    .connection-state-alert-bar {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        letter-spacing: 0.2px;
+        text-transform: none;
+        margin-bottom: 8px;
+        box-shadow: none;
+        border-radius: 6px;
+        gap: 8px;
+    }
+
+    .connection-state-alert-bar .alert-text-full {
+        display: none;
+    }
+
+    .connection-state-alert-bar .alert-text-short {
+        display: inline;
+    }
+
+    .starter-dashboard {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        gap: 8px;
+        padding-bottom: 100px; /* espacio para LARGAR sticky */
+    }
+
+    .starter-sidebar.glass-effect,
+    .race-control.glass-effect {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: var(--color-bg-secondary, #12141e) !important;
+        box-shadow: none !important;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .starter-sidebar {
+        height: auto !important;
+        max-height: none;
+        width: 100%;
+        margin-bottom: 0;
+        border-radius: 10px;
+        padding: 0;
+        overflow: hidden;
+        gap: 0;
+    }
+
+    .cronograma-toggle-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 12px 14px;
+        min-height: 48px;
+    }
+
+    .cronograma-toggle-left,
+    .cronograma-toggle-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cronograma-toggle-left {
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .cronograma-count {
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.08);
+        color: #94a3b8;
+        padding: 2px 7px;
+        border-radius: 999px;
+    }
+
+    .cronograma-current-chip {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: #60a5fa;
+        background: rgba(59, 130, 246, 0.15);
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+
+    .starter-sidebar .btn-collapse {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    /* Ocultar h3 viejo si quedara — usamos la barra toggle */
+    .starter-sidebar > h3 {
+        display: none;
+    }
+
+    .desktop-only-toggle {
+        display: none !important;
+    }
+
+    .cronograma-panel {
+        padding: 0 12px 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        max-height: 42vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-event-selector select {
+        width: 100%;
+        min-height: 44px;
+        font-size: 1rem;
+        border-radius: 8px;
+    }
+
+    /* Grid de pruebas: targets táctiles, números más chicos */
+    .starter-dashboard .pruebas-list.compact-grid,
+    .starter-dashboard .pruebas-list,
+    .finisher-dashboard .pruebas-list.compact-grid,
+    .finisher-dashboard .pruebas-list {
+        display: grid !important;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+    }
+
+    .starter-dashboard .pruebas-list .prueba-item-mini,
+    .finisher-dashboard .pruebas-list .prueba-item-mini {
+        aspect-ratio: 1;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        font-weight: 700;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .starter-dashboard .pruebas-list .prueba-item-detail,
+    .finisher-dashboard .pruebas-list .prueba-item-detail {
+        display: none;
+    }
+
+    .starter-dashboard .pruebas-list .race-num,
+    .finisher-dashboard .pruebas-list .race-num {
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .race-control {
+        padding: 12px !important;
+        gap: 12px;
+        border-radius: 10px;
+        width: 100%;
+        min-height: auto;
+    }
+
+    .badge-live {
+        margin-bottom: 0;
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+
+    .race-header-toolbar {
+        margin-bottom: 8px;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .btn-refresh-sync {
+        padding: 8px 10px;
+        min-height: 36px;
+    }
+
+    .race-header-info h2 {
+        font-size: 1.15rem;
+        line-height: 1.25;
+        margin: 0 0 6px 0;
+    }
+
+    .race-id-prefix {
+        color: #60a5fa;
+        font-weight: 800;
+    }
+
+    .race-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 0 !important;
+        justify-content: flex-start !important;
+    }
+
+    .meta-item {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .race-nav-top {
+        display: flex !important;
+        width: 100%;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .race-nav-top .btn-nav-step {
+        min-height: 40px;
+        min-width: 72px;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+    .checkin-header {
+        margin-bottom: 8px;
+    }
+
+    .checkin-header h3 {
+        font-size: 0.95rem;
+    }
+
+    .btn-reset-list span {
+        font-size: 0.8rem;
+    }
+
+    .checkin-grid {
+        gap: 6px;
+    }
+
+    .checkin-row {
+        flex-wrap: nowrap;
+        align-items: center;
+        padding: 10px 10px !important;
+        gap: 8px !important;
+        margin-bottom: 0;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .checkin-row .lane-badge {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.9rem !important;
+        border-radius: 8px;
+    }
+
+    .athlete-info-block {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .checkin-row .athlete-name {
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        -webkit-line-clamp: unset;
+        display: block;
+    }
+
+    .checkin-row .club-tag-full {
+        max-width: 100%;
+        font-size: 0.65rem;
+        padding: 1px 6px;
+        background: transparent;
+        color: #94a3b8;
+    }
+
+    .checkin-row .status-quick-actions {
+        width: auto;
+        flex-shrink: 0;
+        gap: 4px;
+        justify-content: flex-end;
+    }
+
+    .checkin-row .btn-status-toggle {
+        min-width: 40px;
+        min-height: 36px;
+        padding: 6px 8px !important;
+        font-size: 0.7rem !important;
+        font-weight: 800;
+        border-radius: 6px;
+    }
+
+    /* LARGAR sticky al alcance del pulgar */
+    .starter-sticky-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 900;
+        margin: 0 !important;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(to top, rgba(10, 12, 20, 0.98) 60%, rgba(10, 12, 20, 0.85));
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .starter-sticky-actions .btn-start-big {
+        width: 100%;
+        max-width: 420px;
+        height: auto !important;
+        min-height: 56px;
+        border-radius: 14px !important;
+        border-width: 2px !important;
+        flex-direction: row;
+        gap: 10px;
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+        padding: 12px 16px;
+    }
+
+    .starter-sticky-actions .btn-start-big .start-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .starter-sticky-actions .btn-start-big span {
+        font-size: 1rem !important;
+        letter-spacing: 0.5px;
+    }
+
+    .starter-sticky-actions .btn-reset-starter {
+        flex-shrink: 0;
+        min-height: 56px;
+        border-radius: 12px;
+        padding: 0 14px;
+    }
+
+    .empty-msg {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: #94a3b8;
+    }
+}
+
+/* Desktop: mostrar toggle viejo en sidebar (h3 + collapse) vía barra adaptada */
+@media (min-width: 1001px) {
+    .cronograma-toggle-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        padding: 0;
+    }
+
+    .cronograma-toggle-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .cronograma-count {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+
+    .cronograma-current-chip {
+        display: none;
+    }
+
+    .race-nav-top {
+        display: flex;
+        margin-top: 1rem;
+    }
+
+    .starter-dashboard .fase-details .quick-nav-footer:not(.race-nav-top) {
+        display: none;
+    }
+}
+
+/* ── FINISHER MOBILE REDESIGN ── */
+.btn-doubt {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: not-allowed;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+
+.btn-doubt.active {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
+}
+
+.btn-doubt:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.empty-race-title {
+    color: var(--color-text-muted);
+    font-size: 1rem;
+}
+
+.pendientes-panel {
+    margin-top: 1.25rem;
+    border-top: 2px solid rgba(251, 191, 36, 0.3);
+    padding-top: 1rem;
+}
+
+.pendientes-panel h3 {
+    color: #fbbf24;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+}
+
+.a-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+@media (max-width: 1000px) {
+    .finisher-dashboard {
+        padding: 0;
+        gap: 8px;
+        height: auto !important;
+        padding-bottom: 88px;
+    }
+
+    .finisher-dashboard .finisher-sidebar.glass-effect,
+    .finisher-dashboard .finisher-header.glass-effect,
+    .finisher-dashboard .finisher-main.glass-effect {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: var(--color-bg-secondary, #12141e) !important;
+        box-shadow: none !important;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .finisher-sidebar {
+        order: 1;
+        height: auto !important;
+        max-height: none;
+        width: 100%;
+        margin-bottom: 0;
+        border-radius: 10px;
+        padding: 0;
+        overflow: hidden;
+        gap: 0;
+    }
+
+    .finisher-header {
+        order: 2;
+        margin-bottom: 0;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 8px;
+        padding: 12px !important;
+        border-radius: 10px;
+    }
+
+    .finisher-main {
+        order: 3;
+        padding: 12px !important;
+        width: 100%;
+        border-radius: 10px;
+    }
+
+    .finisher-header .race-header-info {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .finisher-header .race-header-info h2 {
+        font-size: 1.1rem;
+        margin: 0 0 6px;
+    }
+
+    .finisher-header .main-timer {
+        font-size: 2.4rem;
+        line-height: 1;
+        text-align: center;
+        width: 100%;
+        padding: 4px 0;
+    }
+
+    .finisher-header .race-nav-top {
+        display: flex !important;
+        width: 100%;
+        margin-top: 8px;
+        padding: 8px 0 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        background: transparent;
+        border-radius: 0;
+    }
+
+    .finisher-header .race-meta {
+        justify-content: flex-start !important;
+        gap: 6px;
+    }
+
+    .finisher-sticky-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 900;
+        margin: 0 !important;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(to top, rgba(10, 12, 20, 0.98) 60%, rgba(10, 12, 20, 0.85));
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .finisher-sticky-actions .btn-reset,
+    .finisher-sticky-actions .btn-save-official {
+        flex: 1;
+        min-height: 48px;
+        justify-content: center;
+        border-radius: 12px;
+        font-weight: 700;
+    }
+
+    .connection-state-alert-bar {
+        margin: 0 0 8px 0 !important;
+        width: 100% !important;
+    }
+
+    .lane-buttons-grid {
+        gap: 8px !important;
+    }
+
+    .lane-btn {
+        min-height: 64px;
+        border-radius: 10px;
+    }
+
+    .btn-doubt {
+        min-height: 48px;
+        font-size: 0.95rem;
+        box-shadow: none;
+    }
+
+    .btn-doubt.active {
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+    }
 }
 

@@ -409,34 +409,51 @@ return (
                     
                     const isStarterLinked = !!connectedStarter;
                     const isTkLinked = !!connectedTimekeeper;
+                    const isSelfLinked = !!selectedEvento;
                     
                     return (
                         <div className="judges-sync-card" title="Estado de Enlace de Jueces">
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">LARGADOR</span>
-                                {connectedStarter ? (
-                                    <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
-                                ) : (
-                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                )}
+                            <div className="sync-desktop-row">
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">LARGADOR</span>
+                                    {connectedStarter ? (
+                                        <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
+                                    ) : (
+                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                    )}
+                                </div>
+                                <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
+                                    <Link2 size={16} style={isStarterLinked ? undefined : { strokeDasharray: '3,3' }} />
+                                </div>
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">CONTROL</span>
+                                    <span className={`sync-user-pill ${isSelfLinked ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                                </div>
+                                <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
+                                    <Link2 size={16} style={isTkLinked ? undefined : { strokeDasharray: '3,3' }} />
+                                </div>
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">MESA DE LLEGADA</span>
+                                    {connectedTimekeeper ? (
+                                        <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
+                                    ) : (
+                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                    )}
+                                </div>
                             </div>
-                            <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
-                                {isStarterLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
-                            </div>
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">CONTROL</span>
-                                <span className={`sync-user-pill ${selectedEvento ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
-                            </div>
-                            <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
-                                {isTkLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
-                            </div>
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">MESA DE LLEGADA</span>
-                                {connectedTimekeeper ? (
-                                    <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
-                                ) : (
-                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                )}
+                            <div className="sync-mobile-dots" aria-label="Estado de enlace">
+                                <div className={`sync-dot-item ${isStarterLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Larg.</span>
+                                </div>
+                                <div className={`sync-dot-item ${isSelfLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Ctrl</span>
+                                </div>
+                                <div className={`sync-dot-item ${isTkLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Lleg.</span>
+                                </div>
                             </div>
                         </div>
                     );
@@ -445,32 +462,23 @@ return (
             document.getElementById('global-sync-bar-portal-target')
         )}
 
-        <div className="gestion-resultados-container fade-in">
+        <div className={`gestion-resultados-container fade-in control-mobile-ready ${isEmbedded ? 'is-embedded' : ''}`}>
         {!hideTabs && (
-            <div className="admin-header-main">
+            <div className="admin-header-main control-page-header">
                 <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <div className="control-title-row">
                         {!isEmbedded && (
                             <button
                                 className="btn-admin-secondary"
                                 onClick={() => navigate(-1)}
                                 title="Volver"
-                                style={{
-                                    padding: '0',
-                                    width: '22px',
-                                    height: '22px',
-                                    minWidth: '22px',
-                                    minHeight: '22px',
-                                    borderRadius: '50%',
-                                    flexShrink: 0
-                                }}
                             >
                                 <ArrowLeft size={12} />
                             </button>
                         )}
-                        <h2 className="admin-title" style={{ margin: 0 }}>Panel de Resultados y Start List</h2>
+                        <h2 className="admin-title">Panel de Resultados y Start List</h2>
                     </div>
-                    <p className="admin-subtitle" style={{ marginTop: '0.5rem' }}>Sorteo de carriles, armado de heats y carga de resultados oficiales.</p>
+                    <p className="admin-subtitle control-page-subtitle">Sorteo de carriles, armado de heats y carga de resultados oficiales.</p>
                 </div>
             </div>
         )}

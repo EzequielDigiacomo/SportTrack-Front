@@ -50,12 +50,12 @@ const ResultadosHeader = ({
     const catColor = CATEGORIA_COLORS[p?.categoria?.id || p?.categoriaId] || { bg: 'transparent', text: 'var(--color-primary)' };
 
     return (
-        <div className="resultados-header-section admin-form-card glass-effect" style={{ padding: '1.5rem 2rem', marginBottom: '2.5rem' }}>
-            <div className="admin-grid-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+        <div className="resultados-header-section admin-form-card glass-effect">
+            <div className="admin-grid-form resultados-header-grid">
                 
                 {/* Event Selector */}
                 <div className="form-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label className="resultados-field-label">
                         <Calendar size={14} className="text-primary" /> Evento
                     </label>
                     <select 
@@ -74,7 +74,7 @@ const ResultadosHeader = ({
                 {/* Prueba Selector */}
                 {isAdmin && (
                     <div className="form-group">
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label className="resultados-field-label">
                             <Search size={14} className="text-secondary" /> Prueba / Categoría
                         </label>
                         <select 
@@ -122,15 +122,15 @@ const ResultadosHeader = ({
 
                 {/* Regata Selector */}
                 <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                        <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="regata-label-row">
+                        <label className="resultados-field-label" style={{ margin: 0 }}>
                             <List size={14} className="text-accent" /> Regata Específica
                         </label>
                         {cronograma.length > 0 && (
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                            <div className="regata-pdf-actions">
                                 <button 
-                                    className="btn-admin-secondary compact"
-                                    style={{ padding: '0 8px', fontSize: '10px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
+                                    type="button"
+                                    className="btn-admin-secondary compact btn-pdf-mini"
                                     onClick={() => {
                                         const ev = eventos.find(e => String(e.id) === String(selectedEvento));
                                         import('../../services/PdfExportService').then(m => {
@@ -138,11 +138,11 @@ const ResultadosHeader = ({
                                         });
                                     }}
                                 >
-                                    <FileText size={10} style={{ marginRight: '4px' }} /> PDF Schedule
+                                    <FileText size={10} /> PDF Schedule
                                 </button>
                                 <button 
-                                    className="btn-admin-secondary compact"
-                                    style={{ padding: '0 8px', fontSize: '10px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
+                                    type="button"
+                                    className="btn-admin-secondary compact btn-pdf-mini"
                                     onClick={() => {
                                         const ev = eventos.find(e => String(e.id) === String(selectedEvento));
                                         import('../../services/PdfExportService').then(m => {
@@ -150,7 +150,7 @@ const ResultadosHeader = ({
                                         });
                                     }}
                                 >
-                                    <FileText size={10} style={{ marginRight: '4px' }} /> PDF Start List
+                                    <FileText size={10} /> PDF Start List
                                 </button>
                             </div>
                         )}
@@ -196,21 +196,12 @@ const ResultadosHeader = ({
             </div>
 
             {/* Header Status Bar */}
-            <div style={{ 
-                marginTop: '1.2rem', 
-                paddingTop: '1rem',
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-                fontSize: '0.8rem', 
-                color: 'var(--color-text-dim)', 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                <div style={{ display: 'flex', gap: '1.5rem' }}>
+            <div className="resultados-header-status">
+                <div className="resultados-status-left">
                     {cronograma.length > 0 && (
                         <div className="status-pill">
-                            <List size={12} style={{ marginRight: '6px' }} />
-                            Total Regatas: <strong style={{ color: 'white', marginLeft: '4px' }}>{cronograma.length}</strong>
+                            <List size={12} />
+                            <span>Regatas <strong>{cronograma.length}</strong></span>
                         </div>
                     )}
                 </div>
@@ -219,12 +210,14 @@ const ResultadosHeader = ({
                 {selectedPrueba && !hideTabs && (
                     <div className="admin-tabs-nav-modern">
                         <button 
+                            type="button"
                             className={`tab-link ${currentTab === 'startList' ? 'active' : ''}`}
                             onClick={() => setCurrentTab('startList')}
                         >
                             Start List {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
                         </button>
                         <button 
+                            type="button"
                             className={`tab-link ${currentTab === 'resultados' ? 'active' : ''}`}
                             onClick={() => setCurrentTab('resultados')}
                         >

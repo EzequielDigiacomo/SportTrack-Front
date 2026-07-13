@@ -52,7 +52,7 @@ const FinisherDashboard = () => {
     const timerRef = useRef(null);
     const [loading, setLoading] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth <= 1000);
     const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const { addToast } = useToast();
@@ -559,9 +559,8 @@ const FinisherDashboard = () => {
 
     const pendientes = resultados.filter(r => !r.tiempoOficial && (!r.estadoCanto || r.estadoCanto === 'Pendiente'));
 
-    return (
+        return (
         <>
-        {/* BARRA DE SINCRONIZACIÓN GLOBAL (PORTAL AL NAVBAR) */}
         {document.getElementById('global-sync-bar-portal-target') && createPortal(
             <div className="global-sync-bar">
                 {(() => {
@@ -579,35 +578,51 @@ const FinisherDashboard = () => {
                     
                     const isStarterLinked = !!connectedStarter;
                     const isControlLinked = !!connectedControl;
+                    const isSelfLinked = !!selectedEvento;
                     
                     return (
                         <div className="judges-sync-card" title="Estado de Enlace de Jueces">
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">MESA DE LLEGADA</span>
-                                <span className={`sync-user-pill ${selectedEvento ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                            <div className="sync-desktop-row">
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">MESA DE LLEGADA</span>
+                                    <span className={`sync-user-pill ${isSelfLinked ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                                </div>
+                                <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
+                                    <Link2 size={16} style={isControlLinked ? undefined : { strokeDasharray: '3,3' }} />
+                                </div>
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">CONTROL</span>
+                                    {connectedControl ? (
+                                        <span className="sync-user-pill connected">{controlName.toUpperCase()}</span>
+                                    ) : (
+                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                    )}
+                                </div>
+                                <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
+                                    <Link2 size={16} style={isStarterLinked ? undefined : { strokeDasharray: '3,3' }} />
+                                </div>
+                                <div className="sync-role-node">
+                                    <span className="sync-role-name">LARGADOR</span>
+                                    {connectedStarter ? (
+                                        <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
+                                    ) : (
+                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                                    )}
+                                </div>
                             </div>
-                            <div className={`sync-connector-line ${isControlLinked ? 'active' : 'inactive'}`}>
-                                {isControlLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
-                            </div>
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">CONTROL</span>
-                                {connectedControl ? (
-                                    <span className="sync-user-pill connected">{controlName.toUpperCase()}</span>
-                                ) : (
-                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                )}
-                            </div>
-                            <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
-
-                                {isStarterLinked ? <Link2 size={16} /> : <Link2 size={16} style={{ strokeDasharray: '3,3' }} />}
-                            </div>
-                            <div className="sync-role-node">
-                                <span className="sync-role-name">LARGADOR</span>
-                                {connectedStarter ? (
-                                    <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
-                                ) : (
-                                    <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                )}
+                            <div className="sync-mobile-dots" aria-label="Estado de enlace">
+                                <div className={`sync-dot-item ${isSelfLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Lleg.</span>
+                                </div>
+                                <div className={`sync-dot-item ${isControlLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Ctrl</span>
+                                </div>
+                                <div className={`sync-dot-item ${isStarterLinked ? 'on' : 'off'}`}>
+                                    <span className="sync-dot" />
+                                    <span className="sync-dot-label">Larg.</span>
+                                </div>
                             </div>
                         </div>
                     );
@@ -617,37 +632,27 @@ const FinisherDashboard = () => {
         )}
 
         {['Reconnecting', 'Connecting'].includes(connectionState) && (
-            <div className="connection-state-alert-bar reconnecting" style={{ margin: '15px 15px 0 15px', width: 'auto' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <RefreshCw className="spin animate-spin" size={14} />
-                    Conexión inestable. Intentando restablecer la sincronización con el largador...
-                </span>
-                <button
-                    type="button"
-                    className="btn-refresh-sync"
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                >
+            <div className="connection-state-alert-bar reconnecting">
+                <RefreshCw className="spin animate-spin" size={14} />
+                <span className="alert-text-full">Conexión inestable. Intentando sincronizar con el largador…</span>
+                <span className="alert-text-short">Reconectando…</span>
+                <button type="button" className="btn-refresh-sync" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
-                    {refreshing ? 'Refrescando...' : 'Refrescar'}
+                    <span className="btn-refresh-label">{refreshing ? '…' : 'Refrescar'}</span>
                 </button>
             </div>
         )}
         {connectionState === 'Disconnected' && (
-            <div className="connection-state-alert-bar disconnected" style={{ margin: '15px 15px 0 15px', width: 'auto' }}>
-                <span>Sin conexión en tiempo real. No recibirás notificaciones de largada hasta recuperar la señal.</span>
-                <button
-                    type="button"
-                    className="btn-refresh-sync"
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                >
+            <div className="connection-state-alert-bar disconnected">
+                <span className="alert-text-full">Sin tiempo real — no recibirás largadas hasta recuperar señal.</span>
+                <span className="alert-text-short">Sin señal</span>
+                <button type="button" className="btn-refresh-sync" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
-                    {refreshing ? 'Refrescando...' : 'Refrescar'}
+                    <span className="btn-refresh-label">{refreshing ? '…' : 'Refrescar'}</span>
                 </button>
             </div>
         )}
-        <div className={`finisher-dashboard ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div className={`finisher-dashboard finisher-mobile-ready ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             {globalAlert && (
                 <div className="global-race-alert-overlay">
                     <div className="global-race-alert">
@@ -657,7 +662,6 @@ const FinisherDashboard = () => {
                             </div>
                             <h3>¡NUEVA LARGADA!</h3>
                             <p>Una prueba acaba de comenzar en el agua.</p>
-                            
                             <div className="alert-actions-vertical">
                                 <button className="btn-jump-big" onClick={() => {
                                     const target = fases.find(f => f.id === globalAlert.faseId);
@@ -684,20 +688,20 @@ const FinisherDashboard = () => {
                     </div>
                 </div>
             )}
-            
+
             <header className="finisher-header glass-effect">
                 <div className="header-info">
-                    <div className="race-header-actions" style={{ marginBottom: '12px' }}>
-                        <div className="badge-live blue">MODO CRONOMETRISTA</div>
+                    <div className="race-header-toolbar">
+                        <div className="badge-live blue">CRONOMETRISTA</div>
                         <button
                             type="button"
                             className="btn-refresh-sync"
                             onClick={handleRefresh}
                             disabled={refreshing || loading || !selectedEvento}
-                            title="Recargar datos y reconectar con el servidor"
+                            title="Recargar datos y reconectar"
                         >
                             <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
-                            <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
+                            <span className="btn-refresh-label">{refreshing ? '…' : 'Refrescar'}</span>
                         </button>
                     </div>
                     {selectedFase ? (() => {
@@ -706,13 +710,12 @@ const FinisherDashboard = () => {
                         const boteName = p ? (BOTE_NAMES[p.bote?.id] || p.bote?.nombre) : (selectedFase?.boteTipo || selectedFase?.tipoBote || 'Sin Bote');
                         const distName = p ? (DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm') : (selectedFase?.distancia ? selectedFase.distancia + 'm' : '0m');
                         const timeName = formatTime(selectedFase?.fechaHoraProgramada);
+                        const raceNum = selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '');
                         
                         return (
                             <div className="race-header-info">
                                 <h2>
-                                    <span className="race-id-prefix">
-                                        #{selectedFase?.nroPrueba || (fases.findIndex(x => x.id === selectedFase?.id) !== -1 ? fases.findIndex(x => x.id === selectedFase?.id) + 1 : '')}
-                                    </span>
+                                    <span className="race-id-prefix">#{raceNum}</span>
                                     {' '}{catName}
                                 </h2>
                                 <div className="race-meta">
@@ -725,7 +728,37 @@ const FinisherDashboard = () => {
                         );
                     })() : (
                         <div className="race-header-info">
-                            <h2 style={{ color: 'var(--color-text-muted)' }}>Seleccione una prueba</h2>
+                            <h2 className="empty-race-title">Abrí el cronograma</h2>
+                        </div>
+                    )}
+
+                    {selectedFase && (
+                        <div className="quick-nav-footer race-nav-top">
+                            <button 
+                                type="button"
+                                className="btn-nav-step" 
+                                disabled={fases.findIndex(f => f.id === selectedFase?.id) <= 0}
+                                onClick={() => {
+                                    const idx = fases.findIndex(f => f.id === selectedFase?.id);
+                                    if (idx > 0) setSelectedFase(fases[idx - 1]);
+                                }}
+                            >
+                                <ArrowLeft size={16} /> <span className="nav-label">Ant.</span>
+                            </button>
+                            <span className="nav-index">
+                                {fases.findIndex(f => f.id === selectedFase?.id) + 1}/{fases.length}
+                            </span>
+                            <button 
+                                type="button"
+                                className="btn-nav-step" 
+                                disabled={fases.findIndex(f => f.id === selectedFase?.id) >= fases.length - 1}
+                                onClick={() => {
+                                    const idx = fases.findIndex(f => f.id === selectedFase?.id);
+                                    if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
+                                }}
+                            >
+                                <span className="nav-label">Sig.</span> <ArrowRight size={16} />
+                            </button>
                         </div>
                     )}
                 </div>
@@ -735,69 +768,73 @@ const FinisherDashboard = () => {
             </header>
 
             <div className="finisher-layout">
-                <aside className={`finisher-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
-                        <h3 style={{ margin: 0, flex: 1 }}><Clock size={18} /> Cronograma</h3>
-                        <button className="btn-collapse" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
-                            {isSidebarCollapsed ? 'Mostrar' : 'Ocultar'}
-                        </button>
-                    </div>
-                    {!isSidebarCollapsed && (
-                        <div className="selection-stack">
-                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px', display: 'block' }}>Evento:</label>
+            <aside className={`finisher-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : 'expanded'}`}>
+                <button
+                    type="button"
+                    className="cronograma-toggle-bar"
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                >
+                    <span className="cronograma-toggle-left">
+                        <Clock size={16} />
+                        <span>Cronograma</span>
+                        <span className="cronograma-count">{fases.length}</span>
+                    </span>
+                    <span className="cronograma-toggle-right">
+                        {selectedFase && (
+                            <span className="cronograma-current-chip">
+                                #{selectedFase.nroPrueba || (fases.findIndex(x => x.id === selectedFase.id) + 1)}
+                            </span>
+                        )}
+                        <span className="btn-collapse">{isSidebarCollapsed ? 'Abrir' : 'Cerrar'}</span>
+                    </span>
+                </button>
+
+                {!isSidebarCollapsed && (
+                    <div className="selection-stack cronograma-panel">
+                        <div className="mobile-event-selector">
+                            <label>Evento</label>
                             <select value={selectedEvento?.id || ''} onChange={(e) => setSelectedEvento(eventos.find(ev => ev.id === parseInt(e.target.value)))}>
                                 <option value="">Seleccionar Evento...</option>
                                 {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
                             </select>
-
-                            <div className="sidebar-section-header">
-                                <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Pruebas ({fases.length}):</label>
-                                <button className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
-                                    {isCompact ? <Layout size={14} /> : <Grid size={14} />}
-                                </button>
-                            </div>
-
-                            <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
-                                {fases.map((f, index) => (
-                                    <div 
-                                        key={f.id} 
-                                        className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`} 
-                                        onClick={() => { setSelectedFase(f); if (window.innerWidth <= 1000) setIsSidebarCollapsed(true); }}
-                                    >
-                                        {['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
-                                        <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
-                                        {!isCompact && (() => {
-                                            const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
-                                            const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (f.categoriaNombre || 'Sin Categoría');
-                                            return (
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{catName}</span>
-                                                    <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{f.nombreFase}</span>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                ))}
-                            </div>
                         </div>
-                    )}
-                </aside>
+
+                        <div className="sidebar-section-header desktop-only-toggle">
+                            <label>Pruebas ({fases.length})</label>
+                            <button type="button" className="btn-view-toggle" onClick={() => setIsCompact(!isCompact)}>
+                                {isCompact ? <Layout size={14} /> : <Grid size={14} />}
+                            </button>
+                        </div>
+
+                        <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
+                            {fases.map((f, index) => (
+                                <div 
+                                    key={f.id} 
+                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`} 
+                                    onClick={() => { setSelectedFase(f); if (window.innerWidth <= 1000) setIsSidebarCollapsed(true); }}
+                                >
+                                    {['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
+                                    <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
+                                    {!isCompact && (() => {
+                                        const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
+                                        const catName = p ? (CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre) : (f.categoriaNombre || 'Sin Categoría');
+                                        return (
+                                            <div className="prueba-item-detail">
+                                                <span className="prueba-item-cat">{catName}</span>
+                                                <span className="prueba-item-fase">{f.nombreFase}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </aside>
 
                 <main className="finisher-main glass-effect">
                     {selectedFase ? (
                         <div className="quick-controls-panel">
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                                <button
-                                    type="button"
-                                    className="btn-refresh-sync"
-                                    onClick={handleRefresh}
-                                    disabled={refreshing || loading}
-                                    title="Recargar tiempos y reconectar con el servidor"
-                                >
-                                    <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
-                                    <span>{refreshing ? 'Refrescando...' : 'Refrescar'}</span>
-                                </button>
-                            </div>
                             <div className="lane-buttons-grid">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
                                     const res = resultados.find(r => r.carril === num);
@@ -805,7 +842,7 @@ const FinisherDashboard = () => {
                                     const isFinished = res?.tiempoOficial;
                                     const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
                                     return (
-                                        <button key={num} className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}>
+                                        <button key={num} type="button" className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}>
                                             <span className="num">{num}</span>
                                             <span className="label">{isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}</span>
                                         </button>
@@ -813,31 +850,12 @@ const FinisherDashboard = () => {
                                 })}
                             </div>
                             <button 
-                                className="btn-doubt" 
+                                type="button"
+                                className={`btn-doubt ${isRaceRunning ? 'active' : ''}`}
                                 onClick={recordDoubt} 
                                 disabled={!isRaceRunning}
-                                style={{
-                                    width: '100%',
-                                    padding: '15px',
-                                    marginTop: '15px',
-                                    background: isRaceRunning ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'var(--color-bg-secondary)',
-                                    color: 'var(--color-text-primary)',
-                                    border: isRaceRunning ? 'none' : '1px solid var(--color-border)',
-                                    borderRadius: '8px',
-                                    fontSize: '1.1rem',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '10px',
-                                    cursor: isRaceRunning ? 'pointer' : 'not-allowed',
-                                    boxShadow: isRaceRunning ? '0 4px 15px rgba(245, 158, 11, 0.3)' : 'none',
-                                    transition: 'all 0.2s',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px'
-                                }}
                             >
-                                <Activity size={24} /> <span>DUDA (?) [Espacio]</span>
+                                <Activity size={20} /> <span>DUDA (?)</span>
                             </button>
     
                             <div className="arribos-list">
@@ -853,8 +871,8 @@ const FinisherDashboard = () => {
                                                 <span className="a-name">{arrival.participante ? getSoloApellido(arrival.participante) : '—'}</span>
                                             </div>
                                             <div className="a-time">{arrival.time}</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                {arrival.type === 'duda' && <button className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}><XCircle size={16} /></button>}
+                                            <div className="a-actions">
+                                                {arrival.type === 'duda' && <button type="button" className="btn-cancel-doubt" onClick={() => removeRawTime(arrival.id)}><XCircle size={16} /></button>}
                                             </div>
                                         </div>
                                     ))}
@@ -862,58 +880,36 @@ const FinisherDashboard = () => {
                             </div>
     
                             {pendientes.length > 0 && (isRaceRunning || rawTimes.length > 0) && (
-                                <div className="pendientes-panel glass-effect fade-in" style={{ marginTop: '2rem', borderTop: '2px solid rgba(251, 191, 36, 0.3)', paddingTop: '1.5rem' }}>
-                                    <h3 style={{ color: '#fbbf24', fontSize: '1rem', marginBottom: '1rem' }}>Atletas por Clasificar</h3>
-                                    <div className="pendientes-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="pendientes-panel fade-in">
+                                    <h3>Atletas por clasificar</h3>
+                                    <div className="pendientes-list">
                                         {pendientes.map(p => (
                                             <div key={p.id} className="pendiente-item">
                                                 <span className="p-lane">{p.carril}</span>
                                                 <div className="p-info">
                                                     <span className="p-name">{p.participanteNombre}</span>
-                                                    <button className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
+                                                    <button type="button" className="btn-assign-quick" onClick={() => rawTimes.length > 0 ? assignRawTime(rawTimes[0], p.id) : handleRecordFinish(p.id)}>{rawTimes.length > 0 ? 'ASIGNAR ?' : 'LLEGADA'}</button>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
-    
-                            {/* Navegación Rápida */}
-                            <div className="quick-nav-footer">
-                                <button 
-                                    className="btn-nav-step" 
-                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) <= 0}
-                                    onClick={() => {
-                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
-                                        if (idx > 0) setSelectedFase(fases[idx - 1]);
-                                    }}
-                                >
-                                    <ArrowLeft size={16} /> Anterior
-                                </button>
-                                <span className="nav-index">
-                                    Prueba {fases.findIndex(f => f.id === selectedFase?.id) + 1} de {fases.length}
-                                </span>
-                                <button 
-                                    className="btn-nav-step" 
-                                    disabled={fases.findIndex(f => f.id === selectedFase?.id) >= fases.length - 1}
-                                    onClick={() => {
-                                        const idx = fases.findIndex(f => f.id === selectedFase?.id);
-                                        if (idx < fases.length - 1) setSelectedFase(fases[idx + 1]);
-                                    }}
-                                >
-                                    Siguiente <ArrowRight size={16} />
-                                </button>
-                            </div>
                         </div>
                     ) : (
-                        <div className="empty-msg" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--color-text-muted)' }}>
-                            <Activity size={48} opacity={0.2} />
-                            <p>Seleccione una carrera del cronograma para comenzar</p>
+                        <div className="empty-msg">
+                            <Activity size={40} opacity={0.25} />
+                            <p>Abrí el cronograma y elegí una prueba</p>
+                            {isSidebarCollapsed && (
+                                <button type="button" className="btn-collapse empty-open-cronograma" onClick={() => setIsSidebarCollapsed(false)}>
+                                    Abrir cronograma
+                                </button>
+                            )}
                         </div>
                     )}
 
-                    <footer className="finisher-actions">
-                        <button className="btn-reset" onClick={() => {
+                    <footer className="finisher-actions finisher-sticky-actions">
+                        <button type="button" className="btn-reset" onClick={() => {
                             setConfirmDialog({
                                 isOpen: true,
                                 title: 'Reiniciar Reloj',
@@ -930,7 +926,7 @@ const FinisherDashboard = () => {
                         }} disabled={!selectedFase}>
                             <RefreshCw size={18} /> Reiniciar
                         </button>
-                        <button className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
+                        <button type="button" className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
                             <Save size={18} /> Enviar
                         </button>
                     </footer>
