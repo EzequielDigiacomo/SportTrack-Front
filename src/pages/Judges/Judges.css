@@ -682,11 +682,20 @@
     flex-wrap: wrap;
 }
 
+.checkin-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
 .checkin-header-actions {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    margin-left: auto;
 }
 
 .checkin-header h3 {
@@ -1823,6 +1832,17 @@
     border-radius: 8px;
     margin-bottom: 15px;
     animation: slide-down-banner 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    /* Evita que el grid del largador estire el cartel a toda la altura de la fila */
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    align-self: start;
+    box-sizing: border-box;
+}
+
+/* El cartel es hijo directo del grid 2 columnas: debe ocupar todo el ancho, no la 1ª celda */
+.starter-dashboard > .connection-state-alert-bar {
+    grid-column: 1 / -1;
 }
 
 .connection-state-alert-bar .btn-refresh-sync {
@@ -1833,10 +1853,31 @@
     font-weight: 600;
 }
 
-.connection-state-alert-bar.reconnecting {
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #fbbf24;
+.connection-state-alert-bar.fase-cerrada-banner {
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+    text-transform: none;
+    letter-spacing: 0.2px;
+    font-weight: 600;
+}
+
+.start-lag-chip {
+    margin-top: 6px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.checkin-row .btn-status-toggle:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .connection-state-alert-bar.disconnected {
@@ -1889,6 +1930,33 @@
     z-index: 999;
     position: sticky;
     top: 68px; /* Appends just below the top header */
+}
+
+.starter-live-clock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: var(--color-text-primary, #e2e8f0);
+}
+
+.starter-live-clock-icon {
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.starter-live-clock-time {
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.4px;
+    font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+    color: #f8fafc;
+    white-space: nowrap;
 }
 
 .judges-sync-card {
@@ -2084,6 +2152,15 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
+    .starter-live-clock {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+
+    .starter-live-clock-time {
+        font-size: 0.95rem;
+    }
+
     .judges-sync-card {
         padding: 4px 10px;
         gap: 0;
@@ -2162,6 +2239,10 @@
         box-shadow: none;
         border-radius: 6px;
         gap: 8px;
+        flex-wrap: nowrap;
+        min-height: 36px;
+        max-height: 48px;
+        overflow: hidden;
     }
 
     .connection-state-alert-bar .alert-text-full {
@@ -2374,6 +2455,13 @@
 
     .checkin-header {
         margin-bottom: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .checkin-header-left {
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
     }
 
     .checkin-header h3 {

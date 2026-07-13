@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
-import { getJudgeDisplayName, mapFasesFromApi } from '../../utils/judgeDashboardHelpers';
+import { getJudgeDisplayName, mapFasesFromApi, canStartFase, isFaseCerrada, normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
@@ -44,10 +44,15 @@ const StarterDashboard = () => {
     // En mobile el cronograma arranca cerrado para priorizar la prueba activa
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth <= 1000);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
-    const [startingStatus, setStartingStatus] = useState(null); // 'connecting' | 'starting' | 'resetting' | 'fallback_http' | 'success' | 'success_reset' | 'error'
+    const [startingStatus, setStartingStatus] = useState(null); // 'connecting' | 'starting' | 'resetting' | 'fallback_http' | 'success' | 'success_reset' | 'error' | 'queued'
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
     const [activeJudges, setActiveJudges] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [clockSyncStale, setClockSyncStale] = useState(() => timingSignalRService.getClockSyncStatus().isStale);
+    const [liveClock, setLiveClock] = useState(() => {
+        const d = timingSignalRService.getSyncedNow();
+        return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    });
 
     const isTimekeeperConnected = activeJudges.some(j => {
         const role = (j.role || j.Role || '').toLowerCase();
@@ -57,9 +62,47 @@ const StarterDashboard = () => {
     useEffect(() => {
         const unsubscribe = timingSignalRService.onStateChange((state) => {
             setConnectionState(state);
+            setClockSyncStale(timingSignalRService.getClockSyncStatus().isStale);
         });
-        return () => unsubscribe();
+        const syncPoll = setInterval(() => {
+            setClockSyncStale(timingSignalRService.getClockSyncStatus().isStale);
+        }, 15000);
+        const clockTick = setInterval(() => {
+            const d = timingSignalRService.getSyncedNow();
+            setLiveClock(d.toLocaleTimeString('es-AR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            }));
+        }, 250);
+        timingSignalRService.flushPendingRaceStart().then((ok) => {
+            if (ok) addToast('Largada pendiente enviada al servidor', 'success');
+        }).catch(() => {});
+        return () => {
+            unsubscribe();
+            clearInterval(syncPoll);
+            clearInterval(clockTick);
+        };
     }, []);
+
+    const handleResyncClock = async () => {
+        try {
+            if (timingSignalRService.getConnectionState() !== 'Connected') {
+                await timingSignalRService.connect(
+                    selectedEvento?.id,
+                    selectedFase?.id,
+                    getJudgeDisplayName(user, 'Largador'),
+                    'Largador'
+                );
+            } else {
+                await timingSignalRService.syncClock();
+            }
+            setClockSyncStale(timingSignalRService.getClockSyncStatus().isStale);
+            addToast('Reloj re-sincronizado', 'success');
+        } catch {
+            addToast('No se pudo sincronizar el reloj', 'error');
+        }
+    };
 
     useEffect(() => {
         const loadEventos = async () => {
@@ -172,6 +215,31 @@ const StarterDashboard = () => {
                     }
                 });
 
+                const markInReview = (faseId) => {
+                    const id = typeof faseId === 'object' ? (faseId?.id ?? faseId?.Id) : faseId;
+                    if (!id) return;
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(id) ? { ...f, estado: 'Pendiente de Validación' } : f
+                    ));
+                    setSelectedFase(prev => {
+                        if (!prev || String(prev.id) !== String(id)) return prev;
+                        return { ...prev, estado: 'Pendiente de Validación' };
+                    });
+                };
+
+                timingSignalRService.onRaceInReview(markInReview);
+                timingSignalRService.onGlobalRaceInReview(markInReview);
+
+                timingSignalRService.onGlobalRaceOfficialized((faseId) => {
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(faseId) ? { ...f, estado: 'Finalizada' } : f
+                    ));
+                    setSelectedFase(prev => {
+                        if (!prev || String(prev.id) !== String(faseId)) return prev;
+                        return { ...prev, estado: 'Finalizada' };
+                    });
+                });
+
                 timingSignalRService.onGlobalResultStatusUpdated((resId, status) => {
                     if (!isMounted) return;
 
@@ -252,40 +320,59 @@ const StarterDashboard = () => {
     };
 
     const handleStartRace = async () => {
-        if (!selectedFase) return;
+        if (!selectedFase || !canStartFase(selectedFase)) return;
+
+        // t0 sagrado: captura al click, antes de cualquier red.
+        const startStamp = timingSignalRService.getSyncedNow();
+        const t0Iso = startStamp.toISOString();
+
+        // Feedback inmediato (no espera ACK)
         try {
-            setLoading(true);
-            const isConnected = timingSignalRService.getConnectionState() === 'Connected';
-            
-            if (!isConnected) {
-                setStartingStatus('connecting');
-                await timingSignalRService.connect(
-                    selectedFase.id,
-                    user?.nombreCompleto || user?.nombre || user?.username || "Largador",
-                    "Largador"
-                );
-            }
-            
-            setStartingStatus('starting');
-            await timingSignalRService.requestStartRace(selectedFase.id);
-            addToast("Carrera iniciada con éxito (Vía WebSocket)", "success");
-            setStartingStatus('success');
-            setTimeout(() => setStartingStatus(null), 1500);
-        } catch (err) {
-            console.error("SignalR start error, trying HTTP fallback:", err);
-            setStartingStatus('fallback_http');
-            addToast("Fallo en red de tiempo real. Usando canal secundario...", "warning");
-            try {
-                await FaseService.iniciar(selectedFase.id);
-                addToast("Carrera iniciada con éxito", "success");
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(40);
+        } catch { /* ignore */ }
+        setStartingStatus('starting');
+        setLoading(true);
+        setFases(prev => prev.map(f =>
+            String(f.id) === String(selectedFase.id)
+                ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: t0Iso }
+                : f
+        ));
+        setSelectedFase(prev => prev
+            ? { ...prev, estado: 'En Carrera', fechaHoraInicioReal: t0Iso }
+            : prev
+        );
+
+        try {
+            const result = await timingSignalRService.deliverRaceStart(selectedFase.id, startStamp);
+            if (result.ok) {
+                if (result.channel === 'http') {
+                    const updated = result.updated;
+                    const nextEstado = normalizeFaseEstado(updated?.estado || updated?.Estado || 'En Carrera');
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(selectedFase.id)
+                            ? { ...f, ...updated, estado: nextEstado, fechaHoraInicioReal: updated?.fechaHoraInicioReal || t0Iso }
+                            : f
+                    ));
+                    setSelectedFase(prev => prev
+                        ? { ...prev, ...updated, estado: nextEstado, fechaHoraInicioReal: updated?.fechaHoraInicioReal || t0Iso }
+                        : prev
+                    );
+                    addToast('Carrera iniciada (HTTP, mismo instante del click)', 'success');
+                } else {
+                    addToast('Carrera iniciada (tiempo real)', 'success');
+                }
                 setStartingStatus('success');
                 setTimeout(() => setStartingStatus(null), 1500);
-            } catch (httpErr) {
-                console.error("HTTP fallback error starting race:", httpErr);
-                addToast("Error al iniciar la carrera. Verifique su conexión.", "error");
-                setStartingStatus('error');
-                setTimeout(() => setStartingStatus(null), 3000);
+            } else {
+                addToast('Sin red: la largada quedó en cola con el instante del click. Se reenvía al reconectar.', 'warning');
+                setStartingStatus('queued');
+                setTimeout(() => setStartingStatus(null), 2500);
             }
+        } catch (err) {
+            console.error('Error delivering race start:', err);
+            addToast('Largada local marcada; reintentando envío en segundo plano.', 'warning');
+            setStartingStatus('queued');
+            setTimeout(() => setStartingStatus(null), 2500);
         } finally {
             setLoading(false);
         }
@@ -495,21 +582,54 @@ const StarterDashboard = () => {
             document.getElementById('global-sync-bar-portal-target')
         )}
 
-        <div className="starter-dashboard fade-in starter-mobile-ready">
-            {['Reconnecting', 'Connecting'].includes(connectionState) && (
-                <div className="connection-state-alert-bar reconnecting">
-                    <RefreshCw className="spin animate-spin" size={14} />
-                    <span className="alert-text-full">Conexión inestable. Espere antes de largar.</span>
-                    <span className="alert-text-short">Reconectando…</span>
-                </div>
-            )}
-            {connectionState === 'Disconnected' && (
-                <div className="connection-state-alert-bar disconnected">
-                    <span className="alert-text-full">Sin tiempo real — se usará HTTP al largar.</span>
-                    <span className="alert-text-short">Sin señal · HTTP</span>
-                </div>
-            )}
+        {canStartFase(selectedFase) && ['Reconnecting', 'Connecting'].includes(connectionState) && (
+            <div className="connection-state-alert-bar reconnecting">
+                <RefreshCw className="spin animate-spin" size={14} />
+                <span className="alert-text-full">Conexión inestable. Espere antes de largar.</span>
+                <span className="alert-text-short">Reconectando…</span>
+            </div>
+        )}
+        {canStartFase(selectedFase) && connectionState === 'Disconnected' && (
+            <div className="connection-state-alert-bar disconnected">
+                <span className="alert-text-full">Sin tiempo real — se usará HTTP al largar (mismo instante del click).</span>
+                <span className="alert-text-short">Sin señal · HTTP</span>
+                <button
+                    type="button"
+                    className="btn-refresh-sync"
+                    onClick={handleRefresh}
+                    disabled={refreshing || loading || !selectedEvento}
+                >
+                    <RefreshCw size={14} className={refreshing ? 'spin animate-spin' : ''} />
+                    <span className="btn-refresh-label">{refreshing ? '…' : 'Reconectar'}</span>
+                </button>
+            </div>
+        )}
+        {canStartFase(selectedFase) && connectionState === 'Connected' && clockSyncStale && (
+            <div className="connection-state-alert-bar reconnecting">
+                <span className="alert-text-full">Reloj sin sync reciente. Recomendado sincronizar antes de largar.</span>
+                <span className="alert-text-short">Sync reloj</span>
+                <button type="button" className="btn-refresh-sync" onClick={handleResyncClock}>
+                    <RefreshCw size={14} />
+                    <span className="btn-refresh-label">Re-sincronizar</span>
+                </button>
+            </div>
+        )}
+        {selectedFase && isFaseCerrada(selectedFase) && (
+            <div className="connection-state-alert-bar fase-cerrada-banner">
+                <span className="alert-text-full">
+                    Esta prueba ya fue largada
+                    {normalizeFaseEstado(selectedFase.estado) === 'Pendiente de Validación' && ' y está en revisión'}
+                    {normalizeFaseEstado(selectedFase.estado) === 'Finalizada' && ' y tiene resultados guardados'}
+                    {(selectedFase.resultados || []).some(r => r.tiempoOficial) && normalizeFaseEstado(selectedFase.estado) === 'Programada' && ' (hay tiempos cargados)'}
+                    . No se puede volver a largar.
+                </span>
+                <span className="alert-text-short">
+                    {normalizeFaseEstado(selectedFase.estado) === 'Programada' ? 'Con tiempos · cerrada' : normalizeFaseEstado(selectedFase.estado)}
+                </span>
+            </div>
+        )}
 
+        <div className="starter-dashboard fade-in starter-mobile-ready">
             <aside className={`starter-sidebar glass-effect ${isSidebarCollapsed ? 'collapsed' : 'expanded'}`}>
                 <button
                     type="button"
@@ -552,13 +672,13 @@ const StarterDashboard = () => {
                             {fases.map((f, index) => (
                                 <div 
                                     key={f.id} 
-                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`}
+                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${isFaseCerrada(f) ? 'finished' : ''}`}
                                     onClick={() => {
                                         setSelectedFase(f);
                                         if (window.innerWidth <= 1000) setIsSidebarCollapsed(true);
                                     }}
                                 >
-                                    {['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
+                                    {isFaseCerrada(f) && <span className="status-dot finished"></span>}
                                     <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
                                     {!isCompact && (() => {
                                         const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
@@ -652,14 +772,23 @@ const StarterDashboard = () => {
                         <div className="fase-details">
                             <div className="athletes-checkin">
                                 <div className="checkin-header">
-                                    <h3><Users size={18} /> Carriles</h3>
+                                    <div className="checkin-header-left">
+                                        <h3><Users size={18} /> Carriles</h3>
+                                        <div
+                                            className="starter-live-clock"
+                                            title="Hora del sistema (sincronizada). Usala para largar a horario."
+                                        >
+                                            <Clock size={16} className="starter-live-clock-icon" aria-hidden />
+                                            <time className="starter-live-clock-time" dateTime={liveClock}>{liveClock}</time>
+                                        </div>
+                                    </div>
                                     <div className="checkin-header-actions">
                                         <button 
                                             type="button" 
                                             className="btn-reset-list"
                                             onClick={handleResetAllStatuses}
-                                            title="Restablecer todos los carriles a Pendiente"
-                                            disabled={loading || selectedFase.estado !== 'Programada'}
+                                            title="Vuelve todos los carriles a Pendiente (borra DNS/DNF/DSQ)"
+                                            disabled={loading || !canStartFase(selectedFase)}
                                         >
                                             <RotateCcw size={14} />
                                             <span>Restablecer</span>
@@ -668,21 +797,23 @@ const StarterDashboard = () => {
                                 </div>
                                 <div className="checkin-grid">
                                     {(selectedFase.resultados || []).sort((a,b) => a.carril - b.carril).map(r => (
-                                        <div key={r.id} className={`checkin-row ${r.estadoCanto && r.estadoCanto !== 'Pendiente' ? 'row-disabled' : ''}`}>
+                                        <div key={r.id} className={`checkin-row ${!canStartFase(selectedFase) || (r.estadoCanto && r.estadoCanto !== 'Pendiente') ? 'row-disabled' : ''}`}>
                                             <span className="lane-badge">{r.carril}</span>
                                             <div className="athlete-info-block">
                                                 <span className="athlete-name">
                                                     {r.tripulantes && r.tripulantes.length > 0 
-                                                        ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].join(' - ')
-                                                        : r.participanteNombre
+                                                        ? [r.participanteNombre, ...r.tripulantes.map(t => t.participanteNombreCompleto || t.participanteNombre)].filter(Boolean).join(' - ')
+                                                        : (r.participanteNombre || 'Sin atleta')
                                                     }
                                                 </span>
-                                                <span className="club-tag-full">{r.clubNombre}</span>
+                                                {(r.clubSigla || r.clubNombre) && (
+                                                    <span className="club-tag-full">{r.clubSigla || r.clubNombre}</span>
+                                                )}
                                             </div>
                                             <div className="status-quick-actions">
-                                                <button type="button" className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}>DNS</button>
-                                                <button type="button" className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}>DNF</button>
-                                                <button type="button" className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}>DSQ</button>
+                                                <button type="button" disabled={!canStartFase(selectedFase)} className={`btn-status-toggle dns ${r.estadoCanto === 'DNS' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNS' ? 'Pendiente' : 'DNS')}>DNS</button>
+                                                <button type="button" disabled={!canStartFase(selectedFase)} className={`btn-status-toggle dnf ${r.estadoCanto === 'DNF' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DNF' ? 'Pendiente' : 'DNF')}>DNF</button>
+                                                <button type="button" disabled={!canStartFase(selectedFase)} className={`btn-status-toggle dsq ${r.estadoCanto === 'DSQ' ? 'active' : ''}`} onClick={() => handleStatusChange(r.id, r.estadoCanto === 'DSQ' ? 'Pendiente' : 'DSQ')}>DSQ</button>
                                             </div>
                                         </div>
                                     ))}
@@ -692,11 +823,11 @@ const StarterDashboard = () => {
                             <div className="control-actions starter-sticky-actions">
                                 <button 
                                     type="button"
-                                    className={`btn-start-big ${selectedFase.estado !== 'Programada' ? 'disabled' : ''} ${connectionState !== 'Connected' ? 'connection-lost' : ''} ${connectionState === 'Connected' && !isTimekeeperConnected ? 'no-timekeeper' : ''}`}
+                                    className={`btn-start-big ${!canStartFase(selectedFase) ? 'disabled' : ''} ${canStartFase(selectedFase) && connectionState !== 'Connected' ? 'connection-lost' : ''} ${canStartFase(selectedFase) && connectionState === 'Connected' && !isTimekeeperConnected ? 'no-timekeeper' : ''}`}
                                     onClick={handleStartRace}
-                                    disabled={selectedFase.estado !== 'Programada' || loading || connectionState !== 'Connected' || !isTimekeeperConnected}
+                                    disabled={!canStartFase(selectedFase) || loading || connectionState !== 'Connected' || !isTimekeeperConnected}
                                 >
-                                    {selectedFase.estado === 'Programada' ? (
+                                    {canStartFase(selectedFase) ? (
                                         connectionState === 'Connected' ? (
                                             !isTimekeeperConnected ? (
                                                 <>
@@ -722,12 +853,16 @@ const StarterDashboard = () => {
                                         )
                                     ) : (
                                         <>
-                                            <Activity size={32} className={`start-icon ${selectedFase.estado === 'En Carrera' ? 'pulse' : ''}`} />
-                                            <span>{selectedFase.estado.toUpperCase()}</span>
+                                            <Activity size={32} className={`start-icon ${normalizeFaseEstado(selectedFase.estado) === 'En Carrera' ? 'pulse' : ''}`} />
+                                            <span>
+                                                {normalizeFaseEstado(selectedFase.estado) === 'Programada' && (selectedFase.resultados || []).some(r => r.tiempoOficial)
+                                                    ? 'CON TIEMPOS'
+                                                    : normalizeFaseEstado(selectedFase.estado).toUpperCase()}
+                                            </span>
                                         </>
                                     )}
                                 </button>
-                                {(selectedFase.estado === 'En Carrera' || selectedFase.estado === 'Pendiente de Validación') && (
+                                {(normalizeFaseEstado(selectedFase.estado) === 'En Carrera' || normalizeFaseEstado(selectedFase.estado) === 'Pendiente de Validación') && (
                                     <button type="button" className="btn-reset-starter" onClick={handleResetRace} disabled={loading}>
                                         <RefreshCw size={18} /> <span>REINICIAR</span>
                                     </button>
@@ -760,7 +895,7 @@ const StarterDashboard = () => {
                 <div className="starting-overlay">
                     <div className="starting-overlay-card glass-effect">
                         <div className="starting-spinner-wrapper">
-                            {startingStatus === 'success' || startingStatus === 'success_reset' ? (
+                            {startingStatus === 'success' || startingStatus === 'success_reset' || startingStatus === 'queued' ? (
                                 <div className="success-checkmark-animated">✓</div>
                             ) : startingStatus === 'error' ? (
                                 <div className="error-cross-animated">✗</div>
@@ -770,20 +905,22 @@ const StarterDashboard = () => {
                         </div>
                         <h2>
                             {startingStatus === 'connecting' && "Estableciendo Conexión..."}
-                            {startingStatus === 'starting' && "Iniciando Carrera..."}
+                            {startingStatus === 'starting' && "Registrando largada..."}
                             {startingStatus === 'resetting' && "Reiniciando Carrera..."}
                             {startingStatus === 'fallback_http' && "Cambiando a Red de Respaldo..."}
                             {startingStatus === 'success' && "¡LARGADA COMPLETADA!"}
                             {startingStatus === 'success_reset' && "¡REINICIO COMPLETADO!"}
+                            {startingStatus === 'queued' && "LARGADA EN COLA"}
                             {startingStatus === 'error' && "¡ERROR DE CONEXIÓN!"}
                         </h2>
                         <p className="status-desc">
-                            {startingStatus === 'connecting' && "Sincronizando reloj de alta precisión con los cronometristas..."}
-                            {startingStatus === 'starting' && "Enviando señal de inicio a todos los dispositivos en el agua..."}
+                            {startingStatus === 'connecting' && "Sincronizando reloj con el servidor..."}
+                            {startingStatus === 'starting' && "Enviando el instante del click (t0) al servidor..."}
                             {startingStatus === 'resetting' && "Restableciendo el cronómetro en todas las terminales..."}
-                            {startingStatus === 'fallback_http' && "Los WebSockets fallaron. Sincronizando por canal HTTP de respaldo..."}
-                            {startingStatus === 'success' && "El sistema ha tomado el tiempo inicial de largada con precisión absoluta."}
+                            {startingStatus === 'fallback_http' && "Los WebSockets fallaron. Enviando el mismo t0 por HTTP..."}
+                            {startingStatus === 'success' && "Confirmado. El cronómetro usa el instante del botón, no de este aviso."}
                             {startingStatus === 'success_reset' && "La regata ha sido restablecida en todas las terminales del sistema."}
+                            {startingStatus === 'queued' && "Sin red ahora. Se guardó el instante del click y se reenviará al reconectar."}
                             {startingStatus === 'error' && "No se pudo establecer comunicación con el servidor. Revisa tu cobertura móvil."}
                         </p>
                         {['connecting', 'starting', 'resetting', 'fallback_http'].includes(startingStatus) && (

@@ -12,8 +12,9 @@ import FaseService from '../../services/FaseService';
 import ResultadoService from '../../services/ResultadoService';
 import { useAlert } from '../../hooks/useAlert';
 import timingSignalRService from '../../services/TimingSignalRService';
-import { getJudgeDisplayName, mapFasesFromApi } from '../../utils/judgeDashboardHelpers';
+import { getJudgeDisplayName, mapFasesFromApi, normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
+import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -50,6 +51,9 @@ const FinisherDashboard = () => {
     const [elapsedTime, setElapsedTime] = useState(0);
     const [startTime, setStartTime] = useState(null);
     const timerRef = useRef(null);
+    const startTimeRef = useRef(null);
+    const pendingAbsRef = useRef([]); // { kind: 'lane'|'doubt', resultadoId?, finishAbs }
+    const [startReceiveLagSec, setStartReceiveLagSec] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth <= 1000);
@@ -138,20 +142,22 @@ const FinisherDashboard = () => {
         // Si la fase seleccionada ya está "En Carrera", arrancamos el cronómetro inmediatamente
         // para evitar que el reloj se quede trabado o en 0 mientras se realiza la conexión lenta.
         if (selectedFase && selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-            const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
+            const parsed = parseStartMs(selectedFase.fechaHoraInicioReal);
             if (!isNaN(parsed)) {
                 setIsRaceRunning(true);
                 setStartTime(parsed);
-                setElapsedTime(timingSignalRService.getSyncedNow().getTime() - parsed);
+                startTimeRef.current = parsed;
+                setElapsedTime(elapsedMs(parsed, timingSignalRService.getSyncedNow().getTime()));
                 if (timerRef.current) clearInterval(timerRef.current);
                 timerRef.current = setInterval(() => {
-                    setElapsedTime(timingSignalRService.getSyncedNow().getTime() - parsed);
+                    setElapsedTime(elapsedMs(parsed, timingSignalRService.getSyncedNow().getTime()));
                 }, 37);
             }
         } else {
             setElapsedTime(0);
             setIsRaceRunning(false);
             setStartTime(null);
+            startTimeRef.current = null;
         }
         
         const setupSignalR = async () => {
@@ -182,8 +188,7 @@ const FinisherDashboard = () => {
                         if (selectedFase && String(selectedFase.id) === String(faseId)) {
                             const updated = newFases.find(x => String(x.id) === String(faseId));
                             if (updated) setSelectedFase(updated);
-                            // ✅ FIX: arrancar el cronómetro local inmediatamente
-                            const parsed = new Date(serverTime).getTime();
+                            const parsed = parseStartMs(serverTime);
                             if (!isNaN(parsed)) startLocalTimer(parsed);
                         }
                         return newFases;
@@ -215,24 +220,25 @@ const FinisherDashboard = () => {
                         // Evita el bug de stale closure donde selectedFase.estado es viejo
                         try {
                             const fasesEvento = await FaseService.getByEvento(selectedFase.etapaEventoPruebaEventoId || selectedEvento?.id);
-                            const freshFase = fasesEvento?.find(f => String(f.id) === String(selectedFase.id)) || selectedFase;
+                            const mapped = mapFasesFromApi(fasesEvento);
+                            const freshFase = mapped?.find(f => String(f.id) === String(selectedFase.id)) || selectedFase;
 
-                            if (freshFase.estado === 'En Carrera' && freshFase.fechaHoraInicioReal) {
-                                const parsed = new Date(freshFase.fechaHoraInicioReal).getTime();
+                            if (normalizeFaseEstado(freshFase.estado) === 'En Carrera' && freshFase.fechaHoraInicioReal) {
+                                const parsed = parseStartMs(freshFase.fechaHoraInicioReal);
                                 if (!isNaN(parsed)) startLocalTimer(parsed);
                             } else {
                                 // Solo detener si explícitamente ya no está En Carrera
-                                if (freshFase.estado !== 'En Carrera') {
+                                if (normalizeFaseEstado(freshFase.estado) !== 'En Carrera') {
                                     stopLocalTimer();
                                 }
                             }
                         } catch {
                             // fallback: usar el estado local
-                            if (selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-                                const parsed = new Date(selectedFase.fechaHoraInicioReal).getTime();
+                            if (normalizeFaseEstado(selectedFase.estado) === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
+                                const parsed = parseStartMs(selectedFase.fechaHoraInicioReal);
                                 if (!isNaN(parsed)) startLocalTimer(parsed);
                             } else {
-                                if (selectedFase.estado !== 'En Carrera') {
+                                if (normalizeFaseEstado(selectedFase.estado) !== 'En Carrera') {
                                     stopLocalTimer();
                                 }
                             }
@@ -254,14 +260,13 @@ const FinisherDashboard = () => {
                         });
 
                         if (String(id) === String(selectedFase.id)) {
-                            const parsed = new Date(sTime).getTime();
+                            const parsed = parseStartMs(sTime);
                             if (!isNaN(parsed)) startLocalTimer(parsed);
                         }
                     });
 
                     timingSignalRService.onRaceFinished(() => {
                         stopLocalTimer();
-                        // Opcional: recargar fases para ver el check de terminada
                     });
 
                     timingSignalRService.onRaceReset((id) => {
@@ -269,6 +274,9 @@ const FinisherDashboard = () => {
                             stopLocalTimer();
                             setElapsedTime(0);
                             setStartTime(null);
+                            startTimeRef.current = null;
+                            pendingAbsRef.current = [];
+                            setStartReceiveLagSec(null);
                             setResultados(prev => prev.map(r => ({ ...r, tiempoOficial: null, msLlegada: null, status: 'pending', estadoCanto: 'Pendiente' })));
                         }
                         setFases(prev => prev.map(f => 
@@ -310,6 +318,53 @@ const FinisherDashboard = () => {
             timingSignalRService.disconnect();
         };
     }, [selectedEvento, selectedFase?.id]);
+
+    // Poll: si SignalR pierde el push de largada, recuperamos t0 por HTTP
+    useEffect(() => {
+        if (!selectedEvento || !selectedFase) return;
+        if (normalizeFaseEstado(selectedFase.estado) !== 'Programada') return;
+        if (startTime) return;
+
+        const id = setInterval(async () => {
+            try {
+                const data = await FaseService.getByEvento(selectedEvento.id);
+                const sorted = mapFasesFromApi(data);
+                setFases(sorted);
+                const fresh = sorted.find(f => String(f.id) === String(selectedFase.id));
+                if (fresh && normalizeFaseEstado(fresh.estado) === 'En Carrera' && fresh.fechaHoraInicioReal) {
+                    setSelectedFase(fresh);
+                    const parsed = parseStartMs(fresh.fechaHoraInicioReal);
+                    if (!isNaN(parsed)) startLocalTimer(parsed);
+                }
+            } catch {
+                // red mala: siguiente tick
+            }
+        }, 4000);
+
+        return () => clearInterval(id);
+    }, [selectedEvento?.id, selectedFase?.id, selectedFase?.estado, startTime]);
+
+    // Tras reconnect SignalR: re-fetch fase por si se perdió el evento
+    useEffect(() => {
+        const unsub = timingSignalRService.onReconnected(async () => {
+            if (!selectedEvento || !selectedFase) return;
+            try {
+                const data = await FaseService.getByEvento(selectedEvento.id);
+                const sorted = mapFasesFromApi(data);
+                setFases(sorted);
+                const fresh = sorted.find(f => String(f.id) === String(selectedFase.id));
+                if (!fresh) return;
+                setSelectedFase(fresh);
+                if (normalizeFaseEstado(fresh.estado) === 'En Carrera' && fresh.fechaHoraInicioReal) {
+                    const parsed = parseStartMs(fresh.fechaHoraInicioReal);
+                    if (!isNaN(parsed)) startLocalTimer(parsed);
+                }
+            } catch (err) {
+                console.warn('[Finisher] re-fetch after reconnect failed:', err);
+            }
+        });
+        return unsub;
+    }, [selectedEvento?.id, selectedFase?.id]);
 
     // Detener timer automáticamente cuando todos han llegado, tienen estado (DSQ, DNF, etc)
     // o están cubiertos por una duda capturada en rawTimes
@@ -356,19 +411,92 @@ const FinisherDashboard = () => {
 
     const formatTimer = (ms) => formatRaceTimeFromMs(ms);
 
+    const flushPendingAbs = (t0Ms) => {
+        const pending = pendingAbsRef.current;
+        if (!pending.length) return;
+        pendingAbsRef.current = [];
+
+        const laneItems = pending.filter(p => p.kind === 'lane');
+        const doubtItems = pending.filter(p => p.kind === 'doubt');
+
+        if (laneItems.length) {
+            setResultados(prev => prev.map(r => {
+                const hit = laneItems.find(p => String(p.resultadoId) === String(r.id));
+                if (!hit) return r;
+                const diff = elapsedMs(t0Ms, hit.finishAbs);
+                const formatted = formatRaceTimeFromMs(diff);
+                timingSignalRService.sendTime(selectedFase?.id, r.id, formatted, diff).catch(() => {});
+                return { ...r, tiempoOficial: formatted, msLlegada: diff, status: 'finished' };
+            }));
+        }
+        if (doubtItems.length) {
+            setRawTimes(prev => [
+                ...prev,
+                ...doubtItems.map(d => {
+                    const diff = elapsedMs(t0Ms, d.finishAbs);
+                    return { id: d.finishAbs, time: formatRaceTimeFromMs(diff), ms: diff, type: 'duda' };
+                })
+            ]);
+        }
+    };
+
     const startLocalTimer = (sTime) => {
+        const t0 = typeof sTime === 'number' ? sTime : parseStartMs(sTime);
+        if (Number.isNaN(t0)) return;
+
+        const now = timingSignalRService.getSyncedNow().getTime();
+        const lagSec = Math.round(elapsedMs(t0, now) / 1000);
+        if (lagSec >= 1) {
+            setStartReceiveLagSec(lagSec);
+            setTimeout(() => setStartReceiveLagSec(null), 4000);
+        } else {
+            setStartReceiveLagSec(null);
+        }
+
         setIsRaceRunning(true);
-        setStartTime(sTime);
+        setStartTime(t0);
+        startTimeRef.current = t0;
+        setElapsedTime(elapsedMs(t0, now));
         if (timerRef.current) clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
-            // Usar el reloj sincronizado con el servidor para máxima precisión
-            setElapsedTime(timingSignalRService.getSyncedNow().getTime() - sTime);
+            setElapsedTime(elapsedMs(t0, timingSignalRService.getSyncedNow().getTime()));
         }, 37);
+
+        flushPendingAbs(t0);
     };
 
     const stopLocalTimer = () => {
         setIsRaceRunning(false);
         if (timerRef.current) clearInterval(timerRef.current);
+    };
+
+    /** Puede marcar llegada aunque t0 aún no haya llegado (se encola abs). */
+    const canCaptureFinish = isRaceRunning
+        || !!startTime
+        || normalizeFaseEstado(selectedFase?.estado) === 'En Carrera';
+
+    const applyOrQueueFinish = (resultadoId) => {
+        const finishAbs = timingSignalRService.getSyncedNow().getTime();
+        const t0 = startTimeRef.current ?? startTime;
+
+        if (t0 != null && !Number.isNaN(t0)) {
+            const diff = elapsedMs(t0, finishAbs);
+            const formatted = formatTimer(diff);
+            setResultados(prev => prev.map(r =>
+                r.id === resultadoId ? { ...r, tiempoOficial: formatted, msLlegada: diff, status: 'finished' } : r
+            ));
+            timingSignalRService.sendTime(selectedFase.id, resultadoId, formatted, diff).catch(err => {
+                console.error("Error sending time:", err);
+            });
+            return;
+        }
+
+        // Sin t0 aún: guardar instante absoluto y materializar cuando llegue la largada
+        pendingAbsRef.current = [
+            ...pendingAbsRef.current.filter(p => !(p.kind === 'lane' && String(p.resultadoId) === String(resultadoId))),
+            { kind: 'lane', resultadoId, finishAbs }
+        ];
+        addToast('Marca guardada; se calculará al recibir la largada', 'warning');
     };
 
     const handleRefresh = async () => {
@@ -402,12 +530,13 @@ const FinisherDashboard = () => {
                 if (freshFase) {
                     setSelectedFase(freshFase);
                     if (freshFase.estado === 'En Carrera' && freshFase.fechaHoraInicioReal) {
-                        const parsed = new Date(freshFase.fechaHoraInicioReal).getTime();
+                        const parsed = parseStartMs(freshFase.fechaHoraInicioReal);
                         if (!isNaN(parsed)) startLocalTimer(parsed);
-                    } else if (freshFase.estado !== 'En Carrera') {
+                    } else if (normalizeFaseEstado(freshFase.estado) !== 'En Carrera') {
                         stopLocalTimer();
                         setElapsedTime(0);
                         setStartTime(null);
+                        startTimeRef.current = null;
                     }
                 }
             }
@@ -440,7 +569,7 @@ const FinisherDashboard = () => {
             // ESPACIO -> DUDA
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (isRaceRunning) recordDoubt();
+                if (canCaptureFinish) recordDoubt();
                 return;
             }
 
@@ -455,10 +584,8 @@ const FinisherDashboard = () => {
             }
 
             if (laneNum !== null) {
-                // Solo si la carrera está activa
-                if (isRaceRunning) {
+                if (canCaptureFinish) {
                     const res = resultados.find(r => r.carril === laneNum);
-                    // Solo si el carril está ocupado y no tiene tiempo/estado previo
                     if (res && !res.tiempoOficial && (!res.estadoCanto || res.estadoCanto === 'Pendiente')) {
                         handleRecordFinish(res.id);
                     }
@@ -468,7 +595,7 @@ const FinisherDashboard = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isRaceRunning, resultados, startTime, rawTimes]); // Dependencias para acceso a estado fresco
+    }, [isRaceRunning, startTime, resultados, rawTimes, selectedFase?.estado]); // Dependencias para acceso a estado fresco
 
     const handleLaneFinish = (laneNum) => {
         const res = resultados.find(r => r.carril === laneNum);
@@ -477,29 +604,22 @@ const FinisherDashboard = () => {
     };
 
     const handleRecordFinish = async (resultadoId) => {
-        if (!isRaceRunning) return;
-        // getSyncedNow() aplica el offset calculado con el servidor para precisión máxima
-        const now = timingSignalRService.getSyncedNow().getTime();
-        const diff = now - startTime;
-        const formatted = formatTimer(diff);
-
-        setResultados(prev => prev.map(r => 
-            r.id === resultadoId ? { ...r, tiempoOficial: formatted, msLlegada: diff, status: 'finished' } : r
-        ));
-
-        try {
-            await timingSignalRService.sendTime(selectedFase.id, resultadoId, formatted, diff);
-        } catch (err) {
-            console.error("Error sending time:", err);
-        }
+        if (!canCaptureFinish && !selectedFase) return;
+        applyOrQueueFinish(resultadoId);
     };
 
     const recordDoubt = () => {
-        if (!isRaceRunning) return;
-        const now = timingSignalRService.getSyncedNow().getTime();
-        const diff = now - startTime;
-        const time = formatTimer(diff);
-        setRawTimes(prev => [...prev, { id: now, time, ms: diff, type: 'duda' }]);
+        if (!canCaptureFinish && !isRaceRunning) return;
+        const finishAbs = timingSignalRService.getSyncedNow().getTime();
+        const t0 = startTimeRef.current ?? startTime;
+        if (t0 != null && !Number.isNaN(t0)) {
+            const diff = elapsedMs(t0, finishAbs);
+            const time = formatTimer(diff);
+            setRawTimes(prev => [...prev, { id: finishAbs, time, ms: diff, type: 'duda' }]);
+            return;
+        }
+        pendingAbsRef.current = [...pendingAbsRef.current, { kind: 'doubt', finishAbs }];
+        addToast('Duda guardada; se calculará al recibir la largada', 'warning');
     };
 
     const removeRawTime = (id) => {
@@ -672,9 +792,8 @@ const FinisherDashboard = () => {
                                             fechaHoraInicioReal: globalAlert.serverTime
                                         };
                                         setSelectedFase(updatedTarget);
-                                        const start = new Date(globalAlert.serverTime);
-                                        setStartTime(start.getTime());
-                                        setIsRaceRunning(true);
+                                        const parsed = parseStartMs(globalAlert.serverTime);
+                                        if (!isNaN(parsed)) startLocalTimer(parsed);
                                     }
                                     setGlobalAlert(null);
                                 }}>
@@ -765,6 +884,11 @@ const FinisherDashboard = () => {
                 <div className={`main-timer ${isRaceRunning ? 'running' : ''}`}>
                     {formatTimer(elapsedTime)}
                 </div>
+                {startReceiveLagSec != null && startReceiveLagSec >= 1 && (
+                    <div className="start-lag-chip" title="El reloj se sincronizó al instante del click del largador">
+                        Largada recibida (+{startReceiveLagSec}s)
+                    </div>
+                )}
             </header>
 
             <div className="finisher-layout">
@@ -842,7 +966,7 @@ const FinisherDashboard = () => {
                                     const isFinished = res?.tiempoOficial;
                                     const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
                                     return (
-                                        <button key={num} type="button" className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!isRaceRunning || !isOccupied || isFinished || hasStatus}>
+                                        <button key={num} type="button" className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!canCaptureFinish || !isOccupied || isFinished || hasStatus}>
                                             <span className="num">{num}</span>
                                             <span className="label">{isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}</span>
                                         </button>
@@ -851,9 +975,9 @@ const FinisherDashboard = () => {
                             </div>
                             <button 
                                 type="button"
-                                className={`btn-doubt ${isRaceRunning ? 'active' : ''}`}
+                                className={`btn-doubt ${canCaptureFinish ? 'active' : ''}`}
                                 onClick={recordDoubt} 
-                                disabled={!isRaceRunning}
+                                disabled={!canCaptureFinish}
                             >
                                 <Activity size={20} /> <span>DUDA (?)</span>
                             </button>

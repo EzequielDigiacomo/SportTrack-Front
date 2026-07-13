@@ -1,6 +1,8 @@
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../utils/constants';
 import { getStoredAuthToken } from '../utils/authHelpers';
+import { clearPendingRaceStart, loadPendingRaceStart, savePendingRaceStart } from '../utils/timingMath';
+import FaseService from './FaseService';
 
 function resolveHubUrl() {
     const fromEnv = import.meta.env.VITE_SIGNALR_HUB_URL;
@@ -9,25 +11,35 @@ function resolveHubUrl() {
     return `${API_BASE_URL.replace(/\/api\/?$/, '')}/hubs/timing`;
 }
 
+const SYNC_INTERVAL_MS = 60_000;
+const SYNC_STALE_MS = 120_000;
+const MAX_SAMPLE_RTT_MS = 1500;
+
 class TimingSignalRService {
     constructor() {
         this.connection = null;
         this.currentFaseId = null;
         this.currentEventoId = null;
         this.serverOffset = 0;
+        this.lastSyncAt = null;
+        this.lastSyncSampleCount = 0;
+        this.lastSyncMedianRtt = null;
         this.connectionPromise = null;
         this._connectGeneration = 0;
         this._intentionalDisconnect = false;
         this._stateCallbacks = [];
+        this._reconnectedCallbacks = [];
+        this._syncIntervalId = null;
+        this._pendingStartRetryId = null;
         this.userName = "Usuario";
         this.role = "Espectador";
 
-        // Callback registers (to prevent race conditions)
         this._presenceCallback = null;
         this._eventPresenceCallback = null;
         this._raceStartedCallback = null;
         this._raceResetCallback = null;
         this._raceFinishedCallback = null;
+        this._raceInReviewCallback = null;
         this._timeReceivedCallback = null;
         this._globalResultStatusUpdatedCallback = null;
         this._globalRaceStartedCallback = null;
@@ -43,9 +55,16 @@ class TimingSignalRService {
         this._stateCallbacks.push(callback);
         try {
             callback(this.getConnectionState());
-        } catch(e) {}
+        } catch (e) {}
         return () => {
             this._stateCallbacks = this._stateCallbacks.filter(c => c !== callback);
+        };
+    }
+
+    onReconnected(callback) {
+        this._reconnectedCallbacks.push(callback);
+        return () => {
+            this._reconnectedCallbacks = this._reconnectedCallbacks.filter(c => c !== callback);
         };
     }
 
@@ -53,11 +72,36 @@ class TimingSignalRService {
         this._stateCallbacks.forEach(cb => {
             try { cb(state); } catch (e) {}
         });
+        if (state === 'Connected') {
+            this._startPeriodicSync();
+            this._schedulePendingStartRetry();
+        } else if (state === 'Disconnected') {
+            this._stopPeriodicSync();
+        }
+    }
+
+    _notifyReconnected() {
+        this._reconnectedCallbacks.forEach(cb => {
+            try { cb(); } catch (e) {}
+        });
     }
 
     getConnectionState() {
         if (!this.connection) return "Disconnected";
         return this.connection.state;
+    }
+
+    getClockSyncStatus() {
+        const ageMs = this.lastSyncAt == null ? null : Date.now() - this.lastSyncAt;
+        return {
+            offsetMs: this.serverOffset,
+            lastSyncAt: this.lastSyncAt,
+            ageMs,
+            sampleCount: this.lastSyncSampleCount,
+            medianRttMs: this.lastSyncMedianRtt,
+            isStale: ageMs == null || ageMs > SYNC_STALE_MS,
+            hasSynced: this.lastSyncAt != null
+        };
     }
 
     async waitForConnection(timeoutMs = 8000) {
@@ -107,6 +151,13 @@ class TimingSignalRService {
 
         this.connection.on("RaceFinished", (id) => {
             if (this._raceFinishedCallback) this._raceFinishedCallback(id);
+        });
+
+        this.connection.on("RaceInReview", (id) => {
+            if (this._raceInReviewCallback) this._raceInReviewCallback(id);
+        });
+        this.connection.on("raceinreview", (id) => {
+            if (this._raceInReviewCallback) this._raceInReviewCallback(id);
         });
 
         this.connection.on("TimeReceived", (resultadoId, timeStr, ms) => {
@@ -168,6 +219,8 @@ class TimingSignalRService {
                     console.warn("[SignalR] Error re-joining race group after reconnect:", err);
                 }
             }
+            this._notifyReconnected();
+            await this.flushPendingRaceStart();
         });
 
         this.connection.onclose((error) => {
@@ -195,6 +248,36 @@ class TimingSignalRService {
             .build();
         this._handlersRegistered = false;
         this._ensureConnectionHandlers();
+    }
+
+    _startPeriodicSync() {
+        this._stopPeriodicSync();
+        this._syncIntervalId = setInterval(() => {
+            if (this.getConnectionState() === 'Connected') {
+                this.syncClock().catch(() => {});
+            }
+        }, SYNC_INTERVAL_MS);
+    }
+
+    _stopPeriodicSync() {
+        if (this._syncIntervalId) {
+            clearInterval(this._syncIntervalId);
+            this._syncIntervalId = null;
+        }
+    }
+
+    _schedulePendingStartRetry() {
+        if (this._pendingStartRetryId) return;
+        this._pendingStartRetryId = setInterval(() => {
+            this.flushPendingRaceStart().catch(() => {});
+        }, 4000);
+    }
+
+    _stopPendingStartRetry() {
+        if (this._pendingStartRetryId) {
+            clearInterval(this._pendingStartRetryId);
+            this._pendingStartRetryId = null;
+        }
     }
 
     async connect(eventoId = null, faseId = null, userName = null, role = null) {
@@ -255,6 +338,8 @@ class TimingSignalRService {
                 } else {
                     this.currentFaseId = null;
                 }
+
+                await this.flushPendingRaceStart();
             } catch (err) {
                 if (this._intentionalDisconnect || err?.name === 'AbortError') {
                     return;
@@ -270,22 +355,24 @@ class TimingSignalRService {
 
     async syncClock() {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
-        
+
         const SAMPLES = 5;
-        const offsets = [];
+        const samples = [];
 
         for (let i = 0; i < SAMPLES; i++) {
             const start = Date.now();
             try {
                 const serverTimeStr = await this.connection.invoke("GetServerTime");
                 const end = Date.now();
-                
-                const latency = (end - start) / 2;
+                const rtt = end - start;
+                if (rtt > MAX_SAMPLE_RTT_MS) {
+                    await new Promise(r => setTimeout(r, 100));
+                    continue;
+                }
+                const latency = rtt / 2;
                 const serverDate = new Date(serverTimeStr);
-                
                 const offset = (serverDate.getTime() + latency) - end;
-                offsets.push(offset);
-                
+                samples.push({ offset, rtt });
                 await new Promise(r => setTimeout(r, 100));
             } catch (err) {
                 if (!this._intentionalDisconnect) {
@@ -295,9 +382,14 @@ class TimingSignalRService {
             }
         }
 
-        if (offsets.length > 0) {
-            offsets.sort((a, b) => a - b);
-            this.serverOffset = offsets[Math.floor(offsets.length / 2)];
+        if (samples.length > 0) {
+            samples.sort((a, b) => a.offset - b.offset);
+            const mid = samples[Math.floor(samples.length / 2)];
+            this.serverOffset = mid.offset;
+            this.lastSyncAt = Date.now();
+            this.lastSyncSampleCount = samples.length;
+            const rtts = samples.map(s => s.rtt).sort((a, b) => a - b);
+            this.lastSyncMedianRtt = rtts[Math.floor(rtts.length / 2)];
         }
     }
 
@@ -310,15 +402,57 @@ class TimingSignalRService {
         await this.connection.invoke("JoinRaceGroup", faseId.toString(), this.userName, this.role);
     }
 
-    async requestStartRace(faseId) {
+    async requestStartRace(faseId, startTime = null) {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             await this.connect(null, faseId);
         }
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             throw new Error("No hay conexión activa con el servidor de tiempos");
         }
-        const startTime = this.getSyncedNow();
-        await this.connection.invoke("RequestStartRace", parseInt(faseId), startTime.toISOString());
+        const stamp = startTime instanceof Date ? startTime : this.getSyncedNow();
+        await this.connection.invoke("RequestStartRace", parseInt(faseId), stamp.toISOString());
+        clearPendingRaceStart(faseId);
+        return stamp;
+    }
+
+    /**
+     * Entrega t0 (instante del click) por SignalR → HTTP → cola sessionStorage.
+     * Nunca regenera t0.
+     */
+    async deliverRaceStart(faseId, startStamp) {
+        const stamp = startStamp instanceof Date ? startStamp : new Date(startStamp);
+        const t0Iso = stamp.toISOString();
+        savePendingRaceStart(faseId, t0Iso);
+
+        try {
+            if (this.getConnectionState() !== 'Connected') {
+                await this.connect(this.currentEventoId, faseId, this.userName, this.role);
+            }
+            if (this.getConnectionState() === 'Connected') {
+                await this.connection.invoke("RequestStartRace", parseInt(faseId), t0Iso);
+                clearPendingRaceStart(faseId);
+                return { ok: true, channel: 'signalr', stamp };
+            }
+        } catch (err) {
+            console.warn("[Timing] SignalR start failed, trying HTTP:", err);
+        }
+
+        try {
+            const updated = await FaseService.iniciar(faseId, t0Iso);
+            clearPendingRaceStart(faseId);
+            return { ok: true, channel: 'http', stamp, updated };
+        } catch (httpErr) {
+            console.warn("[Timing] HTTP start failed, queued for retry:", httpErr);
+            this._schedulePendingStartRetry();
+            return { ok: false, channel: 'pending', stamp, error: httpErr };
+        }
+    }
+
+    async flushPendingRaceStart() {
+        const pending = loadPendingRaceStart();
+        if (!pending) return false;
+        const result = await this.deliverRaceStart(pending.faseId, pending.t0Iso);
+        return result.ok;
     }
 
     async requestResetRace(faseId) {
@@ -374,7 +508,7 @@ class TimingSignalRService {
     }
 
     onRaceInReview(callback) {
-        // Obsoleto, delegar a global
+        this._raceInReviewCallback = callback;
     }
 
     onRaceReset(callback) {
@@ -392,8 +526,8 @@ class TimingSignalRService {
         await this.connection.invoke("UpdateResultStatus", faseId.toString(), resultadoId.toString(), status);
     }
 
-    onResultStatusUpdated(callback) {
-        // Obsoleto, delegar a global
+    onResultStatusUpdated() {
+        // Obsoleto
     }
 
     onGlobalResultStatusUpdated(callback) {
@@ -421,6 +555,8 @@ class TimingSignalRService {
         this._connectGeneration++;
         this._intentionalDisconnect = true;
         this.connectionPromise = null;
+        this._stopPeriodicSync();
+        this._stopPendingStartRetry();
 
         const conn = this.connection;
         this.connection = null;
@@ -432,7 +568,7 @@ class TimingSignalRService {
             try {
                 await conn.stop();
             } catch {
-                // Cierre intencional durante handshake: ignorar
+                // ignore
             }
         }
 

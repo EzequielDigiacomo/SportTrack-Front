@@ -25,8 +25,9 @@ const FaseService = {
     delete: async (id) => {
         await api.delete(`${ENDPOINTS.FASES.BASE}/${id}`);
     },
-    iniciar: async (id) => {
-        const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Iniciar`);
+    iniciar: async (id, startTimeIso = null) => {
+        const qs = startTimeIso ? `?startTime=${encodeURIComponent(startTimeIso)}` : '';
+        const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Iniciar${qs}`);
         return response.data;
     },
     finalizar: async (id) => {
