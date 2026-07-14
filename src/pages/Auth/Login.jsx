@@ -41,15 +41,21 @@ const Login = () => {
             navigate(getDashboardPathForRole(getUserRole(data)), { replace: true });
             
         } catch (err) {
-            const serverMsg = err.response?.data?.message;
-            if (serverMsg) {
+            // api.js puede rechazar { status, message, data } (no siempre es AxiosError)
+            const status = err.response?.status ?? err.status;
+            const serverMsg =
+                err.response?.data?.message ||
+                err.data?.message ||
+                err.message;
+
+            if (serverMsg && serverMsg !== 'Network Error' && !String(serverMsg).includes('status code')) {
                 setError(serverMsg);
-            } else if (err.response?.status === 401) {
+            } else if (status === 401) {
                 setError('Usuario o contraseña incorrectos');
-            } else if (err.response?.status === 403) {
+            } else if (status === 403) {
                 setError('Acceso denegado o cuenta suspendida');
             } else {
-                setError('No se pudo conectar con el servidor.');
+                setError('No se pudo conectar con el servidor. Revisá la consola (API Context).');
             }
         } finally {
             setLoading(false);
