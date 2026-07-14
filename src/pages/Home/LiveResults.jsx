@@ -4,7 +4,6 @@ import EventoService from '../../services/EventoService';
 import { PruebaService } from '../../services/ConfigService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
-import signalRServiceInstance from '../../services/SignalRService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import PdfExportService from '../../services/PdfExportService';
 import ThemeToggle from '../../components/Common/ThemeToggle';
@@ -116,10 +115,11 @@ const LiveResults = () => {
     };
 
     useEffect(() => {
-        // Connect to the timing hub globally
-        timingSignalRService.connect().catch(console.error);
+        // Hub real: /hubs/timing (no existe /hubs/results)
+        timingSignalRService
+            .connect(id, selectedFase?.id, 'Espectador Live', 'Espectador')
+            .catch(console.error);
 
-        // Listen for any race starting, officialized, in review, or reset globally
         timingSignalRService.onGlobalRaceStarted(({ faseId }) => {
             console.log(`[SignalR] Race started globally: ${faseId}`);
             reloadPhasesOnly();
@@ -158,8 +158,26 @@ const LiveResults = () => {
             setRefreshResultsCounter(prev => prev + 1);
         });
 
+        const applyLiveTime = (resId, timeStr) => {
+            const idKey = String(resId);
+            setResultados(prev => prev.map(r =>
+                String(r.id || r.Id) === idKey
+                    ? { ...r, tiempoOficial: timeStr, TiempoOficial: timeStr }
+                    : r
+            ));
+            setLastUpdated(new Date());
+        };
+
+        timingSignalRService.onGlobalTimeReceived((_faseId, resId, timeStr) => {
+            applyLiveTime(resId, timeStr);
+        });
+        timingSignalRService.onTimeReceived((resId, timeStr) => {
+            applyLiveTime(resId, timeStr);
+        });
+
         return () => {
-            // Shared singleton clean up is not strictly necessary but keeps memory safe
+            timingSignalRService.onGlobalTimeReceived(null);
+            timingSignalRService.onTimeReceived(null);
         };
     }, [id, selectedFase]);
 
@@ -275,61 +293,15 @@ const LiveResults = () => {
 
         loadData();
 
-        // SignalR setup
-        let signalRJoined = false;
-        const setupSignalR = async () => {
-            try {
-                // Nos unimos al grupo de la PRUEBA completa para recibir updates de todas sus fases
-                await signalRServiceInstance.joinEventGroup(selectedPrueba.id);
-                signalRJoined = true;
-                signalRServiceInstance.onResultUpdated((updatedData) => {
-                    const normalized = {
-                        ...updatedData,
-                        id: updatedData.id || updatedData.Id,
-                        posicion: updatedData.posicion || updatedData.Posicion,
-                        tiempoOficial: updatedData.tiempoOficial || updatedData.TiempoOficial,
-                        faseId: updatedData.faseId || updatedData.FaseId,
-                        participanteNombre: updatedData.participanteNombre || updatedData.ParticipanteNombre,
-                        clubSigla: updatedData.clubSigla || updatedData.ClubSigla,
-                        clubNombre: updatedData.clubNombre || updatedData.ClubNombre,
-                        carril: updatedData.carril || updatedData.Carril,
-                        estado: updatedData.estado || updatedData.Estado || updatedData.estadoCanto || updatedData.EstadoCanto
-                    };
-
-                    setResultados(prev => {
-                        const exists = prev.find(r => (r.id || r.Id) === normalized.id || (r.inscripcionId || r.InscripcionId) === normalized.inscripcionId);
-                        let newArr;
-                        if (exists) {
-                            newArr = prev.map(r => ((r.id || r.Id) === normalized.id || (r.inscripcionId || r.InscripcionId) === normalized.inscripcionId) ? { ...r, ...normalized } : r);
-                        } else {
-                            newArr = [...prev, normalized];
-                        }
-                        return [...newArr].sort((a, b) => (a.posicion || a.Posicion || 99) - (b.posicion || b.Posicion || 99));
-                    });
-                    setLastUpdated(new Date());
-                });
-
-                signalRServiceInstance.connection.on("RecibirEstructura", () => {
-                    loadData();
-                });
-            } catch (err) {
-                console.warn("SignalR not available, falling back to polling.", err);
-            }
-        };
-
-        setupSignalR();
-
+        // Backup ligero: el live en tiempo real va por TimingSignalR (/hubs/timing)
         const pollInterval = setInterval(() => {
-            if (!signalRJoined) loadData();
+            if (timingSignalRService.getConnectionState() !== 'Connected') {
+                loadData();
+            }
         }, 30000);
 
         return () => {
             clearInterval(pollInterval);
-            if (signalRJoined) {
-                signalRServiceInstance.leaveEventGroup(selectedPrueba.id).catch(console.error);
-                signalRServiceInstance.connection?.off("RecibirResultado");
-                signalRServiceInstance.connection?.off("RecibirEstructura");
-            }
         };
     }, [selectedPrueba, refreshResultsCounter]);
 

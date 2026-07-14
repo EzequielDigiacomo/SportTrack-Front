@@ -1,10 +1,17 @@
+/**
+ * @deprecated El hub `/hubs/results` no existe en el API.
+ * Usar TimingSignalRService → `/hubs/timing`.
+ * LiveResults ya migró; este archivo queda solo por compatibilidad temporal.
+ */
 import * as signalR from '@microsoft/signalr';
 import { API_BASE_URL } from '../utils/constants';
+import { getStoredAuthToken } from '../utils/authHelpers';
 
 class SignalRService {
     constructor() {
         this.connection = null;
         this.currentGroupId = null;
+        console.warn('[SignalRService] Deprecated: use TimingSignalRService (/hubs/timing).');
     }
 
     async connect() {
@@ -21,13 +28,11 @@ class SignalRService {
         // Si la conexión existe pero no está conectada (ej: se cayó), 
         // no la recreamos, simplemente intentamos start() si está en estado 'Disconnected'
         if (!this.connection) {
-            // Usamos la URL absoluta si es posible, o la del proxy
-            const hubUrl = API_BASE_URL.replace('/api', '') + '/hubs/results';
+            const hubUrl = API_BASE_URL.replace(/\/api\/?$/, '') + '/hubs/timing';
 
             this.connection = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl, {
-                    // Enviamos el token manualmente para evitar bloqueos de cookies en móviles
-                    accessTokenFactory: () => localStorage.getItem('sporttrack_auth_token')
+                    accessTokenFactory: () => getStoredAuthToken() || ''
                 })
                 .configureLogging(signalR.LogLevel.Warning)
                 .withAutomaticReconnect()
