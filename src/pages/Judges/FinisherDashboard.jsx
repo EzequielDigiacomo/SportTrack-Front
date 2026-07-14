@@ -63,12 +63,27 @@ const FinisherDashboard = () => {
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
     const [activeJudges, setActiveJudges] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [liveClock, setLiveClock] = useState(() => {
+        const d = timingSignalRService.getSyncedNow();
+        return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    });
 
     useEffect(() => {
         const unsubscribe = timingSignalRService.onStateChange((state) => {
             setConnectionState(state);
         });
-        return () => unsubscribe();
+        const clockTick = setInterval(() => {
+            const d = timingSignalRService.getSyncedNow();
+            setLiveClock(d.toLocaleTimeString('es-AR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            }));
+        }, 250);
+        return () => {
+            unsubscribe();
+            clearInterval(clockTick);
+        };
     }, []);
 
     useEffect(() => {
@@ -902,6 +917,15 @@ const FinisherDashboard = () => {
                         <Clock size={16} />
                         <span>Cronograma</span>
                         <span className="cronograma-count">{fases.length}</span>
+                    </span>
+                    <span
+                        className="cronograma-toggle-center"
+                        title="Hora del sistema (sincronizada con el servidor)"
+                    >
+                        <span className="starter-live-clock">
+                            <Clock size={16} className="starter-live-clock-icon" aria-hidden />
+                            <time className="starter-live-clock-time" dateTime={liveClock}>{liveClock}</time>
+                        </span>
                     </span>
                     <span className="cronograma-toggle-right">
                         {selectedFase && (

@@ -2,6 +2,7 @@ import React from 'react';
 import { Trophy } from 'lucide-react';
 import { computePositionsForPhase, isExcludedFromRanking, timeToMs } from '../../utils/resultadosHelpers';
 import { formatRaceTime, isMeaningfulRaceTime } from '../../utils/raceTimeUtils';
+import { formatTime } from '../../utils/dateUtils';
 
 const formatDiff = (diffMs) => {
     if (diffMs === null || diffMs <= 0) return '-';
@@ -45,6 +46,9 @@ const ResultadosTable = ({
 }) => {
     if (!fase) return null;
 
+    const horaCompetencia = formatTime(fase.fechaHoraProgramada || fase.FechaHoraProgramada);
+    const horaLabel = horaCompetencia !== '--:--' ? `${horaCompetencia} hs` : null;
+
     const computedPositions = computePositionsForPhase(fase.resultados, tiemposLocales);
 
     const phaseHasMeaningfulTimes = (fase.resultados || []).some(r => {
@@ -82,6 +86,9 @@ const ResultadosTable = ({
             <div className="resultados-table-wrapper live-results-view fade-in">
                 <h3 className="live-results-fase-title">
                     Fase: <span>{fase.nombreFase}</span>
+                    {horaLabel && (
+                        <span className="fase-hora-competencia"> · Hora de competencia: {horaLabel}</span>
+                    )}
                 </h3>
                 <table className="admin-table live-results-table">
                     <thead>
@@ -191,8 +198,15 @@ const ResultadosTable = ({
 
     return (
         <div className={`resultados-table-wrapper fade-in ${isSuccess ? 'grid-success-flash' : ''}`} style={{ marginBottom: '2.5rem' }}>
-            <h3 style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-                Fase: <span style={{ color: 'var(--color-primary-light)' }}>{fase.nombreFase}</span>
+            <h3 style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.35rem' }}>
+                <span>
+                    Fase: <span style={{ color: 'var(--color-primary-light)' }}>{fase.nombreFase}</span>
+                </span>
+                {horaLabel && (
+                    <span className="fase-hora-competencia" style={{ color: 'var(--color-text-muted, #94a3b8)', fontWeight: 500, fontSize: '0.95em' }}>
+                        · Hora de competencia: {horaLabel}
+                    </span>
+                )}
             </h3>
             <table className="admin-table">
                 <thead>

@@ -663,16 +663,61 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
     };
 
+    const syncFaseIdInUrl = useCallback((faseId) => {
+        const params = new URLSearchParams(location.search);
+        const current = params.get('faseId');
+        const next = faseId != null && faseId !== '' ? String(faseId) : null;
+        if ((current || null) === next) return;
+        if (next) params.set('faseId', next);
+        else params.delete('faseId');
+        const search = params.toString();
+        navigate(
+            { pathname: location.pathname, search: search ? `?${search}` : '' },
+            { replace: true }
+        );
+    }, [location.pathname, location.search, navigate]);
+
     const handleSelectRegata = (fase) => {
         if (!fase) {
-            setSelectedPrueba(null);
-            setFiltroVisualFase('Cronograma');
+            pendingFiltro.current = null;
+            setFiltroVisualFase('Todas');
+            syncFaseIdInUrl(null);
             return;
         }
-        // Store the desired filter BEFORE triggering the selectedPrueba useEffect
-        pendingFiltro.current = fase.nombreFase;
-        // 1. Select the prueba (EventoPruebaId) — triggers useEffect which will consume pendingFiltro
-        setSelectedPrueba(fase.eventoPruebaId);
+
+        const pid = String(fase.eventoPruebaId || fase.EventoPruebaId || '');
+        const nombreFase = fase.nombreFase || fase.NombreFase || '';
+
+        // Ir siempre a Resultados para que se vea la grilla de esa regata.
+        setCurrentTab('resultados');
+        syncFaseIdInUrl(fase.id);
+
+        if (String(selectedPrueba) === pid) {
+            // Misma prueba: el useEffect de selectedPrueba no corre; actualizar fase ya.
+            pendingFiltro.current = null;
+            setFiltroVisualFase(nombreFase || 'Todas');
+            return;
+        }
+
+        // Otra prueba: guardar filtro para el useEffect que dispara loadDatosPrueba.
+        pendingFiltro.current = nombreFase || null;
+        setSelectedPrueba(pid);
+    };
+
+    const handleSelectFaseVisual = (nombreFase) => {
+        const nombre = nombreFase || 'Todas';
+        setFiltroVisualFase(nombre);
+        if (!nombre || nombre === 'Todas') {
+            syncFaseIdInUrl(null);
+            return;
+        }
+        const match =
+            (fases || []).find(f => f.nombreFase === nombre)
+            || (cronograma || []).find(f =>
+                String(f.eventoPruebaId || f.EventoPruebaId) === String(selectedPrueba)
+                && f.nombreFase === nombre
+            );
+        syncFaseIdInUrl(match?.id ?? null);
     };
 
     /** Cambio manual de prueba: limpia faseId obsoleto en la URL para no volver a la prueba anterior. */
@@ -717,7 +762,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         currentTab, setCurrentTab,
         inscriptos, fases, cronograma,
         loading, saving, isLocked, message, setMessage,
-        filtroVisualFase, setFiltroVisualFase,
+        filtroVisualFase, setFiltroVisualFase: handleSelectFaseVisual,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,

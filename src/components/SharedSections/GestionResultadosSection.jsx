@@ -99,13 +99,21 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         return acc;
     }, {});
 
-    const faseSeleccionada = filtroVisualFase === 'Todas'
+    const faseSeleccionada = (filtroVisualFase === 'Todas' || filtroVisualFase === 'Cronograma')
         ? null
-        : ((fases || []).find(f => f.nombreFase === filtroVisualFase) || (fases || [])[0] || null);
+        : ((fases || []).find(f => f.nombreFase === filtroVisualFase) || null);
 
-    const faseSeleccionadaParaSync = filtroVisualFase === 'Todas'
-        ? ((fases || []).find(f => f.estado === 'En Carrera') || (fases || [])[0] || null)
-        : faseSeleccionada;
+    const faseSeleccionadaParaSync = faseSeleccionada
+        || ((fases || []).find(f => f.estado === 'En Carrera') || null);
+
+    // Preferir el id de la fase filtrada; si aún no cargó `fases`, usar el cronograma.
+    const selectedFaseIdForHeader = faseSeleccionada?.id
+        || (filtroVisualFase && filtroVisualFase !== 'Todas' && filtroVisualFase !== 'Cronograma'
+            ? (cronograma || []).find(f =>
+                String(f.eventoPruebaId || f.EventoPruebaId) === String(selectedPrueba)
+                && f.nombreFase === filtroVisualFase
+            )?.id
+            : null);
 
     const startLocalTimer = (startTime) => {
         setIsRaceRunning(true);
@@ -497,7 +505,7 @@ return (
             hideTabs={hideTabs}
             cronograma={cronograma}
             onSelectRegata={handleSelectRegata}
-            selectedFaseId={faseSeleccionada?.id}
+            selectedFaseId={selectedFaseIdForHeader}
             isAdmin={isAdmin}
         />
 
@@ -1008,9 +1016,11 @@ return (
                             </div>
                         ) : (
                             <div className="empty-state">
-                                {viewMode === 'resultados'
-                                    ? 'No hay resultados oficiales guardados para esta prueba todavía.'
-                                    : 'Seleccioná una fase para cargar tiempos.'}
+                                {fases.length > 0
+                                    ? 'Seleccioná una fase en el desplegable o una regata específica arriba para ver la grilla.'
+                                    : viewMode === 'resultados'
+                                        ? 'No hay resultados oficiales guardados para esta prueba todavía.'
+                                        : 'Seleccioná una fase para cargar tiempos.'}
                             </div>
                         )}
                     </div>

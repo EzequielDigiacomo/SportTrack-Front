@@ -2058,6 +2058,31 @@
     display: none;
 }
 
+.cronograma-toggle-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    pointer-events: none;
+}
+
+.cronograma-toggle-bar .starter-live-clock {
+    margin: 0;
+}
+
+@media (max-width: 1000px) {
+    .cronograma-toggle-center .starter-live-clock {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+
+    .cronograma-toggle-center .starter-live-clock-time {
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+    }
+}
+
 .cronograma-toggle-bar {
     display: none;
     width: 100%;
