@@ -41,6 +41,7 @@ class TimingSignalRService {
         this._raceFinishedCallback = null;
         this._raceInReviewCallback = null;
         this._timeReceivedCallback = null;
+        this._globalTimeReceivedCallback = null;
         this._globalResultStatusUpdatedCallback = null;
         this._globalRaceStartedCallback = null;
         this._globalRaceInReviewCallback = null;
@@ -163,6 +164,14 @@ class TimingSignalRService {
         this.connection.on("TimeReceived", (resultadoId, timeStr, ms) => {
             if (this._timeReceivedCallback) this._timeReceivedCallback(resultadoId, timeStr, ms);
         });
+
+        const handleGlobalTimeReceived = (faseId, resultadoId, timeStr, ms) => {
+            if (this._globalTimeReceivedCallback) {
+                this._globalTimeReceivedCallback(faseId, resultadoId, timeStr, ms);
+            }
+        };
+        this.connection.on("globalTimeReceived", handleGlobalTimeReceived);
+        this.connection.on("globaltimereceived", handleGlobalTimeReceived);
 
         this.connection.on("GlobalResultStatusUpdated", (resId, status) => {
             if (this._globalResultStatusUpdatedCallback) this._globalResultStatusUpdatedCallback(resId, status);
@@ -333,8 +342,14 @@ class TimingSignalRService {
                 }
 
                 if (faseId) {
-                    await this.connection.invoke("JoinRaceGroup", faseId.toString(), this.userName, this.role);
-                    this.currentFaseId = faseId.toString();
+                    const nextFaseId = faseId.toString();
+                    if (this.currentFaseId && this.currentFaseId !== nextFaseId) {
+                        try {
+                            await this.connection.invoke("LeaveRaceGroup", this.currentFaseId);
+                        } catch (_) { /* ignore */ }
+                    }
+                    await this.connection.invoke("JoinRaceGroup", nextFaseId, this.userName, this.role);
+                    this.currentFaseId = nextFaseId;
                 } else {
                     this.currentFaseId = null;
                 }
@@ -517,6 +532,10 @@ class TimingSignalRService {
 
     onTimeReceived(callback) {
         this._timeReceivedCallback = callback;
+    }
+
+    onGlobalTimeReceived(callback) {
+        this._globalTimeReceivedCallback = callback;
     }
 
     async updateResultStatus(faseId, resultadoId, status) {

@@ -51,8 +51,10 @@ const ResultadosTable = ({
 
     const computedPositions = computePositionsForPhase(fase.resultados, tiemposLocales);
 
+    const getLocal = (id) => tiemposLocales[id] || tiemposLocales[String(id)] || {};
+
     const phaseHasMeaningfulTimes = (fase.resultados || []).some(r => {
-        const local = tiemposLocales[r.id] || {};
+        const local = getLocal(r.id);
         const time = local.tiempoOficial !== undefined ? local.tiempoOficial : r.tiempoOficial;
         return isMeaningfulRaceTime(time);
     });
@@ -60,10 +62,10 @@ const ResultadosTable = ({
     const sortByCarril = (a, b) => (a.carril || 99) - (b.carril || 99);
 
     const getDisplayPosition = (res) => {
-        const local = tiemposLocales[res.id] || {};
+        const local = getLocal(res.id);
         const estado = local.estadoCanto || res.estado;
         if (isExcludedFromRanking(estado)) return '';
-        return computedPositions[res.id] || '';
+        return computedPositions[res.id] || computedPositions[String(res.id)] || '';
     };
 
     // Si no es admin, mostramos el formato "Live Results" (vista de consulta premium y simple)
@@ -103,7 +105,7 @@ const ResultadosTable = ({
                     </thead>
                     <tbody>
                         {sorted.map((res, index) => {
-                            const local = tiemposLocales[res.id] || {};
+                            const local = getLocal(res.id);
                             const pos = getDisplayPosition(res);
                             const timeStr = local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial;
                             const displayTime = formatRaceTime(timeStr);
@@ -220,7 +222,7 @@ const ResultadosTable = ({
                 </thead>
                 <tbody>
                     {sortedResultados.map(res => {
-                        const local = tiemposLocales[res.id] || {};
+                        const local = getLocal(res.id);
                         const displayTime = formatRaceTime(local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial);
                         const displayPos = getDisplayPosition(res);
                         const displayCarril = local.carril !== undefined ? local.carril : (res.carril || '');

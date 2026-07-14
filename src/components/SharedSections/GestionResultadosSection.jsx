@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { formatTime } from '../../utils/dateUtils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus, Calendar, Link2 } from 'lucide-react';
 import { useResultados } from './useResultados';
@@ -18,10 +17,43 @@ import './GestionResultados.css';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
 import { applyPositionsToTiemposLocales } from '../../utils/resultadosHelpers';
 import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
+import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
+import { parseStartMs, elapsedMs } from '../../utils/timingMath';
+
+function getFaseStatusBadge(fase) {
+    if (!fase) return null;
+    const estado = normalizeFaseEstado(fase.estado);
+    if (estado === 'En Carrera') {
+        return {
+            className: 'fase-status-badge running',
+            label: 'En carrera',
+            title: 'La regata está transcurriendo',
+        };
+    }
+    if (estado === 'Pendiente de Validación') {
+        return {
+            className: 'fase-status-badge verifying',
+            label: 'En verificación',
+            title: 'Mesa de control está verificando los tiempos',
+        };
+    }
+    if (estado === 'Finalizada') {
+        return {
+            className: 'fase-status-badge saved',
+            label: 'Tiempos guardados',
+            title: 'Los tiempos oficiales ya fueron guardados',
+        };
+    }
+    return null;
+}
 
 const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded, viewMode, isManualTiming = false }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
+    const isControlOrManualPage =
+        location.pathname.includes('juez-control') ||
+        location.pathname.includes('carga-manual');
     const [showPdfMenu, setShowPdfMenu] = useState(false);
     
     const planNombre = user?.plan?.nombre?.toLowerCase() || 'bronce';
@@ -41,7 +73,9 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         handleGenerarManual,
         handleRecalcularCronograma, handleSelectRegata,
         loadDatosPrueba, setMessage,
-        handleUpdateFaseDetails
+        handleUpdateFaseDetails,
+        setFases,
+        confirmDialog, closeConfirmDialog
     } = useResultados(preselectedEventoId, defaultTab);
 
     const [elapsedTime, setElapsedTime] = useState(0);
@@ -116,11 +150,15 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
             : null);
 
     const startLocalTimer = (startTime) => {
+        const t0 = typeof startTime === 'number' ? startTime : parseStartMs(startTime);
+        if (!Number.isFinite(t0)) return;
         setIsRaceRunning(true);
         clearInterval(timerRef.current);
+        // Mismo contrato que cronometrista/largador: ahora sincronizado − t0
+        setElapsedTime(elapsedMs(t0, timingSignalRService.getSyncedNow().getTime()));
         timerRef.current = setInterval(() => {
-            setElapsedTime(new Date() - startTime);
-        }, 10);
+            setElapsedTime(elapsedMs(t0, timingSignalRService.getSyncedNow().getTime()));
+        }, 37);
     };
 
     const stopLocalTimer = () => {
@@ -129,24 +167,64 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     };
 
     React.useEffect(() => {
-        const canSync = viewMode === 'tiempos' || viewMode === 'resultados';
+        // Sync en tiempos/resultados; también si se usa sin viewMode (Admin / Super).
+        const canSync = !viewMode || viewMode === 'tiempos' || viewMode === 'resultados';
         if (!faseSeleccionadaParaSync || !canSync) {
             stopLocalTimer();
             return;
         }
 
         let isMounted = true;
+        const watchingFaseId = String(faseSeleccionadaParaSync.id);
+
+        const applyLiveTime = (faseId, resId, timeStr) => {
+            if (!isMounted) return;
+            if (faseId != null && String(faseId) !== watchingFaseId) return;
+
+            const idKey = String(resId);
+            const numKey = Number(resId);
+
+            setTiemposLocales(prev => {
+                const prevLocal = prev[idKey] || prev[numKey] || {};
+                const next = {
+                    ...prev,
+                    [idKey]: { ...prevLocal, tiempoOficial: timeStr }
+                };
+                if (!Number.isNaN(numKey)) {
+                    next[numKey] = { ...prevLocal, tiempoOficial: timeStr };
+                }
+                const resultados = faseSeleccionadaParaSync?.resultados || [];
+                return applyPositionsToTiemposLocales(resultados, next);
+            });
+
+            setFases(prev => prev.map(f => {
+                if (String(f.id) !== watchingFaseId) return f;
+                return {
+                    ...f,
+                    resultados: (f.resultados || []).map(r =>
+                        String(r.id) === idKey ? { ...r, tiempoOficial: timeStr } : r
+                    )
+                };
+            }));
+        };
 
         const setupLiveSync = async () => {
             const lowerRol = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
             const isJudgeOrAdminUser = lowerRol.includes('control') || lowerRol.includes('juez') || lowerRol.includes('admin') || lowerRol.includes('largador') || lowerRol.includes('cronometrista');
             
-            if (isBronce && !isJudgeOrAdminUser) return; // EL PLAN BRONCE NO TIENE SYNC EN VIVO PARA ESPECTADORES/OTROS
+            if (isBronce && !isJudgeOrAdminUser) return;
             
             try {
-                // Escuchar jueces conectados en este EVENTO para la barra de sincronización
+                // Registrar listeners ANTES del connect para no perder mensajes tempranos
                 timingSignalRService.onEventPresenceUpdated((presenceList) => {
                     if (isMounted) setActiveJudges(presenceList);
+                });
+
+                timingSignalRService.onTimeReceived((resId, timeStr) => {
+                    applyLiveTime(watchingFaseId, resId, timeStr);
+                });
+                timingSignalRService.onGlobalTimeReceived((faseId, resId, timeStr) => {
+                    applyLiveTime(faseId, resId, timeStr);
                 });
 
                 const name = user?.nombreCompleto || user?.nombre || user?.username || "Control";
@@ -166,67 +244,110 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
                     faseSeleccionadaParaSync.estado === 'Pendiente de Validación' ||
                     faseSeleccionadaParaSync.estado === 'Finalizada'
                 )) {
-                    const start = new Date(faseSeleccionadaParaSync.fechaHoraInicioReal + (faseSeleccionadaParaSync.fechaHoraInicioReal.endsWith('Z') ? '' : 'Z'));
-                    if (!isNaN(start)) startLocalTimer(start);
+                    const startMs = parseStartMs(faseSeleccionadaParaSync.fechaHoraInicioReal);
+                    if (!Number.isNaN(startMs)) startLocalTimer(startMs);
                 }
 
-                // 2. Escuchar inicio de carrera (si ocurre mientras estamos mirando)
-                timingSignalRService.onRaceStarted((id, startTime) => {
-                    if (id.toString() === faseSeleccionadaParaSync.id.toString()) {
-                        const start = new Date(startTime + (startTime.endsWith('Z') ? '' : 'Z'));
-                        if (!isNaN(start)) startLocalTimer(start);
+                // 2. Escuchar inicio de carrera (mismo instante que ve el cronometrista)
+                const toStartIso = (startTime) => {
+                    if (!startTime) return null;
+                    if (startTime instanceof Date && !isNaN(startTime.getTime())) {
+                        return startTime.toISOString();
                     }
+                    const raw = String(startTime);
+                    const parsed = new Date(raw.endsWith('Z') ? raw : `${raw}Z`);
+                    if (!isNaN(parsed.getTime())) return parsed.toISOString();
+                    const fallback = new Date(raw);
+                    return !isNaN(fallback.getTime()) ? fallback.toISOString() : null;
+                };
+
+                const markEnCarrera = (faseId, startTime) => {
+                    if (!faseId) return;
+                    const startIso = toStartIso(startTime);
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(faseId)
+                            ? {
+                                ...f,
+                                estado: 'En Carrera',
+                                fechaHoraInicioReal: startIso || f.fechaHoraInicioReal
+                            }
+                            : f
+                    ));
+                    if (String(faseId) === watchingFaseId && startIso) {
+                        const startMs = parseStartMs(startIso);
+                        if (!Number.isNaN(startMs)) startLocalTimer(startMs);
+                    }
+                };
+
+                timingSignalRService.onRaceStarted((id, startTime) => {
+                    markEnCarrera(id, startTime);
                 });
 
-                // 3. RECIBIR TIEMPOS EN VIVO (CARRIL POR CARRIL)
-                timingSignalRService.onTimeReceived((resId, timeStr, ms) => {
-                    setTiemposLocales(prev => {
-                        const next = {
-                            ...prev,
-                            [resId]: { ...prev[resId], tiempoOficial: timeStr }
-                        };
-                        if (faseSeleccionadaParaSync?.resultados) {
-                            return applyPositionsToTiemposLocales(faseSeleccionadaParaSync.resultados, next);
-                        }
-                        return next;
-                    });
+                timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
+                    markEnCarrera(faseId, serverTime);
                 });
 
-                // 4. Fin de carrera
-                timingSignalRService.onRaceFinished(() => {
+                // 4. Fin de carrera / oficialización
+                const markFinalizada = (faseId) => {
+                    const id = faseId || watchingFaseId;
+                    if (!id) return;
                     stopLocalTimer();
-                    // Refrescar para obtener posiciones finales si las hay
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(id) ? { ...f, estado: 'Finalizada' } : f
+                    ));
+                };
+
+                timingSignalRService.onRaceFinished((id) => {
+                    markFinalizada(id);
                     loadDatosPrueba(selectedPrueba);
+                });
+
+                timingSignalRService.onGlobalRaceOfficialized((faseId) => {
+                    markFinalizada(faseId);
+                    if (selectedPrueba) loadDatosPrueba(selectedPrueba);
                 });
 
                 // 5. Reset de carrera
                 timingSignalRService.onRaceReset((id) => {
-                    if (id.toString() === faseSeleccionadaParaSync.id.toString()) {
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(id)
+                            ? { ...f, estado: 'Programada', fechaHoraInicioReal: null }
+                            : f
+                    ));
+                    if (String(id) === watchingFaseId) {
                         stopLocalTimer();
                         setElapsedTime(0);
                         setTiemposLocales({});
                     }
                 });
 
-                // 6. En revisión
-                timingSignalRService.onRaceInReview((id) => {
-                    if (id.toString() === faseSeleccionadaParaSync.id.toString()) {
-                        stopLocalTimer();
-                        loadDatosPrueba(selectedPrueba);
-                    }
-                });
+                // 6. En revisión (mesa de control verificando)
+                const markEnVerificacion = (faseId) => {
+                    const id = typeof faseId === 'object' ? (faseId?.id ?? faseId?.Id) : faseId;
+                    if (!id) return;
+                    stopLocalTimer();
+                    setFases(prev => prev.map(f =>
+                        String(f.id) === String(id)
+                            ? { ...f, estado: 'Pendiente de Validación' }
+                            : f
+                    ));
+                };
+
+                timingSignalRService.onRaceInReview(markEnVerificacion);
+                timingSignalRService.onGlobalRaceInReview(markEnVerificacion);
 
                 // 7. Status Update (DNS/DNF/DSQ)
-                timingSignalRService.onResultStatusUpdated((resId, status) => {
+                timingSignalRService.onGlobalResultStatusUpdated((resId, status) => {
+                    if (!isMounted) return;
+                    const idKey = String(resId);
                     setTiemposLocales(prev => {
+                        const prevLocal = prev[idKey] || prev[Number(resId)] || {};
                         const next = {
                             ...prev,
-                            [resId]: { ...prev[resId], estadoCanto: status }
+                            [idKey]: { ...prevLocal, estadoCanto: status }
                         };
-                        if (faseSeleccionadaParaSync?.resultados) {
-                            return applyPositionsToTiemposLocales(faseSeleccionadaParaSync.resultados, next);
-                        }
-                        return next;
+                        const resultados = faseSeleccionadaParaSync?.resultados || [];
+                        return applyPositionsToTiemposLocales(resultados, next);
                     });
                 });
 
@@ -239,7 +360,10 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
         return () => {
             isMounted = false;
-            timingSignalRService.disconnect();
+            // No desconectar el hub entero: solo salir del grupo al cambiar de fase.
+            // disconnect() lo maneja el unmount / cambio de evento si hace falta.
+            timingSignalRService.onTimeReceived(null);
+            timingSignalRService.onGlobalTimeReceived(null);
             stopLocalTimer();
         };
     }, [selectedEvento, faseSeleccionadaParaSync?.id, viewMode]);
@@ -395,82 +519,71 @@ const handleExportCsv = () => {
     setShowPdfMenu(false);
 };
 
-return (
-    <>
-        {/* BARRA DE SINCRONIZACIÓN GLOBAL (PORTAL AL NAVBAR) */}
-        {document.getElementById('global-sync-bar-portal-target') && createPortal(
-            <div className="global-sync-bar">
-                {(() => {
-                    const connectedStarter = activeJudges.find(j => {
-                        const role = (j.role || j.Role || '').toLowerCase();
-                        return role === 'largador';
-                    });
-                    const connectedTimekeeper = activeJudges.find(j => {
-                        const role = (j.role || j.Role || '').toLowerCase();
-                        return role === 'cronometrista';
-                    });
-                    
-                    const starterName = connectedStarter ? (connectedStarter.userName || connectedStarter.UserName || 'Largador') : '';
-                    const tkName = connectedTimekeeper ? (connectedTimekeeper.userName || connectedTimekeeper.UserName || 'Cronometrista') : '';
-                    
-                    const myName = user?.nombreCompleto || user?.nombre || user?.username || "Control";
-                    
-                    const isStarterLinked = !!connectedStarter;
-                    const isTkLinked = !!connectedTimekeeper;
-                    const isSelfLinked = !!selectedEvento;
-                    
-                    return (
-                        <div className="judges-sync-card" title="Estado de Enlace de Jueces">
-                            <div className="sync-desktop-row">
-                                <div className="sync-role-node">
-                                    <span className="sync-role-name">LARGADOR</span>
-                                    {connectedStarter ? (
-                                        <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
-                                    ) : (
-                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                    )}
-                                </div>
-                                <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
-                                    <Link2 size={16} style={isStarterLinked ? undefined : { strokeDasharray: '3,3' }} />
-                                </div>
-                                <div className="sync-role-node">
-                                    <span className="sync-role-name">CONTROL</span>
-                                    <span className={`sync-user-pill ${isSelfLinked ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
-                                </div>
-                                <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
-                                    <Link2 size={16} style={isTkLinked ? undefined : { strokeDasharray: '3,3' }} />
-                                </div>
-                                <div className="sync-role-node">
-                                    <span className="sync-role-name">MESA DE LLEGADA</span>
-                                    {connectedTimekeeper ? (
-                                        <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
-                                    ) : (
-                                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="sync-mobile-dots" aria-label="Estado de enlace">
-                                <div className={`sync-dot-item ${isStarterLinked ? 'on' : 'off'}`}>
-                                    <span className="sync-dot" />
-                                    <span className="sync-dot-label">Larg.</span>
-                                </div>
-                                <div className={`sync-dot-item ${isSelfLinked ? 'on' : 'off'}`}>
-                                    <span className="sync-dot" />
-                                    <span className="sync-dot-label">Ctrl</span>
-                                </div>
-                                <div className={`sync-dot-item ${isTkLinked ? 'on' : 'off'}`}>
-                                    <span className="sync-dot" />
-                                    <span className="sync-dot-label">Lleg.</span>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })()}
-            </div>,
-            document.getElementById('global-sync-bar-portal-target')
-        )}
+const connectedStarter = activeJudges.find(j => {
+        const role = (j.role || j.Role || '').toLowerCase();
+        return role === 'largador';
+    });
+    const connectedTimekeeper = activeJudges.find(j => {
+        const role = (j.role || j.Role || '').toLowerCase();
+        return role === 'cronometrista';
+    });
+    const starterName = connectedStarter ? (connectedStarter.userName || connectedStarter.UserName || 'Largador') : '';
+    const tkName = connectedTimekeeper ? (connectedTimekeeper.userName || connectedTimekeeper.UserName || 'Cronometrista') : '';
+    const myName = user?.nombreCompleto || user?.nombre || user?.username || 'Control';
+    const isStarterLinked = !!connectedStarter;
+    const isTkLinked = !!connectedTimekeeper;
+    const isSelfLinked = !!selectedEvento;
 
-        <div className={`gestion-resultados-container fade-in control-mobile-ready ${isEmbedded ? 'is-embedded' : ''}`}>
+    const syncCard = (
+        <div className="judges-sync-card" title="Estado de Enlace de Jueces">
+            <div className="sync-desktop-row">
+                <div className="sync-role-node">
+                    <span className="sync-role-name">LARGADOR</span>
+                    {connectedStarter ? (
+                        <span className="sync-user-pill connected">{starterName.toUpperCase()}</span>
+                    ) : (
+                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                    )}
+                </div>
+                <div className={`sync-connector-line ${isStarterLinked ? 'active' : 'inactive'}`}>
+                    <Link2 size={16} style={isStarterLinked ? undefined : { strokeDasharray: '3,3' }} />
+                </div>
+                <div className="sync-role-node">
+                    <span className="sync-role-name">CONTROL</span>
+                    <span className={`sync-user-pill ${isSelfLinked ? 'connected' : 'disconnected'}`}>{myName.toUpperCase()}</span>
+                </div>
+                <div className={`sync-connector-line ${isTkLinked ? 'active' : 'inactive'}`}>
+                    <Link2 size={16} style={isTkLinked ? undefined : { strokeDasharray: '3,3' }} />
+                </div>
+                <div className="sync-role-node">
+                    <span className="sync-role-name">MESA DE LLEGADA</span>
+                    {connectedTimekeeper ? (
+                        <span className="sync-user-pill connected">{tkName.toUpperCase()}</span>
+                    ) : (
+                        <span className="sync-user-pill disconnected">DESCONECTADO</span>
+                    )}
+                </div>
+            </div>
+            <div className="sync-mobile-dots" aria-label="Estado de enlace">
+                <div className={`sync-dot-item ${isStarterLinked ? 'on' : 'off'}`}>
+                    <span className="sync-dot" />
+                    <span className="sync-dot-label">Larg.</span>
+                </div>
+                <div className={`sync-dot-item ${isSelfLinked ? 'on' : 'off'}`}>
+                    <span className="sync-dot" />
+                    <span className="sync-dot-label">Ctrl</span>
+                </div>
+                <div className={`sync-dot-item ${isTkLinked ? 'on' : 'off'}`}>
+                    <span className="sync-dot" />
+                    <span className="sync-dot-label">Lleg.</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+    <>
+        <div className={`gestion-resultados-container fade-in control-mobile-ready ${isEmbedded ? 'is-embedded' : ''} ${isControlOrManualPage ? 'has-inline-sync' : ''}`}>
         {!hideTabs && (
             <div className="admin-header-main control-page-header">
                 <div>
@@ -508,6 +621,12 @@ return (
             selectedFaseId={selectedFaseIdForHeader}
             isAdmin={isAdmin}
         />
+
+        {isControlOrManualPage && (
+            <div className="control-sync-below-card">
+                {syncCard}
+            </div>
+        )}
 
         {loading ? (
             <div className="loader-container"><div className="loader"></div></div>
@@ -845,7 +964,7 @@ return (
                                     <span><strong>{fases.length}</strong> {fases.length === 1 ? 'Fase' : 'Fases'}</span>
                                 </div>
                                 {fases.length > 0 && (
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                         <select
                                             className="admin-select compact"
                                             value={filtroVisualFase}
@@ -855,7 +974,7 @@ return (
                                             <option value="Todas">— Seleccionar Fase —</option>
                                             {fases.map(f => (
                                                 <option key={f.id} value={f.nombreFase}>
-                                                    {f.nombreFase} {f.estado === 'En Carrera' ? '🔴' : ''}
+                                                    {f.nombreFase} {normalizeFaseEstado(f.estado) === 'En Carrera' ? '🔴' : ''}
                                                 </option>
                                             ))}
                                         </select>
@@ -868,6 +987,20 @@ return (
                                         >
                                             <RefreshCw size={14} className={loading ? 'spin' : ''} />
                                         </button>
+
+                                        {(() => {
+                                            const badge = getFaseStatusBadge(faseSeleccionada);
+                                            if (!badge) return null;
+                                            return (
+                                                <span
+                                                    className={badge.className}
+                                                    title={badge.title}
+                                                >
+                                                    <span className="fase-status-dot" aria-hidden />
+                                                    {badge.label}
+                                                </span>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                             </div>
@@ -927,8 +1060,9 @@ return (
                                 {isRaceRunning && (
                                     <div className="live-monitor-header fade-in">
                                         <div className="live-badge">🔴 EN VIVO</div>
-                                        <div className="live-timer-big">{formatTimer(elapsedTime)}</div>
-                                        <p>Siguiendo la regata en tiempo real...</p>
+                                        <div className="live-monitor-follow">
+                                            Siguiendo regata: <span className="live-timer-inline">{formatTimer(elapsedTime)}</span>
+                                        </div>
                                     </div>
                                 )}
 
@@ -1076,6 +1210,16 @@ return (
             </div>
         )}
     </div>
+    <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        confirmText={confirmDialog.confirmText}
+        loading={saving}
+    />
     </>
 );
 };

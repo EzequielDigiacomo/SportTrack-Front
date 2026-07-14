@@ -9,6 +9,7 @@ import timingSignalRService from '../../services/TimingSignalRService';
 import PdfExportService from '../../services/PdfExportService';
 import ThemeToggle from '../../components/Common/ThemeToggle';
 import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
 import './LiveResults.css';
 import { formatRaceTime, timeToMs } from '../../utils/raceTimeUtils';
 
@@ -75,6 +76,7 @@ const isBoteK4 = (fase) => {
 
 const LiveResults = () => {
     const { id } = useParams();
+    const { addToast } = useToast();
     const [evento, setEvento] = useState(null);
     const [pruebas, setPruebas] = useState([]);
     const [selectedPrueba, setSelectedPrueba] = useState(null);
@@ -381,13 +383,13 @@ const LiveResults = () => {
                 (a.numeroFase ?? a.NumeroFase ?? 0) - (b.numeroFase ?? b.NumeroFase ?? 0)
             );
 
-            if (!fasesToExport.length) { alert('No hay fases para el filtro seleccionado'); return; }
+            if (!fasesToExport.length) { addToast('warning', 'No hay fases para el filtro seleccionado'); return; }
 
             const enriched = fasesToExport.map(enrichFase);
             await PdfExportService.exportGrupo(enriched, eventoExport, pruebaNombre, mode === 'current' ? enriched[0]?.nombreFase : mode);
         } catch (err) {
             console.error('Error generating PDF:', err);
-            alert('Error al generar el PDF.');
+            addToast('error', 'Error al generar el PDF.');
         }
     };
 

@@ -31,6 +31,32 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
     const [filtroVisualFase, setFiltroVisualFase] = useState('Todas');
     const [tiemposLocales, setTiemposLocales] = useState({});
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [confirmDialog, setConfirmDialog] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'warning',
+        confirmText: 'Confirmar',
+        onConfirm: null,
+    });
+
+    const closeConfirmDialog = useCallback(() => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false, onConfirm: null }));
+    }, []);
+
+    const openConfirmDialog = useCallback(({ title, message, type = 'warning', confirmText = 'Confirmar', onConfirm }) => {
+        setConfirmDialog({
+            isOpen: true,
+            title,
+            message,
+            type,
+            confirmText,
+            onConfirm: async () => {
+                closeConfirmDialog();
+                if (onConfirm) await onConfirm();
+            },
+        });
+    }, [closeConfirmDialog]);
 
     // When handleSelectRegata fires it fills this ref BEFORE changing selectedPrueba,
     // so the useEffect below can apply the intended filtro instead of resetting to 'Todas'.
@@ -330,71 +356,93 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             return;
         }
 
-        if (!window.confirm(`¿Promover ${status.etapaNombre || 'la etapa'} y generar la siguiente ronda?`)) {
-            return;
-        }
-
-        setSaving(true);
-        try {
-            await FaseService.promover(selectedPrueba);
-            await handleRecalcularCronograma();
-            setMessage("✅ Etapa promocionada exitosamente. Cronograma actualizado.");
-            await loadDatosPrueba(selectedPrueba);
-            await loadCronograma();
-        } catch (error) {
-            console.error("Error al promover:", error);
-            setMessage("❌ Error al promover etapa: " + (error.response?.data?.message || error.message));
-        } finally {
-            setSaving(false);
-        }
+        openConfirmDialog({
+            title: 'Promover etapa',
+            message: `¿Promover ${status.etapaNombre || 'la etapa'} y generar la siguiente ronda?`,
+            type: 'info',
+            confirmText: 'Promover',
+            onConfirm: async () => {
+                setSaving(true);
+                try {
+                    await FaseService.promover(selectedPrueba);
+                    await handleRecalcularCronograma();
+                    setMessage("✅ Etapa promocionada exitosamente. Cronograma actualizado.");
+                    await loadDatosPrueba(selectedPrueba);
+                    await loadCronograma();
+                } catch (error) {
+                    console.error("Error al promover:", error);
+                    setMessage("❌ Error al promover etapa: " + (error.response?.data?.message || error.message));
+                } finally {
+                    setSaving(false);
+                }
+            },
+        });
     };
 
     const handleDeleteFase = async (id) => {
-        if (!window.confirm("¿Estás seguro de eliminar esta fase? Esto podría invalidar los pases a fases posteriores si ya fueron generados.")) return;
-        
-        try {
-            await FaseService.delete(id);
-            setMessage("✅ Fase eliminada correctamente.");
-            loadDatosPrueba(selectedPrueba);
-        } catch (error) {
-            setMessage("❌ Error al eliminar la fase.");
-        }
+        openConfirmDialog({
+            title: 'Eliminar fase',
+            message: '¿Estás seguro de eliminar esta fase? Esto podría invalidar los pases a fases posteriores si ya fueron generados.',
+            type: 'danger',
+            confirmText: 'Eliminar',
+            onConfirm: async () => {
+                try {
+                    await FaseService.delete(id);
+                    setMessage("✅ Fase eliminada correctamente.");
+                    loadDatosPrueba(selectedPrueba);
+                } catch (error) {
+                    setMessage("❌ Error al eliminar la fase.");
+                }
+            },
+        });
     };
 
     const handleResetFase = async (id) => {
-        if (!window.confirm("¿Estás seguro de reiniciar esta fase? Se borrarán todos los tiempos oficiales y posiciones de esta serie, pero se conservarán los carriles.")) return;
-        
-        setSaving(true);
-        try {
-            await FaseService.reiniciar(id);
-            
-            // Limpiar bloqueos locales para esta prueba si existían
-            const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
-            const newLocked = locked.filter(itemId => itemId !== selectedPrueba);
-            localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
-            
-            setIsLocked(false);
-            setMessage("✅ Fase reiniciada correctamente. Tiempos borrados.");
-            await loadDatosPrueba(selectedPrueba);
-        } catch (error) {
-            setMessage("❌ Error al reiniciar la fase.");
-        } finally {
-            setSaving(false);
-        }
+        openConfirmDialog({
+            title: 'Reiniciar fase',
+            message: '¿Estás seguro de reiniciar esta fase? Se borrarán todos los tiempos oficiales y posiciones de esta serie, pero se conservarán los carriles.',
+            type: 'warning',
+            confirmText: 'Reiniciar',
+            onConfirm: async () => {
+                setSaving(true);
+                try {
+                    await FaseService.reiniciar(id);
+
+                    const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+                    const newLocked = locked.filter(itemId => itemId !== selectedPrueba);
+                    localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
+
+                    setIsLocked(false);
+                    setMessage("✅ Fase reiniciada correctamente. Tiempos borrados.");
+                    await loadDatosPrueba(selectedPrueba);
+                } catch (error) {
+                    setMessage("❌ Error al reiniciar la fase.");
+                } finally {
+                    setSaving(false);
+                }
+            },
+        });
     };
 
     const handleFinalizarFase = async (id) => {
-        if (!window.confirm("¿Confirmar estos resultados como OFICIALES y publicarlos en la web?")) return;
-        setSaving(true);
-        try {
-            await FaseService.finalizar(id);
-            setMessage("✅ Fase oficializada y publicada correctamente.");
-            await loadDatosPrueba(selectedPrueba);
-        } catch (error) {
-            setMessage("❌ Error al oficializar la fase.");
-        } finally {
-            setSaving(false);
-        }
+        openConfirmDialog({
+            title: 'Oficializar resultados',
+            message: '¿Confirmar estos resultados como OFICIALES y publicarlos en la web?',
+            type: 'success',
+            confirmText: 'Publicar oficiales',
+            onConfirm: async () => {
+                setSaving(true);
+                try {
+                    await FaseService.finalizar(id);
+                    setMessage("✅ Fase oficializada y publicada correctamente.");
+                    await loadDatosPrueba(selectedPrueba);
+                } catch (error) {
+                    setMessage("❌ Error al oficializar la fase.");
+                } finally {
+                    setSaving(false);
+                }
+            },
+        });
     };
 
     const parseTimeToTimeSpan = (timeStr) => {
@@ -430,9 +478,24 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         }
 
         if (finalize) {
-            if (!window.confirm('¿Guardar los tiempos y publicar esta serie como resultados oficiales?')) {
-                return;
-            }
+            openConfirmDialog({
+                title: 'Publicar resultados oficiales',
+                message: '¿Guardar los tiempos y publicar esta serie como resultados oficiales?',
+                type: 'success',
+                confirmText: 'Guardar y publicar',
+                onConfirm: () => executeSaveTiempos(faseId, true),
+            });
+            return;
+        }
+
+        await executeSaveTiempos(faseId, false);
+    };
+
+    const executeSaveTiempos = async (faseId, finalize = false) => {
+        const fase = fases.find(f => String(f.id) === String(faseId));
+        if (!fase?.resultados?.length) {
+            setMessage('⚠️ La fase seleccionada no tiene resultados.');
+            return;
         }
 
         setSaving(true);
@@ -587,7 +650,6 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         setSaving(true);
         setMessage("⏳ Analizando cronograma y calculando gaps...");
         try {
-            // 1. Obtener TODAS las fases del evento (no solo de la prueba actual)
             const todasLasFases = await FaseService.getByEvento(selectedEvento);
             const eventoConfig = eventos.find(e => String(e.id) === String(selectedEvento));
 
@@ -596,13 +658,11 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 return;
             }
 
-            // Mapear el GapSugerido desde la distancia para el motor
             const fasesConGaps = todasLasFases.map(f => ({
                 ...f,
                 gapSugerido: f.etapa?.eventoPrueba?.prueba?.distancia?.gapSugerido || 0
             }));
 
-            // 2. Usar el motor matemático para recalcular
             const config = {
                 horaInicioEvento: eventoConfig?.horaInicioEvento || "08:00",
                 gapEntrePruebas: eventoConfig?.gapEntrePruebas || 10,
@@ -614,39 +674,46 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             };
             const fasesReprogramadas = SchedulerService.recalcularTiempos(fasesConGaps, config);
             
-            // Informar al usuario si el cronograma abarca múltiples días
             const diasTotales = Math.max(...fasesReprogramadas.map(f => f.diaOffset || 0)) + 1;
             
             if (diasTotales > 1) {
-                if (!window.confirm(`⚠️ El cronograma se extenderá automáticamente a ${diasTotales} días para respetar el límite horario (18:00 hs). ¿Deseas aplicar el salto de día?`)) {
-                    setSaving(false);
-                    setMessage("❌ Operación cancelada por el usuario.");
-                    return;
-                }
+                setSaving(false);
+                openConfirmDialog({
+                    title: 'Cronograma multi-día',
+                    message: `El cronograma se extenderá automáticamente a ${diasTotales} días para respetar el límite horario (18:00 hs). ¿Deseas aplicar el salto de día?`,
+                    type: 'warning',
+                    confirmText: 'Aplicar',
+                    onConfirm: () => applyCronogramaReprogramado(fasesReprogramadas, eventoConfig),
+                });
+                return;
             }
 
-            // 3. Guardar cambios en masa (Batch Update de Fases)
+            await applyCronogramaReprogramado(fasesReprogramadas, eventoConfig);
+        } catch (error) {
+            setMessage("❌ Error al aplicar el cronograma inteligente.");
+            setSaving(false);
+        }
+    }
+
+    async function applyCronogramaReprogramado(fasesReprogramadas, eventoConfig) {
+        setSaving(true);
+        try {
             const dto = fasesReprogramadas.map(f => ({
                 id: f.id,
                 fechaHoraProgramada: f.nuevaHora || "08:00",
                 diaOffset: f.diaOffset || 0
             }));
 
-            // El backend necesita el DateTime completo, combinamos la fecha del evento, hora y offset de días
             const baseDateStr = (eventoConfig?.fecha || new Date().toISOString()).substring(0, 10);
             const [year, month, day] = baseDateStr.split('-').map(Number);
             
             const dtoFinal = dto.map(item => {
-                // Generar un objeto Date local para combinar fecha y hora del programa
                 const [h, m] = item.fechaHoraProgramada.split(':');
                 const fDate = new Date(year, month - 1, day, parseInt(h), parseInt(m), 0);
-                
-                // Aplicar el offset de días si el cronograma saltó de jornada
                 fDate.setDate(fDate.getDate() + item.diaOffset);
                 
                 return {
                     id: item.id,
-                    // Enviamos el ISO string completo (UTC) para que el backend no tenga dudas
                     fechaHoraProgramada: fDate.toISOString()
                 };
             });
@@ -770,6 +837,9 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         handleRecalcularCronograma,
         handleSelectRegata, loadCronograma,
         loadDatosPrueba,
-        handleUpdateFaseDetails
+        handleUpdateFaseDetails,
+        setFases,
+        confirmDialog,
+        closeConfirmDialog
     };
 };

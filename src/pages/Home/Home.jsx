@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import EventoService from '../../services/EventoService'
 import logo from '../../assets/logo-sporttrack.png'
 import './Home.css'
@@ -229,6 +230,7 @@ const plansData = {
 
 function Home() {
     const { isAuthenticated, user } = useAuth()
+    const { addToast } = useToast()
     const navigate = useNavigate()
     const [ultimoEvento, setUltimoEvento] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -478,7 +480,7 @@ function Home() {
                             Envianos un Mensaje
                         </h4>
                         
-                        <form onSubmit={(e) => { e.preventDefault(); alert('¡Mensaje enviado! Nos contactaremos pronto.'); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <form onSubmit={(e) => { e.preventDefault(); addToast('success', '¡Mensaje enviado! Nos contactaremos pronto.'); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div className="contacto-form-group">
                                     <label htmlFor="contact-nombre">Nombre</label>

@@ -202,6 +202,20 @@
     width: 100%;
 }
 
+.control-panel-navbar {
+    margin: -0.5rem 0 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-sizing: border-box;
+}
+
+.admin-main .control-panel-navbar {
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .btn-judges-back, .btn-judges-logout {
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
@@ -214,6 +228,25 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+.btn-judges-menu {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-judges-menu:hover {
+    background: var(--color-surface-hover);
+    transform: scale(1.05);
 }
 
 .btn-judges-back:hover, .btn-judges-logout-new:hover {
@@ -1962,7 +1995,10 @@
 .judges-sync-card {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
@@ -1970,6 +2006,57 @@
     backdrop-filter: blur(10px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.control-sync-below-card {
+    width: 100%;
+    margin: 0 0 1.5rem;
+}
+
+.control-sync-below-card .judges-sync-card {
+    margin: 0;
+    min-height: 64px;
+    padding: 12px 24px;
+}
+
+.control-sync-below-card .sync-desktop-row {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.manual-timing-page {
+    padding: 1.25rem 1.5rem 2rem;
+    min-height: 100%;
+    background: var(--color-bg);
+}
+
+.manual-timing-tip {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.manual-timing-tip p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 1000px) {
+    .control-sync-below-card {
+        margin: 0 0 0.85rem;
+    }
+
+    .control-sync-below-card .judges-sync-card {
+        min-height: 52px;
+        padding: 10px 12px;
+    }
+
+    .manual-timing-page {
+        padding: 0.75rem 0.5rem 1.5rem;
+    }
 }
 
 .judges-sync-card:hover {
