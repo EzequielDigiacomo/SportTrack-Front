@@ -21,10 +21,15 @@ import {
     getUsuarioFederationName,
 } from '../../../utils/apiHelpers';
 import { isSuperAdminUser, isFederationAdminUser } from '../../../utils/authHelpers';
-import { canAccessControlesLive, normalizePlan } from '../../../utils/planHelpers';
+import {
+    canAccessControlesLive,
+    canAccessDashboardClub,
+    normalizePlan,
+} from '../../../utils/planHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
 const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
+const DEFAULT_ROL = 'Admin';
 
 const enrichFederacionesWithPlan = (federacionesData, saasStatus, planes) => {
     const saasByFedId = Object.fromEntries(
@@ -50,6 +55,7 @@ const enrichFederacionesWithPlan = (federacionesData, saasStatus, planes) => {
             planNombre: plan?.nombre || planNombre,
             plan,
             accesoControlesLive: canAccessControlesLive(plan),
+            accesoDashboardClub: canAccessDashboardClub(plan),
         };
     });
 };
@@ -123,10 +129,13 @@ const GestionLoginsSection = () => {
     }, [effectiveFedId]);
 
     const handleOpenCrear = () => {
+        const fed = federaciones.find(f => String(f.id) === String(effectiveFedId));
+        const plan = fed?.plan ?? (!isSuper ? normalizePlan(user?.plan) : null);
+        const defaultRol = canAccessDashboardClub(plan) ? 'Club' : DEFAULT_ROL;
         setForm({
             username: '', password: '', confirmPassword: '', email: '', clubId: '',
             federacionId: effectiveFedId || '',
-            rol: 'Club', newPassword: '', confirmNewPassword: '',
+            rol: defaultRol, newPassword: '', confirmNewPassword: '',
             nombre: '', apellido: '', dni: '', telefono: '',
         });
         setView('crear');
@@ -160,9 +169,11 @@ const GestionLoginsSection = () => {
             const next = { ...prev, [name]: value };
             if (name === 'federacionId') {
                 next.clubId = '';
-                if (ROLES_JUEZ.includes(next.rol)) {
-                    const fed = federaciones.find(f => String(f.id) === String(value));
-                    if (!fed?.accesoControlesLive) next.rol = 'Club';
+                const fed = federaciones.find(f => String(f.id) === String(value));
+                if (ROLES_JUEZ.includes(next.rol) && !fed?.accesoControlesLive) {
+                    next.rol = fed?.accesoDashboardClub ? 'Club' : DEFAULT_ROL;
+                } else if (next.rol === 'Club' && !fed?.accesoDashboardClub) {
+                    next.rol = DEFAULT_ROL;
                 }
             }
             return next;
@@ -202,6 +213,17 @@ const GestionLoginsSection = () => {
                 showAlert('error', 'Seleccioná el club al que vincular esta credencial.');
                 return;
             }
+            if (form.rol === 'Club') {
+                const fedId = form.federacionId || effectiveFedId;
+                if (isSuper && !fedId) {
+                    showAlert('error', 'Seleccioná la federación antes de crear un login Club.');
+                    return;
+                }
+                if (!canAccessDashboardClub(resolvePlanForForm())) {
+                    showAlert('error', 'El plan de la federación no incluye dashboard/login Club (desde Profesional).');
+                    return;
+                }
+            }
             if (ROLES_JUEZ.includes(form.rol)) {
                 const fedId = form.federacionId || effectiveFedId;
                 if (isSuper && !fedId) {
@@ -209,7 +231,7 @@ const GestionLoginsSection = () => {
                     return;
                 }
                 if (!canAccessControlesLive(resolvePlanForForm())) {
-                    showAlert('error', 'La federación seleccionada no tiene plan con controles en vivo (Largador/Cronometrista).');
+                    showAlert('error', 'La federación no tiene plan con consolas de juez (Ecosistema SportTrack o Pack Dúo).');
                     return;
                 }
             }

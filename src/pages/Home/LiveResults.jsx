@@ -91,6 +91,7 @@ const LiveResults = () => {
     const [allFases, setAllFases] = useState([]);
     const [refreshResultsCounter, setRefreshResultsCounter] = useState(0);
     const [startIndex, setStartIndex] = useState(0);
+    const [liveRealtimeEnabled, setLiveRealtimeEnabled] = useState(true);
 
     const reloadPhasesOnly = async () => {
         try {
@@ -115,6 +116,8 @@ const LiveResults = () => {
     };
 
     useEffect(() => {
+        if (!liveRealtimeEnabled) return undefined;
+
         // Hub real: /hubs/timing (no existe /hubs/results)
         timingSignalRService
             .connect(id, selectedFase?.id, 'Espectador Live', 'Espectador')
@@ -179,13 +182,16 @@ const LiveResults = () => {
             timingSignalRService.onGlobalTimeReceived(null);
             timingSignalRService.onTimeReceived(null);
         };
-    }, [id, selectedFase]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, selectedFase, liveRealtimeEnabled]);
 
     useEffect(() => {
         const loadInitial = async () => {
             try {
                 const ev = await EventoService.getById(id);
                 setEvento(ev);
+                const realtime = ev?.resultadosTiempoReal ?? ev?.ResultadosTiempoReal;
+                setLiveRealtimeEnabled(realtime !== false);
                 const prs = await PruebaService.getByEvento(id);
 
                 // Fetch all phases to get global sequential race numbers (#1, #2, #3...)
@@ -293,17 +299,18 @@ const LiveResults = () => {
 
         loadData();
 
-        // Backup ligero: el live en tiempo real va por TimingSignalR (/hubs/timing)
+        // Backup / modo Esencial: sin SignalR Live, polling más frecuente
+        const pollMs = liveRealtimeEnabled ? 30000 : 10000;
         const pollInterval = setInterval(() => {
-            if (timingSignalRService.getConnectionState() !== 'Connected') {
+            if (!liveRealtimeEnabled || timingSignalRService.getConnectionState() !== 'Connected') {
                 loadData();
             }
-        }, 30000);
+        }, pollMs);
 
         return () => {
             clearInterval(pollInterval);
         };
-    }, [selectedPrueba, refreshResultsCounter]);
+    }, [selectedPrueba, refreshResultsCounter, liveRealtimeEnabled]);
 
     const handleDownloadPDF = async (mode = 'current') => {
         if (!selectedPrueba || !fases.length) return;

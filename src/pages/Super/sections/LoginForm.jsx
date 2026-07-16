@@ -4,9 +4,14 @@ import { useAuth } from '../../../context/AuthContext';
 import CustomSelect from '../../../components/Common/CustomSelect';
 import { pick } from '../../../utils/apiHelpers';
 import { isSuperAdminUser } from '../../../utils/authHelpers';
-import { canAccessControlesLive, normalizePlan } from '../../../utils/planHelpers';
+import {
+    canAccessControlesLive,
+    canAccessDashboardClub,
+    normalizePlan,
+} from '../../../utils/planHelpers';
 
 const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
+const DEFAULT_ROL = 'Admin';
 
 const LoginForm = ({
     initialData,
@@ -44,22 +49,38 @@ const LoginForm = ({
         return null;
     }, [targetFedId, federaciones, isSuper, user?.plan]);
 
+    const planForGates = federationPlan ?? (!isSuper ? normalizePlan(user?.plan) : null);
+
     const judgeRolesEnabled = isSuper
         ? (targetFedId ? canAccessControlesLive(federationPlan) : false)
-        : canAccessControlesLive(federationPlan ?? user?.plan);
+        : canAccessControlesLive(planForGates);
 
-    const judgeDisabledLabel = !targetFedId && showFederationSelect
+    const clubRoleEnabled = isSuper
+        ? (targetFedId ? canAccessDashboardClub(federationPlan) : false)
+        : canAccessDashboardClub(planForGates);
+
+    const needsFedFirst = !targetFedId && showFederationSelect;
+    const judgeDisabledLabel = needsFedFirst
         ? '(Seleccioná federación primero)'
-        : '(Exclusivo plan L)';
+        : '(Exclusivo Ecosistema)';
+    const clubDisabledLabel = needsFedFirst
+        ? '(Seleccioná federación primero)'
+        : '(Desde plan Profesional)';
 
     const isJuezRole = ROLES_JUEZ.includes(initialData.rol);
+    const isClubRole = initialData.rol === 'Club';
 
     useEffect(() => {
-        if (!isEditing && !isEditingProfile && isJuezRole && !judgeRolesEnabled) {
-            onChange('rol', 'Club');
+        if (isEditing || isEditingProfile) return;
+        if (isJuezRole && !judgeRolesEnabled) {
+            onChange('rol', clubRoleEnabled ? 'Club' : DEFAULT_ROL);
+            return;
+        }
+        if (isClubRole && !clubRoleEnabled) {
+            onChange('rol', DEFAULT_ROL);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [judgeRolesEnabled, isJuezRole, isEditing, isEditingProfile]);
+    }, [judgeRolesEnabled, clubRoleEnabled, isJuezRole, isClubRole, isEditing, isEditingProfile]);
     
     return (
         <div className="login-form-container fade-in">
@@ -91,9 +112,10 @@ const LoginForm = ({
                                         {targetFedId && federationPlan && (
                                             <small style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', display: 'block', marginTop: '0.35rem' }}>
                                                 Plan: <strong>{federationPlan.nombre || 'Sin plan'}</strong>
+                                                {clubRoleEnabled ? ' · Login Club OK' : ' · Sin login Club'}
                                                 {judgeRolesEnabled
-                                                    ? ' · Controles en vivo habilitados'
-                                                    : ' · Sin acceso a Largador/Cronometrista/Juez de Control'}
+                                                    ? ' · Controles juez OK'
+                                                    : ' · Sin Largador/Cronometrista/Juez de Control'}
                                             </small>
                                         )}
                                     </div>
@@ -108,11 +130,15 @@ const LoginForm = ({
                                         onChange={(val) => onChange('rol', val)}
                                         required={true}
                                         options={[
-                                            { value: 'Club', label: 'Club (Representante)' },
+                                            { value: 'Admin', label: 'Administrador (Acceso Total)' },
+                                            {
+                                                value: 'Club',
+                                                label: `Club (Representante) ${!clubRoleEnabled ? clubDisabledLabel : ''}`.trim(),
+                                                disabled: !clubRoleEnabled,
+                                            },
                                             { value: 'Largador', label: `Juez: Largador ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                             { value: 'Cronometrista', label: `Juez: Cronometrista ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                             { value: 'JuezControl', label: `Juez de Control ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
-                                            { value: 'Admin', label: 'Administrador (Acceso Total)' }
                                         ]}
                                     />
                                 </div>

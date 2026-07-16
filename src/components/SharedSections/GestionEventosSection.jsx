@@ -21,6 +21,7 @@ import EventGrid from './EventGrid';
 import EventForm from './EventForm';
 import { useAlert } from '../../hooks/useAlert';
 import { getEventFederationName } from '../../utils/apiHelpers';
+import { liveResultsUrl } from '../../utils/constants';
 import './AdminSections.css';
 
 const GestionEventosSection = () => {
@@ -267,7 +268,7 @@ const GestionEventosSection = () => {
     };
 
     const handleCopyLiveLink = (id, nombre) => {
-        const url = `${window.location.origin}/resultados/${id}`;
+        const url = liveResultsUrl(id);
         navigator.clipboard.writeText(url);
         showAlert('info', `¡Link de "${nombre}" copiado!`);
     };

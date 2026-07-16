@@ -26,8 +26,8 @@ const PlanGuard = ({ children, requiereSportTrack, requiereControlesLive, user }
 
     if (requiereControlesLive && !plan.accesoControlesLive) {
         return <PlanBloqueadoFeature
-            titulo="Función exclusiva del Plan L"
-            motivo="Los paneles de control en vivo (Largador, Cronometrista, Juez de Control) están disponibles únicamente en los planes de nivel L."
+            titulo="Función exclusiva del Ecosistema"
+            motivo="Las consolas de juez (Largador, Cronometrista, Juez de Control) están disponibles en SportTrack Ecosistema o Pack Dúo Ecosistema. La carga manual de tiempos está disponible desde Esencial."
             planActual={plan.nombre}
         />;
     }

@@ -1,6 +1,14 @@
 // API Base URL - El proxy de Vite redirige /api → http://localhost:5029/api
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
+/** URL pública canónica del front (Live, links compartidos). */
+export const PUBLIC_APP_URL = (
+    import.meta.env.VITE_PUBLIC_APP_URL || 'https://sporttrack.pro'
+).replace(/\/$/, '')
+
+/** Link público de resultados en vivo de un evento. */
+export const liveResultsUrl = (eventoId) => `${PUBLIC_APP_URL}/resultados/${eventoId}`
+
 // API Endpoints
 export const ENDPOINTS = {
     // Auth

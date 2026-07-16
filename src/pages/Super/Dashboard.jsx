@@ -18,6 +18,7 @@ import ProgressionAuditPage from './sections/ProgressionAuditPage';
 import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
+import { canAccessControlesLive, extractPlanFromUser } from '../../utils/planHelpers';
 
 
 import { 
@@ -27,6 +28,7 @@ import {
     Key, 
     Users, 
     Timer, 
+    List,
     Settings, 
     LogOut,
     Menu,
@@ -52,7 +54,8 @@ const NAV_ITEMS = [
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
     { id: 'auditoria', path: 'auditoria', icon: <FileText size={20} />, label: 'Auditoría Progresión' },
-    { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true },
+    { id: 'carga-manual', path: '/jueces/carga-manual', icon: <List size={20} />, label: 'Carga Manual', isExternal: true },
+    { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true, requiereControlesLive: true },
     { id: 'saas', path: 'saas', icon: <Cloud size={20} />, label: 'Suscripciones SaaS', isSupport: true },
     { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
     { id: 'soporte', path: 'soporte', icon: <TerminalIcon size={20} />, label: 'Auditoría / Logs', isSupport: true },
@@ -101,15 +104,15 @@ const SuperDashboard = () => {
     const filteredNavItems = NAV_ITEMS.filter(item => {
         const role = user?.rol?.trim().toLowerCase();
         const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
-        const isBronce = user?.plan?.nombre?.toLowerCase() === 'bronce';
+        const plan = extractPlanFromUser(user);
 
         // Módulos EXCLUSIVOS para SuperAdmin
         if (item.id === 'saas' || item.id === 'soporte' || item.id === 'configuracion' || item.id === 'federaciones' || item.superOnly) {
             return isSuper;
         }
 
-        // Módulos DESACTIVADOS para Plan Bronce
-        if (item.id === 'jueces' && isBronce) {
+        // Consolas juez: solo Ecosistema (ids 6/9); SuperAdmin siempre ve el ítem
+        if (item.requiereControlesLive && !isSuper && !canAccessControlesLive(plan)) {
             return false;
         }
 

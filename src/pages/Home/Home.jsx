@@ -17,7 +17,7 @@ const plansData = {
     title: "Solo SIGDEF (Gestión)",
     subtitle: "Módulo Administrativo y Padrón Federativo",
     color: "#10b981",
-    cardClass: "", 
+    cardClass: "",
     checkClass: "icon-check-green",
     btnFeaturedClass: "btn-acc-green",
     btnOutlineClass: "btn-acc-outline",
@@ -25,7 +25,7 @@ const plansData = {
       {
         id: "sigdef-s",
         name: "Plan Esencial",
-        limit: "Hasta 500 atletas activos",
+        limit: "Hasta 200 atletas activos",
         price: "$50",
         period: "/mes",
         annualPrice: "Anual: $480/año (~$40/mes)",
@@ -33,19 +33,19 @@ const plansData = {
         icon: LayoutGrid,
         color: "#10b981",
         features: [
-          "Panel de Control Único (Admin Federación)",
-          "Padrón Digital Básico de Afiliados",
-          "Categorización por edad automática",
-          "Legajo de Datos Personales (DNI, Pasaporte)",
-          "Validación básica de documentación interna",
-          "Módulo de tutoría legal para atletas menores",
-          "Exportación de planillas a Excel"
+          "Panel Admin Federación (sin dashboard Club)",
+          "Padrón digital y categorización por edad",
+          "Legajo de datos personales",
+          "Validación documental básica (PDF)",
+          "Tutoría legal para menores",
+          "Exportación PDF de planillas",
+          "Sin carga de imágenes"
         ]
       },
       {
         id: "sigdef-m",
         name: "Plan Profesional",
-        limit: "501 a 2,000 atletas activos",
+        limit: "Hasta 400 atletas activos",
         price: "$120",
         period: "/mes",
         annualPrice: "Anual: $1,150/año (~$96/mes)",
@@ -54,18 +54,18 @@ const plansData = {
         color: "#10b981",
         features: [
           "Todo lo del Plan Esencial",
-          "Doble Dashboard (Federación + Clubes)",
-          "Carga descentralizada desde cada Club",
-          "Flujo de Aprobación Remota en tiempo real",
-          "Gestión avanzada de fotos y legajos médicos",
-          "Módulo de matrícula y control de afiliación",
-          "Filtros avanzados por club, pago y vigencia"
+          "Dashboard Federación + Club",
+          "Carga descentralizada desde clubes",
+          "Flujo de aprobación remota",
+          "Matrícula y control de afiliación",
+          "Filtros por club, pago y vigencia",
+          "Sin carga de imágenes"
         ]
       },
       {
         id: "sigdef-l",
         name: "Plan Ecosistema",
-        limit: "Más de 2,000 atletas activos",
+        limit: "Atletas ilimitados",
         price: "$250",
         period: "/mes",
         annualPrice: "Anual: $2,400/año (~$200/mes)",
@@ -74,12 +74,12 @@ const plansData = {
         color: "#10b981",
         features: [
           "Todo lo del Plan Profesional",
-          "App Móvil Dedicada (Android / iOS)",
-          "Mensajería interna oficial Federación-Clubes",
-          "Centro de Notificaciones masivas con acuse",
-          "Auditoría completa de logs y seguridad",
-          "Resoluciones y circulares oficiales digitales",
-          "Soporte multimedia de alta resolución"
+          "Carga de imágenes en legajos",
+          "Mensajería Federación–Clubes",
+          "Notificaciones masivas",
+          "Auditoría de logs",
+          "Resoluciones digitales",
+          "Soporte prioritario"
         ]
       }
     ]
@@ -96,7 +96,7 @@ const plansData = {
       {
         id: "st-s",
         name: "Plan Esencial",
-        limit: "Hasta 500 atletas activos",
+        limit: "Hasta 200 atletas activos",
         price: "$40",
         period: "/mes",
         annualPrice: "Anual: $380/año (~$31/mes)",
@@ -104,19 +104,19 @@ const plansData = {
         icon: Timer,
         color: "#0070f3",
         features: [
-          "Inscripción básica de atletas a regatas",
-          "Pizarra de resultados en vivo (web pública)",
-          "Consola para Juez Cronometrista",
-          "Planillas de clasificación y series",
-          "Soporte para 1 disciplina deportiva",
-          "Reporte PDF automático de regatas",
-          "Gráficos básicos de rendimiento"
+          "Schedule e inscripción a regatas",
+          "Carga manual de tiempos y DQ",
+          "Pizarra pública (actualización por polling)",
+          "Planillas y series",
+          "Exportación PDF de resultados",
+          "Sin Live SignalR",
+          "Sin consolas de juez"
         ]
       },
       {
         id: "st-m",
         name: "Plan Profesional",
-        limit: "501 a 2,000 atletas activos",
+        limit: "Hasta 400 atletas activos",
         price: "$90",
         period: "/mes",
         annualPrice: "Anual: $860/año (~$71/mes)",
@@ -125,18 +125,18 @@ const plansData = {
         color: "#0070f3",
         features: [
           "Todo lo del Plan Esencial",
-          "Resultados en vivo dinámicos mediante SignalR",
-          "Múltiples consolas de jueces (Largada + Llegada)",
-          "Inscripción descentralizada directa por Clubes",
-          "Control de penalidades y descalificaciones",
-          "Cronograma interactivo de pruebas",
-          "Filtros avanzados por series y categorías"
+          "Resultados Live en tiempo real (SignalR)",
+          "Penalidades y descalificaciones",
+          "Cronograma interactivo",
+          "Filtros por series y categorías",
+          "Sin consolas de juez",
+          "PDF de regatas"
         ]
       },
       {
         id: "st-l",
         name: "Plan Ecosistema",
-        limit: "Más de 2,000 atletas activos",
+        limit: "Atletas ilimitados",
         price: "$190",
         period: "/mes",
         annualPrice: "Anual: $1,800/año (~$150/mes)",
@@ -145,12 +145,12 @@ const plansData = {
         color: "#0070f3",
         features: [
           "Todo lo del Plan Profesional",
-          "Globo terráqueo 3D interactivo de eventos",
-          "Integración de telemetría y GPS en vivo",
-          "Marca Blanca (Resultados en dominio propio)",
-          "Soporte multidisciplinario avanzado",
-          "API pública de resultados e integraciones",
-          "Pantalla de resultados adaptada a Streaming/TV"
+          "Consolas Largador / Cronometrista / Control",
+          "Live SignalR completo",
+          "Carga manual + jueces",
+          "Soporte prioritario",
+          "Exportación PDF avanzada",
+          "Panel admin completo"
         ]
       }
     ]
@@ -167,7 +167,7 @@ const plansData = {
       {
         id: "duo-s",
         name: "Plan Esencial",
-        limit: "Hasta 500 atletas activos",
+        limit: "Hasta 200 atletas activos",
         price: "$75",
         period: "/mes",
         annualPrice: "Anual: $720/año (~$60/mes)",
@@ -175,19 +175,19 @@ const plansData = {
         icon: Layers,
         color: "#3daa94",
         features: [
-          "Plataformas integradas (SIGDEF + SportTrack)",
-          "Sincronización básica de padrón a regatas",
-          "Legajo básico y 1 consola de cronometrista",
-          "Pizarra de resultados en vivo",
-          "50% de descuento en setup inicial",
-          "1.5% fee de inscripción en torneos de pago",
-          "Soporte técnico prioritario por email"
+          "SIGDEF Esencial + SportTrack Esencial",
+          "Sincronización básica padrón ↔ regatas",
+          "Carga manual de tiempos",
+          "Pizarra pública (polling)",
+          "PDF en ambos módulos",
+          "Sin dashboard Club / sin jueces / sin Live",
+          "Soporte por email"
         ]
       },
       {
         id: "duo-m",
         name: "Plan Profesional",
-        limit: "501 a 2,000 atletas activos",
+        limit: "Hasta 400 atletas activos",
         price: "$170",
         period: "/mes",
         annualPrice: "Anual: $1,600/año (~$133/mes)",
@@ -195,33 +195,33 @@ const plansData = {
         icon: Sparkles,
         color: "#3daa94",
         features: [
-          "SIGDEF Standard + SportTrack Standard",
-          "Sincronización automática de atletas de clubes",
-          "Inscripción descentralizada con validación",
-          "Pagos unificados (Afiliación + Inscripción torneo)",
-          "Consolas multi-juez SignalR sincronizadas",
-          "Setup inicial e inducción técnica incluidos",
-          "2.0% fee de inscripción en torneos de pago"
+          "SIGDEF Profesional + SportTrack Profesional",
+          "Dashboard Club + aprobación remota",
+          "Live SignalR de resultados",
+          "Inscripción descentralizada",
+          "Sin consolas de juez",
+          "Sin carga de imágenes",
+          "Setup e inducción incluidos"
         ]
       },
       {
         id: "duo-l",
         name: "Plan Ecosistema",
-        limit: "Más de 2,000 atletas activos",
+        limit: "Atletas ilimitados",
         price: "$350",
         period: "/mes",
         annualPrice: "Anual: $3,360/año (~$280/mes)",
         featured: false,
-        icon: Zap,
+        icon: Star,
         color: "#3daa94",
         features: [
-          "SIGDEF Premium + SportTrack Premium",
-          "App Móvil Integrada (Legajo + Live Tracking)",
-          "Marca Blanca (Dominio propio y logos incluidos)",
-          "Mensajería y notificaciones masivas oficiales",
-          "Globo 3D y telemetría avanzada de regatas",
-          "Soporte VIP 24/7 y Setup prioritario incluido",
-          "Fee de inscripción reducido al 1.0%"
+          "SIGDEF Ecosistema + SportTrack Ecosistema",
+          "Jueces + Live + Club + imágenes",
+          "Todo el stack unificado",
+          "Mensajería y notificaciones",
+          "Soporte prioritario",
+          "Atletas ilimitados",
+          "Máxima integración"
         ]
       }
     ]
@@ -515,14 +515,14 @@ function Home() {
                                 >
                                     <option value="" style={{ background: '#0b0f19', color: '#64748b' }}>Seleccioná un plan...</option>
                                     <optgroup label="🎁 Pack Dúo (Ecosistema Integrado)" style={{ background: '#0b0f19', color: '#ffffff', fontWeight: 600 }}>
-                                        <option value="Pack Dúo - Plan Esencial" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Pack Dúo — Plan Esencial (Hasta 500 atletas)</option>
-                                        <option value="Pack Dúo - Plan Profesional" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Pack Dúo — Plan Profesional (501 a 2,000 atletas)</option>
-                                        <option value="Pack Dúo - Plan Ecosistema" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Pack Dúo — Plan Ecosistema (Más de 2,000 atletas)</option>
+                                        <option value="Pack Dúo - Plan Esencial" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Pack Dúo — Plan Esencial (Hasta 200 atletas)</option>
+                                        <option value="Pack Dúo - Plan Profesional" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Pack Dúo — Plan Profesional (Hasta 400 atletas)</option>
+                                        <option value="Pack Dúo - Plan Ecosistema" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Pack Dúo — Plan Ecosistema (Ilimitado)</option>
                                     </optgroup>
                                     <optgroup label="🔵 Solo SportTrack (Competencias)" style={{ background: '#0b0f19', color: '#ffffff', fontWeight: 600 }}>
-                                        <option value="Solo SportTrack - Plan Esencial" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Solo SportTrack — Plan Esencial (Hasta 500 atletas)</option>
-                                        <option value="Solo SportTrack - Plan Profesional" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Solo SportTrack — Plan Profesional (501 a 2,000 atletas)</option>
-                                        <option value="Solo SportTrack - Plan Ecosistema" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Solo SportTrack — Plan Ecosistema (Más de 2,000 atletas)</option>
+                                        <option value="Solo SportTrack - Plan Esencial" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Solo SportTrack — Plan Esencial (Hasta 200 atletas)</option>
+                                        <option value="Solo SportTrack - Plan Profesional" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Solo SportTrack — Plan Profesional (Hasta 400 atletas)</option>
+                                        <option value="Solo SportTrack - Plan Ecosistema" style={{ background: '#0b0f19', color: '#cbd5e1' }}>Solo SportTrack — Plan Ecosistema (Ilimitado)</option>
                                     </optgroup>
                                 </select>
                             </div>

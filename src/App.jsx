@@ -84,7 +84,8 @@ function App() {
             <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista']} requiereControlesLive><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador']} requiereControlesLive><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']} requiereControlesLive><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']} requiereControlesLive><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
+            {/* Carga manual: SportTrack S/M/L (no exige consolas juez / Ecosistema) */}
+            <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
         {showNotificationCenter && <NotificationCenter isAdmin={isJudgeOrAdmin} />}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
