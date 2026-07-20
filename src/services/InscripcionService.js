@@ -25,7 +25,18 @@ const InscripcionService = {
     toggleSeeding: async (id) => {
         const response = await api.patch(`${ENDPOINTS.INSCRIPCIONES.BASE}/${id}/toggle-seeding`);
         return response.data;
-    }
+    },
+    getRegistro: async (params = {}) => {
+        const searchParams = new URLSearchParams();
+        if (params.eventoId) searchParams.set('eventoId', params.eventoId);
+        if (params.clubId) searchParams.set('clubId', params.clubId);
+        if (params.participanteId) searchParams.set('participanteId', params.participanteId);
+        if (params.busqueda) searchParams.set('busqueda', params.busqueda);
+        const query = searchParams.toString();
+        const url = query ? `${ENDPOINTS.INSCRIPCIONES.REGISTRO}?${query}` : ENDPOINTS.INSCRIPCIONES.REGISTRO;
+        const response = await api.get(url);
+        return response.data;
+    },
 };
 
 export default InscripcionService;

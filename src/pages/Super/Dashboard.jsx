@@ -19,6 +19,7 @@ import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
 import { canAccessControlesLive, extractPlanFromUser } from '../../utils/planHelpers';
+import RegistroInscripcionesSection from '../ClubAdmin/sections/RegistroInscripcionesSection';
 
 
 import { 
@@ -37,7 +38,8 @@ import {
     CreditCard,
     FileText,
     Globe,
-    Mail
+    Mail,
+    ClipboardList
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -49,6 +51,7 @@ const NAV_ITEMS = [
     { id: 'atletas', path: 'atletas', icon: <Users size={20} />, label: 'Atletas' },
     { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
+    { id: 'registro-inscripciones', path: 'registro-inscripciones', icon: <ClipboardList size={20} />, label: 'Registro Inscripciones' },
     { id: 'pagos', path: 'pagos', icon: <CreditCard size={20} />, label: 'Control de Pagos' },
     { id: 'controles', path: 'controles', icon: <Timer size={20} />, label: 'Controles Técnicos' },
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
@@ -182,6 +185,7 @@ const SuperDashboard = () => {
                         <Route path="clubes" element={<GestionClubesSection />} />
                         <Route path="logins" element={<GestionLoginsSection />} />
                         <Route path="atletas" element={<GestionAtletasSection />} />
+                        <Route path="registro-inscripciones" element={<RegistroInscripcionesSection modo="admin" />} />
                         <Route path="pagos" element={<GestionPagosSection />} />
                         <Route path="resultados" element={<GestionResultadosSection />} />
                         <Route path="auditoria" element={<ProgressionAuditPage />} />

@@ -39,6 +39,7 @@ export const ENDPOINTS = {
     INSCRIPCIONES: {
         BASE: '/inscripciones',
         BY_EVENTO_PRUEBA: (id) => `/inscripciones/evento-prueba/${id}`,
+        REGISTRO: '/inscripciones/registro',
     },
 
     // Fases
