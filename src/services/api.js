@@ -21,6 +21,7 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        config.headers['X-Client-App'] = 'sporttrack';
         return config;
     },
     (error) => {

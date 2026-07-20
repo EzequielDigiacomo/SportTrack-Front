@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5173,
+      port: 5174,
       strictPort: true,
       host: true, // Expone la IP de red local para acceso desde móvil/otros dispositivos
       allowedHosts: true, // Permite túneles externos (Cloudflare, ngrok, etc.)

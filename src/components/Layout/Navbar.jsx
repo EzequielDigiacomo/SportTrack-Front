@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { User, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { getDashboardPathForRole } from '../../utils/authHelpers'
 import ThemeToggle from '../Common/ThemeToggle'
 import logo from '../../assets/logo-sporttrack.png'
 import './Navbar.css'
@@ -37,11 +38,7 @@ function Navbar() {
                                 className="btn-icon-nav" 
                                 onClick={() => {
                                     if (!user?.rol) { navigate('/'); return; }
-                                    const role = user.rol.trim().toLowerCase();
-                                    if (role === 'superadmin' || role === 'admin') navigate('/super');
-                                    else if (role === 'club') navigate('/club');
-                                    else if (role === 'largador' || role === 'cronometrista') navigate('/jueces');
-                                    else navigate('/');
+                                    navigate(getDashboardPathForRole(user.rol));
                                 }}
                                 title="Mi Dashboard"
                             >
