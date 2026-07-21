@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
-import { getUserRole } from '../utils/authHelpers';
+import { normalizeAuthUser } from '../utils/authHelpers';
 import { extractPlanFromUser } from '../utils/planHelpers';
 import AuthService from '../services/AuthService';
 import timingSignalRService from '../services/TimingSignalRService';
@@ -34,14 +34,8 @@ export const AuthProvider = ({ children }) => {
 
     const normalizeUser = (data) => {
         if (!data) return null;
-        const rol = getUserRole(data);
         const plan = extractPlanFromUser(data);
-        return {
-            ...data,
-            rol,
-            token: data.token || data.Token,
-            plan,
-        };
+        return normalizeAuthUser(data, plan);
     };
 
     const login = (userData, token) => {

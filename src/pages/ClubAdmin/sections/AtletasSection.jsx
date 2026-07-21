@@ -8,6 +8,7 @@ import SearchBox from '../../../components/Common/SearchBox';
 import AtletaGrid from '../../Super/sections/AtletaGrid';
 import AtletaForm from '../../Super/sections/AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
+import { matchesSearch } from '../../../utils/authHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
@@ -58,17 +59,19 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
 
     useEffect(() => {
         loadAtletas();
-    }, []);
+    }, [user?.clubId, user?.ClubId]);
 
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm]);
 
     const loadAtletas = async () => {
-        if (!user?.clubId) return setLoading(false);
+        const clubId = user?.clubId ?? user?.ClubId;
+        if (!clubId) return setLoading(false);
         try {
-            const data = await AtletaService.getByClub(user.clubId);
-            setAtletas(data);
+            setLoading(true);
+            const data = await AtletaService.getByClub(clubId);
+            setAtletas(Array.isArray(data) ? data : []);
         } catch (error) {
             showAlert('error', 'Error al cargar atletas');
         } finally {
@@ -155,14 +158,19 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
     };
 
     const filteredAtletas = atletas
-        .filter(atleta => {
-            const searchLower = searchTerm.toLowerCase();
-            const fullMatch = `${atleta.nombre} ${atleta.apellido} ${atleta.dni} ${atleta.categoriaNombre}`.toLowerCase();
-            return fullMatch.includes(searchLower);
-        })
+        .filter((atleta) =>
+            matchesSearch(
+                searchTerm,
+                atleta.nombre ?? atleta.Nombre,
+                atleta.apellido ?? atleta.Apellido,
+                atleta.dni ?? atleta.Dni ?? atleta.documento ?? atleta.Documento,
+                atleta.categoriaNombre ?? atleta.CategoriaNombre,
+            )
+        )
         .sort((a, b) => {
-            const aVal = a[sortConfig.key] || '';
-            const bVal = b[sortConfig.key] || '';
+            const key = sortConfig.key;
+            const aVal = a[key] ?? a[key?.charAt(0)?.toUpperCase() + key?.slice(1)] ?? '';
+            const bVal = b[key] ?? b[key?.charAt(0)?.toUpperCase() + key?.slice(1)] ?? '';
             if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
             if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;

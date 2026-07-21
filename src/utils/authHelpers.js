@@ -28,6 +28,20 @@ export const getUserRole = (data) => {
     ).trim();
 };
 
+/** Normaliza campos del login/sesión (camelCase + PascalCase del backend). */
+export const normalizeAuthUser = (data, plan = null) => {
+    if (!data) return null;
+    const rol = getUserRole(data);
+    return {
+        ...data,
+        rol,
+        token: data.token || data.Token || null,
+        clubId: data.clubId ?? data.ClubId ?? null,
+        federacionId: data.federacionId ?? data.FederacionId ?? null,
+        plan: plan ?? data.plan ?? data.Plan ?? null,
+    };
+};
+
 export const isSuperAdminUser = (user) => {
     const role = getUserRole(user).toLowerCase();
     return role === 'superadmin' || user?.username === 'soporte_tecnico';
@@ -51,4 +65,18 @@ export const getDashboardPathForRole = (role) => {
     if (normalized === 'cronometrista') return '/jueces/llegada';
     if (normalized === 'juezcontrol') return '/juez-control';
     return '/';
+};
+
+/** Texto buscable seguro (evita crash si faltan campos). */
+export const buildSearchText = (...parts) =>
+    parts
+        .flat()
+        .filter((p) => p != null && p !== '')
+        .map((p) => String(p).toLowerCase())
+        .join(' ');
+
+export const matchesSearch = (term, ...parts) => {
+    const q = (term || '').trim().toLowerCase();
+    if (!q) return true;
+    return buildSearchText(...parts).includes(q);
 };

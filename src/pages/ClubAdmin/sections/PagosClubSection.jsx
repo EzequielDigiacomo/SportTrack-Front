@@ -18,6 +18,7 @@ import AtletaService from '../../../services/AtletaService';
 import ClubService from '../../../services/ClubService';
 import { useAuth } from '../../../context/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { matchesSearch } from '../../../utils/authHelpers';
 import timingSignalRService from '../../../services/TimingSignalRService';
 import { getClubFederationName } from '../../../utils/apiHelpers';
 import '../../../components/SharedSections/AdminSections.css';
@@ -42,26 +43,27 @@ const PagosClubSection = () => {
 
     useEffect(() => {
         loadData();
-    }, [user?.clubId]);
+    }, [user?.clubId, user?.ClubId]);
 
     const loadData = async () => {
-        if (!user?.clubId) return;
+        const clubId = user?.clubId ?? user?.ClubId;
+        if (!clubId) return;
         setLoading(true);
         try {
             // Fetch club info
-            const club = await ClubService.getById(user.clubId);
+            const club = await ClubService.getById(clubId);
             setClubInfo(club);
             setSolicitudEnviada(club?.solicitudPagoPendiente || club?.SolicitudPagoPendiente || false);
 
             // Fetch athletes of this club
-            const athletesData = await AtletaService.getByClub(user.clubId);
+            const athletesData = await AtletaService.getByClub(clubId);
             setAtletas(athletesData);
 
             // Fetch inscriptions and filter for this club
             const inscRes = await api.get(ENDPOINTS.INSCRIPCIONES.BASE);
             const clubInscripciones = inscRes.data.filter(i => {
                 const athClubId = i.participanteClubId || (i.participante && i.participante.clubId);
-                return athClubId === user.clubId || i.clubId === user.clubId;
+                return athClubId === clubId || i.clubId === clubId;
             });
             setInscripciones(clubInscripciones);
         } catch (err) {
@@ -119,16 +121,22 @@ const PagosClubSection = () => {
     };
 
     // Filter lists
-    const filteredAtletas = atletas.filter(a => 
-        a.nombre.toLowerCase().includes(searchAtleta.toLowerCase()) ||
-        a.apellido.toLowerCase().includes(searchAtleta.toLowerCase()) ||
-        (a.dni && a.dni.toLowerCase().includes(searchAtleta.toLowerCase()))
+    const filteredAtletas = atletas.filter((a) =>
+        matchesSearch(
+            searchAtleta,
+            a.nombre ?? a.Nombre,
+            a.apellido ?? a.Apellido,
+            a.dni ?? a.Dni ?? a.documento ?? a.Documento,
+        )
     );
 
-    const filteredInscripciones = inscripciones.filter(i => 
-        (i.participanteNombreCompleto && i.participanteNombreCompleto.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
-        (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
-        (i.pruebaNombre && i.pruebaNombre.toLowerCase().includes(searchInscripcion.toLowerCase()))
+    const filteredInscripciones = inscripciones.filter((i) =>
+        matchesSearch(
+            searchInscripcion,
+            i.participanteNombreCompleto ?? i.ParticipanteNombreCompleto,
+            i.eventoNombre ?? i.EventoNombre,
+            i.pruebaNombre ?? i.PruebaNombre,
+        )
     );
 
     const isAlDia = clubInfo?.pagoAfiliacionAlDia || clubInfo?.PagoAfiliacionAlDia;

@@ -3,14 +3,17 @@ import { PruebaService } from '../../../services/ConfigService';
 import AtletaService from '../../../services/AtletaService';
 import InscripcionService from '../../../services/InscripcionService';
 import { useAuth } from '../../../context/AuthContext';
+import { matchesSearch } from '../../../utils/authHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import './InscripcionModal.css';
 
 const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true }) => {
     const { user } = useAuth();
+    const clubId = user?.clubId ?? user?.ClubId;
     const [pruebasHabilitadas, setPruebasHabilitadas] = useState([]);
     const [atletasClub, setAtletasClub] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [athleteSearch, setAthleteSearch] = useState('');
 
     const [selectedPrueba, setSelectedPrueba] = useState(null);
     // selectionsMap guardará { [pruebaId]: [atleta1, atleta2... ] }
@@ -53,7 +56,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
 
     const loadInscripcionesClub = async () => {
         try {
-            const data = await InscripcionService.getByEventoAndClub(evento.id, user.clubId);
+            const data = await InscripcionService.getByEventoAndClub(evento.id, clubId);
             setInscripcionesActuales(data);
         } catch (e) {
             console.error("Error loading club inscriptions", e);
@@ -61,11 +64,15 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
     };
 
     useEffect(() => {
+        if (!clubId) {
+            setLoading(false);
+            return;
+        }
         const loadInitial = async () => {
             try {
                 const [pruebas, atletas] = await Promise.all([
                     PruebaService.getByEvento(evento.id),
-                    AtletaService.getByClub(user.clubId) 
+                    AtletaService.getByClub(clubId) 
                 ]);
                 setPruebasHabilitadas(pruebas);
                 setAtletasClub(atletas);
@@ -77,7 +84,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
             }
         };
         loadInitial();
-    }, [evento.id, user.clubId]);
+    }, [evento.id, clubId]);
 
     const getMaxTripulantes = (boteNombre) => {
         if (!boteNombre) return 1;
@@ -379,7 +386,27 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                             {!selectedPrueba ? (
                                 <p className="hint-text">Primero selecciona una prueba a la izquierda.</p>
                             ) : (
-                                atletasClub.map(atleta => {
+                                <>
+                                <div style={{ marginBottom: '0.75rem' }}>
+                                    <input
+                                        type="search"
+                                        className="admin-input"
+                                        placeholder="Buscar atleta por nombre o DNI..."
+                                        value={athleteSearch}
+                                        onChange={(e) => setAthleteSearch(e.target.value)}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                                {atletasClub
+                                    .filter((atleta) =>
+                                        matchesSearch(
+                                            athleteSearch,
+                                            atleta.nombre ?? atleta.Nombre,
+                                            atleta.apellido ?? atleta.Apellido,
+                                            atleta.dni ?? atleta.Dni,
+                                        )
+                                    )
+                                    .map(atleta => {
                                     const isAlreadyRegistered = getInscripcionesPruebaActual().some(insc => 
                                         (insc.participanteId === atleta.id) || 
                                         (insc.tripulantes?.some(t => t.participanteId === atleta.id))
@@ -493,7 +520,8 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                                             </div>
                                         </div>
                                     );
-                                })
+                                })}
+                                </>
                             )}
                         </div>
                     </div>
