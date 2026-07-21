@@ -220,3 +220,68 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Solo Android / Capacitor: pantalla completa, teclado y safe-area */
+html.platform-capacitor .app-container--login,
+html.is-capacitor .app-container--login,
+html.platform-capacitor .main-content--login,
+html.is-capacitor .main-content--login {
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+}
+
+html.platform-capacitor .login-container,
+html.is-capacitor .login-container {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    height: 100%;
+    min-height: 0;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    align-items: flex-start;
+}
+
+html.platform-capacitor .login-card,
+html.is-capacitor .login-card {
+    box-sizing: border-box;
+    margin: auto;
+    flex-shrink: 0;
+}
+
+html.platform-capacitor .form-group input,
+html.is-capacitor .form-group input {
+    font-size: 16px;
+    touch-action: manipulation;
+}
+
+html.platform-capacitor,
+html.platform-capacitor body,
+html.is-capacitor,
+html.is-capacitor body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+}
+
+html.platform-capacitor body.login-route,
+html.platform-capacitor body.login-route #root,
+html.platform-capacitor body.login-route .app-container--login,
+html.is-capacitor body.login-route,
+html.is-capacitor body.login-route #root,
+html.is-capacitor body.login-route .app-container--login {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+}

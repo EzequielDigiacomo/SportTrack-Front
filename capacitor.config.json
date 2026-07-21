@@ -1,0 +1,29 @@
+{
+  "appId": "com.sporttrack.jueces",
+  "appName": "SportTrack Jueces",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": [
+      "https://sporttrack-sigdef.onrender.com/*"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DARK",
+      "backgroundColor": "#0a0c12"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "style": "DARK"
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

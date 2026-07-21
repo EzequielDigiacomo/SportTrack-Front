@@ -1,13 +1,19 @@
 import axios from 'axios'
 import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants'
 import { getStoredAuthToken } from '../utils/authHelpers'
+import { isNativePlatform } from '../utils/platformUtils'
+
+const isNative = isNativePlatform()
 
 // Create axios instance
 const CLIENT_APP = 'sporttrack';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    withCredentials: true,
+    // En Capacitor las cookies cross-origin rompen el login (CORS).
+    // En nativo usamos solo Bearer token.
+    withCredentials: !isNative,
+    timeout: isNative ? 45000 : 30000,
     headers: {
         'Content-Type': 'application/json',
         'X-Client-App': CLIENT_APP,

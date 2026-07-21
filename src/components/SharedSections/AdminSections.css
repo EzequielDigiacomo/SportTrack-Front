@@ -1791,4 +1791,30 @@ th.sortable:hover .sort-icon {
     color: var(--color-text-primary) !important;
 }
 
+/* ── Gestión de Logins ── */
+.login-grid-name {
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.login-grid-meta {
+    color: var(--color-text-secondary);
+}
+
+.login-grid-meta-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    margin-top: 0.15rem;
+}
+
+.login-grid-meta-sub:not(:first-child) {
+    margin-left: 0;
+}
+
+.admin-native-card .login-grid-meta-sub {
+    display: inline;
+    margin-left: 0.5rem;
+}
 

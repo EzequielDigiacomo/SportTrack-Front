@@ -7,6 +7,7 @@ import InscripcionService from '../../../services/InscripcionService';
 import EventoService from '../../../services/EventoService';
 import ClubService from '../../../services/ClubService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import { abbreviatePruebaNombre } from '../../../utils/pruebaFormatUtils';
 import '../../../components/SharedSections/AdminSections.css';
 
 const normalizeRegistro = (item) => ({
@@ -29,11 +30,12 @@ const formatFecha = (value) => {
 };
 
 const formatPrueba = (row) => {
+    const prueba = abbreviatePruebaNombre(row.pruebaNombre) || '—';
     if (row.tripulantesNombres?.length > 0) {
         const crew = [row.participanteNombre, ...row.tripulantesNombres].filter(Boolean).join(' / ');
-        return `${row.pruebaNombre} (${crew})`;
+        return `${prueba} (${crew})`;
     }
-    return row.pruebaNombre || '—';
+    return prueba;
 };
 
 /**

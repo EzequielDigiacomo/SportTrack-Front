@@ -8,6 +8,8 @@
     position: sticky;
     top: 0;
     z-index: var(--z-sticky);
+    /* Safe area: notch / status bar en Capacitor y móviles */
+    padding-top: env(safe-area-inset-top, 0px);
 }
 
 [data-theme='dark'] .navbar {

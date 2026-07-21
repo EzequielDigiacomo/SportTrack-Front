@@ -177,6 +177,25 @@ html {
   transition: background-color var(--transition-base), color var(--transition-base);
 }
 
+/* ── Plataforma (ver utils/platformUtils.js) ──
+ * html/body reciben una de:
+ *   platform-web platform-web-desktop  → navegador en PC
+ *   platform-web platform-web-mobile   → navegador en celular/tablet
+ *   platform-capacitor platform-native is-capacitor [platform-android]
+ * data-platform en <html>: "web-desktop" | "web-mobile" | "capacitor"
+ */
+
+html.is-capacitor,
+html.platform-capacitor,
+html.is-capacitor body,
+html.platform-capacitor body,
+html.is-capacitor #root,
+html.platform-capacitor #root {
+  height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--color-bg-primary);
@@ -186,6 +205,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+html.is-capacitor body,
+html.platform-capacitor body {
+  min-height: 100dvh;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme='dark'] body {
