@@ -354,6 +354,20 @@ class TimingSignalRService {
                     this.currentFaseId = null;
                 }
 
+                // Notificaciones de operadores (admin/jueces) sin Clients.All
+                const roleLower = String(this.role || '').toLowerCase();
+                const isOperator = [
+                    'admin', 'superadmin', 'juezcontrol', 'largador',
+                    'cronometrista', 'soporte_tecnico', 'club'
+                ].some(r => roleLower.includes(r));
+                if (isOperator) {
+                    try {
+                        await this.connection.invoke("JoinOperatorsGroup");
+                    } catch (err) {
+                        console.warn("[SignalR] JoinOperatorsGroup skipped:", err?.message || err);
+                    }
+                }
+
                 await this.flushPendingRaceStart();
             } catch (err) {
                 if (this._intentionalDisconnect || err?.name === 'AbortError') {

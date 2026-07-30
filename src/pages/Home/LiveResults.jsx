@@ -299,16 +299,32 @@ const LiveResults = () => {
 
         loadData();
 
-        // Backup / modo Esencial: sin SignalR Live, polling más frecuente
-        const pollMs = liveRealtimeEnabled ? 30000 : 10000;
-        const pollInterval = setInterval(() => {
-            if (!liveRealtimeEnabled || timingSignalRService.getConnectionState() !== 'Connected') {
-                loadData();
-            }
-        }, pollMs);
+        // Backup / modo Esencial: polling con backoff si el WS está caído
+        let pollMs = liveRealtimeEnabled ? 30000 : 10000;
+        let pollTimer = null;
+        let cancelled = false;
+
+        const schedulePoll = () => {
+            if (cancelled) return;
+            pollTimer = setTimeout(async () => {
+                const wsDown = !liveRealtimeEnabled
+                    || timingSignalRService.getConnectionState() !== 'Connected';
+                if (wsDown) {
+                    await loadData();
+                    // Backoff hasta 60s para no martillar API/DB en picos
+                    pollMs = Math.min(Math.round(pollMs * 1.5), 60000);
+                } else {
+                    pollMs = liveRealtimeEnabled ? 30000 : 10000;
+                }
+                schedulePoll();
+            }, pollMs);
+        };
+
+        schedulePoll();
 
         return () => {
-            clearInterval(pollInterval);
+            cancelled = true;
+            if (pollTimer) clearTimeout(pollTimer);
         };
     }, [selectedPrueba, refreshResultsCounter, liveRealtimeEnabled]);
 
