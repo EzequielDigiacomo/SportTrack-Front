@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, ArrowRightLeft } from 'lucide-react';
 import { computePositionsForPhase, isExcludedFromRanking, timeToMs } from '../../utils/resultadosHelpers';
 import { formatRaceTime, isMeaningfulRaceTime } from '../../utils/raceTimeUtils';
 import { formatTime } from '../../utils/dateUtils';
@@ -40,6 +40,7 @@ const ResultadosTable = ({
     tiemposLocales, 
     onResultChange,
     onStatusChange,
+    onTransferRequest,
     isLocked,
     isSuccess,
     isAdmin = true
@@ -48,6 +49,7 @@ const ResultadosTable = ({
 
     const horaCompetencia = formatTime(fase.fechaHoraProgramada || fase.FechaHoraProgramada);
     const horaLabel = horaCompetencia !== '--:--' ? `${horaCompetencia} hs` : null;
+    const showVerifyActions = !!(onStatusChange || onTransferRequest);
 
     const computedPositions = computePositionsForPhase(fase.resultados, tiemposLocales);
 
@@ -104,7 +106,7 @@ const ResultadosTable = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {sorted.map((res, index) => {
+                        {sorted.map((res) => {
                             const local = getLocal(res.id);
                             const pos = getDisplayPosition(res);
                             const timeStr = local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial;
@@ -217,7 +219,8 @@ const ResultadosTable = ({
                         <th style={{ width: '60px' }}>CARRIL</th>
                         <th>PARTICIPANTE</th>
                         <th>CLUB</th>
-                        <th style={{ width: onStatusChange ? '220px' : '150px' }}>TIEMPO / ESTADO</th>
+                        <th style={{ width: showVerifyActions ? '240px' : '150px' }}>TIEMPO / ESTADO</th>
+                        {showVerifyActions && <th style={{ width: '110px' }}>ACCIONES</th>}
                     </tr>
                 </thead>
                 <tbody>
@@ -246,7 +249,7 @@ const ResultadosTable = ({
                                             value={displayPos}
                                             readOnly
                                             disabled={isLocked}
-                                            title="La posición se calcula automáticamente según el tiempo"
+                                            title="La posición se calcula según el tiempo. Usá «Mover» para traspasar puestos."
                                             style={{ textAlign: 'center', width: '50px', background: 'rgba(255,255,255,0.05)' }}
                                         />
                                     )}
@@ -269,7 +272,9 @@ const ResultadosTable = ({
                                             value={displayNombre}
                                             onChange={(e) => onResultChange(res.id, 'participanteNombre', e.target.value)}
                                             disabled={isLocked}
+                                            readOnly={!onResultChange}
                                             style={{ width: '100%', minWidth: '150px' }}
+                                            title="Preferí usar «Mover» para traspasar puestos sin reescribir nombres"
                                         />
                                         {isOfficial && <span className="official-badge">Oficial</span>}
                                     </div>
@@ -329,6 +334,22 @@ const ResultadosTable = ({
                                         )}
                                     </div>
                                 </td>
+                                {showVerifyActions && (
+                                    <td className="col-acciones">
+                                        {onTransferRequest && !isSpecialStatus && displayPos && (
+                                            <button
+                                                type="button"
+                                                className="btn-transfer-pos"
+                                                onClick={() => onTransferRequest(res.id, displayPos)}
+                                                disabled={isLocked}
+                                                title="Traspasar este atleta a otro puesto"
+                                            >
+                                                <ArrowRightLeft size={14} />
+                                                Mover
+                                            </button>
+                                        )}
+                                    </td>
+                                )}
                             </tr>
                         );
                     })}
@@ -339,4 +360,3 @@ const ResultadosTable = ({
 };
 
 export default ResultadosTable;
-

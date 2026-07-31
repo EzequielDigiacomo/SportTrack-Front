@@ -7,7 +7,7 @@ import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import PdfExportService from '../../services/PdfExportService';
 import ThemeToggle from '../../components/Common/ThemeToggle';
-import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import './LiveResults.css';
 import { formatRaceTime, timeToMs } from '../../utils/raceTimeUtils';
@@ -21,6 +21,24 @@ const formatDiff = (diffMs) => {
     const s = (totalSec % 60).toFixed(2).padStart(5, '0');
     return `+${m}:${s}`;
 };
+
+const getFaseMeta = (f) => {
+    const p = f?.prueba || {};
+    const catName = p.prueba?.categoria?.nombre || p.categoria?.nombre || '';
+    const botRaw = p.prueba?.bote?.tipo || p.bote?.tipo || p.prueba?.bote?.nombre || p.bote?.nombre || '';
+    const botName = replaceKayakNames(botRaw).trim();
+    const distName = p.prueba?.distancia?.descripcion
+        || p.distancia?.descripcion
+        || (p.prueba?.distancia?.metros ? `${p.prueba.distancia.metros}m` : '')
+        || '';
+    const sexName = getSexName(p);
+    const etapa = f?.nombreFase || f?.NombreFase || f?.etapaNombre || f?.EtapaNombre || '';
+    return { catName, botName, distName, sexName, etapa };
+};
+
+const uniqueSorted = (values) => [...new Set(values.filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true })
+);
 
 const formatTime = (isoString) => {
     if (!isoString) return '';
@@ -84,7 +102,11 @@ const LiveResults = () => {
     const [resultados, setResultados] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [filterCategoria, setFilterCategoria] = useState('');
+    const [filterBote, setFilterBote] = useState('');
+    const [filterDistancia, setFilterDistancia] = useState('');
+    const [filterSexo, setFilterSexo] = useState('');
+    const [filterEtapa, setFilterEtapa] = useState('');
     const [showPdfMenu, setShowPdfMenu] = useState(false);
     const [pruebaNumbersMap, setPruebaNumbersMap] = useState({});
     const [faseNumberMap, setFaseNumberMap] = useState({});
@@ -388,17 +410,53 @@ const LiveResults = () => {
         }
     };
 
+    const filterOptions = (() => {
+        const cats = [];
+        const botes = [];
+        const dists = [];
+        const sexos = [];
+        const etapas = [];
+        allFases.forEach(f => {
+            const m = getFaseMeta(f);
+            cats.push(m.catName);
+            botes.push(m.botName);
+            dists.push(m.distName);
+            sexos.push(m.sexName);
+            etapas.push(m.etapa);
+        });
+        return {
+            categorias: uniqueSorted(cats),
+            botes: uniqueSorted(botes),
+            distancias: uniqueSorted(dists),
+            sexos: uniqueSorted(sexos),
+            etapas: uniqueSorted(etapas),
+        };
+    })();
+
+    const hasActiveFilters = !!(filterCategoria || filterBote || filterDistancia || filterSexo || filterEtapa);
+
+    const clearFilters = () => {
+        setFilterCategoria('');
+        setFilterBote('');
+        setFilterDistancia('');
+        setFilterSexo('');
+        setFilterEtapa('');
+    };
+
     const filteredFases = allFases.filter(f => {
-        const p = f.prueba || {};
-        const rawName = `${f.nombreFase} ${p.prueba?.categoria?.nombre || p.categoria?.nombre || ''} ${p.prueba?.bote?.tipo || p.bote?.tipo || ''} ${p.prueba?.distancia?.descripcion || p.distancia?.descripcion || ''} ${getSexName(p)}`;
-        const name = replaceKayakNames(rawName).toLowerCase();
-        return name.includes(searchTerm.toLowerCase());
+        const m = getFaseMeta(f);
+        if (filterCategoria && m.catName !== filterCategoria) return false;
+        if (filterBote && m.botName !== filterBote) return false;
+        if (filterDistancia && m.distName !== filterDistancia) return false;
+        if (filterSexo && m.sexName !== filterSexo) return false;
+        if (filterEtapa && m.etapa !== filterEtapa) return false;
+        return true;
     });
 
-    // Resetear startIndex a 0 cuando cambie el termino de busqueda
+    // Resetear startIndex a 0 cuando cambien los filtros
     useEffect(() => {
         setStartIndex(0);
-    }, [searchTerm]);
+    }, [filterCategoria, filterBote, filterDistancia, filterSexo, filterEtapa]);
 
     // Limitar/validar startIndex si filteredFases disminuye por filtrado
     useEffect(() => {
@@ -554,13 +612,69 @@ const LiveResults = () => {
                             <h3 style={{ margin: 0 }}>Cronograma</h3>
                             <ThemeToggle />
                         </div>
-                        <div className="search-box">
-                            <input
-                                type="text"
-                                placeholder="Buscar categoría..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                        <div className="cronograma-filters">
+                            <div className="filter-grid">
+                                <select
+                                    className="filter-select"
+                                    value={filterCategoria}
+                                    onChange={(e) => setFilterCategoria(e.target.value)}
+                                    aria-label="Filtrar por categoría"
+                                >
+                                    <option value="">Categoría</option>
+                                    {filterOptions.categorias.map(v => (
+                                        <option key={v} value={v}>{v}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    className="filter-select"
+                                    value={filterBote}
+                                    onChange={(e) => setFilterBote(e.target.value)}
+                                    aria-label="Filtrar por bote"
+                                >
+                                    <option value="">Bote</option>
+                                    {filterOptions.botes.map(v => (
+                                        <option key={v} value={v}>{v}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    className="filter-select"
+                                    value={filterDistancia}
+                                    onChange={(e) => setFilterDistancia(e.target.value)}
+                                    aria-label="Filtrar por distancia"
+                                >
+                                    <option value="">Distancia</option>
+                                    {filterOptions.distancias.map(v => (
+                                        <option key={v} value={v}>{v}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    className="filter-select"
+                                    value={filterSexo}
+                                    onChange={(e) => setFilterSexo(e.target.value)}
+                                    aria-label="Filtrar por sexo"
+                                >
+                                    <option value="">Sexo</option>
+                                    {filterOptions.sexos.map(v => (
+                                        <option key={v} value={v}>{v}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    className="filter-select filter-select--wide"
+                                    value={filterEtapa}
+                                    onChange={(e) => setFilterEtapa(e.target.value)}
+                                    aria-label="Filtrar por etapa"
+                                >
+                                    <option value="">Etapa</option>
+                                    {filterOptions.etapas.map(v => (
+                                        <option key={v} value={v}>{v}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {hasActiveFilters && (
+                                <button type="button" className="filter-clear-btn" onClick={clearFilters}>
+                                    <X size={14} /> Limpiar filtros
+                                </button>
+                            )}
                         </div>
                         {filteredFases.length > 10 && (
                             <div className="sidebar-pagination">
@@ -587,15 +701,13 @@ const LiveResults = () => {
                         )}
                     </div>
                     <div className="pruebas-v-list">
-                        {filteredFases.slice(startIndex, startIndex + 10).map(f => {
-                            const p = f.prueba || {};
+                        {filteredFases.length === 0 ? (
+                            <p className="cronograma-empty">No hay regatas con esos filtros.</p>
+                        ) : filteredFases.slice(startIndex, startIndex + 10).map(f => {
                             const raceNum = faseNumberMap[f.id] || f.numeroPrueba || f.NumeroPrueba || f.id;
                             const isSelected = selectedFase?.id === f.id;
-                            const catName = p.prueba?.categoria?.nombre || p.categoria?.nombre || '';
-                            const botName = p.prueba?.bote?.tipo || p.bote?.tipo || p.prueba?.bote?.nombre || p.bote?.nombre || '';
-                            const distName = p.prueba?.distancia?.descripcion || p.distancia?.descripcion || (p.prueba?.distancia?.metros ? `${p.prueba.distancia.metros}m` : '');
-                            const sexName = getSexName(p);
-                            const label = replaceKayakNames(`${catName} ${botName} ${distName} - ${sexName}`);
+                            const { catName, botName, distName, sexName } = getFaseMeta(f);
+                            const label = `${catName} ${botName} ${distName} - ${sexName}`.trim();
                             return (
                                 <button
                                     key={f.id}

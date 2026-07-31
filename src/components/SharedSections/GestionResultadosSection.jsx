@@ -8,6 +8,7 @@ import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
 import ResultadosTable from './ResultadosTable';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import Modal from '../Common/Modal';
 import { useAlert } from '../../hooks/useAlert';
 import PdfExportService from '../../services/PdfExportService';
 import CsvExportService from '../../services/CsvExportService';
@@ -15,8 +16,8 @@ import timingSignalRService from '../../services/TimingSignalRService';
 // import FaseDetailsForm from './FaseDetailsForm';
 import './GestionResultados.css';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
-import { applyPositionsToTiemposLocales } from '../../utils/resultadosHelpers';
-import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
+import { applyPositionsToTiemposLocales, getTransferablePositions, transferAthleteToPosition } from '../../utils/resultadosHelpers';
+import { formatRaceTime, formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 
@@ -60,6 +61,9 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const isBronce = planNombre === 'bronce';
     const role = user?.rol?.trim();
     const isAdmin = role === 'Admin' || role === 'SuperAdmin' || user?.username === 'soporte_tecnico';
+    const isJuezControl = (role || '').toLowerCase().includes('juezcontrol') || (role || '').toLowerCase().includes('control');
+    // Juez de control / mesa de llegada / admin: grilla editable en verificación
+    const canEditResults = isAdmin || isJuezControl || viewMode === 'resultados' || viewMode === 'tiempos' || isManualTiming;
     const {
         eventos, selectedEvento, setSelectedEvento,
         pruebas, selectedPrueba, setSelectedPrueba,
@@ -86,6 +90,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const [isManualMode, setIsManualMode] = useState(false);
     const [manualPlacements, setManualPlacements] = useState({});
     const [isNominaCollapsed, setIsNominaCollapsed] = useState(false);
+    const [transferModal, setTransferModal] = useState(null);
+    // transferModal: { sourceId, sourcePos, targetPos, mode, sourceTime, targetTime }
 
     const seedingStatus = useMemo(() => {
         const N = inscriptos.length;
@@ -476,6 +482,68 @@ const handleStatusChange = (id, status) => {
         }
         return next;
     });
+};
+
+const openTransferModal = (sourceId, sourcePos) => {
+    if (!faseSeleccionada?.resultados) return;
+    const options = getTransferablePositions(faseSeleccionada.resultados, tiemposLocales)
+        .filter(o => String(o.id) !== String(sourceId));
+    if (options.length === 0) {
+        showAlert('warning', 'No hay otros puestos para traspasar.');
+        return;
+    }
+    const sourceOpt = getTransferablePositions(faseSeleccionada.resultados, tiemposLocales)
+        .find(o => String(o.id) === String(sourceId));
+    const defaultTarget = options.find(o => o.posicion === sourcePos + 1) || options[0];
+    setTransferModal({
+        sourceId,
+        sourcePos,
+        sourceNombre: sourceOpt?.nombre || '',
+        sourceTime: sourceOpt?.tiempo || '',
+        targetPos: defaultTarget.posicion,
+        targetId: defaultTarget.id,
+        targetNombre: defaultTarget.nombre,
+        targetTime: defaultTarget.tiempo || '',
+        mode: 'keepTargetTime',
+        editSourceTime: defaultTarget.tiempo || '',
+        editTargetTime: sourceOpt?.tiempo || '',
+        options,
+    });
+};
+
+const updateTransferTarget = (targetPos) => {
+    setTransferModal(prev => {
+        if (!prev) return prev;
+        const target = prev.options.find(o => o.posicion === Number(targetPos));
+        if (!target) return prev;
+        return {
+            ...prev,
+            targetPos: target.posicion,
+            targetId: target.id,
+            targetNombre: target.nombre,
+            targetTime: target.tiempo || '',
+            editSourceTime: target.tiempo || '',
+            editTargetTime: prev.sourceTime || '',
+        };
+    });
+};
+
+const applyTransfer = () => {
+    if (!transferModal || !faseSeleccionada?.resultados) return;
+    const { sourceId, targetPos, mode, editSourceTime, editTargetTime } = transferModal;
+    setTiemposLocales(prev => transferAthleteToPosition(
+        faseSeleccionada.resultados,
+        prev,
+        sourceId,
+        targetPos,
+        mode === 'customTimes'
+            ? { mode: 'customTimes', sourceTime: editSourceTime, targetTime: editTargetTime }
+            : { mode: 'keepTargetTime' }
+    ));
+    setTransferModal(null);
+    setMessage(mode === 'customTimes'
+        ? '✅ Traspaso aplicado con tiempos corregidos. Guardá para confirmar.'
+        : '✅ Puestos intercambiados (tiempos de cada puesto conservados). Guardá para confirmar.');
 };
 
 const eventoActual = eventos.find(e => String(e.id) === String(selectedEvento));
@@ -1077,7 +1145,7 @@ const connectedStarter = activeJudges.find(j => {
                                         <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
                                             <span style={{ color: '#10b981', fontWeight: 600 }}>
                                                 {faseSeleccionada.estado === "Pendiente de Validación"
-                                                    ? '🏁 Serie completada por cronometrista. Revisá los tiempos y usá «Guardar y Hacer Oficial» abajo.'
+                                                    ? '🏁 Serie completada. Podés descalificar (DSQ), traspasar puestos con «Mover» y luego «Guardar y Hacer Oficial».'
                                                     : '✅ Resultados oficiales publicados.'}
                                             </span>
                                         </div>
@@ -1087,10 +1155,11 @@ const connectedStarter = activeJudges.find(j => {
                                     fase={faseSeleccionada}
                                     tiemposLocales={tiemposLocales}
                                     onResultChange={handleResultChange}
-                                    onStatusChange={isManualTiming ? handleStatusChange : undefined}
-                                    isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') ? false : isLocked}
+                                    onStatusChange={canEditResults ? handleStatusChange : undefined}
+                                    onTransferRequest={canEditResults ? openTransferModal : undefined}
+                                    isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados' || canEditResults) ? false : isLocked}
                                     isSuccess={saveSuccess}
-                                    isAdmin={isAdmin}
+                                    isAdmin={canEditResults}
                                 />
                                 
                                 {(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && (
@@ -1210,6 +1279,100 @@ const connectedStarter = activeJudges.find(j => {
             </div>
         )}
     </div>
+    <Modal
+        isOpen={!!transferModal}
+        onClose={() => setTransferModal(null)}
+        title="Traspasar puesto"
+        maxWidth="520px"
+        footer={
+            <>
+                <button type="button" className="btn-admin-secondary" onClick={() => setTransferModal(null)}>
+                    Cancelar
+                </button>
+                <button type="button" className="btn-admin-primary" onClick={applyTransfer}>
+                    Aplicar traspaso
+                </button>
+            </>
+        }
+    >
+        {transferModal && (
+            <div className="transfer-modal-body">
+                <p className="transfer-modal-lead">
+                    Movés el resultado de <strong>{transferModal.sourceNombre || 'Atleta'}</strong> (puesto {transferModal.sourcePos})
+                    sin reescribir nombres ni clubes: se intercambian los tiempos con el puesto destino.
+                </p>
+
+                <label className="transfer-field">
+                    <span>Puesto destino</span>
+                    <select
+                        value={transferModal.targetPos}
+                        onChange={(e) => updateTransferTarget(e.target.value)}
+                    >
+                        {transferModal.options.map(o => (
+                            <option key={o.id} value={o.posicion}>
+                                #{o.posicion} — {o.nombre || 'Sin nombre'} ({formatRaceTime(o.tiempo) || '—'})
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <div className="transfer-mode-options">
+                    <label className={`transfer-mode-card ${transferModal.mode === 'keepTargetTime' ? 'active' : ''}`}>
+                        <input
+                            type="radio"
+                            name="transferMode"
+                            checked={transferModal.mode === 'keepTargetTime'}
+                            onChange={() => setTransferModal(prev => prev && ({ ...prev, mode: 'keepTargetTime' }))}
+                        />
+                        <div>
+                            <strong>Conservar tiempo del puesto destino</strong>
+                            <span>
+                                {transferModal.sourceNombre || 'Origen'} pasa al #{transferModal.targetPos} con el tiempo {formatRaceTime(transferModal.targetTime) || '—'}.
+                                {transferModal.targetNombre || 'Destino'} queda en #{transferModal.sourcePos} con {formatRaceTime(transferModal.sourceTime) || '—'}.
+                            </span>
+                        </div>
+                    </label>
+                    <label className={`transfer-mode-card ${transferModal.mode === 'customTimes' ? 'active' : ''}`}>
+                        <input
+                            type="radio"
+                            name="transferMode"
+                            checked={transferModal.mode === 'customTimes'}
+                            onChange={() => setTransferModal(prev => prev && ({ ...prev, mode: 'customTimes' }))}
+                        />
+                        <div>
+                            <strong>Corregir posición y tiempo</strong>
+                            <span>Elegí el traspaso y ajustá manualmente ambos tiempos antes de aplicar.</span>
+                        </div>
+                    </label>
+                </div>
+
+                {transferModal.mode === 'customTimes' && (
+                    <div className="transfer-custom-times">
+                        <label className="transfer-field">
+                            <span>Nuevo tiempo — {transferModal.sourceNombre || 'Origen'} (irá a #{transferModal.targetPos})</span>
+                            <input
+                                type="text"
+                                className="admin-input-small"
+                                value={transferModal.editSourceTime}
+                                onChange={(e) => setTransferModal(prev => prev && ({ ...prev, editSourceTime: e.target.value }))}
+                                placeholder="00:00.000"
+                            />
+                        </label>
+                        <label className="transfer-field">
+                            <span>Nuevo tiempo — {transferModal.targetNombre || 'Destino'} (irá a #{transferModal.sourcePos})</span>
+                            <input
+                                type="text"
+                                className="admin-input-small"
+                                value={transferModal.editTargetTime}
+                                onChange={(e) => setTransferModal(prev => prev && ({ ...prev, editTargetTime: e.target.value }))}
+                                placeholder="00:00.000"
+                            />
+                        </label>
+                    </div>
+                )}
+            </div>
+        )}
+    </Modal>
     <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={closeConfirmDialog}
