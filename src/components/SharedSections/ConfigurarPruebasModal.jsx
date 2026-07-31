@@ -81,7 +81,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     const [editingId, setEditingId] = useState(null);
 
     const [gapEntrePruebas, setGapEntrePruebas] = useState(evento.gapEntrePruebas || 10);
-    const [gapRecuperacion, setGapRecuperacion] = useState(40);
+    const [gapRecuperacion, setGapRecuperacion] = useState(evento.gapRecuperacionMinutos ?? 40);
     const [horaInicioFinales, setHoraInicioFinales] = useState('10:30');
     const [usarBloqueFinales, setUsarBloqueFinales] = useState(true);
     const [usarGapVariable, setUsarGapVariable] = useState(evento.usarGapVariable || false);
@@ -117,6 +117,7 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                 setFasesLive(Array.isArray(live) ? live : []);
                 if (evento) {
                     setGapEntrePruebas(evento.gapEntrePruebas || 10);
+                    setGapRecuperacion(evento.gapRecuperacionMinutos ?? 40);
                     setUsarGapVariable(evento.usarGapVariable || false);
                 }
             } catch (err) {
@@ -302,8 +303,8 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
                                         <input type="number" className="admin-input" value={gapEntrePruebas} onChange={e => setGapEntrePruebas(parseInt(e.target.value) || 10)} min="1" max="120" />
                                     </div>
                                     <div className="form-group">
-                                        <label style={{ fontSize: '0.8rem', opacity: 0.8 }}>Descanso (min)</label>
-                                        <input type="number" className="admin-input" value={gapRecuperacion} onChange={e => setGapRecuperacion(parseInt(e.target.value) || 40)} min="10" max="180" />
+                                        <label style={{ fontSize: '0.8rem', opacity: 0.8 }}>Descanso atleta (min)</label>
+                                        <input type="number" className="admin-input" value={gapRecuperacion} onChange={e => setGapRecuperacion(parseInt(e.target.value) || 40)} min="10" max="180" title="Mínimo entre pruebas distintas misma categoría/sexo" />
                                     </div>
                                 </div>
                                 <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>

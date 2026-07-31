@@ -669,7 +669,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 sinReceso: eventoConfig?.sinReceso || false,
                 horaInicioReceso: eventoConfig?.horaInicioReceso || "13:00",
                 horaFinReceso: eventoConfig?.horaFinReceso || "14:00",
-                gapRecuperacionMs: 40 * 60 * 1000,
+                gapRecuperacionMinutos: eventoConfig?.gapRecuperacionMinutos ?? 40,
                 usarGapVariable: eventoConfig?.usarGapVariable || false,
             };
             const fasesReprogramadas = SchedulerService.recalcularTiempos(fasesConGaps, config);

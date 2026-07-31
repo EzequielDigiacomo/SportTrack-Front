@@ -266,6 +266,25 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                     <option value={15}>Cada 15 min (Lento)</option>
                                 </select>
                             </div>
+                            <div className="form-group">
+                                <label>Descanso mín. atleta (min)</label>
+                                <input
+                                    type="number"
+                                    className="admin-input"
+                                    min={10}
+                                    max={180}
+                                    step={5}
+                                    value={initialData.gapRecuperacionMinutos ?? 40}
+                                    onChange={(e) => {
+                                        const n = parseInt(e.target.value, 10);
+                                        onChange('gapRecuperacionMinutos', Number.isFinite(n) ? n : 40);
+                                    }}
+                                    title="Tiempo mínimo entre pruebas distintas de la misma categoría y sexo (ej. semi K1 → K2)"
+                                />
+                                <small style={{ display: 'block', marginTop: '0.35rem', color: 'var(--color-text-muted)', fontSize: '0.75rem', lineHeight: 1.35 }}>
+                                    Por defecto 40&apos;. Evita que un atleta corra otra prueba (otro bote) de la misma categoría/sexo antes de ese tiempo.
+                                </small>
+                            </div>
                             <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', justifyContent: 'center' }}>
                                 <label className="checkbox-label" style={{ marginBottom: '0px' }}>
                                     <input 

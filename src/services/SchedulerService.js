@@ -2,25 +2,33 @@
  * SchedulerService.js
  * Motor de cálculo de cronograma inteligente basado en "Bloques por Categoría" e "Intercalación Activa".
  * Agrupa las series de la misma categoría de manera consecutiva y coloca las semis/finales
- * en los huecos naturales entre categorías respetando una ventana óptima de descanso (40-60 minutos).
+ * en los huecos naturales entre categorías respetando una ventana de descanso configurable
+ * (default 40 minutos: misma categoría/sexo entre pruebas distintas, y semis→finales).
  * Adicionalmente, retiene las Finales para que comiencen a partir de una hora preferencial (ej. 10:30 AM).
  */
 
 const SchedulerService = {
     recalcularTiempos: (items, config = {}) => {
         if (!items || items.length === 0) return [];
+
+        const gapRecuperacionMin = Math.max(
+            1,
+            Number(config.gapRecuperacionMinutos ?? (config.gapRecuperacionMs != null ? config.gapRecuperacionMs / 60000 : 40)) || 40
+        );
         
         const {
             gapBaseMs = (config.gapEntrePruebas || 10) * 60 * 1000,
-            gapRecuperacionMs = 40 * 60 * 1000,
+            gapRecuperacionMs = gapRecuperacionMin * 60 * 1000,
             horaInicioEvento = "08:00",
             horaFinEvento = "18:00",
             sinReceso = false,
             horaInicioReceso = "13:00",
             horaFinReceso = "14:00",
-            horaInicioFinales = config.horaInicioFinales || "10:30", // Hora preferencial para iniciar las finales
+            horaInicioFinales = config.horaInicioFinales || "10:30",
             usarGapVariable = config.usarGapVariable || false
         } = config;
+
+        const gapRecuperacionMinutos = gapRecuperacionMs / 60000;
 
         const getMinutesOfDay = (item) => {
             const val = item.fechaHoraProgramada || item.time || item.fechaHoraOriginal || item.prueba?.fechaHora || item.raw?.fechaHora;
@@ -178,7 +186,7 @@ const SchedulerService = {
             const notReadyBlocks = [];
 
             eligibleBlocks.forEach(block => {
-                // Check for category/gender safety gap conflict (minimum 40 minutes rest between different events)
+                // Check for category/gender safety gap conflict (descanso mín. entre pruebas distintas)
                 const { catId, sexId } = getCatAndSex(block.items[0]);
                 let hasCatSexConflict = false;
                 if (catId && sexId) {
@@ -188,7 +196,7 @@ const SchedulerService = {
                     if (lastFinish !== undefined && lastOffset === currentDiaOffset) {
                         if (lastPId !== block.pruebaId) {
                             const elapsed = cursorMinutos - lastFinish;
-                            if (elapsed < 40) {
+                            if (elapsed < gapRecuperacionMinutos) {
                                 hasCatSexConflict = true;
                             }
                         }
@@ -209,7 +217,7 @@ const SchedulerService = {
                         readyBlocks.push(block);
                     } else {
                         const elapsed = cursorMinutos - lastFinish;
-                        if (elapsed >= (gapRecuperacionMs / 60000)) {
+                        if (elapsed >= gapRecuperacionMinutos) {
                             readyBlocks.push(block);
                         } else {
                             notReadyBlocks.push(block);
@@ -227,7 +235,7 @@ const SchedulerService = {
                             readyBlocks.push(block);
                         } else {
                             const elapsed = cursorMinutos - lastFinish;
-                            if (elapsed >= (gapRecuperacionMs / 60000)) {
+                            if (elapsed >= gapRecuperacionMinutos) {
                                 readyBlocks.push(block);
                             } else {
                                 notReadyBlocks.push(block);
@@ -274,7 +282,7 @@ const SchedulerService = {
                 notReadyBlocks.forEach(block => {
                     // 1. Same-prueba recovery gap
                     const lastFinishPrueba = lastStageFinishTime[block.pruebaId];
-                    let readyTimePrueba = lastFinishPrueba !== undefined ? lastFinishPrueba + (gapRecuperacionMs / 60000) : cursorMinutos;
+                    let readyTimePrueba = lastFinishPrueba !== undefined ? lastFinishPrueba + gapRecuperacionMinutos : cursorMinutos;
 
                     // 2. Category-sex recovery gap
                     const { catId, sexId } = getCatAndSex(block.items[0]);
@@ -284,7 +292,7 @@ const SchedulerService = {
                         const lastOffsetCS = lastCatSexDia[catId]?.[sexId];
                         const lastPIdCS = lastCatSexPruebaId[catId]?.[sexId];
                         if (lastFinishCS !== undefined && lastOffsetCS === currentDiaOffset && lastPIdCS !== block.pruebaId) {
-                            readyTimeCatSex = lastFinishCS + 40;
+                            readyTimeCatSex = lastFinishCS + gapRecuperacionMinutos;
                         }
                     }
 
