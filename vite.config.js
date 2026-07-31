@@ -15,8 +15,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    // Capacitor carga el build desde file/capacitor:// — rutas relativas
-    base: './',
+    // Web: '/' para que /resultados/:id y /planes/:id resuelvan /assets correctamente.
+    // Capacitor (file/capacitor://): rutas relativas con --mode capacitor.
+    base: mode === 'capacitor' ? './' : '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
