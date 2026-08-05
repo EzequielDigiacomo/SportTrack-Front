@@ -11,6 +11,7 @@ import GestionAtletasSection from './sections/GestionAtletasSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
 import ConfiguracionSection from './sections/ConfiguracionSection';
 import SoporteSection from './sections/SoporteSection';
+import BackupsSection from './sections/BackupsSection';
 import SaaSManagement from './sections/SaaSManagement';
 import ControlesSection from '../ClubAdmin/sections/ControlesSection';
 import GestionPagosSection from './sections/GestionPagosSection';
@@ -39,7 +40,8 @@ import {
     FileText,
     Globe,
     Mail,
-    ClipboardList
+    ClipboardList,
+    Database
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -60,6 +62,7 @@ const NAV_ITEMS = [
     { id: 'carga-manual', path: '/jueces/carga-manual', icon: <List size={20} />, label: 'Carga Manual', isExternal: true },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true, requiereControlesLive: true },
     { id: 'saas', path: 'saas', icon: <Cloud size={20} />, label: 'Suscripciones SaaS', isSupport: true },
+    { id: 'backups', path: 'backups', icon: <Database size={20} />, label: 'Backups DB', isSupport: true },
     { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
     { id: 'soporte', path: 'soporte', icon: <TerminalIcon size={20} />, label: 'Auditoría / Logs', isSupport: true },
 ];
@@ -110,7 +113,7 @@ const SuperDashboard = () => {
         const plan = extractPlanFromUser(user);
 
         // Módulos EXCLUSIVOS para SuperAdmin
-        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'configuracion' || item.id === 'federaciones' || item.superOnly) {
+        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'backups' || item.id === 'configuracion' || item.id === 'federaciones' || item.superOnly) {
             return isSuper;
         }
 
@@ -193,6 +196,7 @@ const SuperDashboard = () => {
                         <Route path="federaciones/*" element={<GestionFederacionesSection />} />
                         <Route path="mensajes" element={<MensajesSection modo={isSuper ? 'super' : 'admin'} />} />
                         <Route path="saas" element={<SaaSManagement />} />
+                        <Route path="backups" element={<BackupsSection />} />
                         <Route path="federacion/:id" element={<AdminHome />} />
                         <Route path="soporte" element={<SoporteSection />} />
                     </Routes>
