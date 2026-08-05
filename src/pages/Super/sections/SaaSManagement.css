@@ -2,14 +2,18 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    height: calc(100vh - 120px);
+    /* Altura mínima (no fija): con la grilla de precios abierta el listado
+       no se aplasta a 0px y el panel puede scrollear. */
+    min-height: calc(100vh - 120px);
+    height: auto;
+    overflow: visible;
 }
 
 .saas-main-layout {
     display: flex;
     gap: 1.5rem;
     flex: 1;
-    min-height: 0;
+    min-height: 420px;
 }
 
 /* List Side */
@@ -18,9 +22,16 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 360px;
     transition: all 0.3s ease;
     border-radius: 12px;
     overflow: hidden;
+}
+
+.saas-list-container .table-responsive {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 220px;
 }
 
 .saas-list-container.has-selection {

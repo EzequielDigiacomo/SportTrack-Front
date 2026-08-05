@@ -116,9 +116,9 @@ const SaaSManagement = () => {
                 SaaSService.getClubesStatus()
             ]);
             
-            const planesMapeados = planesData.map(p => {
+            const planesMapeados = (planesData || []).map(p => {
                 let color = 'var(--color-text-secondary)';
-                const nombre = p.nombre.toLowerCase();
+                const nombre = (p.nombre || '').toLowerCase();
                 if (nombre.includes('oro')) color = '#FFD700';
                 if (nombre.includes('plata')) color = '#E0E0E0';
                 if (nombre.includes('bronce')) color = '#CD7F32';
@@ -126,9 +126,14 @@ const SaaSManagement = () => {
             });
             
             setPlanes(planesMapeados);
-            setClubesStatus(clubesData);
+            setClubesStatus(Array.isArray(clubesData) ? clubesData : []);
         } catch (error) {
             console.error("Error fetching SaaS data:", error);
+            setClubesStatus([]);
+            addToast(
+                error?.message || "No se pudo cargar el listado de federaciones. Revisá la consola o reintentá.",
+                "error"
+            );
         } finally {
             setLoading(false);
             setLoadingStatus(false);
@@ -412,8 +417,8 @@ const SaaSManagement = () => {
 
     const selectedFed = clubesStatus.find(f => f.clubId === selectedFedId);
 
-    const filteredFederaciones = clubesStatus.filter(f => 
-        f.clubNombre.toLowerCase().includes(filter.toLowerCase())
+    const filteredFederaciones = clubesStatus.filter(f =>
+        (f.clubNombre || f.ClubNombre || '').toLowerCase().includes((filter || '').toLowerCase())
     );
 
     const ProgressBar = ({ current, max, label }) => {
@@ -633,6 +638,14 @@ const SaaSManagement = () => {
 <tbody>
                                 {loadingStatus ? (
                                     <tr><td colSpan="8"><div className="loader-row"><div className="loader"></div></div></td></tr>
+                                ) : filteredFederaciones.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="8" style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--color-text-secondary, #94a3b8)' }}>
+                                            {clubesStatus.length === 0
+                                                ? 'No hay federaciones cargadas. Creá una con “+ Nueva Federación” o verificá que la API responda.'
+                                                : 'Ninguna federación coincide con la búsqueda.'}
+                                        </td>
+                                    </tr>
                                 ) : filteredFederaciones.map(fed => {
                                     const planColor = planes.find(p => p.id === fed.planSaaSId)?.color;
                                     return (
