@@ -36,7 +36,10 @@ const pickStr = (obj, ...keys) => pick(obj, ...keys) ?? '';
 const getRol = (usuario) =>
     pickStr(usuario, 'rolFederacion', 'RolFederacion', 'rol', 'Rol').toLowerCase();
 
-const isActivo = (usuario) => usuario?.activo !== false && usuario?.Activo !== false;
+const isActivo = (usuario) => {
+    const v = usuario?.estaActivo ?? usuario?.EstaActivo ?? usuario?.activo ?? usuario?.Activo;
+    return v !== false;
+};
 
 const displayUsuario = (usuario) => {
     if (!usuario) return 'Usuario';
@@ -463,6 +466,7 @@ const MensajesSection = ({ modo: modoProp = 'auto' }) => {
                         className="btn-admin-secondary"
                         onClick={() => {
                             loadHilos();
+                            loadCatalogos();
                             if (puedeMasivo) loadCampanas();
                         }}
                         title="Actualizar"
@@ -473,6 +477,7 @@ const MensajesSection = ({ modo: modoProp = 'auto' }) => {
                         type="button"
                         className="btn-admin-primary"
                         onClick={() => {
+                            loadCatalogos();
                             setVista('redactar');
                             setSelectedHiloId(null);
                             setHiloDetalle(null);
