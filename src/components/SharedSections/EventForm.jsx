@@ -344,14 +344,24 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                         <div className="form-rules-container glass-effect mt-md">
                             <h4>Optimización de Series</h4>
                             <div className="rules-grid">
-                                <label className="checkbox-label rule-card">
+                                <label
+                                    className="checkbox-label rule-card"
+                                    style={{ opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' }}
+                                    title="En construcción"
+                                >
                                     <input 
                                         type="checkbox" 
-                                        checked={initialData.permitirCombinadas} 
-                                        onChange={(e) => onChange('permitirCombinadas', e.target.checked)} 
+                                        checked={false}
+                                        disabled
+                                        readOnly
                                     />
                                     <div className="rule-info">
-                                        <strong>Permitir Sugerencia de Series Combinadas</strong>
+                                        <strong style={{ color: '#64748b' }}>
+                                            Permitir Sugerencia de Series Combinadas{' '}
+                                            <span style={{ fontWeight: 400, fontStyle: 'italic', fontSize: '0.85em' }}>
+                                                (en construcción)
+                                            </span>
+                                        </strong>
                                     </div>
                                 </label>
                             </div>
