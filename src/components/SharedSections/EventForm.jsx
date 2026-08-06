@@ -286,10 +286,25 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 </small>
                             </div>
                             <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', justifyContent: 'center' }}>
-                                <label className="checkbox-label" style={{ marginBottom: '0px' }}>
+                                <label
+                                    className="checkbox-label"
+                                    style={{
+                                        marginBottom: '0px',
+                                        opacity: initialData.perfilTiempo !== 'Personalizado' ? 0.55 : 1,
+                                        cursor: initialData.perfilTiempo !== 'Personalizado' ? 'not-allowed' : 'pointer',
+                                    }}
+                                    title={
+                                        initialData.perfilTiempo === 'Caso3'
+                                            ? 'Caso 3 incluye receso de almuerzo. Usá Caso 4 (Manual) para eliminarlo.'
+                                            : initialData.perfilTiempo === 'Caso1' || initialData.perfilTiempo === 'Caso2'
+                                                ? 'Este caso ya elimina el receso. Usá Caso 4 (Manual) para cambiarlo.'
+                                                : undefined
+                                    }
+                                >
                                     <input 
                                         type="checkbox" 
                                         checked={initialData.sinReceso} 
+                                        disabled={initialData.perfilTiempo !== 'Personalizado'}
                                         onChange={(e) => onChange('sinReceso', e.target.checked)} 
                                     />
                                     <strong>Eliminar Receso de Almuerzo</strong>
