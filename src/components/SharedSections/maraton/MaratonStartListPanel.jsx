@@ -189,23 +189,24 @@ const MaratonStartListPanel = ({
                     </div>
 
                     {hasNumeros && (
-                        <div className="glass-effect p-md" style={{ borderRadius: 'var(--radius-lg)' }}>
+                        <div className="glass-effect p-md maraton-orden-largada" style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                             <h3 style={{ marginTop: 0, color: 'var(--color-primary-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <RefreshCw size={16} /> Orden de largada (por número)
                             </h3>
-                            <ol style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.8 }}>
+                            <ul className="maraton-orden-list">
                                 {sortInscriptosByNumero(inscriptos.filter(i => i.numeroCompetidor)).map(ins => (
-                                    <li key={ins.id}>
-                                        <strong>#{ins.numeroCompetidor}</strong>
-                                        {' — '}
-                                        {ins.participanteNombreCompleto || 'Atleta'}
-                                        {' · '}
-                                        <span className="badge-bote">{ins.boteLabel}</span>
-                                        {ins.sexoLabel ? ` · ${ins.sexoLabel}` : ''}
-                                        {ins.categoriaLabel ? ` · ${ins.categoriaLabel}` : ''}
+                                    <li key={ins.id} className="maraton-orden-row">
+                                        <span className="maraton-orden-num">#{ins.numeroCompetidor}</span>
+                                        <span className="maraton-orden-body">
+                                            <strong>{ins.participanteNombreCompleto || 'Atleta'}</strong>
+                                            {' · '}
+                                            <span className="badge-bote">{ins.boteLabel}</span>
+                                            {ins.sexoLabel ? ` · ${ins.sexoLabel}` : ''}
+                                            {ins.categoriaLabel ? ` · ${ins.categoriaLabel}` : ''}
+                                        </span>
                                     </li>
                                 ))}
-                            </ol>
+                            </ul>
                         </div>
                     )}
                 </>

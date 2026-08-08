@@ -555,3 +555,37 @@
         max-height: 350px;
     }
 }
+
+/* Orden de largada Maratón: columna fija para el Nº (evita desborde con 10+) */
+.maraton-orden-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-width: 100%;
+}
+
+.maraton-orden-row {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: baseline;
+    line-height: 1.55;
+    min-width: 0;
+}
+
+.maraton-orden-num {
+    font-weight: 700;
+    color: var(--color-primary);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.maraton-orden-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
