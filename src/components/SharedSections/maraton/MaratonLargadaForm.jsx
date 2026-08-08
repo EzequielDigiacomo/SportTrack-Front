@@ -5,7 +5,7 @@ import {
     DISTANCIA_NAMES,
     SEXO_NAMES,
     toggleInList,
-} from '../../utils/maratonScheduleUtils';
+} from '../../../utils/maratonScheduleUtils';
 
 const checkboxListStyle = {
     maxHeight: '140px',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { buildMaratonProgramaRows, getISODatePart } from '../../utils/maratonScheduleUtils';
+import { buildMaratonProgramaRows, getISODatePart } from '../../../utils/maratonScheduleUtils';
 
 /**
  * Listado del programa provisorio Maratón.

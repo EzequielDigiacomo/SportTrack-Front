@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../services/ConfigService';
-import ConfirmDialog from '../Common/ConfirmDialog';
-import { pick } from '../../utils/apiHelpers';
+import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../../services/ConfigService';
+import ConfirmDialog from '../../Common/ConfirmDialog';
+import { pick } from '../../../utils/apiHelpers';
 import {
     collapseMaratonLargadas,
     getEpGrupoId,
@@ -10,7 +10,7 @@ import {
     buildMaratonFechaHoraIso,
     formatTimeFromFechaHora,
     findMaratonGrupoMembers,
-} from '../../utils/maratonScheduleUtils';
+} from '../../../utils/maratonScheduleUtils';
 import MaratonLargadaForm from './MaratonLargadaForm';
 import MaratonProgramaList from './MaratonProgramaList';
 import '../ConfigurarPruebas.css';

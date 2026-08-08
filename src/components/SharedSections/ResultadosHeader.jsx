@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { formatTime } from '../../utils/dateUtils';
-import { Trophy, Calendar, Search, List, FileText } from 'lucide-react';
+import { Calendar, Search, List, FileText } from 'lucide-react';
+import { buildMaratonLargadaOptions } from './maraton/maratonStartListUtils';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -31,7 +32,8 @@ const ResultadosHeader = ({
     cronograma = [],
     onSelectRegata,
     selectedFaseId,
-    isAdmin = true
+    isAdmin = true,
+    isMaraton = false,
 }) => {
     const CATEGORIA_COLORS = {
         1: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
@@ -48,6 +50,21 @@ const ResultadosHeader = ({
 
     const p = pruebas.find(p => String(p.id) === String(selectedPrueba));
     const catColor = CATEGORIA_COLORS[p?.categoria?.id || p?.categoriaId] || { bg: 'transparent', text: 'var(--color-primary)' };
+
+    const maratonLargadas = useMemo(
+        () => (isMaraton ? buildMaratonLargadaOptions(pruebas) : []),
+        [isMaraton, pruebas]
+    );
+
+    const selectedMaratonLargadaKey = useMemo(() => {
+        if (!isMaraton || !selectedPrueba) return '';
+        const opt = maratonLargadas.find(o =>
+            o.memberIds.some(id => String(id) === String(selectedPrueba))
+        );
+        return opt?.key || '';
+    }, [isMaraton, maratonLargadas, selectedPrueba]);
+
+    const showTabs = !hideTabs && (selectedPrueba || (isMaraton && selectedEvento));
 
     return (
         <div className="resultados-header-section admin-form-card glass-effect">
@@ -71,56 +88,76 @@ const ResultadosHeader = ({
                     </select>
                 </div>
 
-                {/* Prueba Selector */}
+                {/* Selector: Largada (Maratón) o Prueba (Velocidad) */}
                 {isAdmin && (
                     <div className="form-group">
                         <label className="resultados-field-label">
-                            <Search size={14} className="text-secondary" /> Prueba / Categoría
+                            <Search size={14} className="text-secondary" />
+                            {isMaraton ? 'Largada' : 'Prueba / Categoría'}
                         </label>
-                        <select 
-                            value={selectedPrueba} 
-                            onChange={(e) => setSelectedPrueba(e.target.value)}
-                            className="admin-select"
-                            style={{ 
-                                borderLeft: `3px solid ${catColor.text}`,
-                                color: catColor.text
-                            }}
-                        >
-                            <option value="">-- Seleccione una Prueba --</option>
-                            {pruebas.map(p => {
-                                const inner = p.prueba || p;
-                                const catId = inner.categoria?.id || inner.categoriaId;
-                                const botId = inner.bote?.id || inner.boteId;
-                                const distId = inner.distancia?.id || inner.distanciaId;
+                        {isMaraton ? (
+                            <select
+                                value={selectedMaratonLargadaKey}
+                                onChange={(e) => {
+                                    const opt = maratonLargadas.find(o => o.key === e.target.value);
+                                    if (opt) setSelectedPrueba(String(opt.representativeId));
+                                    else setSelectedPrueba('');
+                                }}
+                                className="admin-select"
+                                style={{ borderLeft: '3px solid var(--color-primary)' }}
+                            >
+                                <option value="">-- Seleccione una largada --</option>
+                                {maratonLargadas.map(o => (
+                                    <option key={o.key} value={o.key}>{o.label}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <select 
+                                value={selectedPrueba} 
+                                onChange={(e) => setSelectedPrueba(e.target.value)}
+                                className="admin-select"
+                                style={{ 
+                                    borderLeft: `3px solid ${catColor.text}`,
+                                    color: catColor.text
+                                }}
+                            >
+                                <option value="">-- Seleccione una Prueba --</option>
+                                {pruebas.map(p => {
+                                    const inner = p.prueba || p;
+                                    const catId = inner.categoria?.id || inner.categoriaId;
+                                    const botId = inner.bote?.id || inner.boteId;
+                                    const distId = inner.distancia?.id || inner.distanciaId;
 
-                                const catName = CATEGORIA_NAMES[catId] || inner.categoria?.nombre || 'Cat';
-                                const botName = BOTE_NAMES[botId] || inner.bote?.tipo || 'Bote';
-                                const distName = DISTANCIA_NAMES[distId] || (inner.distancia?.metros ? `${inner.distancia.metros}m` : '?m');
+                                    const catName = CATEGORIA_NAMES[catId] || inner.categoria?.nombre || 'Cat';
+                                    const botName = BOTE_NAMES[botId] || inner.bote?.tipo || 'Bote';
+                                    const distName = DISTANCIA_NAMES[distId] || (inner.distancia?.metros ? `${inner.distancia.metros}m` : '?m');
 
-                                // Calcular el número de regata secuencial en el cronograma
-                                const raceIndices = [];
-                                (cronograma || []).forEach((f, idx) => {
-                                    const pid = f.eventoPruebaId || f.EventoPruebaId;
-                                    if (String(pid) === String(p.id)) {
-                                        raceIndices.push(idx + 1);
-                                    }
-                                });
-                                const minRaceNum = raceIndices.length > 0 ? Math.min(...raceIndices) : null;
-                                const prefix = minRaceNum ? `#${minRaceNum} - ` : '';
+                                    // Calcular el número de regata secuencial en el cronograma
+                                    const raceIndices = [];
+                                    (cronograma || []).forEach((f, idx) => {
+                                        const pid = f.eventoPruebaId || f.EventoPruebaId;
+                                        if (String(pid) === String(p.id)) {
+                                            raceIndices.push(idx + 1);
+                                        }
+                                    });
+                                    const minRaceNum = raceIndices.length > 0 ? Math.min(...raceIndices) : null;
+                                    const prefix = minRaceNum ? `#${minRaceNum} - ` : '';
 
-                                const label = `${prefix}${p.nombre || `${catName} - ${botName} - ${distName}`}`;
-                                
-                                return (
-                                    <option key={p.id} value={p.id} style={{ color: CATEGORIA_COLORS[catId]?.text || 'white' }}>
-                                        {label}
-                                    </option>
-                                );
-                            })}
-                        </select>
+                                    const label = `${prefix}${p.nombre || `${catName} - ${botName} - ${distName}`}`;
+                                    
+                                    return (
+                                        <option key={p.id} value={p.id} style={{ color: CATEGORIA_COLORS[catId]?.text || 'white' }}>
+                                            {label}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        )}
                     </div>
                 )}
 
-                {/* Regata Selector */}
+                {/* Regata Selector — solo pista (Maratón no usa heats/carriles) */}
+                {!isMaraton && (
                 <div className="form-group">
                     <div className="regata-label-row">
                         <label className="resultados-field-label" style={{ margin: 0 }}>
@@ -193,35 +230,42 @@ const ResultadosHeader = ({
                         })}
                     </select>
                 </div>
+                )}
             </div>
 
             {/* Header Status Bar */}
             <div className="resultados-header-status">
                 <div className="resultados-status-left">
-                    {cronograma.length > 0 && (
+                    {!isMaraton && cronograma.length > 0 && (
                         <div className="status-pill">
                             <List size={12} />
                             <span>Regatas <strong>{cronograma.length}</strong></span>
                         </div>
                     )}
+                    {isMaraton && (
+                        <div className="status-pill">
+                            <List size={12} />
+                            <span>Modalidad <strong>Maratón</strong></span>
+                        </div>
+                    )}
                 </div>
 
                 
-                {selectedPrueba && !hideTabs && (
+                {showTabs && (
                     <div className="admin-tabs-nav-modern">
                         <button 
                             type="button"
                             className={`tab-link ${currentTab === 'startList' ? 'active' : ''}`}
                             onClick={() => setCurrentTab('startList')}
                         >
-                            Start List {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
+                            Start List {!isMaraton && selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
                         </button>
                         <button 
                             type="button"
                             className={`tab-link ${currentTab === 'resultados' ? 'active' : ''}`}
                             onClick={() => setCurrentTab('resultados')}
                         >
-                            Resultados {selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
+                            Resultados {!isMaraton && selectedFaseId ? `#${cronograma.findIndex(f => String(f.id) === String(selectedFaseId)) + 1}` : ''}
                         </button>
                     </div>
                 )}

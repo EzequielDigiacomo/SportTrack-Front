@@ -20,6 +20,8 @@ import { applyPositionsToTiemposLocales, getTransferablePositions, transferAthle
 import { formatRaceTime, formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
+import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
+import MaratonStartListPanel from './maraton/MaratonStartListPanel';
 
 function getFaseStatusBadge(fase) {
     if (!fase) return null;
@@ -92,6 +94,12 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const [isNominaCollapsed, setIsNominaCollapsed] = useState(false);
     const [transferModal, setTransferModal] = useState(null);
     // transferModal: { sourceId, sourcePos, targetPos, mode, sourceTime, targetTime }
+
+    const eventoActual = useMemo(
+        () => eventos.find(e => String(e.id) === String(selectedEvento)),
+        [eventos, selectedEvento]
+    );
+    const isMaratonEvent = resolveIsMaratonEvent(eventoActual);
 
     const seedingStatus = useMemo(() => {
         const N = inscriptos.length;
@@ -546,7 +554,6 @@ const applyTransfer = () => {
         : '✅ Puestos intercambiados (tiempos de cada puesto conservados). Guardá para confirmar.');
 };
 
-const eventoActual = eventos.find(e => String(e.id) === String(selectedEvento));
 const eventoNombre = eventoActual?.nombre || 'Evento';
 const pruebaNombre = pruebas.find(p => String(p.id) === String(selectedPrueba))?.nombre || 'Prueba';
 const etiquetasEtapas = Object.keys(agrupadoPorEtapa);
@@ -667,7 +674,11 @@ const connectedStarter = activeJudges.find(j => {
                         )}
                         <h2 className="admin-title">Panel de Resultados y Start List</h2>
                     </div>
-                    <p className="admin-subtitle control-page-subtitle">Sorteo de carriles, armado de heats y carga de resultados oficiales.</p>
+                    <p className="admin-subtitle control-page-subtitle">
+                        {isMaratonEvent
+                            ? 'Maratón: nómina por largada y sorteo de números de competidor.'
+                            : 'Sorteo de carriles, armado de heats y carga de resultados oficiales.'}
+                    </p>
                 </div>
             </div>
         )}
@@ -688,6 +699,7 @@ const connectedStarter = activeJudges.find(j => {
             onSelectRegata={handleSelectRegata}
             selectedFaseId={selectedFaseIdForHeader}
             isAdmin={isAdmin}
+            isMaraton={isMaratonEvent}
         />
 
         {isControlOrManualPage && (
@@ -698,11 +710,20 @@ const connectedStarter = activeJudges.find(j => {
 
         {loading ? (
             <div className="loader-container"><div className="loader"></div></div>
+        ) : isMaratonEvent && selectedEvento && currentTab === 'startList' ? (
+            <div className="resultados-content-area">
+                <MaratonStartListPanel
+                    pruebas={pruebas}
+                    selectedPrueba={selectedPrueba}
+                    isAdmin={isAdmin}
+                    onMessage={setMessage}
+                />
+            </div>
         ) : selectedPrueba ? (
             <div className="resultados-content-area">
 
-                {/* TAB: START LIST / SIEMBRA */}
-                {currentTab === 'startList' && (
+                {/* TAB: START LIST / SIEMBRA (solo Velocidad / pista) */}
+                {currentTab === 'startList' && !isMaratonEvent && (
                     <div className="start-list-view fade-in">
                         <div className="action-bar-premium glass-effect mb-md" style={{ padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div className="info-badge-modern">
@@ -1274,8 +1295,12 @@ const connectedStarter = activeJudges.find(j => {
         ) : (
             <div className="empty-selection-state">
                 <div className="icon-circle">🎯</div>
-                <h3>Seleccioná un evento y una regata</h3>
-                <p>Para comenzar a gestionar los carriles o cargar tiempos, debés elegir una competencia del menú superior o ver el cronograma completo.</p>
+                <h3>{isMaratonEvent ? 'Seleccioná un evento y una largada' : 'Seleccioná un evento y una regata'}</h3>
+                <p>
+                    {isMaratonEvent
+                        ? 'Para armar la nómina y sortear números, elegí una largada del menú superior.'
+                        : 'Para comenzar a gestionar los carriles o cargar tiempos, debés elegir una competencia del menú superior o ver el cronograma completo.'}
+                </p>
             </div>
         )}
     </div>
