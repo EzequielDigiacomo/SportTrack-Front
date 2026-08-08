@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import EventoService from '../../services/EventoService';
 import { PruebaService } from '../../services/ConfigService';
@@ -11,6 +11,12 @@ import { MapPin, Calendar, ArrowLeft, Download, Trophy, Clock, X, ChevronLeft, C
 import { useToast } from '../../context/ToastContext';
 import './LiveResults.css';
 import { formatRaceTime, timeToMs } from '../../utils/raceTimeUtils';
+import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
+import { computePositionsForPhase } from '../../utils/resultadosHelpers';
+import {
+    groupMaratonResultadosByClasificacion,
+    loadMaratonLargadaInscriptos,
+} from '../../components/SharedSections/maraton/maratonStartListUtils';
 
 // Formatea una diferencia en ms como "+Xs" o "+m:ss"
 const formatDiff = (diffMs) => {
@@ -114,6 +120,29 @@ const LiveResults = () => {
     const [refreshResultsCounter, setRefreshResultsCounter] = useState(0);
     const [startIndex, setStartIndex] = useState(0);
     const [liveRealtimeEnabled, setLiveRealtimeEnabled] = useState(true);
+    const [maratonInscripcionEpMap, setMaratonInscripcionEpMap] = useState(null);
+
+    const isMaratonEvent = resolveIsMaratonEvent(evento);
+
+    useEffect(() => {
+        if (!isMaratonEvent || !selectedPrueba?.id || !pruebas?.length) {
+            setMaratonInscripcionEpMap(null);
+            return undefined;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const list = await loadMaratonLargadaInscriptos(pruebas, selectedPrueba.id);
+                if (cancelled) return;
+                setMaratonInscripcionEpMap(
+                    new Map((list || []).map(i => [String(i.id), i.eventoPruebaId]))
+                );
+            } catch {
+                if (!cancelled) setMaratonInscripcionEpMap(null);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isMaratonEvent, selectedPrueba?.id, pruebas]);
 
     const reloadPhasesOnly = async () => {
         try {
@@ -479,6 +508,153 @@ const LiveResults = () => {
         }
     }, [selectedFase?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const currentResultsForFase = useMemo(() => {
+        if (!selectedFase) return [];
+        return resultados.filter(r => (r.faseId || r.FaseId) === selectedFase.id);
+    }, [resultados, selectedFase]);
+
+    const maratonLiveGroups = useMemo(() => {
+        if (!isMaratonEvent || !selectedFase || !currentResultsForFase.length) return [];
+
+        const enriched = currentResultsForFase.map(r => {
+            if (r.eventoPruebaId || r.EventoPruebaId) return r;
+            const epId = maratonInscripcionEpMap?.get?.(
+                String(r.inscripcionId || r.InscripcionId)
+            );
+            return epId ? { ...r, eventoPruebaId: epId } : r;
+        });
+
+        return groupMaratonResultadosByClasificacion(
+            { ...selectedFase, resultados: enriched },
+            pruebas
+        );
+    }, [isMaratonEvent, selectedFase, currentResultsForFase, maratonInscripcionEpMap, pruebas]);
+
+    const renderLiveResultsTable = (rows, faseCtx) => {
+        const posMap = computePositionsForPhase(rows);
+        const sorted = [...rows].sort((a, b) => {
+            const posA = posMap[a.id] || posMap[String(a.id)];
+            const posB = posMap[b.id] || posMap[String(b.id)];
+            if (posA && posB) return posA - posB;
+            if (posA) return -1;
+            if (posB) return 1;
+            return (a.carril || a.Carril || 99) - (b.carril || b.Carril || 99);
+        });
+
+        const lider = sorted.find(r => (posMap[r.id] || posMap[String(r.id)]) === 1);
+        const liderMs = lider ? timeToMs(lider.tiempoOficial || lider.TiempoOficial) : null;
+
+        return (
+            <table className="results-table">
+                <thead>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Carril</th>
+                        <th>Atleta / Tripulación</th>
+                        <th>Club</th>
+                        <th>Tiempo</th>
+                        <th>Dif.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {sorted.length > 0 ? sorted.map((r, i) => {
+                        const pos = posMap[r.id] || posMap[String(r.id)];
+                        const isLeader = pos === 1;
+                        const tMs = timeToMs(r.tiempoOficial || r.TiempoOficial);
+                        const diff = (!isLeader && liderMs && tMs) ? tMs - liderMs : null;
+
+                        return (
+                            <tr key={r.id || r.Id || i} className={`pos-row pos-${pos || ''}`}>
+                                <td className="pos-cell">
+                                    <div className="pos-number">
+                                        {pos === 1 ? <Trophy size={16} style={{ color: '#eab308' }} />
+                                            : pos === 2 ? <Trophy size={16} style={{ color: '#94a3b8' }} />
+                                                : pos === 3 ? <Trophy size={16} style={{ color: '#cd7f32' }} />
+                                                    : pos || '-'}
+                                    </div>
+                                </td>
+                                <td className="carril-cell">{r.carril || r.Carril || '-'}</td>
+                                <td>
+                                    <div className="athlete-info">
+                                        <span className="name">
+                                            {(() => {
+                                                const mainName = r.participanteNombre || r.ParticipanteNombre;
+                                                const trips = r.tripulantes || [];
+                                                const names = trips.length > 0
+                                                    ? [mainName, ...trips.map(t => t.participanteNombreCompleto || t.participanteNombre)]
+                                                    : [mainName];
+
+                                                if (isBoteK4(faseCtx)) {
+                                                    return names.map(n => getSoloApellido(n)).join(' - ');
+                                                }
+                                                return names.join(' - ');
+                                            })()}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div className="club-info" title={r.clubNombre || r.ClubNombre}>
+                                        <span className="club-badge">{r.clubSigla || r.ClubSigla}</span>
+                                    </div>
+                                </td>
+                                <td className="time-cell">
+                                    {(() => {
+                                        const statusStr = (r.estado || r.Estado || r.estadoCanto || r.EstadoCanto || '').toUpperCase();
+                                        const isSpecialStatus = ['DNS', 'DNF', 'DSQ', 'DESCALIFICADO'].includes(statusStr);
+
+                                        if (isSpecialStatus) {
+                                            return (
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '6px',
+                                                    fontWeight: '800',
+                                                    fontSize: '0.85rem',
+                                                    textTransform: 'uppercase',
+                                                    textAlign: 'center',
+                                                    background: statusStr === 'DNS'
+                                                        ? 'rgba(31, 41, 55, 0.6)'
+                                                        : statusStr === 'DNF'
+                                                            ? 'rgba(146, 64, 14, 0.4)'
+                                                            : 'rgba(153, 27, 27, 0.4)',
+                                                    color: statusStr === 'DNS'
+                                                        ? '#f3f4f6'
+                                                        : statusStr === 'DNF'
+                                                            ? '#fef3c7'
+                                                            : '#fee2e2',
+                                                    border: `1px solid ${statusStr === 'DNS'
+                                                        ? 'rgba(255, 255, 255, 0.15)'
+                                                        : statusStr === 'DNF'
+                                                            ? 'rgba(251, 191, 36, 0.25)'
+                                                            : 'rgba(248, 113, 113, 0.25)'
+                                                        }`
+                                                }}>
+                                                    {statusStr === 'DESCALIFICADO' ? 'DSQ' : statusStr}
+                                                </span>
+                                            );
+                                        }
+
+                                        const rawTime = r.tiempoOficial || r.TiempoOficial;
+                                        return rawTime ? formatRaceTime(rawTime) : '--:--.---';
+                                    })()}
+                                </td>
+                                <td className="diff-cell">
+                                    {isLeader ? <span className="leader-label">LIDER</span> : formatDiff(diff)}
+                                </td>
+                            </tr>
+                        );
+                    }) : (
+                        <tr>
+                            <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>
+                                No hay resultados cargados para esta fase.
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        );
+    };
+
     if (loading) return <div className="results-loading"><div className="loader"></div><p>Sincronizando con el canal oficial...</p></div>;
     if (!evento) return <div className="results-error">Evento no encontrado</div>;
 
@@ -746,10 +922,16 @@ const LiveResults = () => {
                             <div className="results-content-header">
                                 <div className="title-area">
                                     <h2>
-                                        {replaceKayakNames(`${selectedPrueba.prueba?.categoria?.nombre} ${selectedPrueba.prueba?.bote?.tipo} ${selectedPrueba.prueba?.distancia?.descripcion}`)}
+                                        {isMaratonEvent
+                                            ? (selectedFase?.nombreFase || selectedFase?.NombreFase || 'Largada')
+                                            : replaceKayakNames(`${selectedPrueba.prueba?.categoria?.nombre} ${selectedPrueba.prueba?.bote?.tipo} ${selectedPrueba.prueba?.distancia?.descripcion}`)}
                                     </h2>
                                     <div className="gender-tag">
-                                        {getSexName(selectedPrueba)}
+                                        {isMaratonEvent
+                                            ? (maratonLiveGroups.length > 1
+                                                ? maratonLiveGroups.map(g => g.sexoLabel).filter((v, i, a) => a.indexOf(v) === i).join(' · ')
+                                                : 'Clasificaciones')
+                                            : getSexName(selectedPrueba)}
                                     </div>
                                 </div>
                                 <div className="status-indicator" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -848,126 +1030,26 @@ const LiveResults = () => {
                                             <Clock size={14} /> Programada: {formatTime(selectedFase.fechaHoraProgramada || selectedFase.FechaHoraProgramada)} hs
                                         </div>
                                     </div>
-                                    <table className="results-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Pos</th>
-                                                <th>Carril</th>
-                                                <th>Atleta / Tripulación</th>
-                                                <th>Club</th>
-                                                <th>Tiempo</th>
-                                                <th>Dif.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(() => {
-                                                const currentResults = resultados.filter(r => (r.faseId || r.FaseId) === selectedFase.id);
-                                                const sorted = [...currentResults].sort((a, b) => {
-                                                    const posA = a.posicion || a.Posicion;
-                                                    const posB = b.posicion || b.Posicion;
-                                                    if (posA && posB) return posA - posB;
-                                                    if (posA) return -1;
-                                                    if (posB) return 1;
-                                                    return (a.carril || a.Carril || 99) - (b.carril || b.Carril || 99);
-                                                });
 
-                                                const lider = sorted.find(r => (r.posicion || r.Posicion) === 1);
-                                                const liderMs = lider ? timeToMs(lider.tiempoOficial || lider.TiempoOficial) : null;
-
-                                                return sorted.length > 0 ? sorted.map((r, i) => {
-                                                    const pos = r.posicion || r.Posicion;
-                                                    const isLeader = pos === 1;
-                                                    const tMs = timeToMs(r.tiempoOficial || r.TiempoOficial);
-                                                    const diff = (!isLeader && liderMs && tMs) ? tMs - liderMs : null;
-
-                                                    return (
-                                                        <tr key={r.id || r.Id || i} className={`pos-row pos-${pos}`}>
-                                                            <td className="pos-cell">
-                                                                <div className="pos-number">
-                                                                    {pos === 1 ? <Trophy size={16} style={{ color: '#eab308' }} /> : pos === 2 ? <Trophy size={16} style={{ color: '#94a3b8' }} /> : pos === 3 ? <Trophy size={16} style={{ color: '#cd7f32' }} /> : pos || '-'}
-                                                                </div>
-                                                            </td>
-                                                            <td className="carril-cell">{r.carril || r.Carril || '-'}</td>
-                                                            <td>
-                                                                <div className="athlete-info">
-                                                                    <span className="name">
-                                                                        {(() => {
-                                                                            const mainName = r.participanteNombre || r.ParticipanteNombre;
-                                                                            const trips = r.tripulantes || [];
-                                                                            const names = trips.length > 0 
-                                                                                ? [mainName, ...trips.map(t => t.participanteNombreCompleto || t.participanteNombre)]
-                                                                                : [mainName];
-                                                                            
-                                                                            if (isBoteK4(selectedFase)) {
-                                                                                return names.map(n => getSoloApellido(n)).join(' - ');
-                                                                            } else {
-                                                                                return names.join(' - ');
-                                                                            }
-                                                                        })()}
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div className="club-info" title={r.clubNombre || r.ClubNombre}>
-                                                                    <span className="club-badge">{r.clubSigla || r.ClubSigla}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="time-cell">
-                                                                {(() => {
-                                                                    const statusStr = (r.estado || r.Estado || r.estadoCanto || r.EstadoCanto || '').toUpperCase();
-                                                                    const isSpecialStatus = ['DNS', 'DNF', 'DSQ', 'DESCALIFICADO'].includes(statusStr);
-
-                                                                    if (isSpecialStatus) {
-                                                                        return (
-                                                                            <span style={{
-                                                                                display: 'inline-block',
-                                                                                padding: '4px 10px',
-                                                                                borderRadius: '6px',
-                                                                                fontWeight: '800',
-                                                                                fontSize: '0.85rem',
-                                                                                textTransform: 'uppercase',
-                                                                                textAlign: 'center',
-                                                                                background: statusStr === 'DNS'
-                                                                                    ? 'rgba(31, 41, 55, 0.6)'
-                                                                                    : statusStr === 'DNF'
-                                                                                        ? 'rgba(146, 64, 14, 0.4)'
-                                                                                        : 'rgba(153, 27, 27, 0.4)',
-                                                                                color: statusStr === 'DNS'
-                                                                                    ? '#f3f4f6'
-                                                                                    : statusStr === 'DNF'
-                                                                                        ? '#fef3c7'
-                                                                                        : '#fee2e2',
-                                                                                border: `1px solid ${statusStr === 'DNS'
-                                                                                    ? 'rgba(255, 255, 255, 0.15)'
-                                                                                    : statusStr === 'DNF'
-                                                                                        ? 'rgba(251, 191, 36, 0.25)'
-                                                                                        : 'rgba(248, 113, 113, 0.25)'
-                                                                                    }`
-                                                                            }}>
-                                                                                {statusStr === 'DESCALIFICADO' ? 'DSQ' : statusStr}
-                                                                            </span>
-                                                                        );
-                                                                    }
-
-                                                                    const rawTime = r.tiempoOficial || r.TiempoOficial;
-                                                                    return rawTime ? formatRaceTime(rawTime) : '--:--.---';
-                                                                })()}
-                                                            </td>
-                                                            <td className="diff-cell">
-                                                                {isLeader ? <span className="leader-label">LIDER</span> : formatDiff(diff)}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                }) : (
-                                                    <tr>
-                                                        <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>
-                                                            No hay resultados cargados para esta fase.
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })()}
-                                        </tbody>
-                                    </table>
+                                    {isMaratonEvent && maratonLiveGroups.length > 0 ? (
+                                        <div className="maraton-live-grids">
+                                            <p className="maraton-live-hint">
+                                                Maratón: clasificaciones separadas por Categoría · Sexo · Bote
+                                                ({maratonLiveGroups.length} tabla{maratonLiveGroups.length !== 1 ? 's' : ''}).
+                                            </p>
+                                            {maratonLiveGroups.map(g => (
+                                                <div key={g.key} className="maraton-live-group">
+                                                    <div className="maraton-live-group-title">
+                                                        <h4>{g.title}</h4>
+                                                        <span className="maraton-live-count">{g.resultados.length}</span>
+                                                    </div>
+                                                    {renderLiveResultsTable(g.resultados, selectedFase)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        renderLiveResultsTable(currentResultsForFase, selectedFase)
+                                    )}
                                 </div>
                             ) : (
                                 <div className="empty-state" style={{ padding: '5rem' }}>

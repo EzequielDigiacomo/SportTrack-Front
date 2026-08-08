@@ -427,6 +427,39 @@
     border-spacing: 0 0.8rem;
 }
 
+.maraton-live-hint {
+    margin: 0 0 1.25rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.maraton-live-group {
+    margin-bottom: 2rem;
+}
+
+.maraton-live-group-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.maraton-live-group-title h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--color-primary);
+}
+
+.maraton-live-count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-muted);
+}
+
 .results-table th {
     padding: 0 1.2rem 0.5rem 1.2rem;
     text-align: left;
