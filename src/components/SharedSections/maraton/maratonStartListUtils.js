@@ -7,6 +7,8 @@ import {
 } from '../../../utils/pruebaLabelUtils';
 import InscripcionService from '../../../services/InscripcionService';
 import FaseService from '../../../services/FaseService';
+import ResultadoService from '../../../services/ResultadoService';
+import ParticipanteService from '../../../services/ParticipanteService';
 
 /** Agrupa EventoPrueba en opciones de selector de largada. */
 export function buildMaratonLargadaOptions(pruebas = []) {
@@ -290,4 +292,233 @@ export function sortInscriptosByNumero(inscriptos = []) {
         if (bOk) return 1;
         return String(a.participanteNombreCompleto || '').localeCompare(String(b.participanteNombreCompleto || ''));
     });
+}
+
+/** Nombre/apellido desde "Nombre Apellido..." */
+export function splitNombreApellido(nombreCompleto = '') {
+    const parts = String(nombreCompleto).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return { nombre: '', apellido: '' };
+    if (parts.length === 1) return { nombre: parts[0], apellido: '' };
+    return { nombre: parts[0], apellido: parts.slice(1).join(' ') };
+}
+
+/**
+ * Tripulación completa para el modal: titular + tripulantes (K2/K4).
+ * Orden: participante principal, luego tripulantes por posición.
+ */
+export function buildCrewFromInscripcion(inscripcion) {
+    if (!inscripcion) return [];
+
+    const trips = [...(inscripcion.tripulantes || [])].sort((a, b) =>
+        (a.posicionEnBote ?? a.PosicionEnBote ?? 99) - (b.posicionEnBote ?? b.PosicionEnBote ?? 99)
+    );
+
+    const titularId = inscripcion.participanteId || inscripcion.ParticipanteId;
+    const crew = [];
+
+    if (titularId) {
+        const { nombre, apellido } = splitNombreApellido(inscripcion.participanteNombreCompleto);
+        crew.push({
+            key: `titular-${titularId}`,
+            participanteId: titularId,
+            nombre,
+            apellido,
+            clubId: inscripcion.participanteClubId || inscripcion.clubId || '',
+            rol: trips.length ? 'Titular' : 'Atleta',
+            isTitular: true,
+        });
+    }
+
+    trips.forEach((t, idx) => {
+        const pid = t.participanteId || t.ParticipanteId;
+        if (!pid || (titularId && String(pid) === String(titularId))) return;
+        const { nombre, apellido } = splitNombreApellido(
+            t.participanteNombreCompleto || t.ParticipanteNombreCompleto || ''
+        );
+        crew.push({
+            key: `trip-${pid}-${idx}`,
+            participanteId: pid,
+            nombre,
+            apellido,
+            clubId: '',
+            rol: `Tripulante ${idx + 1}`,
+            isTitular: false,
+        });
+    });
+
+    return crew;
+}
+
+async function updateParticipantePatch(participanteId, { nombre, apellido, clubId }, fallbackNombreCompleto = '') {
+    if (!participanteId) return;
+    const current = await ParticipanteService.getById(participanteId);
+    const { nombre: fbN, apellido: fbA } = splitNombreApellido(fallbackNombreCompleto);
+
+    const payload = {
+        nombre: nombre != null ? String(nombre).trim() : (current.nombre || fbN),
+        apellido: apellido != null ? String(apellido).trim() : (current.apellido || fbA),
+        fechaNacimiento: current.fechaNacimiento || current.FechaNacimiento || '2000-01-01',
+        sexoId: current.sexoId ?? current.SexoId ?? 1,
+        categoriaId: current.categoriaId ?? current.CategoriaId ?? null,
+        clubId: current.clubId ?? current.ClubId ?? null,
+        federacionId: current.federacionId ?? current.FederacionId ?? null,
+        pais: current.pais ?? current.Pais ?? null,
+        dni: current.dni ?? current.Dni ?? current.documento ?? null,
+        email: current.email ?? current.Email ?? null,
+        pagoAfiliacionAlDia: current.pagoAfiliacionAlDia ?? current.PagoAfiliacionAlDia ?? true,
+    };
+
+    if (clubId !== undefined) {
+        payload.clubId = clubId === '' || clubId === 0 || clubId == null
+            ? null
+            : Number(clubId);
+    }
+
+    await ParticipanteService.update(participanteId, payload);
+}
+
+/** Opciones de clasificación permitidas en la largada (EventoPrueba del grupo). */
+export function buildMaratonClasificacionOptions(pruebas, selectedPruebaId) {
+    const memberIds = resolveMaratonLargadaMemberIds(pruebas, selectedPruebaId);
+    const epById = new Map((pruebas || []).map(p => [String(p.id), p]));
+
+    return memberIds
+        .map(id => {
+            const ep = epById.get(String(id));
+            if (!ep) return null;
+            return {
+                id: Number(id) || id,
+                label: getClasificacionTitleFromEventoPrueba(ep),
+                categoriaLabel: getCategoriaLabelFromEventoPrueba(ep),
+                sexoLabel: getSexoLabelFromEventoPrueba(ep),
+                boteLabel: getBoteLabelFromEventoPrueba(ep),
+            };
+        })
+        .filter(Boolean);
+}
+
+/**
+ * Sincroniza Carril del resultado de la fase de largada con el Nº de competidor.
+ * Impacta cronometrista / live (carril = dorsal).
+ */
+export async function syncMaratonResultadoCarril(pruebas, selectedPruebaId, inscripcionId, numero) {
+    const n = parseInt(numero, 10);
+    if (!Number.isFinite(n) || n <= 0 || !inscripcionId) return false;
+
+    const memberIds = resolveMaratonLargadaMemberIds(pruebas, selectedPruebaId);
+    for (const epId of memberIds) {
+        let fases = [];
+        try {
+            fases = await FaseService.getByEventoPrueba(epId);
+        } catch {
+            continue;
+        }
+        for (const f of fases || []) {
+            let rows = f.resultados;
+            if (!rows?.length) {
+                try {
+                    rows = await ResultadoService.getByFase(f.id);
+                } catch {
+                    rows = [];
+                }
+            }
+            const res = (rows || []).find(r =>
+                String(r.inscripcionId || r.InscripcionId) === String(inscripcionId)
+            );
+            if (res) {
+                // BatchUpdate con Carril activa "full update" en API: hay que reenviar tiempo/posición
+                // para no borrarlos.
+                await ResultadoService.batchUpdate([{
+                    id: res.id || res.Id,
+                    carril: n,
+                    tiempoOficial: res.tiempoOficial ?? res.TiempoOficial ?? null,
+                    posicion: res.posicion ?? res.Posicion ?? null,
+                    estado: res.estado || res.Estado || undefined,
+                }]);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Edita una fila de la nómina Maratón:
+ * - Nº + EventoPrueba (cat/sexo/bote) vía inscripción
+ * - Nombre/apellido (+ club del titular) vía participantes (titular + tripulación)
+ * - Carril en fase de largada si ya existe
+ */
+export async function updateMaratonNominaRow({
+    pruebas,
+    selectedPruebaId,
+    inscripcion,
+    patch = {},
+}) {
+    if (!inscripcion?.id) throw new Error('Inscripción inválida');
+
+    const nextNumero = patch.numeroCompetidor != null
+        ? String(patch.numeroCompetidor).trim()
+        : inscripcion.numeroCompetidor;
+    const nextEpId = patch.eventoPruebaId != null
+        ? Number(patch.eventoPruebaId)
+        : Number(inscripcion.eventoPruebaId);
+
+    const crew = Array.isArray(patch.crew) ? patch.crew : null;
+
+    if (crew?.length) {
+        await Promise.all(crew.map(async (member) => {
+            if (!member?.participanteId) return;
+            await updateParticipantePatch(
+                member.participanteId,
+                {
+                    nombre: member.nombre,
+                    apellido: member.apellido,
+                    clubId: member.isTitular ? (member.clubId ?? patch.clubId) : undefined,
+                },
+                `${member.nombre || ''} ${member.apellido || ''}`.trim()
+            );
+        }));
+    } else {
+        const participanteId = inscripcion.participanteId || inscripcion.ParticipanteId;
+        if (participanteId && (patch.nombre != null || patch.apellido != null || patch.clubId != null)) {
+            await updateParticipantePatch(
+                participanteId,
+                {
+                    nombre: patch.nombre,
+                    apellido: patch.apellido,
+                    clubId: patch.clubId,
+                },
+                inscripcion.participanteNombreCompleto
+            );
+        }
+    }
+
+    const insPatch = {};
+    if (nextNumero !== undefined && nextNumero !== null && String(nextNumero) !== String(inscripcion.numeroCompetidor || '')) {
+        insPatch.numeroCompetidor = String(nextNumero);
+    }
+    if (Number.isFinite(nextEpId) && nextEpId > 0 && nextEpId !== Number(inscripcion.eventoPruebaId)) {
+        insPatch.eventoPruebaId = nextEpId;
+    }
+    if (Object.keys(insPatch).length) {
+        await InscripcionService.update(inscripcion.id, insPatch);
+    }
+
+    if (insPatch.numeroCompetidor) {
+        await syncMaratonResultadoCarril(
+            pruebas,
+            selectedPruebaId,
+            inscripcion.id,
+            insPatch.numeroCompetidor
+        );
+    }
+
+    return true;
+}
+
+/** Elimina la inscripción de la nómina (cascade quita resultado de la fase si existía). */
+export async function removeMaratonNominaRow(inscripcionId) {
+    if (!inscripcionId) throw new Error('Inscripción inválida');
+    await InscripcionService.delete(inscripcionId);
+    return true;
 }

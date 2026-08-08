@@ -32,6 +32,187 @@
     max-width: 1580px;
 }
 
+/* Modal edición nómina Maratón: alto automático + aire */
+.admin-modal--nomina-edit {
+    width: min(92vw, 560px);
+    max-width: 560px;
+    height: auto;
+    max-height: min(92vh, 820px);
+    padding: 0;
+    overflow: hidden;
+}
+
+.admin-modal--nomina-edit .nomina-edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.35rem 1.5rem 1.1rem;
+    margin: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-modal--nomina-edit .nomina-edit-header h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+    color: var(--color-primary-light, #60a5fa);
+}
+
+.nomina-edit-subtitle {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    max-width: 36ch;
+}
+
+.nomina-edit-body {
+    padding: 1.35rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+}
+
+.nomina-edit-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.1rem 1.15rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nomina-edit-section-title {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.nomina-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.nomina-edit-field > span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.nomina-edit-field .admin-input {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+}
+
+.nomina-edit-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.nomina-edit-grid--2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.nomina-edit-grid--numero-clasif {
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 1rem;
+}
+
+.nomina-edit-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #64748b;
+}
+
+.nomina-edit-crew-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nomina-edit-crew-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-primary-light, #60a5fa);
+}
+
+.nomina-edit-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.1rem 1.5rem 1.35rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.15);
+    flex-wrap: wrap;
+}
+
+.nomina-edit-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+.nomina-edit-btn-danger {
+    color: #fca5a5 !important;
+    border-color: rgba(248, 113, 113, 0.35) !important;
+}
+
+.nomina-edit-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.12) !important;
+}
+
+.nomina-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.nomina-row-actions .btn-admin-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+}
+
+.nomina-btn-delete {
+    color: #f87171 !important;
+}
+
+.nomina-btn-delete:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+@media (max-width: 560px) {
+    .nomina-edit-grid--2,
+    .nomina-edit-grid--numero-clasif {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-modal--nomina-edit .nomina-edit-header,
+    .nomina-edit-body,
+    .nomina-edit-footer {
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+}
+
 .admin-modal--maraton .admin-grid-layout {
     grid-template-columns: 320px minmax(0, 1fr);
 }
