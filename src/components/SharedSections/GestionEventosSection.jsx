@@ -26,6 +26,7 @@ import {
     isModalidadMaraton,
     resolveIsMaratonEvent,
     isDistanciaMaratonEligible,
+    isDistanciaVelocidadEligible,
     isCategoriaMaratonEligible,
 } from '../../utils/pruebaLabelUtils';
 import { liveResultsUrl } from '../../utils/constants';
@@ -247,6 +248,10 @@ const GestionEventosSection = () => {
                 next.limitacionBotesAB = false;
                 next.usarGapVariable = false;
                 next.permitirCombinadas = false;
+            } else {
+                const distIds = (prev.distanciasHabilitadas || '').split(',').filter(Boolean)
+                    .filter(id => isDistanciaVelocidadEligible(id));
+                next.distanciasHabilitadas = distIds.join(',');
             }
             return next;
         });
@@ -612,8 +617,10 @@ const GestionEventosSection = () => {
                                     <Calendar size={16} /> {new Date(selectedEvento.fecha).toLocaleDateString('es-AR')} | <MapPin size={16} /> {selectedEvento.ubicacion || 'Sin ubicación'}
                                 </p>
                                 <div className="dashboard-chips">
-                                    {resolveIsMaratonEvent(selectedEvento) && (
+                                    {resolveIsMaratonEvent(selectedEvento) ? (
                                         <span className="chip" style={{ background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>Maratón</span>
+                                    ) : (
+                                        <span className="chip" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd' }}>Velocidad</span>
                                     )}
                                     {selectedEvento.restringirSoloCategoriaPropia && <span className="chip chip-ecu-yellow">Categoría Única</span>}
                                     {selectedEvento.permitirSub23EnSenior && <span className="chip chip-ecu-blue">S23 en Senior</span>}

@@ -2,6 +2,19 @@ import React from 'react';
 import { Settings, Edit2, Trash2, Radio, Calendar, MapPin, Unlock, Lock } from 'lucide-react';
 import StatusBadge from '../Common/StatusBadge';
 import EmptyState from '../Common/EmptyState';
+import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
+
+const ModalidadChip = ({ evento }) => (
+    resolveIsMaratonEvent(evento) ? (
+        <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>
+            Maratón
+        </span>
+    ) : (
+        <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd' }}>
+            Velocidad
+        </span>
+    )
+);
 
 const EventGrid = ({ 
     eventos, 
@@ -19,9 +32,9 @@ const EventGrid = ({
     return (
         <>
             {/* VISTA MOBILE: Cards */}
-            <div className="eventos-mobile-list">
+            <div className="eventos-mobile-list fade-in">
                 {eventos.map(ev => (
-                    <div key={ev.id} className="evento-native-row glass-effect fade-in">
+                    <div key={ev.id} className="evento-native-card glass-effect">
                         <div className="evento-native-status-bar" style={{ background: 'var(--color-primary)' }} />
                         <div className="evento-native-info">
                             <span className="evento-native-name">{ev.nombre}</span>
@@ -30,11 +43,7 @@ const EventGrid = ({
                             </span>
                             <div className="evento-native-tags">
                                 <StatusBadge estado={ev.estado} />
-                                {String(ev.modalidad || '').toLowerCase() === 'maraton' && (
-                                    <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>
-                                        Maratón
-                                    </span>
-                                )}
+                                <ModalidadChip evento={ev} />
                                 {showFederation && (
                                     <span className="chip chip-ecu-yellow" style={{ fontSize: '0.7rem' }}>
                                         {ev.federacionNombre || '—'}
@@ -101,11 +110,7 @@ const EventGrid = ({
                                 <td>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-start' }}>
                                         <StatusBadge estado={ev.estado} />
-                                        {String(ev.modalidad || '').toLowerCase() === 'maraton' && (
-                                            <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>
-                                                Maratón
-                                            </span>
-                                        )}
+                                        <ModalidadChip evento={ev} />
                                     </div>
                                 </td>
                                 <td className="actions-cell">

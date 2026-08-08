@@ -9,6 +9,7 @@ export const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4'
 export const DISTANCIA_NAMES = {
     1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m',
     6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 10: '5000m',
+    17: '6000m',
     11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
 };
 
@@ -16,12 +17,15 @@ export const DISTANCIA_NAMES = {
 export const DISTANCIA_METROS = {
     1: 200, 2: 350, 3: 400, 4: 450, 5: 500,
     6: 1000, 7: 1500, 8: 2000, 9: 3000, 10: 5000,
+    17: 6000,
     11: 10000, 12: 12000, 13: 15000, 14: 18000, 15: 22000, 16: 30000
 };
 
 export const MODALIDAD_VELOCIDAD = 'Velocidad';
 export const MODALIDAD_MARATON = 'Maraton';
 export const MARATON_MIN_METROS = 1000;
+/** Velocidad / pista: hasta 6000 m inclusive; superiores son Maratón. */
+export const VELOCIDAD_MAX_METROS = 6000;
 /** Cadete (15-16) en adelante — ids del catálogo de categorías. */
 export const MARATON_MIN_CATEGORIA_ID = 4;
 
@@ -31,6 +35,11 @@ export function getDistanciaMetros(id) {
 
 export function isDistanciaMaratonEligible(id) {
     return getDistanciaMetros(id) >= MARATON_MIN_METROS;
+}
+
+export function isDistanciaVelocidadEligible(id) {
+    const m = getDistanciaMetros(id);
+    return m > 0 && m <= VELOCIDAD_MAX_METROS;
 }
 
 export function isCategoriaMaratonEligible(id) {
@@ -44,6 +53,17 @@ export function isModalidadMaraton(modalidad) {
         .toLowerCase()
         .trim();
     return v === 'maraton';
+}
+
+export function isModalidadVelocidad(modalidad) {
+    if (!modalidad) return true; // default histórico = pista
+    if (isModalidadMaraton(modalidad)) return false;
+    const v = String(modalidad || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    return v === 'velocidad' || v === '';
 }
 
 /**

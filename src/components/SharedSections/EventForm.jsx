@@ -3,10 +3,12 @@ import { useAuth } from '../../context/AuthContext';
 import {
     BOTE_NAMES,
     DISTANCIA_NAMES,
+    DISTANCIA_METROS,
     MODALIDAD_VELOCIDAD,
     MODALIDAD_MARATON,
     isModalidadMaraton,
     isDistanciaMaratonEligible,
+    isDistanciaVelocidadEligible,
     isCategoriaMaratonEligible,
 } from '../../utils/pruebaLabelUtils';
 
@@ -15,9 +17,10 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
     const isAdmin = user?.rol === 'Admin';
     const isMaraton = isModalidadMaraton(initialData.modalidad);
 
-    const distanciasVisibles = isMaraton
+    const distanciasVisibles = (isMaraton
         ? allDistancias.filter(d => isDistanciaMaratonEligible(d.id))
-        : allDistancias;
+        : allDistancias.filter(d => isDistanciaVelocidadEligible(d.id))
+    ).slice().sort((a, b) => (DISTANCIA_METROS[a.id] || 0) - (DISTANCIA_METROS[b.id] || 0));
 
     const categoriasVisibles = (isMaraton
         ? allCategorias.filter(c => isCategoriaMaratonEligible(c.id))
@@ -450,7 +453,7 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                         <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
                             {isMaraton
                                 ? 'Maratón: solo distancias desde 1000 m y categorías Cadete en adelante.'
-                                : 'Selecciona las opciones que estarán disponibles al armar el programa de este evento.'}
+                                : 'Velocidad: distancias hasta 6000 m (las superiores son solo Maratón).'}
                         </p>
 
                         <div className="habilitaciones-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
