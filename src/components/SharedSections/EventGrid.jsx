@@ -30,6 +30,11 @@ const EventGrid = ({
                             </span>
                             <div className="evento-native-tags">
                                 <StatusBadge estado={ev.estado} />
+                                {String(ev.modalidad || '').toLowerCase() === 'maraton' && (
+                                    <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>
+                                        Maratón
+                                    </span>
+                                )}
                                 {showFederation && (
                                     <span className="chip chip-ecu-yellow" style={{ fontSize: '0.7rem' }}>
                                         {ev.federacionNombre || '—'}
@@ -93,7 +98,16 @@ const EventGrid = ({
                                         {ev.inscripcionesAbiertas ? <><Unlock size={14} /> Abiertas</> : <><Lock size={14} /> Cerradas</>}
                                     </span>
                                 </td>
-                                <td><StatusBadge estado={ev.estado} /></td>
+                                <td>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-start' }}>
+                                        <StatusBadge estado={ev.estado} />
+                                        {String(ev.modalidad || '').toLowerCase() === 'maraton' && (
+                                            <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>
+                                                Maratón
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                                 <td className="actions-cell">
                                     <button className="btn-icon-admin primary" onClick={() => onCopyLink(ev.id, ev.nombre)} title="Live Link"><Radio size={18} /></button>
                                     {isAdmin && (

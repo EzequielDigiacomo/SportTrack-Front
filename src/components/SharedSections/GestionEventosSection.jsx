@@ -20,12 +20,13 @@ import FederacionService from '../../services/FederacionService';
 import EventGrid from './EventGrid';
 import EventForm from './EventForm';
 import { useAlert } from '../../hooks/useAlert';
+import { getEventFederationName, getUserFederationId, eventBelongsToFederation, resolveScopeFederationId } from '../../utils/apiHelpers';
 import {
-    getEventFederationName,
-    getUserFederationId,
-    eventBelongsToFederation,
-    resolveScopeFederationId,
-} from '../../utils/apiHelpers';
+    MODALIDAD_VELOCIDAD,
+    isModalidadMaraton,
+    isDistanciaMaratonEligible,
+    isCategoriaMaratonEligible,
+} from '../../utils/pruebaLabelUtils';
 import { liveResultsUrl } from '../../utils/constants';
 import './AdminSections.css';
 
@@ -55,6 +56,7 @@ const GestionEventosSection = () => {
         ubicacion: '',
         descripcion: '',
         estado: 'Programada',
+        modalidad: MODALIDAD_VELOCIDAD,
         inscripcionesHabilitadas: true,
         restringirSoloCategoriaPropia: false,
         permitirSub23EnSenior: false,
@@ -72,6 +74,7 @@ const GestionEventosSection = () => {
         gapRecuperacionMinutos: 40,
         permitirCombinadas: false,
         usarGapVariable: false,
+        timeZoneId: 'America/Argentina/Buenos_Aires',
         categoriasHabilitadas: '',
         botesHabilitados: '',
         distanciasHabilitadas: '',
@@ -206,7 +209,28 @@ const GestionEventosSection = () => {
     };
 
     const handleFieldChange = (name, value) => {
-        setForm(prev => ({ ...prev, [name]: value }));
+        setForm(prev => {
+            if (name !== 'modalidad') {
+                return { ...prev, [name]: value };
+            }
+
+            const next = { ...prev, modalidad: value };
+            if (isModalidadMaraton(value)) {
+                const distIds = (prev.distanciasHabilitadas || '').split(',').filter(Boolean)
+                    .filter(id => isDistanciaMaratonEligible(id));
+                const catIds = (prev.categoriasHabilitadas || '').split(',').filter(Boolean)
+                    .filter(id => isCategoriaMaratonEligible(id));
+                next.distanciasHabilitadas = distIds.join(',');
+                next.categoriasHabilitadas = catIds.join(',');
+                next.restringirSoloCategoriaPropia = false;
+                next.permitirSub23EnSenior = false;
+                next.permitirMasterBajarASenior = false;
+                next.limitacionBotesAB = false;
+                next.usarGapVariable = false;
+                next.permitirCombinadas = false;
+            }
+            return next;
+        });
     };
 
     const validateForm = () => {
@@ -268,6 +292,7 @@ const GestionEventosSection = () => {
             ubicacion: evento.ubicacion || '',
             descripcion: evento.descripcion || '',
             estado: evento.estado || 'Programado',
+            modalidad: evento.modalidad || MODALIDAD_VELOCIDAD,
             inscripcionesHabilitadas: evento.inscripcionesHabilitadas ?? true,
             restringirSoloCategoriaPropia: evento.restringirSoloCategoriaPropia || false,
             permitirSub23EnSenior: evento.permitirSub23EnSenior || false,
@@ -285,6 +310,7 @@ const GestionEventosSection = () => {
             gapRecuperacionMinutos: evento.gapRecuperacionMinutos ?? 40,
             permitirCombinadas: evento.permitirCombinadas || false,
             usarGapVariable: evento.usarGapVariable || false,
+            timeZoneId: evento.timeZoneId || 'America/Argentina/Buenos_Aires',
             categoriasHabilitadas: evento.categoriasHabilitadas || '',
             botesHabilitados: evento.botesHabilitados || '',
             distanciasHabilitadas: evento.distanciasHabilitadas || '',
@@ -339,7 +365,42 @@ const GestionEventosSection = () => {
                                     <Plus size={20} /> Nuevo Control
                                 </button>
                             )}
-                            <button className="btn-admin-primary" onClick={() => setView('crear')}>
+                            <button className="btn-admin-primary" onClick={() => {
+                                setSelectedEvento(null);
+                                setForm(prev => ({
+                                    ...prev,
+                                    nombre: '',
+                                    fecha: '',
+                                    fechaFin: '',
+                                    fechaFinInscripciones: '',
+                                    ubicacion: '',
+                                    descripcion: '',
+                                    estado: 'Programada',
+                                    modalidad: MODALIDAD_VELOCIDAD,
+                                    inscripcionesHabilitadas: true,
+                                    restringirSoloCategoriaPropia: false,
+                                    permitirSub23EnSenior: false,
+                                    permitirMasterBajarASenior: false,
+                                    permitirCompletarK4: false,
+                                    limitacionBotesAB: false,
+                                    clubId: '',
+                                    horaInicioEvento: '08:00',
+                                    carrilesDisponibles: 9,
+                                    perfilTiempo: 'Estandar',
+                                    horaInicioReceso: '13:00',
+                                    horaFinReceso: '14:00',
+                                    sinReceso: false,
+                                    gapEntrePruebas: 10,
+                                    gapRecuperacionMinutos: 40,
+                                    permitirCombinadas: false,
+                                    usarGapVariable: false,
+                                    timeZoneId: 'America/Argentina/Buenos_Aires',
+                                    categoriasHabilitadas: '',
+                                    botesHabilitados: '',
+                                    distanciasHabilitadas: '',
+                                }));
+                                setView('crear');
+                            }}>
                                 <Plus size={20} /> Nuevo Evento
                             </button>
                         </div>

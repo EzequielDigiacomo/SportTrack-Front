@@ -1,15 +1,29 @@
 import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-const BOTE_NAMES = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2', 6: 'C4' };
-const DISTANCIA_NAMES = {
-    1: '200m', 2: '350m', 3: '400m', 4: '450m', 5: '500m', 6: '1000m', 7: '1500m', 8: '2000m', 9: '3000m', 
-    10: '5000m', 11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
-};
+import {
+    BOTE_NAMES,
+    DISTANCIA_NAMES,
+    MODALIDAD_VELOCIDAD,
+    MODALIDAD_MARATON,
+    isModalidadMaraton,
+    isDistanciaMaratonEligible,
+    isCategoriaMaratonEligible,
+} from '../../utils/pruebaLabelUtils';
 
 const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, clubes = [], allCategorias = [], allBotes = [], allDistancias = [] }) => {
     const { user } = useAuth();
     const isAdmin = user?.rol === 'Admin';
+    const isMaraton = isModalidadMaraton(initialData.modalidad);
+
+    const distanciasVisibles = isMaraton
+        ? allDistancias.filter(d => isDistanciaMaratonEligible(d.id))
+        : allDistancias;
+
+    const categoriasVisibles = (isMaraton
+        ? allCategorias.filter(c => isCategoriaMaratonEligible(c.id))
+        : allCategorias
+    ).filter(c => c.nombre?.toLowerCase() !== 'control');
+
     return (
         <div className="event-form-container fade-in">
             <div className="section-header-row" style={{ marginBottom: '2rem' }}>
@@ -31,12 +45,63 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                     <div className="form-section">
                         <h4>Información Básica</h4>
                         <div className="form-group">
+                            <label>Modalidad del Evento</label>
+                            <div
+                                className="modalidad-switch"
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr',
+                                    gap: '0.75rem',
+                                    marginTop: '0.35rem',
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    className={`btn-scenario glass-effect ${!isMaraton ? 'active' : ''}`}
+                                    onClick={() => onChange('modalidad', MODALIDAD_VELOCIDAD)}
+                                    style={{
+                                        padding: '0.85rem 1rem',
+                                        borderRadius: '12px',
+                                        border: !isMaraton ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        background: !isMaraton ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)',
+                                        color: 'white',
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Velocidad</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                        Pista / sprint — distancias cortas y carriles.
+                                    </div>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`btn-scenario glass-effect ${isMaraton ? 'active' : ''}`}
+                                    onClick={() => onChange('modalidad', MODALIDAD_MARATON)}
+                                    style={{
+                                        padding: '0.85rem 1rem',
+                                        borderRadius: '12px',
+                                        border: isMaraton ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        background: isMaraton ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)',
+                                        color: 'white',
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Maratón</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                        Distancia ≥ 1000 m · Cadetes en adelante.
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        <div className="form-group">
                             <label>Nombre del Evento</label>
                             <input 
                                 type="text" 
                                 value={initialData.nombre} 
                                 onChange={(e) => onChange('nombre', e.target.value)} 
-                                placeholder="Ej: Regata Nacional de Canotaje"
+                                placeholder={isMaraton ? 'Ej: Maratón Nacional de Canotaje' : 'Ej: Regata Nacional de Canotaje'}
                             />
                         </div>
                         <div className="form-row">
@@ -58,12 +123,12 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                             </div>
                         </div>
                         <div className="form-group">
-                            <label>Ubicación / Pista</label>
+                            <label>{isMaraton ? 'Ubicación / Recorrido' : 'Ubicación / Pista'}</label>
                             <input 
                                 type="text" 
                                 value={initialData.ubicacion} 
                                 onChange={(e) => onChange('ubicacion', e.target.value)} 
-                                placeholder="Ej: Lago San Pablo, Imbabura"
+                                placeholder={isMaraton ? 'Ej: Lago San Roque, Córdoba' : 'Ej: Lago San Pablo, Imbabura'}
                             />
                         </div>
 
@@ -106,56 +171,61 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                             />
                         </div>
                         
-                        <div className="form-rules-container glass-effect mt-md">
-                            <h4>Reglas Técnicas Federativas</h4>
-                            <div className="rules-grid">
-                                <label className="checkbox-label rule-card">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.restringirSoloCategoriaPropia} 
-                                        onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
-                                    />
-                                    <div className="rule-info">
-                                        <strong>Solo permitir categoría propia</strong>
-                                    </div>
-                                </label>
-                                <label className="checkbox-label rule-card">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.permitirSub23EnSenior} 
-                                        onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
-                                    />
-                                    <div className="rule-info">
-                                        <strong>Permitir Sub23 en Senior</strong>
-                                    </div>
-                                </label>
-                                <label className="checkbox-label rule-card">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.permitirMasterBajarASenior} 
-                                        onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
-                                    />
-                                    <div className="rule-info">
-                                        <strong>Permitir Master en Senior</strong>
-                                    </div>
-                                </label>
-                                <label className="checkbox-label rule-card">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.limitacionBotesAB} 
-                                        onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
-                                    />
-                                    <div className="rule-info">
-                                        <strong>Límite Botes A/B por Club</strong>
-                                    </div>
-                                </label>
+                        {!isMaraton && (
+                            <div className="form-rules-container glass-effect mt-md">
+                                <h4>Reglas Técnicas Federativas</h4>
+                                <div className="rules-grid">
+                                    <label className="checkbox-label rule-card">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={initialData.restringirSoloCategoriaPropia} 
+                                            onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
+                                        />
+                                        <div className="rule-info">
+                                            <strong>Solo permitir categoría propia</strong>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={initialData.permitirSub23EnSenior} 
+                                            onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
+                                        />
+                                        <div className="rule-info">
+                                            <strong>Permitir Sub23 en Senior</strong>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={initialData.permitirMasterBajarASenior} 
+                                            onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
+                                        />
+                                        <div className="rule-info">
+                                            <strong>Permitir Master en Senior</strong>
+                                        </div>
+                                    </label>
+                                    <label className="checkbox-label rule-card">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={initialData.limitacionBotesAB} 
+                                            onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
+                                        />
+                                        <div className="rule-info">
+                                            <strong>Límite Botes A/B por Club</strong>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div className="form-section">
                         <h4>Configuración de Cronograma Inteligente</h4>
-                        <div className="form-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                        <div
+                            className="form-row"
+                            style={{ gridTemplateColumns: isMaraton ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)' }}
+                        >
                             <div className="form-group">
                                 <label>Hora de Inicio</label>
                                 <input 
@@ -164,20 +234,22 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                     onChange={(e) => onChange('horaInicioEvento', e.target.value)} 
                                 />
                             </div>
-                            <div className="form-group">
-                                <label>Carriles</label>
-                                <select 
-                                    value={initialData.carrilesDisponibles} 
-                                    onChange={(e) => onChange('carrilesDisponibles', parseInt(e.target.value))}
-                                >
-                                    <option value={8}>8 Carriles</option>
-                                    <option value={9}>9 Carriles</option>
-                                </select>
-                            </div>
+                            {!isMaraton && (
+                                <div className="form-group">
+                                    <label>Carriles</label>
+                                    <select 
+                                        value={initialData.carrilesDisponibles} 
+                                        onChange={(e) => onChange('carrilesDisponibles', parseInt(e.target.value))}
+                                    >
+                                        <option value={8}>8 Carriles</option>
+                                        <option value={9}>9 Carriles</option>
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>Huso Horario (Sede)</label>
                                 <select 
-                                    value={initialData.timeZoneId} 
+                                    value={initialData.timeZoneId || 'America/Argentina/Buenos_Aires'} 
                                     onChange={(e) => onChange('timeZoneId', e.target.value)}
                                     className="admin-select"
                                 >
@@ -193,194 +265,200 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label>Escenario de Cronograma (Presets)</label>
-                            <div className="scenarios-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginTop: '0.5rem' }}>
-                                <button 
-                                    type="button"
-                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso1' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        onChange('perfilTiempo', 'Caso1');
-                                        onChange('gapEntrePruebas', 7); // Un promedio para terminar temprano
-                                        onChange('sinReceso', true);
-                                        onChange('horaFinReceso', '14:00');
-                                    }}
-                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso1' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
-                                >
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 1: Intensivo</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Terminar ~14:00hs. Sin receso. Gap corto.</div>
-                                </button>
-                                <button 
-                                    type="button"
-                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso2' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        onChange('perfilTiempo', 'Caso2');
-                                        onChange('gapEntrePruebas', 10);
-                                        onChange('sinReceso', true);
-                                    }}
-                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso2' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
-                                >
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 2: Jornada Corrida</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Hasta 17:30hs. Sin receso. Gap 10'.</div>
-                                </button>
-                                <button 
-                                    type="button"
-                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso3' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        onChange('perfilTiempo', 'Caso3');
-                                        onChange('gapEntrePruebas', 10);
-                                        onChange('sinReceso', false);
-                                        onChange('horaInicioReceso', '13:00');
-                                        onChange('horaFinReceso', '14:00');
-                                    }}
-                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso3' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
-                                >
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 3: Con Receso</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Hasta 16:30hs. Con almuerzo (13-14hs).</div>
-                                </button>
-                                <button 
-                                    type="button"
-                                    className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Personalizado' ? 'active' : ''}`}
-                                    onClick={() => onChange('perfilTiempo', 'Personalizado')}
-                                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Personalizado' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
-                                >
-                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 4: Manual</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tú eliges gaps y recesos libremente.</div>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="form-row" style={{ alignItems: 'flex-end' }}>
-                            <div className="form-group">
-                                <label>Pausa entre Largadas (Minutos)</label>
-                                <select 
-                                    value={initialData.gapEntrePruebas} 
-                                    onChange={(e) => onChange('gapEntrePruebas', parseInt(e.target.value))}
-                                    className="admin-select"
-                                >
-                                    <option value={5}>Cada 5 min (Muy rápido)</option>
-                                    <option value={7}>Cada 7 min (Optimizado)</option>
-                                    <option value={8}>Cada 8 min (Ágil)</option>
-                                    <option value={10}>Cada 10 min (Estándar)</option>
-                                    <option value={12}>Cada 12 min (Holgado)</option>
-                                    <option value={15}>Cada 15 min (Lento)</option>
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Descanso mín. atleta (min)</label>
-                                <input
-                                    type="number"
-                                    className="admin-input"
-                                    min={10}
-                                    max={180}
-                                    step={5}
-                                    value={initialData.gapRecuperacionMinutos ?? 40}
-                                    onChange={(e) => {
-                                        const n = parseInt(e.target.value, 10);
-                                        onChange('gapRecuperacionMinutos', Number.isFinite(n) ? n : 40);
-                                    }}
-                                    title="Tiempo mínimo entre pruebas distintas de la misma categoría y sexo (ej. semi K1 → K2)"
-                                />
-                                <small style={{ display: 'block', marginTop: '0.35rem', color: 'var(--color-text-muted)', fontSize: '0.75rem', lineHeight: 1.35 }}>
-                                    Por defecto 40&apos;. Evita que un atleta corra otra prueba (otro bote) de la misma categoría/sexo antes de ese tiempo.
-                                </small>
-                            </div>
-                            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', justifyContent: 'center' }}>
-                                <label
-                                    className="checkbox-label"
-                                    style={{
-                                        marginBottom: '0px',
-                                        opacity: initialData.perfilTiempo !== 'Personalizado' ? 0.55 : 1,
-                                        cursor: initialData.perfilTiempo !== 'Personalizado' ? 'not-allowed' : 'pointer',
-                                    }}
-                                    title={
-                                        initialData.perfilTiempo === 'Caso3'
-                                            ? 'Caso 3 incluye receso de almuerzo. Usá Caso 4 (Manual) para eliminarlo.'
-                                            : initialData.perfilTiempo === 'Caso1' || initialData.perfilTiempo === 'Caso2'
-                                                ? 'Este caso ya elimina el receso. Usá Caso 4 (Manual) para cambiarlo.'
-                                                : undefined
-                                    }
-                                >
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.sinReceso} 
-                                        disabled={initialData.perfilTiempo !== 'Personalizado'}
-                                        onChange={(e) => onChange('sinReceso', e.target.checked)} 
-                                    />
-                                    <strong>Eliminar Receso de Almuerzo</strong>
-                                </label>
-                                <label className="checkbox-label" style={{ marginBottom: '0px' }}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={initialData.usarGapVariable} 
-                                        onChange={(e) => onChange('usarGapVariable', e.target.checked)} 
-                                    />
-                                    <strong style={{ color: 'var(--color-primary)' }}>Ajustar gap de largada según distancia (variable)</strong>
-                                </label>
-                            </div>
-                        </div>
-
-                        {!initialData.sinReceso && (
-                            <div className="form-row fade-in">
+                        {!isMaraton && (
+                            <>
                                 <div className="form-group">
-                                    <label>Inicio Receso</label>
-                                    <input 
-                                        type="time" 
-                                        value={initialData.horaInicioReceso} 
-                                        onChange={(e) => onChange('horaInicioReceso', e.target.value)} 
-                                    />
+                                    <label>Escenario de Cronograma (Presets)</label>
+                                    <div className="scenarios-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginTop: '0.5rem' }}>
+                                        <button 
+                                            type="button"
+                                            className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso1' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                onChange('perfilTiempo', 'Caso1');
+                                                onChange('gapEntrePruebas', 7);
+                                                onChange('sinReceso', true);
+                                                onChange('horaFinReceso', '14:00');
+                                            }}
+                                            style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso1' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 1: Intensivo</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Terminar ~14:00hs. Sin receso. Gap corto.</div>
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso2' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                onChange('perfilTiempo', 'Caso2');
+                                                onChange('gapEntrePruebas', 10);
+                                                onChange('sinReceso', true);
+                                            }}
+                                            style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso2' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 2: Jornada Corrida</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Hasta 17:30hs. Sin receso. Gap 10'.</div>
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Caso3' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                onChange('perfilTiempo', 'Caso3');
+                                                onChange('gapEntrePruebas', 10);
+                                                onChange('sinReceso', false);
+                                                onChange('horaInicioReceso', '13:00');
+                                                onChange('horaFinReceso', '14:00');
+                                            }}
+                                            style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Caso3' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 3: Con Receso</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Hasta 16:30hs. Con almuerzo (13-14hs).</div>
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'Personalizado' ? 'active' : ''}`}
+                                            onClick={() => onChange('perfilTiempo', 'Personalizado')}
+                                            style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Personalizado' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 4: Manual</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tú eliges gaps y recesos libremente.</div>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label>Fin Receso</label>
-                                    <input 
-                                        type="time" 
-                                        value={initialData.horaFinReceso} 
-                                        onChange={(e) => onChange('horaFinReceso', e.target.value)} 
-                                    />
+
+                                <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                                    <div className="form-group">
+                                        <label>Pausa entre Largadas (Minutos)</label>
+                                        <select 
+                                            value={initialData.gapEntrePruebas} 
+                                            onChange={(e) => onChange('gapEntrePruebas', parseInt(e.target.value))}
+                                            className="admin-select"
+                                        >
+                                            <option value={5}>Cada 5 min (Muy rápido)</option>
+                                            <option value={7}>Cada 7 min (Optimizado)</option>
+                                            <option value={8}>Cada 8 min (Ágil)</option>
+                                            <option value={10}>Cada 10 min (Estándar)</option>
+                                            <option value={12}>Cada 12 min (Holgado)</option>
+                                            <option value={15}>Cada 15 min (Lento)</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Descanso mín. atleta (min)</label>
+                                        <input
+                                            type="number"
+                                            className="admin-input"
+                                            min={10}
+                                            max={180}
+                                            step={5}
+                                            value={initialData.gapRecuperacionMinutos ?? 40}
+                                            onChange={(e) => {
+                                                const n = parseInt(e.target.value, 10);
+                                                onChange('gapRecuperacionMinutos', Number.isFinite(n) ? n : 40);
+                                            }}
+                                            title="Tiempo mínimo entre pruebas distintas de la misma categoría y sexo (ej. semi K1 → K2)"
+                                        />
+                                        <small style={{ display: 'block', marginTop: '0.35rem', color: 'var(--color-text-muted)', fontSize: '0.75rem', lineHeight: 1.35 }}>
+                                            Por defecto 40&apos;. Evita que un atleta corra otra prueba (otro bote) de la misma categoría/sexo antes de ese tiempo.
+                                        </small>
+                                    </div>
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', justifyContent: 'center' }}>
+                                        <label
+                                            className="checkbox-label"
+                                            style={{
+                                                marginBottom: '0px',
+                                                opacity: initialData.perfilTiempo !== 'Personalizado' ? 0.55 : 1,
+                                                cursor: initialData.perfilTiempo !== 'Personalizado' ? 'not-allowed' : 'pointer',
+                                            }}
+                                            title={
+                                                initialData.perfilTiempo === 'Caso3'
+                                                    ? 'Caso 3 incluye receso de almuerzo. Usá Caso 4 (Manual) para eliminarlo.'
+                                                    : initialData.perfilTiempo === 'Caso1' || initialData.perfilTiempo === 'Caso2'
+                                                        ? 'Este caso ya elimina el receso. Usá Caso 4 (Manual) para cambiarlo.'
+                                                        : undefined
+                                            }
+                                        >
+                                            <input 
+                                                type="checkbox" 
+                                                checked={initialData.sinReceso} 
+                                                disabled={initialData.perfilTiempo !== 'Personalizado'}
+                                                onChange={(e) => onChange('sinReceso', e.target.checked)} 
+                                            />
+                                            <strong>Eliminar Receso de Almuerzo</strong>
+                                        </label>
+                                        <label className="checkbox-label" style={{ marginBottom: '0px' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={initialData.usarGapVariable} 
+                                                onChange={(e) => onChange('usarGapVariable', e.target.checked)} 
+                                            />
+                                            <strong style={{ color: 'var(--color-primary)' }}>Ajustar gap de largada según distancia (variable)</strong>
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
+
+                                {!initialData.sinReceso && (
+                                    <div className="form-row fade-in">
+                                        <div className="form-group">
+                                            <label>Inicio Receso</label>
+                                            <input 
+                                                type="time" 
+                                                value={initialData.horaInicioReceso} 
+                                                onChange={(e) => onChange('horaInicioReceso', e.target.value)} 
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Fin Receso</label>
+                                            <input 
+                                                type="time" 
+                                                value={initialData.horaFinReceso} 
+                                                onChange={(e) => onChange('horaFinReceso', e.target.value)} 
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="form-rules-container glass-effect mt-md">
+                                    <h4>Optimización de Series</h4>
+                                    <div className="rules-grid">
+                                        <label
+                                            className="checkbox-label rule-card"
+                                            style={{ opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' }}
+                                            title="En construcción"
+                                        >
+                                            <input 
+                                                type="checkbox" 
+                                                checked={false}
+                                                disabled
+                                                readOnly
+                                            />
+                                            <div className="rule-info">
+                                                <strong style={{ color: '#64748b' }}>
+                                                    Permitir Sugerencia de Series Combinadas{' '}
+                                                    <span style={{ fontWeight: 400, fontStyle: 'italic', fontSize: '0.85em' }}>
+                                                        (en construcción)
+                                                    </span>
+                                                </strong>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </>
                         )}
 
-                        <div className="form-rules-container glass-effect mt-md">
-                            <h4>Optimización de Series</h4>
-                            <div className="rules-grid">
-                                <label
-                                    className="checkbox-label rule-card"
-                                    style={{ opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none' }}
-                                    title="En construcción"
-                                >
-                                    <input 
-                                        type="checkbox" 
-                                        checked={false}
-                                        disabled
-                                        readOnly
-                                    />
-                                    <div className="rule-info">
-                                        <strong style={{ color: '#64748b' }}>
-                                            Permitir Sugerencia de Series Combinadas{' '}
-                                            <span style={{ fontWeight: 400, fontStyle: 'italic', fontSize: '0.85em' }}>
-                                                (en construcción)
-                                            </span>
-                                        </strong>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
                     <div className="form-section full-width">
                         <h4 style={{ color: 'var(--color-primary)', borderBottom: '1px solid var(--color-primary-light)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>
                             Configuración de Opciones Habilitadas (Programa)
                         </h4>
                         <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
-                            Selecciona las opciones que estarán disponibles al armar el programa de este evento.
+                            {isMaraton
+                                ? 'Maratón: solo distancias desde 1000 m y categorías Cadete en adelante.'
+                                : 'Selecciona las opciones que estarán disponibles al armar el programa de este evento.'}
                         </p>
 
                         <div className="habilitaciones-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
-                            {/* DISTANCIAS */}
                             <div className="habilitacion-group glass-effect" style={{ padding: '1.2rem', borderRadius: '12px' }}>
                                 <h5 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>📏 Distancias</h5>
                                 <div className="checkbox-scroll-list" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                    {allDistancias.map(d => {
-                                        const ids = initialData.distanciasHabilitadas ? initialData.distanciasHabilitadas.split(',') : [];
+                                    {distanciasVisibles.map(d => {
+                                        const ids = initialData.distanciasHabilitadas ? initialData.distanciasHabilitadas.split(',').filter(Boolean) : [];
                                         const isChecked = ids.includes(d.id.toString());
                                         const label = DISTANCIA_NAMES[d.id] || `${d.distanciaRegata}m`;
                                         return (
@@ -402,40 +480,36 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 </div>
                             </div>
 
-                            {/* CATEGORIAS */}
                             <div className="habilitacion-group glass-effect" style={{ padding: '1.2rem', borderRadius: '12px' }}>
                                 <h5 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>👥 Categorías</h5>
                                 <div className="checkbox-scroll-list" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                    {allCategorias
-                                        .filter(c => c.nombre.toLowerCase() !== 'control')
-                                        .map(c => {
-                                            const ids = initialData.categoriasHabilitadas ? initialData.categoriasHabilitadas.split(',') : [];
-                                            const isChecked = ids.includes(c.id.toString());
-                                            return (
-                                                <label key={c.id} className="checkbox-label" style={{ fontSize: '0.9rem' }}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={isChecked}
-                                                        onChange={(e) => {
-                                                            let newIds = e.target.checked 
-                                                                ? [...ids, c.id.toString()]
-                                                                : ids.filter(id => id !== c.id.toString());
-                                                            onChange('categoriasHabilitadas', newIds.join(','));
-                                                        }}
-                                                    />
-                                                    {c.nombre}
-                                                </label>
-                                            );
-                                        })}
+                                    {categoriasVisibles.map(c => {
+                                        const ids = initialData.categoriasHabilitadas ? initialData.categoriasHabilitadas.split(',').filter(Boolean) : [];
+                                        const isChecked = ids.includes(c.id.toString());
+                                        return (
+                                            <label key={c.id} className="checkbox-label" style={{ fontSize: '0.9rem' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        let newIds = e.target.checked 
+                                                            ? [...ids, c.id.toString()]
+                                                            : ids.filter(id => id !== c.id.toString());
+                                                        onChange('categoriasHabilitadas', newIds.join(','));
+                                                    }}
+                                                />
+                                                {c.nombre}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            {/* BOTES */}
                             <div className="habilitacion-group glass-effect" style={{ padding: '1.2rem', borderRadius: '12px' }}>
                                 <h5 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🚣 Botes</h5>
                                 <div className="checkbox-scroll-list" style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                                     {allBotes.map(b => {
-                                        const ids = initialData.botesHabilitados ? initialData.botesHabilitados.split(',') : [];
+                                        const ids = initialData.botesHabilitados ? initialData.botesHabilitados.split(',').filter(Boolean) : [];
                                         const isChecked = ids.includes(b.id.toString());
                                         const label = BOTE_NAMES[b.id] || b.tipo;
                                         return (

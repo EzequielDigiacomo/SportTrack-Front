@@ -12,6 +12,35 @@ export const DISTANCIA_NAMES = {
     11: '10000m', 12: '12000m', 13: '15000m', 14: '18000m', 15: '22000m', 16: '30000m'
 };
 
+/** Metros reales por Id de distancia (no confundir con el valor del enum). */
+export const DISTANCIA_METROS = {
+    1: 200, 2: 350, 3: 400, 4: 450, 5: 500,
+    6: 1000, 7: 1500, 8: 2000, 9: 3000, 10: 5000,
+    11: 10000, 12: 12000, 13: 15000, 14: 18000, 15: 22000, 16: 30000
+};
+
+export const MODALIDAD_VELOCIDAD = 'Velocidad';
+export const MODALIDAD_MARATON = 'Maraton';
+export const MARATON_MIN_METROS = 1000;
+/** Cadete (15-16) en adelante — ids del catálogo de categorías. */
+export const MARATON_MIN_CATEGORIA_ID = 4;
+
+export function getDistanciaMetros(id) {
+    return DISTANCIA_METROS[Number(id)] ?? 0;
+}
+
+export function isDistanciaMaratonEligible(id) {
+    return getDistanciaMetros(id) >= MARATON_MIN_METROS;
+}
+
+export function isCategoriaMaratonEligible(id) {
+    return Number(id) >= MARATON_MIN_CATEGORIA_ID;
+}
+
+export function isModalidadMaraton(modalidad) {
+    return String(modalidad || '').toLowerCase() === 'maraton';
+}
+
 export const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
 /** Resuelve etiqueta de distancia (el backend a veces envía metros = id de enum, no metros reales). */
