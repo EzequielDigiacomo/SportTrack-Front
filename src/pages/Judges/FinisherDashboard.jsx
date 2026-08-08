@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { 
     Timer, CheckCircle, Clock, Users, XCircle, RefreshCw, Save, 
@@ -613,10 +613,30 @@ const FinisherDashboard = () => {
     }, [isRaceRunning, startTime, resultados, rawTimes, selectedFase?.estado]); // Dependencias para acceso a estado fresco
 
     const handleLaneFinish = (laneNum) => {
-        const res = resultados.find(r => r.carril === laneNum);
+        const res = resultados.find(r => Number(r.carril) === Number(laneNum));
         if (!res) return;
         handleRecordFinish(res.id);
     };
+
+    /** Pista: 1–9 fijos. Maratón / campos grandes: todos los Nº del sorteo (carril = dorsal). */
+    const finishPadNumbers = useMemo(() => {
+        const occupied = [...new Set(
+            (resultados || [])
+                .map(r => Number(r.carril))
+                .filter(n => Number.isFinite(n) && n > 0)
+        )].sort((a, b) => a - b);
+
+        if (!occupied.length) return [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+        const max = occupied[occupied.length - 1];
+        const isClassicPista = max <= 9 && occupied.length <= 9 && resultados.length <= 9;
+        if (isClassicPista) return [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+        return occupied;
+    }, [resultados]);
+
+    const isLargeFinishField = finishPadNumbers.length > 9
+        || finishPadNumbers.some(n => n > 9);
 
     const handleRecordFinish = async (resultadoId) => {
         if (!canCaptureFinish && !selectedFase) return;
@@ -983,14 +1003,21 @@ const FinisherDashboard = () => {
                 <main className="finisher-main glass-effect">
                     {selectedFase ? (
                         <div className="quick-controls-panel">
-                            <div className="lane-buttons-grid">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-                                    const res = resultados.find(r => r.carril === num);
+                            <div className={`lane-buttons-grid ${isLargeFinishField ? 'large-field' : ''}`}>
+                                {finishPadNumbers.map(num => {
+                                    const res = resultados.find(r => Number(r.carril) === num);
                                     const isOccupied = !!res;
                                     const isFinished = res?.tiempoOficial;
                                     const hasStatus = res?.estadoCanto && res?.estadoCanto !== 'Pendiente';
                                     return (
-                                        <button key={num} type="button" className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`} onClick={() => handleLaneFinish(num)} disabled={!canCaptureFinish || !isOccupied || isFinished || hasStatus}>
+                                        <button
+                                            key={num}
+                                            type="button"
+                                            className={`lane-btn ${!isOccupied ? 'empty' : ''} ${isFinished ? 'finished' : ''} ${hasStatus ? 'has-status' : ''}`}
+                                            onClick={() => handleLaneFinish(num)}
+                                            disabled={!canCaptureFinish || !isOccupied || isFinished || hasStatus}
+                                            title={isOccupied ? (res.participanteNombre || `Nº ${num}`) : `Sin inscrito Nº ${num}`}
+                                        >
                                             <span className="num">{num}</span>
                                             <span className="label">{isOccupied ? (hasStatus ? res.estadoCanto : (isFinished ? 'LLEGÓ' : 'LLEGADA')) : '-'}</span>
                                         </button>

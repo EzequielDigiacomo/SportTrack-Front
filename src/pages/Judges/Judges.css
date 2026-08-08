@@ -1064,14 +1064,36 @@
         margin: 15px 0 !important;
     }
 
+    .lane-buttons-grid.large-field {
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)) !important;
+        gap: 6px !important;
+        margin: 10px 0 !important;
+    }
+
     .lane-btn {
         height: 80px !important;
         background: rgba(59, 130, 246, 0.15) !important;
         border: 1px solid rgba(59, 130, 246, 0.3) !important;
     }
 
+    .lane-buttons-grid.large-field .lane-btn {
+        height: 48px !important;
+        min-height: 48px !important;
+        border-radius: 8px !important;
+    }
+
     .lane-btn .num { font-size: 1.8rem !important; }
     .lane-btn .label { font-size: 0.7rem !important; }
+
+    .lane-buttons-grid.large-field .lane-btn .num {
+        font-size: 0.95rem !important;
+        line-height: 1.1;
+    }
+
+    .lane-buttons-grid.large-field .lane-btn .label {
+        font-size: 0.45rem !important;
+        line-height: 1.1;
+    }
 
     /* Ajustar cabecera móvil */
     .finisher-header {
@@ -1113,6 +1135,27 @@
     gap: 12px !important;
 }
 
+/* Maratón / >9: grilla fluida con todos los dorsales del sorteo */
+.lane-buttons-grid.large-field {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) !important;
+    gap: 8px !important;
+}
+
+.lane-buttons-grid.large-field .lane-btn {
+    height: 56px !important;
+    min-height: 56px;
+    padding: 4px 2px;
+}
+
+.lane-buttons-grid.large-field .lane-btn .num {
+    font-size: 1.15rem;
+}
+
+.lane-buttons-grid.large-field .lane-btn .label {
+    font-size: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
 @media (min-width: 1024px) {
     .quick-controls-panel {
         background: rgba(255, 255, 255, 0.02);
@@ -1122,6 +1165,16 @@
     }
     .lane-buttons-grid {
         grid-template-columns: repeat(9, 1fr) !important;
+    }
+    .lane-buttons-grid.large-field {
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+        gap: 10px !important;
+    }
+    .lane-buttons-grid.large-field .lane-btn {
+        height: 64px !important;
+    }
+    .lane-buttons-grid.large-field .lane-btn .num {
+        font-size: 1.35rem;
     }
 }
 
@@ -2907,9 +2960,27 @@
         gap: 8px !important;
     }
 
+    .lane-buttons-grid.large-field {
+        gap: 5px !important;
+        grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)) !important;
+    }
+
     .lane-btn {
         min-height: 64px;
         border-radius: 10px;
+    }
+
+    .lane-buttons-grid.large-field .lane-btn {
+        min-height: 44px !important;
+        height: 44px !important;
+    }
+
+    .lane-buttons-grid.large-field .lane-btn .num {
+        font-size: 0.85rem !important;
+    }
+
+    .lane-buttons-grid.large-field .lane-btn .label {
+        font-size: 0.4rem !important;
     }
 
     .btn-doubt {
