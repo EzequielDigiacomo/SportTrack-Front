@@ -55,6 +55,27 @@ export function getCategoriaLabelFromEventoPrueba(ep) {
     return CATEGORIA_NAMES[ids.catId] || ep?.prueba?.categoria?.nombre || '—';
 }
 
+export function getSexoLabelFromEventoPrueba(ep) {
+    const ids = getPruebaIds(ep);
+    return SEXO_NAMES[ids.sexId] || ep?.prueba?.sexo?.nombre || ep?.prueba?.sexoNombre || '—';
+}
+
+export function getSexoIdFromEventoPrueba(ep) {
+    return getPruebaIds(ep).sexId || null;
+}
+
+export function getClasificacionKeyFromEventoPrueba(ep) {
+    const ids = getPruebaIds(ep);
+    return `${ids.catId || 0}|${ids.sexId || 0}|${ids.botId || 0}`;
+}
+
+export function getClasificacionTitleFromEventoPrueba(ep) {
+    const cat = getCategoriaLabelFromEventoPrueba(ep);
+    const sex = getSexoLabelFromEventoPrueba(ep);
+    const bot = getBoteLabelFromEventoPrueba(ep);
+    return [cat, sex, bot].filter(x => x && x !== '—').join(' · ');
+}
+
 /** Agrupa inscritos duplicados de tripulación (mismo criterio que pista). */
 export function uniqueBoatsFromIncripciones(rawInscs = []) {
     const uniqueBoats = [];
@@ -77,7 +98,7 @@ export function uniqueBoatsFromIncripciones(rawInscs = []) {
 }
 
 /**
- * Carga inscritos de todas las EventoPrueba de una largada y enriquece con bote/categoría.
+ * Carga inscritos de todas las EventoPrueba de una largada y enriquece con bote/categoría/sexo.
  */
 export async function loadMaratonLargadaInscriptos(pruebas, selectedPruebaId) {
     const memberIds = resolveMaratonLargadaMemberIds(pruebas, selectedPruebaId);
@@ -93,11 +114,64 @@ export async function loadMaratonLargadaInscriptos(pruebas, selectedPruebaId) {
             ...ins,
             boteLabel: getBoteLabelFromEventoPrueba(ep),
             categoriaLabel: getCategoriaLabelFromEventoPrueba(ep),
+            sexoLabel: getSexoLabelFromEventoPrueba(ep),
+            sexoId: getSexoIdFromEventoPrueba(ep),
+            clasificacionKey: getClasificacionKeyFromEventoPrueba(ep),
+            clasificacionTitle: getClasificacionTitleFromEventoPrueba(ep),
             eventoPrueba: ep,
         };
     });
 
     return uniqueBoatsFromIncripciones(enriched);
+}
+
+/**
+ * Agrupa resultados de una fase Maratón por Categoría · Sexo · Bote
+ * (vía EventoPrueba de cada inscripción).
+ */
+export function groupMaratonResultadosByClasificacion(fase, pruebas = []) {
+    if (!fase?.resultados?.length) return [];
+
+    const epById = new Map((pruebas || []).map(p => [String(p.id), p]));
+    const groups = new Map();
+
+    for (const res of fase.resultados) {
+        const epId = res.eventoPruebaId || res.EventoPruebaId || res.inscripcionEventoPruebaId;
+        const ep = epById.get(String(epId))
+            || (pruebas || []).find(p =>
+                String(p.id) === String(fase.eventoPruebaId)
+            );
+
+        const key = ep
+            ? getClasificacionKeyFromEventoPrueba(ep)
+            : `unknown|${res.inscripcionId || res.id}`;
+        const title = ep
+            ? getClasificacionTitleFromEventoPrueba(ep)
+            : 'Clasificación';
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                title,
+                categoriaLabel: ep ? getCategoriaLabelFromEventoPrueba(ep) : '—',
+                sexoLabel: ep ? getSexoLabelFromEventoPrueba(ep) : '—',
+                boteLabel: ep ? getBoteLabelFromEventoPrueba(ep) : '—',
+                resultados: [],
+            });
+        }
+        groups.get(key).resultados.push(res);
+    }
+
+    return [...groups.values()]
+        .sort((a, b) => a.title.localeCompare(b.title, 'es'))
+        .map(g => ({
+            ...g,
+            faseVirtual: {
+                ...fase,
+                nombreFase: g.title,
+                resultados: g.resultados,
+            },
+        }));
 }
 
 /** Fisher–Yates: números 1..N permutados. */

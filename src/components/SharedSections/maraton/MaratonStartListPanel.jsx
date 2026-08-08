@@ -138,13 +138,14 @@ const MaratonStartListPanel = ({
                                             <th>Atleta / Tripulación</th>
                                             <th>Club</th>
                                             <th>Categoría</th>
+                                            <th style={{ textAlign: 'center' }}>Sexo</th>
                                             <th style={{ textAlign: 'center' }}>Bote</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {inscriptos.length === 0 && (
                                             <tr>
-                                                <td colSpan={5} style={{ textAlign: 'center', opacity: 0.7 }}>
+                                                <td colSpan={6} style={{ textAlign: 'center', opacity: 0.7 }}>
                                                     No hay inscritos en esta largada todavía.
                                                 </td>
                                             </tr>
@@ -163,6 +164,15 @@ const MaratonStartListPanel = ({
                                                 </td>
                                                 <td>{ins.clubNombre || ins.clubSigla || 'Independiente'}</td>
                                                 <td style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{ins.categoriaLabel || '—'}</td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span className={`badge-sexo ${
+                                                        String(ins.sexoLabel || '').toLowerCase().startsWith('masc') ? 'masc'
+                                                            : String(ins.sexoLabel || '').toLowerCase().startsWith('fem') ? 'fem'
+                                                                : 'mix'
+                                                    }`}>
+                                                        {ins.sexoLabel || '—'}
+                                                    </span>
+                                                </td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <span className="badge-bote">{ins.boteLabel || '—'}</span>
                                                 </td>
@@ -191,6 +201,7 @@ const MaratonStartListPanel = ({
                                         {ins.participanteNombreCompleto || 'Atleta'}
                                         {' · '}
                                         <span className="badge-bote">{ins.boteLabel}</span>
+                                        {ins.sexoLabel ? ` · ${ins.sexoLabel}` : ''}
                                         {ins.categoriaLabel ? ` · ${ins.categoriaLabel}` : ''}
                                     </li>
                                 ))}

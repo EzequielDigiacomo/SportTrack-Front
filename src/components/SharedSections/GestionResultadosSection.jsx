@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -22,6 +22,8 @@ import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
 import MaratonStartListPanel from './maraton/MaratonStartListPanel';
+import MaratonResultadosGrids from './maraton/MaratonResultadosGrids';
+import { loadMaratonLargadaInscriptos } from './maraton/maratonStartListUtils';
 
 function getFaseStatusBadge(fase) {
     if (!fase) return null;
@@ -100,6 +102,29 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         [eventos, selectedEvento]
     );
     const isMaratonEvent = resolveIsMaratonEvent(eventoActual);
+
+    const [maratonInscripcionEpMap, setMaratonInscripcionEpMap] = useState(null);
+
+    useEffect(() => {
+        if (!isMaratonEvent || !selectedPrueba || !pruebas?.length) {
+            setMaratonInscripcionEpMap(null);
+            return undefined;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const list = await loadMaratonLargadaInscriptos(pruebas, selectedPrueba);
+                if (cancelled) return;
+                const map = new Map(
+                    (list || []).map(i => [String(i.id), i.eventoPruebaId])
+                );
+                setMaratonInscripcionEpMap(map);
+            } catch {
+                if (!cancelled) setMaratonInscripcionEpMap(null);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isMaratonEvent, selectedPrueba, pruebas]);
 
     const seedingStatus = useMemo(() => {
         const N = inscriptos.length;
@@ -1172,16 +1197,31 @@ const connectedStarter = activeJudges.find(j => {
                                         </div>
                                     )
                                 )}
-                                <ResultadosTable
-                                    fase={faseSeleccionada}
-                                    tiemposLocales={tiemposLocales}
-                                    onResultChange={handleResultChange}
-                                    onStatusChange={canEditResults ? handleStatusChange : undefined}
-                                    onTransferRequest={canEditResults ? openTransferModal : undefined}
-                                    isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados' || canEditResults) ? false : isLocked}
-                                    isSuccess={saveSuccess}
-                                    isAdmin={canEditResults}
-                                />
+                                {isMaratonEvent ? (
+                                    <MaratonResultadosGrids
+                                        fase={faseSeleccionada}
+                                        pruebas={pruebas}
+                                        tiemposLocales={tiemposLocales}
+                                        onResultChange={handleResultChange}
+                                        onStatusChange={canEditResults ? handleStatusChange : undefined}
+                                        onTransferRequest={canEditResults ? openTransferModal : undefined}
+                                        isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados' || canEditResults) ? false : isLocked}
+                                        isSuccess={saveSuccess}
+                                        isAdmin={canEditResults}
+                                        inscripcionEpMap={maratonInscripcionEpMap}
+                                    />
+                                ) : (
+                                    <ResultadosTable
+                                        fase={faseSeleccionada}
+                                        tiemposLocales={tiemposLocales}
+                                        onResultChange={handleResultChange}
+                                        onStatusChange={canEditResults ? handleStatusChange : undefined}
+                                        onTransferRequest={canEditResults ? openTransferModal : undefined}
+                                        isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados' || canEditResults) ? false : isLocked}
+                                        isSuccess={saveSuccess}
+                                        isAdmin={canEditResults}
+                                    />
+                                )}
                                 
                                 {(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && (
                                     <div className="form-footer-actions mt-md" style={{ justifyContent: 'space-between' }}>
