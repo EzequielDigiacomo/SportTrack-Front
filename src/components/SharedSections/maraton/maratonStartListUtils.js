@@ -6,6 +6,7 @@ import {
     SEXO_NAMES,
 } from '../../../utils/pruebaLabelUtils';
 import InscripcionService from '../../../services/InscripcionService';
+import FaseService from '../../../services/FaseService';
 
 /** Agrupa EventoPrueba en opciones de selector de largada. */
 export function buildMaratonLargadaOptions(pruebas = []) {
@@ -127,6 +128,81 @@ export async function sortearNumerosMaraton(inscriptos = []) {
         ...ins,
         numeroCompetidor: String(numbers[idx]),
     }));
+}
+
+/**
+ * Crea la fase de cronometraje para la largada (solo Maratón).
+ * Preferencia: POST GenerarLargadaMaraton.
+ * Fallback si 404: GenerarManual en el EP representante + limpia fases huérfanas del resto.
+ */
+export async function generarFaseLargadaMaraton(pruebas, selectedPruebaId, inscriptosConNumero = []) {
+    const memberIds = resolveMaratonLargadaMemberIds(pruebas, selectedPruebaId)
+        .map(id => Number(id))
+        .filter(id => Number.isFinite(id) && id > 0);
+
+    if (!memberIds.length) {
+        throw new Error('No se pudo resolver el grupo de largada.');
+    }
+
+    try {
+        return await FaseService.generarLargadaMaraton(memberIds);
+    } catch (err) {
+        const status = err?.response?.status;
+        if (status !== 404) throw err;
+        console.warn('[Maratón] GenerarLargadaMaraton no disponible; fallback GenerarManual.');
+        return generarFaseLargadaMaratonFallback(memberIds, inscriptosConNumero);
+    }
+}
+
+async function generarFaseLargadaMaratonFallback(memberIds, inscriptosConNumero) {
+    const representativeId = memberIds[0];
+    const others = memberIds.slice(1);
+
+    await Promise.all(
+        others.map(async (epId) => {
+            try {
+                const fases = await FaseService.getByEventoPrueba(epId);
+                await Promise.all((fases || []).map(f => FaseService.delete(f.id).catch(() => {})));
+            } catch {
+                // ignore
+            }
+        })
+    );
+
+    const placements = (inscriptosConNumero || []).map(ins => {
+        const n = parseInt(ins.numeroCompetidor, 10);
+        return {
+            inscripcionId: ins.id,
+            serie: 1,
+            carril: Number.isFinite(n) && n > 0 ? n : 1,
+        };
+    });
+
+    const used = new Set();
+    let next = 1;
+    for (const p of placements) {
+        if (used.has(p.carril)) {
+            while (used.has(next)) next += 1;
+            p.carril = next;
+        }
+        used.add(p.carril);
+        next = Math.max(next, p.carril + 1);
+    }
+
+    if (!placements.length) {
+        throw new Error('No hay inscritos para armar la fase de largada.');
+    }
+
+    return FaseService.generarManual(representativeId, placements);
+}
+
+/**
+ * Sortea números y genera la fase de cronometraje (flujo completo Maratón).
+ */
+export async function sortearYArmarLargadaMaraton(pruebas, selectedPruebaId, inscriptos = []) {
+    const conNumeros = await sortearNumerosMaraton(inscriptos);
+    const fases = await generarFaseLargadaMaraton(pruebas, selectedPruebaId, conNumeros);
+    return { inscriptos: conNumeros, fases };
 }
 
 export function sortInscriptosByNumero(inscriptos = []) {

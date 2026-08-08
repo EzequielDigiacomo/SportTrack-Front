@@ -47,6 +47,7 @@ export const ENDPOINTS = {
         BASE: '/fases',
         BY_EVENTO_PRUEBA: (id) => `/fases/EventoPrueba/${id}`,
         GENERAR: (id) => `/fases/Generar/${id}`,
+        GENERAR_LARGADA_MARATON: '/fases/GenerarLargadaMaraton',
         PROMOVER: (id) => `/fases/Promover/${id}`,
         BY_EVENTO: (id) => `/eventos/${id}/fases`,
         BATCH_UPDATE: '/fases/BatchUpdate',

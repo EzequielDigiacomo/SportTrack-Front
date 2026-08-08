@@ -10,6 +10,13 @@ const FaseService = {
         const response = await api.post(ENDPOINTS.FASES.GENERAR(eventoPruebaId));
         return response.data;
     },
+    /** Maratón: una fase "Largada" con todos los inscritos del grupo. */
+    generarLargadaMaraton: async (eventoPruebaIds) => {
+        const response = await api.post(ENDPOINTS.FASES.GENERAR_LARGADA_MARATON, {
+            eventoPruebaIds,
+        });
+        return response.data;
+    },
     generarManual: async (eventoPruebaId, placements) => {
         const response = await api.post(`${ENDPOINTS.FASES.BASE}/GenerarManual/${eventoPruebaId}`, placements);
         return response.data;

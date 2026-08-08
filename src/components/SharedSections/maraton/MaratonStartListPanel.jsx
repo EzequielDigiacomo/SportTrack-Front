@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { List, RotateCcw, RefreshCw } from 'lucide-react';
 import {
     loadMaratonLargadaInscriptos,
-    sortearNumerosMaraton,
+    sortearYArmarLargadaMaraton,
     sortInscriptosByNumero,
 } from './maratonStartListUtils';
 import '../ConfigurarPruebas.css';
@@ -11,7 +11,7 @@ import '../ConfigurarPruebas.css';
  * Start List exclusivo de Maratón.
  * - Muestra todos los atletas de la largada combinada (selectedPrueba = representante del grupo)
  * - Columna Bote (no cabeza de serie / carril)
- * - Sorteo: solo NumeroCompetidor 1..N
+ * - Sorteo: NumeroCompetidor 1..N + genera fase "Largada" para el cronometraje
  */
 const MaratonStartListPanel = ({
     pruebas = [],
@@ -47,19 +47,28 @@ const MaratonStartListPanel = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedPrueba, pruebas]);
 
-    const handleSortearNumeros = async () => {
+    const handleSortearYArmar = async () => {
         if (!inscriptos.length) {
             onMessage?.('No hay inscritos para sortear.');
             return;
         }
         setSaving(true);
         try {
-            const updated = await sortearNumerosMaraton(inscriptos);
+            const { inscriptos: updated } = await sortearYArmarLargadaMaraton(
+                pruebas,
+                selectedPrueba,
+                inscriptos
+            );
             setInscriptos(sortInscriptosByNumero(updated));
-            onMessage?.(`✅ Números sorteados (1–${updated.length}).`);
+            onMessage?.(
+                `✅ Números sorteados (1–${updated.length}) y largada lista para cronometrar.`
+            );
         } catch (err) {
             console.error(err);
-            onMessage?.('❌ Error al sortear números.');
+            const apiMsg = err?.response?.data?.message || err?.message;
+            onMessage?.(apiMsg
+                ? `❌ ${apiMsg}`
+                : '❌ Error al sortear números / armar largada.');
         } finally {
             setSaving(false);
         }
@@ -89,19 +98,19 @@ const MaratonStartListPanel = ({
                         {isAdmin && (
                             <button
                                 className="btn-admin-action primary"
-                                onClick={handleSortearNumeros}
+                                onClick={handleSortearYArmar}
                                 disabled={saving || !inscriptos.length}
                             >
                                 <RotateCcw size={16} />
-                                {hasNumeros ? 'Regenerar números' : 'Sortear números'}
+                                {hasNumeros ? 'Regenerar números y largada' : 'Sortear números y armar largada'}
                             </button>
                         )}
                     </div>
 
                     <div className="seeding-status-banner info mb-md">
                         <span>
-                            Maratón: comparten salida. Se listan todos los inscritos de la largada.
-                            El sorteo asigna solo números de competidor (1…N), sin carriles ni cabezas de serie.
+                            Maratón: comparten salida. El sorteo asigna números (1…N) y genera la fase de largada
+                            para el Largador / Finalizador (sin carriles ni heats de pista).
                         </span>
                     </div>
 
@@ -165,7 +174,7 @@ const MaratonStartListPanel = ({
                         )}
 
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-dim)', marginTop: '1rem', fontStyle: 'italic' }}>
-                            * Tras el sorteo, el número es el dorsal de orden de largada (1 = primero, N = último inscrito sorteado).
+                            * Tras armar la largada, debería aparecer en el cronograma del Largador / Finalizador.
                         </p>
                     </div>
 
