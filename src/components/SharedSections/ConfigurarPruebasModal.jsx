@@ -4,6 +4,7 @@ import SchedulerService from '../../services/SchedulerService';
 import PdfExportService from '../../services/PdfExportService';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
+import ConfigurarMaratonModal from './maraton/ConfigurarMaratonModal';
 import './ConfigurarPruebas.css';
 
 import { pick } from '../../utils/apiHelpers';
@@ -133,8 +134,16 @@ const joinUniqueLabels = (members, pickId, namesMap) => {
     return ids.map(id => namesMap[id] || String(id)).join(' · ');
 };
 
-const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
-    const isMaraton = resolveIsMaratonEvent(evento);
+/** Router: Maratón usa módulo propio (horarios manuales). Pista sigue acá. */
+const ConfigurarPruebasModal = (props) => {
+    if (resolveIsMaratonEvent(props.evento)) {
+        return <ConfigurarMaratonModal {...props} />;
+    }
+    return <ConfigurarPruebasVelocidadModal {...props} />;
+};
+
+const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
+    const isMaraton = false;
 
     const [categorias, setCategorias] = useState([]);
     const [botes, setBotes] = useState([]);
@@ -213,17 +222,17 @@ const ConfigurarPruebasModal = ({ evento, onClose, onRefresh }) => {
     }, [evento]);
 
     useEffect(() => {
+        // Pista: sugerir siguiente hora según gap. Maratón no pasa por este modal.
         if (!editingId && !editingGrupoId && pruebasParaCronograma.length > 0) {
             const sortedPruebas = [...pruebasParaCronograma].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
             const lastPrueba = sortedPruebas[sortedPruebas.length - 1];
             const lastTime = new Date(lastPrueba.fechaHora);
-            const gapMin = isMaraton ? 15 : gapEntrePruebas;
-            const nextTime = new Date(lastTime.getTime() + gapMin * 60 * 1000);
+            const nextTime = new Date(lastTime.getTime() + gapEntrePruebas * 60 * 1000);
             setSelectedTime(`${String(nextTime.getHours()).padStart(2, '0')}:${String(nextTime.getMinutes()).padStart(2, '0')}`);
         } else if (!editingId && !editingGrupoId) {
             setSelectedTime('');
         }
-    }, [gapEntrePruebas, pruebasParaCronograma, editingId, editingGrupoId, isMaraton]);
+    }, [gapEntrePruebas, pruebasParaCronograma, editingId, editingGrupoId]);
 
     const resetForm = () => {
         setSelectedCat(''); setSelectedBote(''); setSelectedDist('');
