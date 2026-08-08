@@ -175,10 +175,14 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             if (user?.rol === 'Club' && user?.clubId) {
                 const club = await ClubService.getById(user.clubId);
                 const fedId = getClubFederationId(club);
-                data = await EventoService.getAll(fedId);
+                data = fedId
+                    ? await EventoService.getAll(fedId, { asFederation: true })
+                    : await EventoService.getAll(user.clubId);
             } else if (user?.rol === 'Admin') {
                 const fedId = getUserFederationId(user);
-                data = await EventoService.getAll(fedId);
+                data = fedId
+                    ? await EventoService.getAll(fedId, { asFederation: true })
+                    : await EventoService.getAll();
             } else {
                 data = await EventoService.getAll();
             }

@@ -21,7 +21,9 @@ const ControlesSection = () => {
             const queryParams = new URLSearchParams(window.location.search);
             const fedId = queryParams.get('fedId');
             
-            const data = await EventoService.getAll(fedId);
+            const data = fedId
+                ? await EventoService.getAll(fedId, { asFederation: true })
+                : await EventoService.getAll();
             // Filtramos solo los que SON controles
             const onlyControles = data.filter(e => e.nombre.toLowerCase().includes('control'));
             setControles(onlyControles);

@@ -34,6 +34,7 @@ import {
     resolveScopeFederationId,
     getEventFederationId,
     eventBelongsToFederation,
+    athleteBelongsToFederation,
 } from '../../utils/apiHelpers';
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 import { isSuperAdminUser } from '../../utils/authHelpers';
@@ -154,7 +155,9 @@ const AdminHome = () => {
                 });
                 setFedEvents(myEvents);
 
-                const atletasList = Array.isArray(atletasData) ? atletasData : [];
+                const atletasList = (Array.isArray(atletasData) ? atletasData : []).filter(a =>
+                    athleteBelongsToFederation(a, clubesData, targetFedId)
+                );
                 setStats({
                     eventos: myEvents.length,
                     programados: myEvents.filter(e => e.estado === 'Programado').length,

@@ -20,7 +20,12 @@ import FederacionService from '../../services/FederacionService';
 import EventGrid from './EventGrid';
 import EventForm from './EventForm';
 import { useAlert } from '../../hooks/useAlert';
-import { getEventFederationName } from '../../utils/apiHelpers';
+import {
+    getEventFederationName,
+    getUserFederationId,
+    eventBelongsToFederation,
+    resolveScopeFederationId,
+} from '../../utils/apiHelpers';
 import { liveResultsUrl } from '../../utils/constants';
 import './AdminSections.css';
 
@@ -80,8 +85,10 @@ const GestionEventosSection = () => {
     const [validationErrors, setValidationErrors] = useState(null);
 
     useEffect(() => {
-        loadEventos();
-        loadClubes();
+        (async () => {
+            const clubesData = await loadClubes();
+            await loadEventos(clubesData);
+        })();
         if (isSuperAdmin) loadFederaciones();
         loadConfigData();
 
@@ -117,11 +124,25 @@ const GestionEventosSection = () => {
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
 
-    const loadEventos = async () => {
+    const loadEventos = async (clubesForFilter = clubes) => {
         setLoading(true);
         try {
-            const data = await EventoService.getAll();
-            const filtered = isSuperAdmin ? data : data.filter(e => !e.nombre.toLowerCase().includes('control'));
+            const fedId = getUserFederationId(user);
+            const data = fedId && !isSuperAdmin
+                ? await EventoService.getAll(fedId, { asFederation: true })
+                : await EventoService.getAll();
+
+            const scopeFedId = resolveScopeFederationId({ user, clubes: clubesForFilter });
+            let filtered = isSuperAdmin
+                ? data
+                : (data || []).filter(e => !e.nombre?.toLowerCase().includes('control'));
+
+            if (!isSuperAdmin && scopeFedId != null) {
+                filtered = filtered.filter(e =>
+                    eventBelongsToFederation(e, clubesForFilter, scopeFedId, { trustApiScope: true })
+                );
+            }
+
             setEventos(filtered);
         } catch (e) {
             showAlert('error', 'Error al cargar eventos');
@@ -134,8 +155,10 @@ const GestionEventosSection = () => {
         try {
             const data = await ClubService.getAll();
             setClubes(data);
+            return data;
         } catch (e) {
             console.error("Error al cargar clubes", e);
+            return [];
         }
     };
 

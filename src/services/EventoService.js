@@ -1,15 +1,34 @@
 import api from './api';
 import { ENDPOINTS } from '../utils/constants';
 
+const buildListUrl = (base, { clubId = null, federacionId = null } = {}) => {
+    const params = new URLSearchParams();
+    if (federacionId != null && federacionId !== '') params.set('federacionId', String(federacionId));
+    if (clubId != null && clubId !== '') params.set('clubId', String(clubId));
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+};
+
+/** @param {number|string|null} [clubOrFedId] clubId legacy, o federacionId si options.asFederation */
 const EventoService = {
-    getAll: async (clubId = null) => {
-        const url = clubId ? `${ENDPOINTS.EVENTOS.BASE}?clubId=${clubId}` : ENDPOINTS.EVENTOS.BASE;
+    getAll: async (clubOrFedId = null, options = {}) => {
+        const asFederation = options.asFederation === true
+            || options.federacionId != null
+            || (clubOrFedId != null && options.scope === 'federation');
+        const federacionId = options.federacionId ?? (asFederation ? clubOrFedId : null);
+        const clubId = asFederation ? (options.clubId ?? null) : clubOrFedId;
+        const url = buildListUrl(ENDPOINTS.EVENTOS.BASE, { clubId, federacionId });
         const response = await api.get(url);
         return response.data;
     },
 
-    getProximos: async (clubId = null) => {
-        const url = clubId ? `${ENDPOINTS.EVENTOS.PROXIMOS}?clubId=${clubId}` : ENDPOINTS.EVENTOS.PROXIMOS;
+    getProximos: async (clubOrFedId = null, options = {}) => {
+        const asFederation = options.asFederation === true
+            || options.federacionId != null
+            || (clubOrFedId != null && options.scope === 'federation');
+        const federacionId = options.federacionId ?? (asFederation ? clubOrFedId : null);
+        const clubId = asFederation ? (options.clubId ?? null) : clubOrFedId;
+        const url = buildListUrl(ENDPOINTS.EVENTOS.PROXIMOS, { clubId, federacionId });
         const response = await api.get(url);
         return response.data;
     },

@@ -32,7 +32,9 @@ const EventosSection = ({ pagoAfiliacionAlDia = true }) => {
             const queryParams = new URLSearchParams(window.location.search);
             const fedId = queryParams.get('fedId');
             
-            const data = await EventoService.getAll(fedId);
+            const data = fedId
+                ? await EventoService.getAll(fedId, { asFederation: true })
+                : await EventoService.getAll();
             const filtered = user?.rol === 'SuperAdmin' ? data : data.filter(e => !e.nombre.toLowerCase().includes('control'));
             setEventos(filtered);
         } catch (error) {
