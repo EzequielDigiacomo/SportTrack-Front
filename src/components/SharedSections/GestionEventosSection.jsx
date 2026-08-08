@@ -24,6 +24,7 @@ import { getEventFederationName, getUserFederationId, eventBelongsToFederation, 
 import {
     MODALIDAD_VELOCIDAD,
     isModalidadMaraton,
+    resolveIsMaratonEvent,
     isDistanciaMaratonEligible,
     isCategoriaMaratonEligible,
 } from '../../utils/pruebaLabelUtils';
@@ -197,14 +198,32 @@ const GestionEventosSection = () => {
         }
     };
 
-    const handleOpenDashboard = (evento) => {
+    const handleOpenDashboard = async (evento) => {
         setSelectedEvento(evento);
         window.history.pushState({ panel: 'dashboard', evento }, '');
         setView('dashboard');
+        try {
+            const fresh = await EventoService.getById(evento.id);
+            if (fresh) setSelectedEvento(prev => ({ ...prev, ...fresh }));
+        } catch (e) {
+            console.warn('No se pudo refrescar el evento', e);
+        }
     };
 
-    const handleOpenConfig = () => {
-        window.history.pushState({ panel: 'config', evento: selectedEvento }, '');
+    const handleOpenConfig = async () => {
+        let eventoForModal = selectedEvento;
+        try {
+            if (selectedEvento?.id) {
+                const fresh = await EventoService.getById(selectedEvento.id);
+                if (fresh) {
+                    eventoForModal = { ...selectedEvento, ...fresh };
+                    setSelectedEvento(eventoForModal);
+                }
+            }
+        } catch (e) {
+            console.warn('No se pudo refrescar el evento antes de configurar', e);
+        }
+        window.history.pushState({ panel: 'config', evento: eventoForModal }, '');
         setShowConfigModal(true);
     };
 
@@ -260,7 +279,8 @@ const GestionEventosSection = () => {
 
         const payload = {
             ...form,
-            clubId: form.clubId === "" ? null : parseInt(form.clubId)
+            clubId: form.clubId === "" ? null : parseInt(form.clubId),
+            modalidad: isModalidadMaraton(form.modalidad) ? 'Maraton' : 'Velocidad',
         };
 
         try {
@@ -592,6 +612,9 @@ const GestionEventosSection = () => {
                                     <Calendar size={16} /> {new Date(selectedEvento.fecha).toLocaleDateString('es-AR')} | <MapPin size={16} /> {selectedEvento.ubicacion || 'Sin ubicación'}
                                 </p>
                                 <div className="dashboard-chips">
+                                    {resolveIsMaratonEvent(selectedEvento) && (
+                                        <span className="chip" style={{ background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>Maratón</span>
+                                    )}
                                     {selectedEvento.restringirSoloCategoriaPropia && <span className="chip chip-ecu-yellow">Categoría Única</span>}
                                     {selectedEvento.permitirSub23EnSenior && <span className="chip chip-ecu-blue">S23 en Senior</span>}
                                     {selectedEvento.permitirMasterBajarASenior && <span className="chip chip-ecu-red">Master en Senior</span>}

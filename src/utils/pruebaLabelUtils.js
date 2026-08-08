@@ -38,7 +38,27 @@ export function isCategoriaMaratonEligible(id) {
 }
 
 export function isModalidadMaraton(modalidad) {
-    return String(modalidad || '').toLowerCase() === 'maraton';
+    const v = String(modalidad || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    return v === 'maraton';
+}
+
+/**
+ * Detecta Maratón por modalidad o, en eventos viejos, por distancias solo ≥1000m.
+ */
+export function resolveIsMaratonEvent(evento) {
+    if (!evento) return false;
+    if (isModalidadMaraton(evento.modalidad ?? evento.Modalidad)) return true;
+
+    const dists = String(evento.distanciasHabilitadas ?? evento.DistanciasHabilitadas ?? '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+    if (!dists.length) return false;
+    return dists.every(id => isDistanciaMaratonEligible(id));
 }
 
 export const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
