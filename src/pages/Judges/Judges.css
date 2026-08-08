@@ -375,6 +375,39 @@
     text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
+.finisher-timers-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.finisher-wall-clock {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    color: #f8fafc;
+}
+
+.finisher-wall-clock-icon {
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.finisher-wall-clock-time {
+    font-size: 1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.4px;
+    font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+    white-space: nowrap;
+}
+
 .main-timer.running {
     color: #10b981;
     text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
@@ -2207,11 +2240,26 @@
     pointer-events: none;
 }
 
+.cronograma-toggle-left,
+.cronograma-toggle-right {
+    flex-shrink: 0;
+    z-index: 1;
+}
+
 .cronograma-toggle-bar .starter-live-clock {
     margin: 0;
 }
 
 @media (max-width: 1000px) {
+    .finisher-wall-clock {
+        display: none;
+    }
+
+    .finisher-timers-block {
+        align-items: center;
+        width: 100%;
+    }
+
     .cronograma-toggle-center .starter-live-clock {
         padding: 4px 8px;
         gap: 6px;
@@ -2220,6 +2268,13 @@
     .cronograma-toggle-center .starter-live-clock-time {
         font-size: 0.95rem;
         letter-spacing: 0.04em;
+    }
+}
+
+@media (min-width: 1001px) {
+    /* Sidebar angosto: el reloj va en el header, no encima de "Cronograma" */
+    .finisher-dashboard .cronograma-toggle-center {
+        display: none;
     }
 }
 

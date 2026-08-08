@@ -916,8 +916,17 @@ const FinisherDashboard = () => {
                         </div>
                     )}
                 </div>
-                <div className={`main-timer ${isRaceRunning ? 'running' : ''}`}>
-                    {formatTimer(elapsedTime)}
+                <div className="finisher-timers-block">
+                    <div
+                        className="finisher-wall-clock"
+                        title="Hora del sistema (sincronizada con el servidor)"
+                    >
+                        <Clock size={14} className="finisher-wall-clock-icon" aria-hidden />
+                        <time className="finisher-wall-clock-time" dateTime={liveClock}>{liveClock}</time>
+                    </div>
+                    <div className={`main-timer ${isRaceRunning ? 'running' : ''}`}>
+                        {formatTimer(elapsedTime)}
+                    </div>
                 </div>
                 {startReceiveLagSec != null && startReceiveLagSec >= 1 && (
                     <div className="start-lag-chip" title="El reloj se sincronizó al instante del click del largador">
