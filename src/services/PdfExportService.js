@@ -460,6 +460,51 @@ const PdfExportService = {
         doc.save(`${eventoInfo.nombre}_Programa_Provisorio.pdf`.replace(/\s+/g, '_'));
     },
 
+    /**
+     * Programa provisorio Maratón (largadas combinadas).
+     * rows: salida de buildMaratonProgramaRows — sin columna de inscritos.
+     */
+    exportProgramaMaraton: async (rows, eventoOrName) => {
+        if (!rows?.length) return;
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const body = rows.map((row, idx) => [
+            idx + 1,
+            row.hora || '--:--',
+            row.isGrupo ? `${row.catLabel} (combinada)` : (row.catLabel || '-'),
+            row.botLabel || '-',
+            row.distLabel || '-',
+            row.sexLabel || '-',
+        ]);
+
+        autoTable(doc, {
+            startY: BAND_H + MARGIN,
+            head: [['#', 'Hora', 'Categoría', 'Bote', 'Dist.', 'Rama']],
+            body,
+            ...tableStyles(false),
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 11 },
+                1: { halign: 'center', cellWidth: 22, fontStyle: 'bold' },
+                2: { cellWidth: 62 },
+                3: { halign: 'center', cellWidth: 28 },
+                4: { halign: 'center', cellWidth: 22 },
+                5: { cellWidth: 40 },
+            },
+            ...tableLayout(),
+        });
+
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            drawBand(doc, eventoInfo, 'Programa Provisorio · Maratón', i, totalPages, logo);
+            drawFooter(doc, eventoInfo);
+        }
+
+        doc.save(`${eventoInfo.nombre}_Programa_Provisorio_Maraton.pdf`.replace(/\s+/g, '_'));
+    },
+
     /** General Event Schedule overview (without start lists/competitors) */
     exportRegattaSchedule: async (cronograma, eventoOrName) => {
         if (!cronograma?.length) return;

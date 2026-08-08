@@ -187,7 +187,7 @@ const ConfigurarMaratonModal = ({ evento, onClose, onRefresh }) => {
 
     return (
         <div className="admin-modal-overlay">
-            <div className="admin-modal glass-effect fade-in">
+                <div className="admin-modal glass-effect fade-in admin-modal--maraton">
                 <div className="modal-header">
                     <h3>
                         Configurar Evento - {evento.nombre}
@@ -227,6 +227,7 @@ const ConfigurarMaratonModal = ({ evento, onClose, onRefresh }) => {
                             filtroDia={filtroDia}
                             setFiltroDia={setFiltroDia}
                             loading={loading}
+                            evento={evento}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
                         />

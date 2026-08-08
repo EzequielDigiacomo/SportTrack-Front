@@ -26,6 +26,45 @@
     /* Evita que los hijos estiren el modal más allá de su width */
 }
 
+/* Maratón: más ancho para que categoría/bote/rama no doblen renglón */
+.admin-modal--maraton {
+    width: min(98vw, 1580px);
+    max-width: 1580px;
+}
+
+.admin-modal--maraton .admin-grid-layout {
+    grid-template-columns: 320px minmax(0, 1fr);
+}
+
+.admin-modal--maraton .table-container-mini {
+    overflow-x: auto;
+}
+
+.admin-modal--maraton .admin-table.mini {
+    min-width: 920px;
+    width: 100%;
+}
+
+.admin-modal--maraton .admin-table.mini th,
+.admin-modal--maraton .admin-table.mini td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.admin-modal--maraton .badge-chips {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.admin-modal--maraton .badge-outline,
+.admin-modal--maraton .badge-bote,
+.admin-modal--maraton .badge-sexo,
+.admin-modal--maraton .badge-distancia {
+    white-space: nowrap;
+}
+
 .modal-header {
     padding: var(--spacing-lg);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
