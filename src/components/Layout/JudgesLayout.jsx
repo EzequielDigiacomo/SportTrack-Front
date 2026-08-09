@@ -174,8 +174,8 @@ const JudgesLayout = ({ children }) => {
                             </button>
 
                             <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
-                                <button className="super-quick-logout glass-effect" onClick={handleLogout} title="Cerrar Sesión">
-                                    <LogOut size={20} color="var(--color-error)" />
+                                <button type="button" className="super-quick-logout" onClick={handleLogout} title="Cerrar Sesión" aria-label="Cerrar Sesión">
+                                    <LogOut size={22} strokeWidth={2.25} />
                                 </button>
                             </div>
                         </>

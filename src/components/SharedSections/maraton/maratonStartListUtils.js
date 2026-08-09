@@ -9,6 +9,7 @@ import InscripcionService from '../../../services/InscripcionService';
 import FaseService from '../../../services/FaseService';
 import ResultadoService from '../../../services/ResultadoService';
 import ParticipanteService from '../../../services/ParticipanteService';
+import { computePositionsForPhase } from '../../../utils/resultadosHelpers';
 
 /** Agrupa EventoPrueba en opciones de selector de largada. */
 export function buildMaratonLargadaOptions(pruebas = []) {
@@ -158,6 +159,7 @@ export function groupMaratonResultadosByClasificacion(fase, pruebas = []) {
                 categoriaLabel: ep ? getCategoriaLabelFromEventoPrueba(ep) : '—',
                 sexoLabel: ep ? getSexoLabelFromEventoPrueba(ep) : '—',
                 boteLabel: ep ? getBoteLabelFromEventoPrueba(ep) : '—',
+                eventoPrueba: ep || null,
                 resultados: [],
             });
         }
@@ -171,9 +173,66 @@ export function groupMaratonResultadosByClasificacion(fase, pruebas = []) {
             faseVirtual: {
                 ...fase,
                 nombreFase: g.title,
+                prueba: g.eventoPrueba || fase.prueba,
                 resultados: g.resultados,
             },
         }));
+}
+
+/**
+ * Expande fases Maratón a una grilla PDF por Categoría · Sexo · Bote
+ * (mismo criterio que Live / MaratonResultadosGrids), recalculando posiciones por grupo.
+ */
+export function expandFasesMaratonByClasificacion(fases = [], pruebas = [], inscripcionEpMap = null) {
+    const out = [];
+
+    for (const fase of fases || []) {
+        const enrichedResultados = (fase.resultados || []).map(r => {
+            if (r.eventoPruebaId || r.EventoPruebaId) return r;
+            const inscId = String(r.inscripcionId || r.InscripcionId || '');
+            const epId = inscId
+                ? (inscripcionEpMap?.get?.(inscId) ?? inscripcionEpMap?.[inscId])
+                : null;
+            return epId ? { ...r, eventoPruebaId: epId } : r;
+        });
+
+        const groups = groupMaratonResultadosByClasificacion(
+            { ...fase, resultados: enrichedResultados },
+            pruebas
+        );
+
+        if (!groups.length) {
+            out.push(fase);
+            continue;
+        }
+
+        const originalNombre = fase.nombreFase || fase.NombreFase || '';
+        const distLabel = (() => {
+            const p = fase?.prueba?.prueba || fase?.prueba || groups[0]?.eventoPrueba?.prueba;
+            if (!p) return '';
+            return DISTANCIA_NAMES[p.distancia?.id || p.distanciaId]
+                || (p.distancia?.metros ? `${p.distancia.metros}m` : '')
+                || p.distancia?.descripcion
+                || '';
+        })();
+
+        for (const g of groups) {
+            const posMap = computePositionsForPhase(g.resultados);
+            const resultados = g.resultados.map(r => {
+                const pos = posMap[r.id] ?? posMap[String(r.id)];
+                return pos != null ? { ...r, posicion: pos } : r;
+            });
+
+            out.push({
+                ...g.faseVirtual,
+                resultados,
+                nombreFase: g.title,
+                _pdfSubtitleOverride: [originalNombre, distLabel].filter(Boolean).join('  ·  '),
+            });
+        }
+    }
+
+    return out;
 }
 
 /** Fisher–Yates: números 1..N permutados. */

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatRaceTime, isMeaningfulRaceTime } from '../utils/raceTimeUtils';
 import { getPdfLogo, fitLogoDimensions } from '../utils/pdfLogoLoader';
+import { expandFasesMaratonByClasificacion } from '../components/SharedSections/maraton/maratonStartListUtils';
 
 // ─── Lookup tables ────────────────────────────────────────────────────────────
 const CATEGORIA_NAMES = {
@@ -338,7 +339,9 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
 
         // Title block
         const timeStr    = getTimeStr(fase);
-        const pruebaInfo = getPruebaInfo(fase);
+        const pruebaInfo = fase._pdfSubtitleOverride != null
+            ? fase._pdfSubtitleOverride
+            : getPruebaInfo(fase);
         const line1      = `#${globalIdx}  ${timeStr} hs  —  ${fase.nombreFase}`;
         drawGridTitle(doc, line1, pruebaInfo, currentY);
 
@@ -363,35 +366,51 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
 };
 
 
+/** Expande fases Maratón a tablas por Categoría · Sexo · Bote cuando corresponde. */
+const resolveFasesForResultsExport = (fases, options = {}) => {
+    if (!options.isMaraton) return fases || [];
+    return expandFasesMaratonByClasificacion(
+        fases || [],
+        options.pruebas || [],
+        options.inscripcionEpMap || null
+    );
+};
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 const PdfExportService = {
 
     /** Single fase — results format */
-    exportFase: async (fase, eventoOrName, pruebaNombre) => {
+    exportFase: async (fase, eventoOrName, pruebaNombre, options = {}) => {
         const logo = await getPdfLogo();
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, [fase], eventoInfo, pruebaNombre, fase.nombreFase, 'results', logo);
+        const fases = resolveFasesForResultsExport([fase], options);
+        const subtitle = options.isMaraton && fases.length > 1
+            ? 'Clasificaciones'
+            : (fase.nombreFase || fases[0]?.nombreFase);
+        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, subtitle, 'results', logo);
         doc.save(`${eventoInfo.nombre}_${fase.nombreFase}_Resultados.pdf`.replace(/\s+/g, '_'));
     },
 
     /** Group of fases (e.g. all heats) — results format */
-    exportGrupo: async (fases, eventoOrName, pruebaNombre, grupoLabel) => {
+    exportGrupo: async (fases, eventoOrName, pruebaNombre, grupoLabel, options = {}) => {
         if (!fases?.length) return;
         const logo = await getPdfLogo();
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, grupoLabel, 'results', logo);
+        const fasesExport = resolveFasesForResultsExport(fases, options);
+        renderStackedPages(doc, fasesExport, eventoInfo, pruebaNombre, grupoLabel, 'results', logo);
         doc.save(`${eventoInfo.nombre}_${grupoLabel}_Resultados.pdf`.replace(/\s+/g, '_'));
     },
 
     /** All fases of a prueba — results format */
-    exportPrueba: async (fases, eventoOrName, pruebaNombre) => {
+    exportPrueba: async (fases, eventoOrName, pruebaNombre, options = {}) => {
         if (!fases?.length) return;
         const logo = await getPdfLogo();
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, 'Resultados Completos', 'results', logo);
+        const fasesExport = resolveFasesForResultsExport(fases, options);
+        renderStackedPages(doc, fasesExport, eventoInfo, pruebaNombre, 'Resultados Completos', 'results', logo);
         doc.save(`${eventoInfo.nombre}_${pruebaNombre}_Completo.pdf`.replace(/\s+/g, '_'));
     },
 

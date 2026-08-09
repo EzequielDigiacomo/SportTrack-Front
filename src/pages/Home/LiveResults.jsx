@@ -399,6 +399,7 @@ const LiveResults = () => {
                 resultados: resultados
                     .filter(r => (r.faseId || r.FaseId) === fase.id)
                     .map(r => ({
+                        id: r.id || r.Id,
                         posicion: r.posicion || r.Posicion,
                         carril: r.carril || r.Carril,
                         participanteNombre: r.participanteNombre || r.ParticipanteNombre,
@@ -406,6 +407,9 @@ const LiveResults = () => {
                         clubSigla: r.clubSigla || r.ClubSigla,
                         tiempoOficial: r.tiempoOficial || r.TiempoOficial,
                         tripulantes: r.tripulantes || [],
+                        estado: r.estado || r.Estado,
+                        eventoPruebaId: r.eventoPruebaId || r.EventoPruebaId,
+                        inscripcionId: r.inscripcionId || r.InscripcionId,
                     })),
             });
 
@@ -432,7 +436,16 @@ const LiveResults = () => {
             if (!fasesToExport.length) { addToast('warning', 'No hay fases para el filtro seleccionado'); return; }
 
             const enriched = fasesToExport.map(enrichFase);
-            await PdfExportService.exportGrupo(enriched, eventoExport, pruebaNombre, mode === 'current' ? enriched[0]?.nombreFase : mode);
+            const maratonOpts = isMaratonEvent
+                ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
+                : {};
+            await PdfExportService.exportGrupo(
+                enriched,
+                eventoExport,
+                pruebaNombre,
+                mode === 'current' ? enriched[0]?.nombreFase : mode,
+                maratonOpts
+            );
         } catch (err) {
             console.error('Error generating PDF:', err);
             addToast('error', 'Error al generar el PDF.');

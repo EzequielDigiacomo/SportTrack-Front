@@ -585,18 +585,27 @@ const etiquetasEtapas = Object.keys(agrupadoPorEtapa);
 
 const handleExportFase = async () => {
     if (!faseSeleccionada) return;
-    await PdfExportService.exportFase(faseSeleccionada, eventoActual || eventoNombre, pruebaNombre);
+    const maratonOpts = isMaratonEvent
+        ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
+        : {};
+    await PdfExportService.exportFase(faseSeleccionada, eventoActual || eventoNombre, pruebaNombre, maratonOpts);
     setShowPdfMenu(false);
 };
 
 const handleExportGrupo = async (etapa) => {
     const fasesDelGrupo = agrupadoPorEtapa[etapa] || [];
-    await PdfExportService.exportGrupo(fasesDelGrupo, eventoActual || eventoNombre, pruebaNombre, etapa);
+    const maratonOpts = isMaratonEvent
+        ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
+        : {};
+    await PdfExportService.exportGrupo(fasesDelGrupo, eventoActual || eventoNombre, pruebaNombre, etapa, maratonOpts);
     setShowPdfMenu(false);
 };
 
 const handleExportPrueba = async () => {
-    await PdfExportService.exportPrueba(fases, eventoActual || eventoNombre, pruebaNombre);
+    const maratonOpts = isMaratonEvent
+        ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
+        : {};
+    await PdfExportService.exportPrueba(fases, eventoActual || eventoNombre, pruebaNombre, maratonOpts);
     setShowPdfMenu(false);
 };
 

@@ -193,20 +193,21 @@
     font-size: 1.6rem;
 }
 
-/* FLOATING ACTIONS TOP RIGHT */
+/* FLOATING ACTIONS TOP RIGHT — siempre visible, por encima del contenido */
 .top-right-actions {
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 101;
+    z-index: 5000;
     display: flex;
     gap: var(--spacing-sm);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    pointer-events: auto;
+    isolation: isolate;
 }
 
-/* Esconder si el sidebar está completamente abierto (opcional, aunque puede quedar visible) */
 .top-right-actions.active {
-    opacity: 0.5;
+    opacity: 1;
 }
 
 .super-quick-logout {
@@ -216,17 +217,27 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-md);
-    background: rgba(220, 38, 38, 0.15);
-    border: 1.5px solid rgba(220, 38, 38, 0.45);
+    background: rgba(185, 28, 28, 0.95) !important;
+    border: 1.5px solid #f87171 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.15);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
     transition: all 0.2s;
+    opacity: 1 !important;
+    color: #fff;
+}
+
+.super-quick-logout svg {
+    color: #fff !important;
+    stroke: #fff !important;
+    opacity: 1 !important;
 }
 
 .super-quick-logout:hover {
-    background: rgba(220, 38, 38, 0.30);
-    border-color: rgba(220, 38, 38, 0.7);
-    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.35);
+    background: #dc2626 !important;
+    border-color: #fecaca !important;
+    box-shadow: 0 6px 22px rgba(220, 38, 38, 0.55);
     transform: scale(1.05);
 }
 
@@ -332,11 +343,12 @@
 
 .sidebar-logout:hover { background: rgba(220, 38, 38, 0.25); border-color: rgba(220, 38, 38, 0.6); }
 
-/* MAIN CONTENT */
+/* MAIN CONTENT — reserva espacio para el logout fijo (evita que botones lo tapen) */
 .admin-main {
     flex: 1;
     margin-left: 260px;
     padding: var(--spacing-xl) var(--spacing-2xl);
+    padding-right: max(var(--spacing-2xl), 5.5rem);
     min-height: 100vh;
     transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -453,7 +465,11 @@
 
 @media (max-width: 1024px) {
     .admin-sidebar { width: 220px; }
-    .admin-main { margin-left: 220px; padding: var(--spacing-lg); }
+    .admin-main {
+        margin-left: 220px;
+        padding: var(--spacing-lg);
+        padding-right: max(var(--spacing-lg), 5.5rem);
+    }
 }
 
 @media (max-width: 768px) {
@@ -491,6 +507,7 @@
     }
     .admin-content-wrapper {
         padding: 0 var(--spacing-lg);
+        padding-right: max(var(--spacing-lg), 5.5rem);
         width: 100%;
         box-sizing: border-box;
     }
@@ -507,6 +524,7 @@
     .sidebar-trigger-favicon, .top-right-actions {
         position: fixed !important;
         top: 20px;
+        z-index: 5000;
     }
 }
 
