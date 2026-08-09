@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import EventoService from '../../services/EventoService'
+import SaaSService from '../../services/SaaSService'
+import { applyCatalogPrices } from '../../utils/plansCatalogDisplay'
 import logo from '../../assets/logo-sporttrack.png'
 import './Home.css'
 import { 
@@ -11,8 +13,8 @@ import {
 } from 'lucide-react'
 import WorldGlobe from '../../components/Common/WorldGlobe'
 
-// Estructura completa de planes unificados
-const plansData = {
+// Estructura completa de planes unificados (precios/límites se sobrescriben desde el catálogo SaaS)
+const plansDataBase = {
   sigdef: {
     title: "Solo SIGDEF (Gestión)",
     subtitle: "Módulo Administrativo y Padrón Federativo",
@@ -238,6 +240,7 @@ function Home() {
     // Estados para la comparación de planes y contacto
     const [selectedTab, setSelectedTab] = useState('sporttrack') // SportTrack por defecto para esta landing
     const [nivelInteres, setNivelInteres] = useState('')
+    const [plansData, setPlansData] = useState(plansDataBase)
 
     useEffect(() => {
         setLoading(true)
@@ -249,6 +252,18 @@ function Home() {
         })
             .catch(() => { })
             .finally(() => setLoading(false))
+    }, [])
+
+    useEffect(() => {
+        let cancelled = false
+        SaaSService.getPlanes()
+            .then((planes) => {
+                if (!cancelled) setPlansData(applyCatalogPrices(plansDataBase, planes))
+            })
+            .catch((err) => {
+                console.warn('No se pudieron cargar precios del catálogo; se usan valores locales.', err)
+            })
+        return () => { cancelled = true }
     }, [])
 
     const handleClubAccess = () => {
