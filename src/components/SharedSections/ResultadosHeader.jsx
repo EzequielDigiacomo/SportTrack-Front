@@ -33,7 +33,6 @@ const ResultadosHeader = ({
     cronograma = [],
     onSelectRegata,
     selectedFaseId,
-    isAdmin = true,
     isMaraton = false,
 }) => {
     const CATEGORIA_COLORS = {
@@ -90,72 +89,72 @@ const ResultadosHeader = ({
                 </div>
 
                 {/* Selector: Largada (Maratón) o Prueba (Velocidad) */}
-                {isAdmin && (
-                    <div className="form-group">
-                        <label className="resultados-field-label">
-                            <Search size={14} className="text-secondary" />
-                            {isMaraton ? 'Largada' : 'Prueba / Categoría'}
-                        </label>
-                        {isMaraton ? (
-                            <select
-                                value={selectedMaratonLargadaKey}
-                                onChange={(e) => {
-                                    const opt = maratonLargadas.find(o => o.key === e.target.value);
-                                    if (opt) setSelectedPrueba(String(opt.representativeId));
-                                    else setSelectedPrueba('');
-                                }}
-                                className="admin-select"
-                                style={{ borderLeft: '3px solid var(--color-primary)' }}
-                            >
-                                <option value="">-- Seleccione una largada --</option>
-                                {maratonLargadas.map(o => (
-                                    <option key={o.key} value={o.key}>{o.label}</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <select 
-                                value={selectedPrueba} 
-                                onChange={(e) => setSelectedPrueba(e.target.value)}
-                                className="admin-select"
-                                style={{ 
-                                    borderLeft: `3px solid ${catColor.text}`,
-                                    color: catColor.text
-                                }}
-                            >
-                                <option value="">-- Seleccione una Prueba --</option>
-                                {pruebas.map(p => {
-                                    const inner = p.prueba || p;
-                                    const catId = inner.categoria?.id || inner.categoriaId;
-                                    const botId = inner.bote?.id || inner.boteId;
-                                    const distId = inner.distancia?.id || inner.distanciaId;
+                <div className="form-group">
+                    <label className="resultados-field-label">
+                        <Search size={14} className="text-secondary" />
+                        {isMaraton ? 'Largada' : 'Prueba / Categoría'}
+                    </label>
+                    {isMaraton ? (
+                        <select
+                            value={selectedMaratonLargadaKey}
+                            onChange={(e) => {
+                                const opt = maratonLargadas.find(o => o.key === e.target.value);
+                                if (opt) setSelectedPrueba(String(opt.representativeId));
+                                else setSelectedPrueba('');
+                            }}
+                            className="admin-select"
+                            style={{ borderLeft: '3px solid var(--color-primary)' }}
+                            disabled={!selectedEvento}
+                        >
+                            <option value="">-- Seleccione una largada --</option>
+                            {maratonLargadas.map(o => (
+                                <option key={o.key} value={o.key}>{o.label}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <select 
+                            value={selectedPrueba} 
+                            onChange={(e) => setSelectedPrueba(e.target.value)}
+                            className="admin-select"
+                            disabled={!selectedEvento}
+                            style={{ 
+                                borderLeft: `3px solid ${catColor.text}`,
+                                color: catColor.text
+                            }}
+                        >
+                            <option value="">-- Seleccione una Prueba --</option>
+                            {pruebas.map(p => {
+                                const inner = p.prueba || p;
+                                const catId = inner.categoria?.id || inner.categoriaId;
+                                const botId = inner.bote?.id || inner.boteId;
+                                const distId = inner.distancia?.id || inner.distanciaId;
 
-                                    const catName = CATEGORIA_NAMES[catId] || inner.categoria?.nombre || 'Cat';
-                                    const botName = BOTE_NAMES[botId] || inner.bote?.tipo || 'Bote';
-                                    const distName = DISTANCIA_NAMES[distId] || (inner.distancia?.metros ? `${inner.distancia.metros}m` : '?m');
+                                const catName = CATEGORIA_NAMES[catId] || inner.categoria?.nombre || 'Cat';
+                                const botName = BOTE_NAMES[botId] || inner.bote?.tipo || 'Bote';
+                                const distName = DISTANCIA_NAMES[distId] || (inner.distancia?.metros ? `${inner.distancia.metros}m` : '?m');
 
-                                    // Calcular el número de regata secuencial en el cronograma
-                                    const raceIndices = [];
-                                    (cronograma || []).forEach((f, idx) => {
-                                        const pid = f.eventoPruebaId || f.EventoPruebaId;
-                                        if (String(pid) === String(p.id)) {
-                                            raceIndices.push(idx + 1);
-                                        }
-                                    });
-                                    const minRaceNum = raceIndices.length > 0 ? Math.min(...raceIndices) : null;
-                                    const prefix = minRaceNum ? `#${minRaceNum} - ` : '';
+                                // Calcular el número de regata secuencial en el cronograma
+                                const raceIndices = [];
+                                (cronograma || []).forEach((f, idx) => {
+                                    const pid = f.eventoPruebaId || f.EventoPruebaId;
+                                    if (String(pid) === String(p.id)) {
+                                        raceIndices.push(idx + 1);
+                                    }
+                                });
+                                const minRaceNum = raceIndices.length > 0 ? Math.min(...raceIndices) : null;
+                                const prefix = minRaceNum ? `#${minRaceNum} - ` : '';
 
-                                    const label = `${prefix}${p.nombre || `${catName} - ${botName} - ${distName}`}`;
-                                    
-                                    return (
-                                        <option key={p.id} value={p.id} style={{ color: CATEGORIA_COLORS[catId]?.text || 'white' }}>
-                                            {label}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                        )}
-                    </div>
-                )}
+                                const label = `${prefix}${p.nombre || `${catName} - ${botName} - ${distName}`}`;
+                                
+                                return (
+                                    <option key={p.id} value={p.id} style={{ color: CATEGORIA_COLORS[catId]?.text || 'white' }}>
+                                        {label}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    )}
+                </div>
 
                 {/* Regata Selector — solo pista (Maratón no usa heats/carriles) */}
                 {!isMaraton && (

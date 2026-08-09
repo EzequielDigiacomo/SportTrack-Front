@@ -723,7 +723,6 @@ const connectedStarter = activeJudges.find(j => {
             cronograma={cronograma}
             onSelectRegata={handleSelectRegata}
             selectedFaseId={selectedFaseIdForHeader}
-            isAdmin={isAdmin}
             isMaraton={isMaratonEvent}
         />
 
@@ -1072,18 +1071,17 @@ const connectedStarter = activeJudges.find(j => {
                 {currentTab === 'resultados' && (
                     <div className="resultados-view fade-in">
                         <div className="action-bar-premium glass-effect mb-md" style={{ padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div className="action-bar-left">
                                 <div className="info-badge-modern">
                                     <Trophy size={14} />
                                     <span><strong>{fases.length}</strong> {fases.length === 1 ? 'Fase' : 'Fases'}</span>
                                 </div>
                                 {fases.length > 0 && (
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div className="action-bar-fase-controls">
                                         <select
-                                            className="admin-select compact"
+                                            className="admin-select compact action-bar-fase-select"
                                             value={filtroVisualFase}
                                             onChange={(e) => setFiltroVisualFase(e.target.value)}
-                                            style={{ minWidth: '180px' }}
                                         >
                                             <option value="Todas">— Seleccionar Fase —</option>
                                             {fases.map(f => (
@@ -1119,7 +1117,7 @@ const connectedStarter = activeJudges.find(j => {
                                 )}
                             </div>
 
-                            <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                            <div className="action-bar-right">
                                 {fases.length > 0 && (isAdmin || viewMode === 'tiempos' || viewMode === 'resultados') && promotionStatus.showButton && (
                                     <button
                                         className="btn-admin-action success"

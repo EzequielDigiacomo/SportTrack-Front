@@ -73,6 +73,33 @@
     min-height: 56px;
 }
 
+.action-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.action-bar-fase-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.action-bar-fase-select {
+    min-width: 180px;
+}
+
+.action-bar-right {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
 .info-badge-modern {
     display: flex;
     align-items: center;
@@ -949,12 +976,43 @@
         padding: 12px !important;
     }
 
+    .action-bar-left,
+    .action-bar-right,
     .action-bar-premium > div {
         width: 100% !important;
-        justify-content: space-between !important;
+    }
+
+    .action-bar-left {
+        flex-wrap: wrap;
+        gap: 8px !important;
+        align-items: center !important;
+    }
+
+    .action-bar-fase-controls {
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+        gap: 6px !important;
+        max-width: 100%;
+    }
+
+    .action-bar-fase-select {
+        min-width: 0 !important;
+        flex: 1 1 140px;
+        max-width: 100%;
+    }
+
+    .action-bar-fase-controls .btn-admin-icon {
+        flex-shrink: 0;
+    }
+
+    .action-bar-fase-controls .fase-status-badge {
+        flex: 0 0 auto;
+        padding: 5px 10px;
+        font-size: 0.72rem;
     }
 
     /* Stack buttons below the selector */
+    .action-bar-right,
     .action-bar-premium > div:last-child {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
@@ -1388,8 +1446,37 @@
         height: auto !important;
     }
 
+    .control-mobile-ready .action-bar-left {
+        flex-wrap: wrap;
+        gap: 8px !important;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .control-mobile-ready .action-bar-fase-controls {
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+        gap: 6px !important;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .control-mobile-ready .action-bar-fase-select {
+        min-width: 0 !important;
+        flex: 1 1 140px;
+        width: auto;
+        max-width: 100%;
+    }
+
+    .control-mobile-ready .action-bar-fase-controls .fase-status-badge {
+        flex: 0 0 auto;
+        padding: 5px 10px;
+        font-size: 0.72rem;
+    }
+
     .control-mobile-ready .info-badge-modern {
         font-size: 0.8rem;
+        flex-shrink: 0;
     }
 
     .control-mobile-ready .promotion-status-banner {
