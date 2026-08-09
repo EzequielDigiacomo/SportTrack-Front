@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, RefreshCw, Users, Eye, Shield, Trophy } from 'lucide-react';
+import { Activity, RefreshCw, Users, Eye, Shield, Trophy, Settings2 } from 'lucide-react';
 import AudienceService from '../../../services/AudienceService';
 import { useToast } from '../../../context/ToastContext';
 import './AudiencePeaksSection.css';
@@ -21,16 +21,24 @@ const AudiencePeaksSection = () => {
     const { addToast } = useToast();
     const [live, setLive] = useState(null);
     const [peaks, setPeaks] = useState([]);
+    const [capacity, setCapacity] = useState(null);
+    const [customValue, setCustomValue] = useState(200);
+    const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const load = useCallback(async () => {
         try {
-            const [liveData, peaksData] = await Promise.all([
+            const [liveData, peaksData, capacityData] = await Promise.all([
                 AudienceService.getLive(),
                 AudienceService.getPeaks(150),
+                AudienceService.getCapacity(),
             ]);
             setLive(liveData || null);
             setPeaks(Array.isArray(peaksData) ? peaksData : []);
+            setCapacity(capacityData || null);
+            if (capacityData?.softCapacity) {
+                setCustomValue(capacityData.softCapacity);
+            }
         } catch (err) {
             console.error(err);
             addToast(err?.message || 'No se pudo cargar la audiencia', 'error');
@@ -45,11 +53,31 @@ const AudiencePeaksSection = () => {
         return () => clearInterval(id);
     }, [load]);
 
+    const applyPreset = async (preset) => {
+        setSaving(true);
+        try {
+            const payload = preset.isCustom
+                ? { presetId: 'custom', softCapacity: Number(customValue) || 1 }
+                : { presetId: preset.id };
+            const updated = await AudienceService.updateCapacity(payload);
+            setCapacity(updated);
+            addToast(`Techo de control: ${updated.softCapacity} (${updated.planLabel})`, 'success');
+            const liveData = await AudienceService.getLive();
+            setLive(liveData);
+        } catch (err) {
+            console.error(err);
+            addToast(err?.message || 'No se pudo guardar la configuración', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     if (loading && !live) {
         return <div className="loader-container"><div className="loader" /></div>;
     }
 
     const pct = live?.saturationPercent ?? 0;
+    const activePreset = capacity?.presetId || live?.presetId || 'starter';
 
     return (
         <div className="audience-peaks-section fade-in">
@@ -61,6 +89,68 @@ const AudiencePeaksSection = () => {
                 <button type="button" className="audience-refresh-btn glass-effect" onClick={load} title="Actualizar">
                     <RefreshCw size={16} /> Actualizar
                 </button>
+            </div>
+
+            <div className="audience-config-card glass-effect">
+                <div className="audience-config-title">
+                    <Settings2 size={18} />
+                    <div>
+                        <h3>Techo de control (manual)</h3>
+                        <p>
+                            Solo referencia para el %. <strong>No limita ni corta conexiones</strong>.
+                            Si tenés plan básico y llegan 800, el evento sigue; después ajustás infraestructura.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="audience-preset-grid">
+                    {(capacity?.presets || []).map((preset) => {
+                        const selected = activePreset === preset.id;
+                        return (
+                            <button
+                                key={preset.id}
+                                type="button"
+                                className={`audience-preset-card ${selected ? 'selected' : ''}`}
+                                disabled={saving || (preset.isCustom && false)}
+                                onClick={() => {
+                                    if (preset.isCustom) return;
+                                    applyPreset(preset);
+                                }}
+                            >
+                                <div className="audience-preset-cap">
+                                    {preset.isCustom ? 'Custom' : preset.softCapacity}
+                                </div>
+                                <div className="audience-preset-label">{preset.label}</div>
+                                <div className="audience-preset-hint">{preset.hint}</div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="audience-custom-row">
+                    <label htmlFor="audience-custom-cap">Personalizado</label>
+                    <input
+                        id="audience-custom-cap"
+                        type="number"
+                        min={1}
+                        max={50000}
+                        value={customValue}
+                        onChange={(e) => setCustomValue(e.target.value)}
+                    />
+                    <button
+                        type="button"
+                        className="audience-refresh-btn"
+                        disabled={saving}
+                        onClick={() => applyPreset({ id: 'custom', isCustom: true })}
+                    >
+                        Aplicar techo
+                    </button>
+                    <span className="audience-active-plan">
+                        Activo: <strong>{capacity?.planLabel || live?.planLabel || '—'}</strong>
+                        {' · '}
+                        {capacity?.softCapacity || live?.softCapacity || '—'} conexiones
+                    </span>
+                </div>
             </div>
 
             {live && (
@@ -110,6 +200,7 @@ const AudiencePeaksSection = () => {
                                 <th>Total</th>
                                 <th>Live</th>
                                 <th>Operadores</th>
+                                <th>Techo</th>
                                 <th>Saturación</th>
                                 <th>Evento top</th>
                                 <th>Pico</th>
@@ -118,7 +209,7 @@ const AudiencePeaksSection = () => {
                         <tbody>
                             {peaks.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="audience-empty">
+                                    <td colSpan={8} className="audience-empty">
                                         Todavía no hay muestras. Se registran cuando hay conexiones activas.
                                     </td>
                                 </tr>
@@ -129,6 +220,7 @@ const AudiencePeaksSection = () => {
                                         <td>{p.totalConnections}</td>
                                         <td>{p.liveConnections}</td>
                                         <td>{p.operatorConnections}</td>
+                                        <td>{p.softCapacity}</td>
                                         <td>{p.saturationPercent}%</td>
                                         <td>
                                             {p.topEventoNombre

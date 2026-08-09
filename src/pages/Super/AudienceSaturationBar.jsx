@@ -52,6 +52,7 @@ const AudienceSaturationBar = () => {
                 <span>Live: {live.liveConnections}</span>
                 <span>Operadores: {live.operatorConnections}</span>
                 <span>Pico sesión: {live.sessionPeakTotal}</span>
+                {live.planLabel && <span>Plan ref: {live.planLabel}</span>}
             </div>
         </div>
     );

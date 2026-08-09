@@ -10,6 +10,16 @@ const AudienceService = {
         const response = await api.get('/Audience/peaks', { params: { limit } });
         return response.data;
     },
+
+    getCapacity: async () => {
+        const response = await api.get('/Audience/capacity');
+        return response.data;
+    },
+
+    updateCapacity: async ({ presetId, softCapacity }) => {
+        const response = await api.put('/Audience/capacity', { presetId, softCapacity });
+        return response.data;
+    },
 };
 
 export default AudienceService;
