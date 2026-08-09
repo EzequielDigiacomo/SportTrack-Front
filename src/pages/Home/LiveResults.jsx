@@ -379,17 +379,28 @@ const LiveResults = () => {
         };
     }, [selectedPrueba, refreshResultsCounter, liveRealtimeEnabled]);
 
-    const handleDownloadPDF = async (mode = 'current') => {
+    const handleDownloadPDF = async (mode = 'current', clasificacionKey = null) => {
         if (!selectedPrueba || !fases.length) return;
 
         try {
             const eventoExport = evento || 'Evento';
-            const pruebaNombre = [
-                selectedPrueba.prueba?.categoria?.nombre,
-                selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.bote?.nombre,
-                selectedPrueba.prueba?.distancia?.descripcion || selectedPrueba.prueba?.distancia?.metros + 'm',
-                getSexName(selectedPrueba),
-            ].filter(Boolean).join(' - ');
+            const distLabel = selectedPrueba.prueba?.distancia?.descripcion
+                || (selectedPrueba.prueba?.distancia?.metros ? `${selectedPrueba.prueba.distancia.metros}m` : '');
+            const grupoSeleccionado = clasificacionKey
+                ? maratonLiveGroups.find(g => g.key === clasificacionKey)
+                : null;
+            const pruebaNombre = isMaratonEvent
+                ? [
+                    selectedFase?.nombreFase || selectedFase?.NombreFase || 'Largada',
+                    distLabel,
+                    grupoSeleccionado?.title,
+                ].filter(Boolean).join(' - ')
+                : [
+                    selectedPrueba.prueba?.categoria?.nombre,
+                    selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.bote?.nombre,
+                    distLabel,
+                    getSexName(selectedPrueba),
+                ].filter(Boolean).join(' - ');
 
             // Enrich each fase with the resultados from local state (real-time)
             const enrichFase = (fase) => ({
@@ -416,7 +427,9 @@ const LiveResults = () => {
             // Filter fases by mode
             let raw = [...fases];
             let fasesToExport = [];
-            if (mode === 'current') {
+            if (isMaratonEvent && (mode === 'maraton-full' || mode === 'maraton-group')) {
+                fasesToExport = selectedFase ? [selectedFase] : [];
+            } else if (mode === 'current') {
                 fasesToExport = selectedFase ? [selectedFase] : [];
             } else if (mode === 'series') {
                 fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('serie'));
@@ -437,13 +450,34 @@ const LiveResults = () => {
 
             const enriched = fasesToExport.map(enrichFase);
             const maratonOpts = isMaratonEvent
-                ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
+                ? {
+                    isMaraton: true,
+                    pruebas,
+                    inscripcionEpMap: maratonInscripcionEpMap,
+                    ...(mode === 'maraton-group' && clasificacionKey
+                        ? { clasificacionKey }
+                        : {}),
+                }
                 : {};
+
+            if (mode === 'maraton-group' && clasificacionKey && !grupoSeleccionado) {
+                addToast('warning', 'No se encontró esa clasificación.');
+                return;
+            }
+
+            const grupoLabel = mode === 'maraton-group'
+                ? (grupoSeleccionado?.title || 'Clasificación')
+                : mode === 'maraton-full'
+                    ? 'Prueba Completa'
+                    : mode === 'current'
+                        ? enriched[0]?.nombreFase
+                        : mode;
+
             await PdfExportService.exportGrupo(
                 enriched,
                 eventoExport,
                 pruebaNombre,
-                mode === 'current' ? enriched[0]?.nombreFase : mode,
+                grupoLabel,
                 maratonOpts
             );
         } catch (err) {
@@ -960,12 +994,45 @@ const LiveResults = () => {
                                             <>
                                                 <div className="pdf-menu-backdrop" onClick={() => setShowPdfMenu(false)}></div>
                                                 <div className="pdf-dropdown-menu">
-                                                    <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('current'), 100); }}>Fase Actual</div>
-                                                    <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('series'), 100); }}>Todas las Series</div>
-                                                    <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('semis'), 100); }}>Todas las Semis</div>
-                                                    <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('finals'), 100); }}>Todas las Finales</div>
-                                                    <div className="dropdown-divider"></div>
-                                                    <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('full'), 100); }}>Prueba Completa</div>
+                                                    {isMaratonEvent ? (
+                                                        <>
+                                                            <div
+                                                                className="dropdown-item"
+                                                                onClick={() => {
+                                                                    setShowPdfMenu(false);
+                                                                    setTimeout(() => handleDownloadPDF('maraton-full'), 100);
+                                                                }}
+                                                            >
+                                                                Prueba Completa
+                                                            </div>
+                                                            {maratonLiveGroups.length > 0 && (
+                                                                <>
+                                                                    <div className="dropdown-divider"></div>
+                                                                    {maratonLiveGroups.map(g => (
+                                                                        <div
+                                                                            key={g.key}
+                                                                            className="dropdown-item"
+                                                                            onClick={() => {
+                                                                                setShowPdfMenu(false);
+                                                                                setTimeout(() => handleDownloadPDF('maraton-group', g.key), 100);
+                                                                            }}
+                                                                        >
+                                                                            {g.title}
+                                                                        </div>
+                                                                    ))}
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('current'), 100); }}>Fase Actual</div>
+                                                            <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('series'), 100); }}>Todas las Series</div>
+                                                            <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('semis'), 100); }}>Todas las Semis</div>
+                                                            <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('finals'), 100); }}>Todas las Finales</div>
+                                                            <div className="dropdown-divider"></div>
+                                                            <div className="dropdown-item" onClick={() => { setShowPdfMenu(false); setTimeout(() => handleDownloadPDF('full'), 100); }}>Prueba Completa</div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </>
                                         )}

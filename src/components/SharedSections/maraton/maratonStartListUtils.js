@@ -227,6 +227,7 @@ export function expandFasesMaratonByClasificacion(fases = [], pruebas = [], insc
                 ...g.faseVirtual,
                 resultados,
                 nombreFase: g.title,
+                _clasificacionKey: g.key,
                 _pdfSubtitleOverride: [originalNombre, distLabel].filter(Boolean).join('  ·  '),
             });
         }

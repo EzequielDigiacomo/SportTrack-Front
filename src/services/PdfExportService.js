@@ -369,11 +369,15 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
 /** Expande fases Maratón a tablas por Categoría · Sexo · Bote cuando corresponde. */
 const resolveFasesForResultsExport = (fases, options = {}) => {
     if (!options.isMaraton) return fases || [];
-    return expandFasesMaratonByClasificacion(
+    let expanded = expandFasesMaratonByClasificacion(
         fases || [],
         options.pruebas || [],
         options.inscripcionEpMap || null
     );
+    if (options.clasificacionKey) {
+        expanded = expanded.filter(f => f._clasificacionKey === options.clasificacionKey);
+    }
+    return expanded;
 };
 
 // ─── Service ─────────────────────────────────────────────────────────────────
