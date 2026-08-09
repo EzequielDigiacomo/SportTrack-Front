@@ -4,7 +4,7 @@
 
 La carpeta `Documentacion/` en la raíz solo conserva un puntero hacia aquí.
 
-**Última actualización:** 2026-07-12
+**Última actualización:** 2026-08-09
 
 ---
 
@@ -15,9 +15,17 @@ La carpeta `Documentacion/` en la raíz solo conserva un puntero hacia aquí.
 | [guias-usuario/](./guias-usuario/) | Manuales de uso e instalación |
 | [casos-de-uso/](./casos-de-uso/) | Casos de uso |
 | [criterios/](./criterios/) | Requerimientos / criterios |
-| [tecnico/](./tecnico/) | Arquitectura, SaaS, backup, admin DB, **diagramas** |
+| [tecnico/](./tecnico/) | Arquitectura, SaaS, backup, admin DB, **diagramas**, modalidad Maratón |
 | [entrega/](./entrega/) | Material de entrega / presentación |
 | [referencia/](./referencia/) | Histórico traído desde `Documentacion/` |
+
+### Destacados recientes
+
+| Tema | Documento |
+|------|-----------|
+| Modalidad Maratón (usuario) | [guias-usuario/modalidad-maraton.md](./guias-usuario/modalidad-maraton.md) |
+| Modalidad Maratón (técnico) | [tecnico/modalidad-maraton.md](./tecnico/modalidad-maraton.md) |
+| Control de competencia / jueces | [guias-usuario/modulos-control-competencia.md](./guias-usuario/modulos-control-competencia.md) |
 
 > Padrón federativo / tutores / accesos SIGDEF → repo **FrontSigdef** `docs/`.  
 > API → **SportTrack-Sigdef** `docs/` (ER canónico en `docs/tecnico/diagramas/`).

@@ -118,6 +118,13 @@ WHERE LOWER("Username") IN ('superadmin', 'admin');
 | Cronometrista | `/jueces/llegada` | — |
 | JuezControl | `/juez-control` | — |
 
+### Modalidades de evento
+
+| Modalidad | Docs |
+|-----------|------|
+| Velocidad (pista) | [../guias-usuario/modulos-control-competencia.md](../guias-usuario/modulos-control-competencia.md) |
+| Maratón | [../guias-usuario/modalidad-maraton.md](../guias-usuario/modalidad-maraton.md) · [modalidad-maraton.md](./modalidad-maraton.md) |
+
 ---
 
 ## 4. API — endpoints clave por dominio

@@ -4,6 +4,9 @@ Este documento describe **cómo usar cada módulo operativo de SportTrack** el d
 
 Está pensado para operadores, jueces y administradores. Refleja el comportamiento actual del sistema en frontend y backend.
 
+> **Copia de referencia.** La versión vigente está en [../guias-usuario/modulos-control-competencia.md](../guias-usuario/modulos-control-competencia.md).  
+> **Modalidad Maratón:** [../guias-usuario/modalidad-maraton.md](../guias-usuario/modalidad-maraton.md) · técnico [../tecnico/modalidad-maraton.md](../tecnico/modalidad-maraton.md).
+
 ---
 
 ## Índice
@@ -22,6 +25,7 @@ Está pensado para operadores, jueces y administradores. Refleja el comportamien
 12. [Plan Bronce vs Plan con Controles Live](#12-plan-bronce-vs-plan-con-controles-live)
 13. [Notificaciones y centro de alertas](#13-notificaciones-y-centro-de-alertas)
 14. [Preguntas frecuentes y resolución de problemas](#14-preguntas-frecuentes-y-resolución-de-problemas)
+15. [Modalidad Maratón (resumen)](#15-modalidad-maratón-resumen)
 
 ---
 
@@ -243,14 +247,16 @@ Al entrar aparece un aviso (se oculta solo a los 10 segundos):
 
 | Función | JuezControl | Admin |
 |---------|:-----------:|:-----:|
-| Ver Start List y grilla de carriles | ✅ | ✅ |
+| Ver Start List y grilla / nómina | ✅ | ✅ |
 | Ver resultados en vivo (SignalR) | ✅ | ✅ |
-| Seleccionar evento y regata | ✅ | ✅ |
-| Seleccionar prueba/categoría | ❌ | ✅ |
+| Seleccionar evento | ✅ | ✅ |
+| Seleccionar prueba (Velocidad) o largada (Maratón) | ✅ | ✅ |
+| Seleccionar regata específica (solo Velocidad) | ✅ | ✅ |
 | Generar heats / siembra / reprogramar | ❌ | ✅ |
-| Editar tiempos en tabla | ❌ (vista consulta) | ✅ |
+| Sortear números de competidor (Maratón) | ❌ | ✅ |
+| Editar tiempos en tabla (verificación) | ✅ | ✅ |
 | **Guardar y Hacer Oficial** | ✅ | ✅ |
-| **Promover Etapa** | ✅ | ✅ |
+| **Promover Etapa** (solo Velocidad) | ✅ | ✅ |
 | **Reiniciar Fase** | ✅ | ✅ |
 | Exportar PDF / CSV | ✅ | ✅ |
 | Carga manual DNS/DNF/DSQ | ❌ | ✅ (vía `/jueces/carga-manual`) |
@@ -258,15 +264,19 @@ Al entrar aparece un aviso (se oculta solo a los 10 segundos):
 ### Flujo operativo — Juez de Control
 
 1. Entrar a `/juez-control`.
-2. Seleccionar **Evento** y **Regata Específica**.
-3. En **Start List**: revisar grilla de carriles de la fase.
-4. Durante la regata: pestaña **Resultados** → monitor **EN VIVO**.
-5. Cuando el cronometrista pulsa **Enviar** → la fase pasa a **Pendiente de Validación**.
-6. Revisar tiempos recibidos (tabla de consulta).
-7. Pulsar **Guardar y Hacer Oficial** → confirma → fase **Finalizada**.
-8. Si corresponde: **Promover Etapa** al completar la última serie de la ronda.
+2. Seleccionar **Evento**.
+3. Seleccionar **Prueba** (Velocidad) o **Largada** (Maratón).
+4. En Velocidad, opcionalmente elegir la **regata** del cronograma.
+5. En **Start List**: revisar grilla de carriles (pista) o nómina con números (Maratón).
+6. Durante la regata: pestaña **Resultados** → monitor **EN VIVO**.
+7. Cuando el cronometrista pulsa **Enviar** → la fase pasa a **Pendiente de Validación**.
+8. Revisar / corregir tiempos si hace falta.
+9. Pulsar **Guardar y Hacer Oficial** → confirma → fase **Finalizada**.
+10. En Velocidad, si corresponde: **Promover Etapa** al completar la ronda.
 
-> **Nota:** El juez de control valida lo que envió el cronometrista. Si necesita corregir tiempos manualmente, debe pedirle al administrador que use **Carga Manual**.
+> **Nota:** Si necesita una carga de emergencia fuera del flujo Live, debe pedirle al administrador que use **Carga Manual**.
+
+> **Maratón:** no hay selector de regata ni promoción de etapas. Guía completa: [../guias-usuario/modalidad-maraton.md](../guias-usuario/modalidad-maraton.md).
 
 ---
 
@@ -668,6 +678,16 @@ Destino según rol:
 
 ---
 
+## 15. Modalidad Maratón (resumen)
+
+Ver la documentación vigente:
+
+- Usuario: [../guias-usuario/modalidad-maraton.md](../guias-usuario/modalidad-maraton.md)
+- Técnico: [../tecnico/modalidad-maraton.md](../tecnico/modalidad-maraton.md)
+- Resumen operativo también en [../guias-usuario/modulos-control-competencia.md](../guias-usuario/modulos-control-competencia.md#15-modalidad-maratón-resumen)
+
+---
+
 ## Referencias técnicas
 
 | Recurso | Ubicación |
@@ -676,9 +696,12 @@ Destino según rol:
 | API batch update resultados | `PUT /api/Resultados/BatchUpdate` |
 | Finalizar fase | `FaseService.finalizar` |
 | Enviar a revisión | `FaseService.enviarARevision` |
-| Reglas ICF progresión | `Documentacion/explicacion_sistema_progresion.md` |
-| Historias de usuario base | `Documentacion/01_Usuario_y_Negocio.md` |
+| Generar largada Maratón | `FaseService.generarLargadaMaraton` |
+| Modalidad Maratón (usuario) | `docs/guias-usuario/modalidad-maraton.md` |
+| Modalidad Maratón (técnico) | `docs/tecnico/modalidad-maraton.md` |
+| Reglas ICF progresión | `docs/referencia/explicacion_sistema_progresion.md` |
+| Historias de usuario base | `docs/referencia/01_Usuario_y_Negocio.md` |
 
 ---
 
-*Última actualización: julio 2026 — SportTrack Front*
+*Última actualización: agosto 2026 — SportTrack Front*
