@@ -38,6 +38,7 @@ import {
 } from '../../utils/apiHelpers';
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 import { isSuperAdminUser } from '../../utils/authHelpers';
+import AudienceSaturationBar from './AudienceSaturationBar';
 
 const AdminHome = () => {
     const navigate = useNavigate();
@@ -361,6 +362,8 @@ const AdminHome = () => {
                         <p className="admin-home-subtitle">Métricas de rendimiento de toda la plataforma SportTrack</p>
                     </div>
                 </div>
+
+                <AudienceSaturationBar />
 
                 <div className="stats-dashboard-grid">
                     <div className="stat-card-premium glass-effect">

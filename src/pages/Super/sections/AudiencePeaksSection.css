@@ -1,0 +1,191 @@
+.audience-peaks-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.audience-peaks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.audience-peaks-header p {
+    margin: 0.35rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.audience-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: var(--color-text-primary);
+    border-radius: 10px;
+    padding: 0.55rem 0.9rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.audience-live-card,
+.audience-peaks-card {
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.audience-live-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.audience-live-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.audience-bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.audience-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #84cc16);
+    transition: width 0.4s ease;
+}
+
+.audience-level-warning .audience-bar-fill {
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+}
+
+.audience-level-critical .audience-bar-fill {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.audience-live-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem 1.25rem;
+    margin-top: 0.9rem;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.audience-live-stats > div {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.audience-by-event {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.audience-by-event h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+}
+
+.audience-by-event ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.audience-by-event li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+}
+
+.audience-peaks-card h3 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+}
+
+.audience-peaks-table-wrap {
+    overflow-x: auto;
+}
+
+.audience-peaks-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.audience-peaks-table th,
+.audience-peaks-table td {
+    text-align: left;
+    padding: 0.65rem 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+}
+
+.audience-peaks-table th {
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.audience-peaks-table tr.is-peak td {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.audience-empty {
+    text-align: center;
+    color: var(--color-text-dim);
+    padding: 1.5rem 0.5rem !important;
+}
+
+/* Widget compacto del dashboard */
+.audience-sat-widget {
+    margin: 0 0 1.25rem;
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.audience-sat-widget-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+}
+
+.audience-sat-widget-top a {
+    font-size: 0.8rem;
+    color: var(--color-primary-light);
+    text-decoration: none;
+}
+
+.audience-sat-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin-top: 0.65rem;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}

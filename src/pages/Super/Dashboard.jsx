@@ -18,6 +18,7 @@ import GestionPagosSection from './sections/GestionPagosSection';
 import ProgressionAuditPage from './sections/ProgressionAuditPage';
 import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
+import AudiencePeaksSection from './sections/AudiencePeaksSection';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
 import { canAccessControlesLive, extractPlanFromUser } from '../../utils/planHelpers';
 import RegistroInscripcionesSection from '../ClubAdmin/sections/RegistroInscripcionesSection';
@@ -41,7 +42,8 @@ import {
     Globe,
     Mail,
     ClipboardList,
-    Database
+    Database,
+    Activity
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
@@ -59,6 +61,7 @@ const NAV_ITEMS = [
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
     { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
     { id: 'auditoria', path: 'auditoria', icon: <FileText size={20} />, label: 'Auditoría Progresión' },
+    { id: 'audiencia', path: 'audiencia', icon: <Activity size={20} />, label: 'Audiencia / Picos', superOnly: true },
     { id: 'carga-manual', path: '/jueces/carga-manual', icon: <List size={20} />, label: 'Carga Manual', isExternal: true },
     { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true, requiereControlesLive: true },
     { id: 'saas', path: 'saas', icon: <Cloud size={20} />, label: 'Suscripciones SaaS', isSupport: true },
@@ -113,7 +116,7 @@ const SuperDashboard = () => {
         const plan = extractPlanFromUser(user);
 
         // Módulos EXCLUSIVOS para SuperAdmin
-        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'backups' || item.id === 'configuracion' || item.id === 'federaciones' || item.superOnly) {
+        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'backups' || item.id === 'configuracion' || item.id === 'federaciones' || item.id === 'audiencia' || item.superOnly) {
             return isSuper;
         }
 
@@ -197,6 +200,7 @@ const SuperDashboard = () => {
                         <Route path="mensajes" element={<MensajesSection modo={isSuper ? 'super' : 'admin'} />} />
                         <Route path="saas" element={<SaaSManagement />} />
                         <Route path="backups" element={<BackupsSection />} />
+                        <Route path="audiencia" element={<AudiencePeaksSection />} />
                         <Route path="federacion/:id" element={<AdminHome />} />
                         <Route path="soporte" element={<SoporteSection />} />
                     </Routes>
