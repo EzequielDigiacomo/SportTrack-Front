@@ -8,6 +8,12 @@ import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { getJudgeDisplayName, mapFasesFromApi, canStartFase, isFaseCerrada, normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
+import {
+    filterEventosForJudgeRole,
+    isControlTecnicoRole,
+    isSoloControlTecnicoMode,
+    saveControlTecnicoHandoff,
+} from '../../utils/controlTecnico';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
@@ -34,10 +40,12 @@ const StarterDashboard = () => {
     const { user, logout } = useAuth();
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isAdmin = roleStr.includes('admin');
+    const starterSignalRole = isControlTecnicoRole(user) ? 'ControlTecnico' : 'Largador';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
     const [fases, setFases] = useState([]);
     const [selectedFase, setSelectedFase] = useState(null);
+    const soloMode = isSoloControlTecnicoMode(user, selectedEvento);
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
@@ -91,8 +99,8 @@ const StarterDashboard = () => {
                 await timingSignalRService.connect(
                     selectedEvento?.id,
                     selectedFase?.id,
-                    getJudgeDisplayName(user, 'Largador'),
-                    'Largador'
+                    getJudgeDisplayName(user, starterSignalRole),
+                    starterSignalRole
                 );
             } else {
                 await timingSignalRService.syncClock();
@@ -106,7 +114,7 @@ const StarterDashboard = () => {
 
     useEffect(() => {
         const loadEventos = async () => {
-            const data = await EventoService.getAll();
+            const data = filterEventosForJudgeRole(await EventoService.getAll(), user);
             setEventos(data);
             
             // Solo seleccionar el primero si no hay nada guardado en localStorage
@@ -174,8 +182,8 @@ const StarterDashboard = () => {
                 await timingSignalRService.connect(
                     selectedEvento?.id,
                     selectedFase.id,
-                    user?.nombreCompleto || user?.nombre || user?.username || "Largador",
-                    "Largador"
+                    user?.nombreCompleto || user?.nombre || user?.username || starterSignalRole,
+                    starterSignalRole
                 );
                 if (!isMounted) return;
 
@@ -298,15 +306,15 @@ const StarterDashboard = () => {
                 await timingSignalRService.connect(
                     selectedEvento.id,
                     currentFaseId,
-                    getJudgeDisplayName(user, 'Largador'),
-                    'Largador'
+                    getJudgeDisplayName(user, starterSignalRole),
+                    starterSignalRole
                 );
             } else {
                 await timingSignalRService.connect(
                     selectedEvento.id,
                     null,
-                    getJudgeDisplayName(user, 'Largador'),
-                    'Largador'
+                    getJudgeDisplayName(user, starterSignalRole),
+                    starterSignalRole
                 );
             }
 
@@ -342,6 +350,16 @@ const StarterDashboard = () => {
             : prev
         );
 
+        const goToLlegadaIfSolo = () => {
+            if (!isSoloControlTecnicoMode(user, selectedEvento)) return;
+            saveControlTecnicoHandoff({
+                eventoId: selectedEvento.id,
+                faseId: selectedFase.id,
+                t0Iso,
+            });
+            navigate('/jueces/llegada');
+        };
+
         try {
             const result = await timingSignalRService.deliverRaceStart(selectedFase.id, startStamp);
             if (result.ok) {
@@ -363,16 +381,19 @@ const StarterDashboard = () => {
                 }
                 setStartingStatus('success');
                 setTimeout(() => setStartingStatus(null), 1500);
+                goToLlegadaIfSolo();
             } else {
                 addToast('Sin red: la largada quedó en cola con el instante del click. Se reenvía al reconectar.', 'warning');
                 setStartingStatus('queued');
                 setTimeout(() => setStartingStatus(null), 2500);
+                goToLlegadaIfSolo();
             }
         } catch (err) {
             console.error('Error delivering race start:', err);
             addToast('Largada local marcada; reintentando envío en segundo plano.', 'warning');
             setStartingStatus('queued');
             setTimeout(() => setStartingStatus(null), 2500);
+            goToLlegadaIfSolo();
         } finally {
             setLoading(false);
         }
@@ -474,9 +495,10 @@ const StarterDashboard = () => {
                     if (!isConnected) {
                         setStartingStatus('connecting');
                         await timingSignalRService.connect(
+                            selectedEvento?.id,
                             selectedFase.id,
-                            user?.nombreCompleto || user?.nombre || user?.username || "Largador",
-                            "Largador"
+                            user?.nombreCompleto || user?.nombre || user?.username || starterSignalRole,
+                            starterSignalRole
                         );
                     }
                     
@@ -823,13 +845,13 @@ const StarterDashboard = () => {
                             <div className="control-actions starter-sticky-actions">
                                 <button 
                                     type="button"
-                                    className={`btn-start-big ${!canStartFase(selectedFase) ? 'disabled' : ''} ${canStartFase(selectedFase) && connectionState !== 'Connected' ? 'connection-lost' : ''} ${canStartFase(selectedFase) && connectionState === 'Connected' && !isTimekeeperConnected ? 'no-timekeeper' : ''}`}
+                                    className={`btn-start-big ${!canStartFase(selectedFase) ? 'disabled' : ''} ${canStartFase(selectedFase) && connectionState !== 'Connected' ? 'connection-lost' : ''} ${canStartFase(selectedFase) && connectionState === 'Connected' && !soloMode && !isTimekeeperConnected ? 'no-timekeeper' : ''}`}
                                     onClick={handleStartRace}
-                                    disabled={!canStartFase(selectedFase) || loading || connectionState !== 'Connected' || !isTimekeeperConnected}
+                                    disabled={!canStartFase(selectedFase) || loading || connectionState !== 'Connected' || (!soloMode && !isTimekeeperConnected)}
                                 >
                                     {canStartFase(selectedFase) ? (
                                         connectionState === 'Connected' ? (
-                                            !isTimekeeperConnected ? (
+                                            !soloMode && !isTimekeeperConnected ? (
                                                 <>
                                                     <Users size={32} className="start-icon" />
                                                     <span>ESPERANDO LLEGADA</span>

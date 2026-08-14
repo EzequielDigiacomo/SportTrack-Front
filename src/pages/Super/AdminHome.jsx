@@ -1345,8 +1345,8 @@ const AdminHome = () => {
                                                         <div key={idx} style={{ padding: '0.6rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div>
                                                                 <strong style={{ color: 'var(--color-text-primary)' }}>{evt.nombre}</strong>
-                                                                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-dim)', marginTop: '2px' }}>
-                                                                    Lugar: {evt.lugar || 'Por definir'} | Club: {evt.clubNombre || 'Federación'}
+                                                                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                                                                    Lugar: {evt.lugar || evt.ubicacion || 'Por definir'} | Club: {evt.clubNombre || 'Federación'}
                                                                 </span>
                                                             </div>
                                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>

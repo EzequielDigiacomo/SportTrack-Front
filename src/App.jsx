@@ -81,9 +81,9 @@ function App() {
             } />
 
             {/* Módulo de Jueces */}
-            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista']} requiereControlesLive><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador']} requiereControlesLive><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
-            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista']} requiereControlesLive><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista', 'ControlTecnico']} requiereControlesLive><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'ControlTecnico']} requiereControlesLive><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
+            <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista', 'ControlTecnico']} requiereControlesLive><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />
             {/* Carga manual: SportTrack S/M/L (no exige consolas juez / Ecosistema) */}
             <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>

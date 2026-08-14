@@ -8,10 +8,11 @@ const ROL_LABEL = {
     'Largador':      { label: 'Largador',        color: '#f59e0b' },
     'Cronometrista': { label: 'Cronometrista',   color: '#3b82f6' },
     'JuezControl':   { label: 'Juez de Control', color: '#8b5cf6' },
+    'ControlTecnico': { label: 'Control técnico', color: '#14b8a6' },
 };
 
 // Roles que pueden ser desactivados (los jueces auxiliares, no Admin/Club)
-const ROLES_TOGGLABLES = ['Largador', 'Cronometrista', 'JuezControl'];
+const ROLES_TOGGLABLES = ['Largador', 'Cronometrista', 'JuezControl', 'ControlTecnico'];
 
 const RolBadge = ({ rol }) => {
     const meta = ROL_LABEL[rol] || { label: rol, color: '#94a3b8' };
@@ -68,22 +69,22 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                                 </div>
                             </h4>
                             
-                            <p style={{ color: '#000000' }}><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
+                            <p><Mail size={14} className="text-secondary" /> {u.email || 'Sin email'}</p>
                             {u.clubNombre ? (
-                                <p style={{ color: '#000000', fontWeight: 800 }}>
+                                <p>
                                     <Building2 size={14} className="text-accent" /> {u.clubNombre}
                                 </p>
                             ) : (
-                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                                     <Building2 size={14} className="text-secondary" /> (Sin institución)
                                 </p>
                             )}
                             {showFederation && (
-                                <p style={{ color: '#000000', fontSize: '0.85rem' }}>
+                                <p style={{ fontSize: '0.85rem' }}>
                                     Federación: {u.federacionNombre || '—'}
                                 </p>
                             )}
-                            {u.telefono && <p style={{ color: '#000000' }}><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
+                            {u.telefono && <p><Phone size={14} style={{ color: '#ec4899' }} /> {u.telefono}</p>}
                         </div>
                         <div className="card-actions-row">
                             <button className="btn-icon-view" onClick={() => onEditProfile(u)} title="Editar Perfil">
@@ -143,13 +144,13 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                                         </span>
                                     </td>
                                 )}
-                                <td style={{ color: '#000000' }}>
+                                <td>
                                     {u.clubNombre ? (
                                         <span style={{ fontWeight: '800' }}>{u.clubNombre}</span>
                                     ) : (
-                                        <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>(Sin institución)</span>
+                                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>(Sin institución)</span>
                                     )}
-                                    {u.telefono && <span style={{ display: 'block', fontSize: '0.75rem', color: '#000000', fontWeight: '600' }}><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
+                                    {u.telefono && <span className="login-grid-meta-sub"><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
                                 </td>
                                 <td>{u.email || '—'}</td>
                                 <td><RolBadge rol={getLoginRole(u)} /></td>

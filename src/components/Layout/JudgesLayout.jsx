@@ -80,8 +80,8 @@ const JudgesLayout = ({ children }) => {
 
     const getRoleName = () => {
         const path = location.pathname;
-        if (path.includes('largador')) return 'Largador';
-        if (path.includes('llegada')) return 'Cronometrista';
+        if (path.includes('largador')) return roleStr.includes('controltecnico') ? 'Control técnico' : 'Largador';
+        if (path.includes('llegada')) return roleStr.includes('controltecnico') ? 'Control técnico' : 'Cronometrista';
         if (path.includes('juez-control')) return 'Juez de Control';
         if (path.includes('carga-manual')) return 'Carga Manual';
         return 'Módulo Jueces';

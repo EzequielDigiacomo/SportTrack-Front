@@ -741,6 +741,52 @@
     }
 }
 
+@media (max-width: 768px) {
+    .calendar-card,
+    .annual-calendar-container {
+        padding: 1rem !important;
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .calendar-agenda-split {
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 1rem !important;
+    }
+
+    .calendar-days-grid-container,
+    .selected-month-details {
+        flex: none !important;
+        width: 100% !important;
+        max-width: 100%;
+        max-height: none !important;
+        min-height: 0 !important;
+        box-sizing: border-box;
+    }
+
+    .months-pills-row {
+        max-width: 100% !important;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .months-pills-row::-webkit-scrollbar {
+        display: none;
+    }
+
+    .calendar-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .admin-home-grid {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+}
+
 @media (max-width: 600px) {
     .stats-dashboard-grid {
         grid-template-columns: 1fr;

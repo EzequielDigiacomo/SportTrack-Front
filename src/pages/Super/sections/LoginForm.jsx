@@ -10,7 +10,7 @@ import {
     normalizePlan,
 } from '../../../utils/planHelpers';
 
-const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
+const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl', 'ControlTecnico'];
 const DEFAULT_ROL = 'Admin';
 
 const LoginForm = ({
@@ -139,6 +139,7 @@ const LoginForm = ({
                                             { value: 'Largador', label: `Juez: Largador ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                             { value: 'Cronometrista', label: `Juez: Cronometrista ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                             { value: 'JuezControl', label: `Juez de Control ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
+                                            { value: 'ControlTecnico', label: `Control técnico ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                         ]}
                                     />
                                 </div>

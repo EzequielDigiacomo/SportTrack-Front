@@ -10,10 +10,11 @@ const JudgesDashboard = () => {
     const roleStr = user?.rol || user?.Rol || user?.role || '';
     const roles = roleStr.toLowerCase().split(/[,;]/).map(r => r.trim());
 
-    const isAdmin = roles.includes('admin');
-    const isStarter = roles.includes('largador') || isAdmin;
-    const isFinisher = roles.includes('cronometrista') || isAdmin;
-    const isControl = roles.includes('juezcontrol') || roles.includes('control') || isAdmin;
+    const isAdmin = roles.includes('admin') || roles.includes('superadmin');
+    const isControlTecnico = roles.includes('controltecnico');
+    const isStarter = roles.includes('largador') || isAdmin || isControlTecnico;
+    const isFinisher = roles.includes('cronometrista') || isAdmin || isControlTecnico;
+    const isControl = roles.includes('juezcontrol') || isAdmin;
 
     return (
         <div className="judges-container glass-effect">
@@ -32,7 +33,18 @@ const JudgesDashboard = () => {
             </header>
 
             <div className="judges-grid">
-                {isStarter && (
+                {isControlTecnico && !isAdmin && (
+                    <div className="judge-card starter" onClick={() => navigate('/jueces/largador')}>
+                        <div className="card-icon">
+                            <Play size={48} />
+                        </div>
+                        <h2>Control técnico</h2>
+                        <p>Largá la prueba y pasá a llegada en el mismo dispositivo.</p>
+                        <button className="btn-judge">Entrar</button>
+                    </div>
+                )}
+
+                {isStarter && !(isControlTecnico && !isAdmin) && (
                     <div className="judge-card starter" onClick={() => navigate('/jueces/largador')}>
                         <div className="card-icon">
                             <Play size={48} />
@@ -43,7 +55,7 @@ const JudgesDashboard = () => {
                     </div>
                 )}
 
-                {isFinisher && (
+                {isFinisher && !(isControlTecnico && !isAdmin) && (
                     <div className="judge-card finisher" onClick={() => navigate('/jueces/llegada')}>
                         <div className="card-icon">
                             <Flag size={48} />

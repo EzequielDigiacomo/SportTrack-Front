@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     ClipboardList, Search, RefreshCw, Download, Trash2, CheckCircle2, AlertCircle,
+    User, Building2, Calendar, Hash,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import InscripcionService from '../../../services/InscripcionService';
@@ -146,17 +147,34 @@ const RegistroInscripcionesSection = ({ modo = 'club' }) => {
 
     const colSpan = esAdmin ? 9 : 7;
 
+    const pagadoBadge = (pagado) => (
+        <span style={{
+            padding: '4px 10px',
+            borderRadius: '20px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            background: pagado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+            color: pagado ? '#10B981' : '#F59E0B',
+        }}>
+            {pagado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+            {pagado ? 'Pagado' : 'Pendiente'}
+        </span>
+    );
+
     return (
-        <div className="admin-section fade-in">
+        <div className="admin-section fade-in registro-inscripciones">
             <div className="admin-section-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <ClipboardList size={28} color="var(--color-primary-light)" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                    <ClipboardList size={28} color="var(--color-primary-light)" style={{ flexShrink: 0 }} />
                     <div>
                         <h2 className="admin-title">{titulo}</h2>
                         <p className="admin-subtitle">{subtitulo}</p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className="registro-inscripciones-actions">
                     <button type="button" className="btn-admin-secondary" onClick={loadInscripciones} disabled={loading}>
                         <RefreshCw size={16} /> Actualizar
                     </button>
@@ -173,8 +191,8 @@ const RegistroInscripcionesSection = ({ modo = 'club' }) => {
                 </div>
             </div>
 
-            <div className="search-bar-container mb-md" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <div style={{ position: 'relative', flex: '1 1 220px' }}>
+            <div className="search-bar-container mb-md registro-inscripciones-filters">
+                <div className="registro-inscripciones-search">
                     <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dim)' }} />
                     <input
                         type="text"
@@ -189,7 +207,6 @@ const RegistroInscripcionesSection = ({ modo = 'club' }) => {
                     className="admin-input"
                     value={filtroEventoId}
                     onChange={(e) => setFiltroEventoId(e.target.value)}
-                    style={{ flex: '0 1 200px', minWidth: '160px' }}
                 >
                     <option value="">Todos los eventos</option>
                     {eventos.map((ev) => {
@@ -203,7 +220,6 @@ const RegistroInscripcionesSection = ({ modo = 'club' }) => {
                         className="admin-input"
                         value={filtroClubId}
                         onChange={(e) => setFiltroClubId(e.target.value)}
-                        style={{ flex: '0 1 200px', minWidth: '160px' }}
                     >
                         <option value="">Todos los clubes</option>
                         {clubes.map((c) => {
@@ -215,7 +231,50 @@ const RegistroInscripcionesSection = ({ modo = 'club' }) => {
                 )}
             </div>
 
-            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px' }}>
+            <div className="registro-inscripciones-mobile">
+                {loading ? (
+                    <p className="registro-inscripciones-empty">Cargando...</p>
+                ) : inscripciones.length === 0 ? (
+                    <p className="registro-inscripciones-empty">No hay inscripciones registradas</p>
+                ) : (
+                    inscripciones.map((row) => (
+                        <div key={row.id} className="admin-native-card glass-effect">
+                            <div className="card-accent-bar ecu-blue" />
+                            <div className="card-content">
+                                <h4>
+                                    <User size={16} />
+                                    {row.participanteNombre || '—'}
+                                </h4>
+                                <p><Hash size={14} /> {row.participanteDocumento || 'Sin documento'}</p>
+                                {esAdmin && (
+                                    <p><Building2 size={14} /> {row.clubNombre || 'Sin club'}</p>
+                                )}
+                                <p><Calendar size={14} /> {row.eventoNombre || 'Sin evento'}</p>
+                                <p className="registro-inscripciones-prueba">{formatPrueba(row)}</p>
+                                <div className="registro-inscripciones-meta">
+                                    <span>{formatFecha(row.fechaInscripcion)}</span>
+                                    {row.estado ? <span className="chip">{row.estado}</span> : null}
+                                    {pagadoBadge(row.pagado)}
+                                </div>
+                            </div>
+                            {esAdmin && (
+                                <div className="card-actions-row">
+                                    <button
+                                        type="button"
+                                        className="btn-icon-admin danger"
+                                        onClick={() => setDeleteConfirm({ show: true, id: row.id })}
+                                        title="Eliminar inscripción"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <div className="admin-grid-card glass-effect registro-inscripciones-desktop">
                 <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'left' }}>
@@ -253,22 +312,7 @@ const RegistroInscripcionesSection = ({ modo = 'club' }) => {
                                     <td style={{ padding: '1rem' }}>{formatPrueba(row)}</td>
                                     <td style={{ padding: '1rem' }}>{formatFecha(row.fechaInscripcion)}</td>
                                     <td style={{ padding: '1rem' }}>{row.estado || '—'}</td>
-                                    <td style={{ padding: '1rem' }}>
-                                        <span style={{
-                                            padding: '4px 10px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '0.35rem',
-                                            background: row.pagado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                                            color: row.pagado ? '#10B981' : '#F59E0B',
-                                        }}>
-                                            {row.pagado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                            {row.pagado ? 'Sí' : 'No'}
-                                        </span>
-                                    </td>
+                                    <td style={{ padding: '1rem' }}>{pagadoBadge(row.pagado)}</td>
                                     {esAdmin && (
                                         <td style={{ padding: '1rem' }}>
                                             <button

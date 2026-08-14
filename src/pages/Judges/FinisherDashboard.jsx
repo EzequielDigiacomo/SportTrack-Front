@@ -13,6 +13,12 @@ import ResultadoService from '../../services/ResultadoService';
 import { useAlert } from '../../hooks/useAlert';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { getJudgeDisplayName, mapFasesFromApi, normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
+import {
+    filterEventosForJudgeRole,
+    isControlTecnicoRole,
+    isSoloControlTecnicoMode,
+    readControlTecnicoHandoff,
+} from '../../utils/controlTecnico';
 import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 
@@ -41,10 +47,12 @@ const FinisherDashboard = () => {
     const { user, logout } = useAuth();
     const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
     const isAdmin = roleStr.includes('admin');
+    const finisherSignalRole = isControlTecnicoRole(user) ? 'ControlTecnico' : 'Cronometrista';
     const [eventos, setEventos] = useState([]);
     const [selectedEvento, setSelectedEvento] = useState(null);
     const [fases, setFases] = useState([]);
     const [selectedFase, setSelectedFase] = useState(null);
+    const soloMode = isSoloControlTecnicoMode(user, selectedEvento);
     const [resultados, setResultados] = useState([]);
     const [rawTimes, setRawTimes] = useState([]);
     const [isRaceRunning, setIsRaceRunning] = useState(false);
@@ -88,10 +96,11 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         const loadEventos = async () => {
-            const data = await EventoService.getAll();
+            const data = filterEventosForJudgeRole(await EventoService.getAll(), user);
             setEventos(data);
-            
-            const savedEventId = localStorage.getItem('finisher_event_id');
+
+            const handoff = readControlTecnicoHandoff();
+            const savedEventId = handoff?.eventoId || localStorage.getItem('finisher_event_id');
             if (!savedEventId && data.length > 0) {
                 setSelectedEvento(data[0]);
             }
@@ -122,18 +131,27 @@ const FinisherDashboard = () => {
 
     // Recuperar estado al cargar
     useEffect(() => {
-        const savedEventId = localStorage.getItem('finisher_event_id');
+        const handoff = readControlTecnicoHandoff();
+        const savedEventId = handoff?.eventoId || localStorage.getItem('finisher_event_id');
         if (savedEventId && eventos.length > 0) {
-            const ev = eventos.find(e => e.id === parseInt(savedEventId));
+            const ev = eventos.find(e => String(e.id) === String(savedEventId));
             if (ev) setSelectedEvento(ev);
         }
     }, [eventos]);
 
     useEffect(() => {
-        const savedFaseId = localStorage.getItem('finisher_fase_id');
+        const handoff = readControlTecnicoHandoff();
+        const savedFaseId = handoff?.faseId || localStorage.getItem('finisher_fase_id');
         if (savedFaseId && fases.length > 0) {
-            const f = fases.find(x => x.id === parseInt(savedFaseId));
-            if (f) setSelectedFase(f);
+            const f = fases.find(x => String(x.id) === String(savedFaseId));
+            if (f) {
+                const t0Iso = handoff?.t0Iso;
+                if (t0Iso && !f.fechaHoraInicioReal) {
+                    setSelectedFase({ ...f, estado: 'En Carrera', fechaHoraInicioReal: t0Iso });
+                } else {
+                    setSelectedFase(f);
+                }
+            }
         }
     }, [fases]);
 
@@ -186,8 +204,8 @@ const FinisherDashboard = () => {
                 await timingSignalRService.connect(
                     selectedEvento?.id,
                     selectedFase?.id,
-                    user?.nombreCompleto || user?.nombre || user?.username || "Cronometrista",
-                    "Cronometrista"
+                    user?.nombreCompleto || user?.nombre || user?.username || finisherSignalRole,
+                    finisherSignalRole
                 );
 
                 // 2. LISTENERS GLOBALES (Siempre activos mientras estemos en el dashboard)
@@ -562,8 +580,8 @@ const FinisherDashboard = () => {
             await timingSignalRService.connect(
                 selectedEvento.id,
                 currentFaseId || null,
-                getJudgeDisplayName(user, 'Cronometrista'),
-                'Cronometrista'
+                getJudgeDisplayName(user, finisherSignalRole),
+                finisherSignalRole
             );
 
             addToast('Datos y conexión actualizados', 'success');
@@ -686,15 +704,22 @@ const FinisherDashboard = () => {
                 }));
 
             await ResultadoService.batchUpdate(dataToSave);
-            
-            // Cambiar el estado de la fase a "Pendiente de Validación"
-            await FaseService.enviarARevision(selectedFase.id);
-            
-            setFases(prev => prev.map(f => 
-                f.id === selectedFase.id ? { ...f, estado: 'Pendiente de Validación' } : f
-            ));
-            
-            addToast("Resultados enviados y fase enviada a revisión", "success");
+
+            if (soloMode) {
+                await FaseService.finalizar(selectedFase.id);
+                setFases(prev => prev.map(f =>
+                    f.id === selectedFase.id ? { ...f, estado: 'Finalizada' } : f
+                ));
+                setSelectedFase(prev => prev ? { ...prev, estado: 'Finalizada' } : prev);
+                addToast('Resultados guardados. La prueba quedó finalizada.', 'success');
+            } else {
+                await FaseService.enviarARevision(selectedFase.id);
+                setFases(prev => prev.map(f =>
+                    f.id === selectedFase.id ? { ...f, estado: 'Pendiente de Validación' } : f
+                ));
+                setSelectedFase(prev => prev ? { ...prev, estado: 'Pendiente de Validación' } : prev);
+                addToast('Resultados enviados y fase enviada a revisión', 'success');
+            }
         } catch (err) {
             console.error("Error al finalizar carga:", err);
             addToast("Error al guardar resultados", "error");
@@ -1110,7 +1135,7 @@ const FinisherDashboard = () => {
                         }} disabled={!selectedFase}>
                             <RefreshCw size={18} /> Reiniciar
                         </button>
-                        <button type="button" className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || arribosOrdenados.length === 0 || arribosOrdenados.some(a => a.type === 'duda')}>
+                        <button type="button" className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || loading || ['Finalizada', 'Finalizado'].includes(normalizeFaseEstado(selectedFase?.estado)) || arribosOrdenados.some(a => a.type === 'duda')}>
                             <Save size={18} /> Enviar
                         </button>
                     </footer>

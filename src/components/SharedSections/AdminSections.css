@@ -839,7 +839,55 @@ form:invalid button[type="submit"] {
 
 @media (max-width: 768px) {
     .form-grid { grid-template-columns: 1fr; }
-    .admin-section-header { flex-direction: column; gap: var(--spacing-md); }
+    .admin-section-header { flex-direction: column; gap: var(--spacing-md); align-items: stretch; }
+}
+
+.registro-inscripciones-mobile { display: none; }
+.registro-inscripciones-desktop { overflow-x: auto; border-radius: 16px; }
+.registro-inscripciones-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.registro-inscripciones-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.registro-inscripciones-search { position: relative; flex: 1 1 220px; }
+.registro-inscripciones-filters select { flex: 0 1 200px; min-width: 160px; }
+
+@media (max-width: 768px) {
+    .registro-inscripciones-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .registro-inscripciones-desktop { display: none !important; }
+    .registro-inscripciones-actions { width: 100%; }
+    .registro-inscripciones-actions .btn-admin-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+    .registro-inscripciones-filters { flex-direction: column; }
+    .registro-inscripciones-search,
+    .registro-inscripciones-filters select {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .registro-inscripciones-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: var(--color-text-secondary);
+        margin: 0;
+    }
+    .registro-inscripciones-prueba {
+        font-size: 0.82rem !important;
+        color: var(--color-text-muted) !important;
+    }
+    .registro-inscripciones-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem;
+        margin-top: 0.5rem;
+        color: var(--color-text-secondary);
+        font-size: 0.8rem;
+    }
 }
 
 /* SIMULACION */
@@ -1221,6 +1269,60 @@ th.sortable:hover .sort-icon {
     line-height: 1.3;
 }
 
+.evento-native-card {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border-radius: var(--radius-md);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.evento-native-card .evento-native-status-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+.evento-native-card .evento-native-info {
+    padding: 0.9rem 0.9rem 0.5rem 1rem;
+    cursor: default;
+}
+
+.evento-native-card .evento-native-name {
+    white-space: normal;
+}
+
+.evento-native-card .evento-native-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: normal;
+    color: var(--color-text-secondary);
+}
+
+.evento-native-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+}
+
+.evento-native-card .evento-native-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.9rem 0.85rem;
+    border-left: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
 /* ── LISTA NATIVA MOBILE DE EVENTOS ── */
 
 /* Por defecto (desktop): ocultar lista nativa, mostrar tabla */
@@ -1339,6 +1441,35 @@ th.sortable:hover .sort-icon {
 @media (max-width: 768px) {
     .eventos-mobile-list, .clubes-mobile-list, .logins-mobile-list, .atletas-mobile-list { display: block; }
     .eventos-desktop-table, .clubes-desktop-table, .logins-desktop-table, .atletas-desktop-table { display: none !important; }
+
+    .admin-section-container {
+        padding-left: 0;
+        padding-right: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .section-header-row {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .admin-native-card {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-native-card .card-content p {
+        color: var(--color-text-secondary);
+        align-items: flex-start;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.35;
+    }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1625,7 +1756,7 @@ th.sortable:hover .sort-icon {
 
 .admin-native-card .card-content p {
     margin: 0.35rem 0;
-    color: var(--color-text-dim);
+    color: var(--color-text-secondary);
     font-size: 0.88rem;
     display: flex;
     align-items: center;

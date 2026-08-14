@@ -28,7 +28,7 @@ import {
 } from '../../../utils/planHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
-const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl'];
+const ROLES_JUEZ = ['Largador', 'Cronometrista', 'JuezControl', 'ControlTecnico'];
 const DEFAULT_ROL = 'Admin';
 
 const enrichFederacionesWithPlan = (federacionesData, saasStatus, planes) => {
