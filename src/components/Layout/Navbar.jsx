@@ -54,7 +54,13 @@ function Navbar() {
                         </div>
                     ) : (
                         location.pathname !== '/login' && (
-                            <Link to="/login" className="btn-login-nav">Acceder</Link>
+                            <Link
+                                to="/login"
+                                className="btn-login-nav"
+                                onClick={() => window.scrollTo(0, 0)}
+                            >
+                                Acceder
+                            </Link>
                         )
                     )}
                 </div>

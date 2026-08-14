@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import MainLayout from './components/Layout/MainLayout'
 import Home from './pages/Home/Home'
 import ClubDashboard from './pages/ClubAdmin/Dashboard'
@@ -18,7 +19,14 @@ import JudgesLayout from './components/Layout/JudgesLayout'
 import NotificationCenter from './components/Common/NotificationCenter'
 import { useAuth } from './context/AuthContext'
 import PlanDetails from './pages/Home/PlanDetails'
-import { useLocation } from 'react-router-dom'
+
+function ScrollToTop() {
+    const { pathname } = useLocation()
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [pathname])
+    return null
+}
 
 function App() {
     const { toasts, removeToast } = useToast()
@@ -46,7 +54,8 @@ function App() {
 
     return (
         <>
-            <Routes>
+        <ScrollToTop />
+        <Routes>
             {/* Rutas públicas */}
             <Route path="/login" element={<MainLayout><Login /></MainLayout>} />
             <Route path="/" element={<MainLayout><Home /></MainLayout>} />
