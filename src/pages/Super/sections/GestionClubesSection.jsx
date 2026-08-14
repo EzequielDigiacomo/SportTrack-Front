@@ -4,6 +4,7 @@ import { Plus, ArrowLeft } from 'lucide-react';
 import api from '../../../services/api';
 import AuthService from '../../../services/AuthService';
 import FederacionService from '../../../services/FederacionService';
+import SaaSService from '../../../services/SaaSService';
 import { ENDPOINTS } from '../../../utils/constants';
 import ClubGrid from './ClubGrid';
 import ClubForm from './ClubForm';
@@ -16,7 +17,39 @@ import {
     resolveScopeFederationId,
 } from '../../../utils/apiHelpers';
 import { isSuperAdminUser } from '../../../utils/authHelpers';
+import {
+    canAccessDashboardClub,
+    extractPlanFromUser,
+    normalizePlan,
+} from '../../../utils/planHelpers';
 import '../../../components/SharedSections/AdminSections.css';
+
+const enrichFederacionesWithPlan = (federacionesData, saasStatus, planes) => {
+    const saasByFedId = Object.fromEntries(
+        (saasStatus || []).map(s => [String(pick(s, 'clubId', 'ClubId')), s])
+    );
+    const planesById = Object.fromEntries(
+        (planes || []).map(p => [String(pick(p, 'id', 'Id')), p])
+    );
+
+    return (federacionesData || []).map(f => {
+        const fedId = pick(f, 'id', 'Id', 'idFederacion', 'IdFederacion');
+        const saas = saasByFedId[String(fedId)] || {};
+        const planSaaSId = pick(saas, 'planSaaSId', 'PlanSaaSId');
+        const planNombre = pick(saas, 'planNombre', 'PlanNombre') || 'Sin plan';
+        const planRaw = planSaaSId != null ? planesById[String(planSaaSId)] : null;
+        const plan = normalizePlan(planRaw || { id: planSaaSId, nombre: planNombre });
+
+        return {
+            ...f,
+            id: fedId,
+            nombre: pick(f, 'nombre', 'Nombre') || f.nombre,
+            planNombre: plan?.nombre || planNombre,
+            plan,
+            accesoDashboardClub: canAccessDashboardClub(plan),
+        };
+    });
+};
 
 const GestionClubesSection = () => {
     const navigate = useNavigate();
@@ -43,34 +76,38 @@ const GestionClubesSection = () => {
 
     const isSuper = isSuperAdminUser(user);
 
-    const loadPlanes = useCallback(async () => {
-        try {
-            const res = await api.get(ENDPOINTS.SAAS.PLANES);
-            setPlanes(res.data);
-        } catch (e) {
-            console.error('Error loading plans:', e);
-        }
-    }, []);
+    const fedAllowsClubLogin = useCallback((federacionId) => {
+        if (!isSuper) return canAccessDashboardClub(extractPlanFromUser(user));
+        const fed = federaciones.find(f => String(f.id) === String(federacionId));
+        if (fed && typeof fed.accesoDashboardClub === 'boolean') return fed.accesoDashboardClub;
+        return canAccessDashboardClub(fed?.plan);
+    }, [isSuper, user, federaciones]);
+
+    const clubLoginAllowed = fedAllowsClubLogin(form.federacionId || scopeFedId);
 
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
             const clubesUrl = withFederationScope(ENDPOINTS.CLUBES, scopeFedId);
-            const [clubesRes, feds] = await Promise.all([
+            const [clubesRes, feds, saasStatus, planesData] = await Promise.all([
                 api.get(clubesUrl),
                 FederacionService.getAll(),
+                SaaSService.getClubesStatus().catch(() => []),
+                SaaSService.getPlanes().catch(() => []),
             ]);
 
             const todos = clubesRes.data || [];
+            const enrichedFeds = enrichFederacionesWithPlan(feds, saasStatus, planesData);
             const visibleFeds = scopeFedId
-                ? feds.filter(fed => String(fed.id) === String(scopeFedId))
-                : feds;
+                ? enrichedFeds.filter(fed => String(fed.id) === String(scopeFedId))
+                : enrichedFeds;
 
             let filtrados = todos;
             if (scopeFedId) {
                 filtrados = todos.filter(c => clubBelongsToFederation(c, scopeFedId));
             }
 
+            if (planesData?.length) setPlanes(planesData);
             setFederaciones(visibleFeds);
             setClubes(filtrados);
         } catch (e) {
@@ -83,10 +120,10 @@ const GestionClubesSection = () => {
 
     useEffect(() => {
         loadData();
-        if (isSuper) loadPlanes();
-    }, [loadData, loadPlanes, isSuper]);
+    }, [loadData]);
 
     const handleOpenCrear = () => {
+        const initialFedId = scopeFedId ? parseInt(scopeFedId, 10) : '';
         setForm({
             nombre: '',
             sigla: '',
@@ -96,13 +133,13 @@ const GestionClubesSection = () => {
             ubicacion: '',
             direccion: '',
             estadoMatricula: 0,
-            federacionId: scopeFedId ? parseInt(scopeFedId) : '',
+            federacionId: initialFedId,
             planSaaSId: '',
             frecuenciaPago: 'Mensual',
             fechaAltaPlan: '',
             fechaVencimientoPlan: '',
             bloqueadoPorFaltaDePago: false,
-            crearCuentaLogin: true,
+            crearCuentaLogin: fedAllowsClubLogin(initialFedId),
             loginUsername: '',
             loginPassword: '',
             loginConfirmPassword: '',
@@ -131,13 +168,19 @@ const GestionClubesSection = () => {
     };
 
     const handleFieldChange = (name, value) => {
-        setForm(prev => ({ ...prev, [name]: value }));
+        setForm(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === 'federacionId') {
+                next.crearCuentaLogin = fedAllowsClubLogin(value);
+            }
+            return next;
+        });
     };
 
     const buildClubPayload = () => {
         const fedId = scopeFedId
-            ? parseInt(scopeFedId)
-            : (form.federacionId ? parseInt(form.federacionId) : null);
+            ? parseInt(scopeFedId, 10)
+            : (form.federacionId ? parseInt(form.federacionId, 10) : null);
 
         return {
             nombre: form.nombre,
@@ -171,7 +214,10 @@ const GestionClubesSection = () => {
                     return;
                 }
 
-                if (form.crearCuentaLogin !== false) {
+                const allowClubLogin = fedAllowsClubLogin(payload.federacionId);
+                const shouldCreateLogin = allowClubLogin && form.crearCuentaLogin !== false;
+
+                if (shouldCreateLogin) {
                     if (!form.loginUsername?.trim()) {
                         showAlert('error', 'Ingresá el usuario de acceso para el club.');
                         setSaving(false);
@@ -192,7 +238,7 @@ const GestionClubesSection = () => {
                 const response = await api.post(ENDPOINTS.CLUBES, payload);
                 const newClubId = pick(response.data, 'id', 'Id');
 
-                if (form.crearCuentaLogin !== false && newClubId) {
+                if (shouldCreateLogin && newClubId) {
                     try {
                         const fedId = payload.federacionId
                             ?? pick(response.data, 'federacionId', 'FederacionId');
@@ -207,8 +253,15 @@ const GestionClubesSection = () => {
                         });
                         showAlert('success', 'Club y cuenta de acceso creados correctamente.');
                     } catch (regErr) {
-                        showAlert('error', `Club creado, pero falló la cuenta de acceso: ${regErr.response?.data?.message || regErr.message}. Podés vincularla desde Logins.`);
+                        const msgText = regErr.response?.data?.message || regErr.message || '';
+                        if (/no incluye dashboard\/login Club/i.test(msgText)) {
+                            showAlert('success', 'Club creado. El login de club no aplica en este plan; se puede dar de alta si más adelante contratan SIGDEF Profesional o Pack Dúo.');
+                        } else {
+                            showAlert('error', `Club creado, pero falló la cuenta de acceso: ${msgText}. Podés vincularla desde Logins.`);
+                        }
                     }
+                } else if (!allowClubLogin) {
+                    showAlert('success', 'Club creado. Este plan no incluye panel Club; queda cargado y el login se puede crear si más adelante pagan SIGDEF/Dúo Profesional o superior.');
                 } else {
                     showAlert('success', 'Club registrado. Podés crear su login desde Gestión de Logins.');
                 }
@@ -278,6 +331,7 @@ const GestionClubesSection = () => {
                     planes={planes}
                     federaciones={federaciones}
                     showFederationSelect={isSuper && !scopeFedId && view === 'crear'}
+                    clubLoginAllowed={clubLoginAllowed}
                 />
             )}
         </div>

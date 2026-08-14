@@ -8,7 +8,7 @@ const ESTADO_MATRICULA_OPTIONS = [
     { value: 3, label: 'Parcial' },
 ];
 
-const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, isSuperAdmin, planes, federaciones = [], showFederationSelect = false }) => {
+const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing, isSuperAdmin, planes, federaciones = [], showFederationSelect = false, clubLoginAllowed = true }) => {
     return (
         <div className="club-form-container fade-in">
             <div className="admin-form-card glass-effect">
@@ -136,9 +136,17 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                     {!isEditing && (
                         <div className="form-section">
                             <h4>Acceso al Sistema</h4>
+                            {!clubLoginAllowed ? (
+                                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 1rem 0' }}>
+                                    El plan de esta federación no incluye panel Club (SIGDEF Profesional o Pack Dúo).
+                                    El club se crea igual y queda listo por si más adelante contratan ese módulo. El login se puede dar de alta entonces.
+                                </p>
+                            ) : (
                             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 1rem 0' }}>
                                 Creá las credenciales para que el club ingrese a su panel de gestión.
                             </p>
+                            )}
+                            {clubLoginAllowed && (
                             <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                                 <input
                                     type="checkbox"
@@ -150,7 +158,8 @@ const ClubForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditing
                                     Crear cuenta de login para este club
                                 </label>
                             </div>
-                            {initialData.crearCuentaLogin !== false && (
+                            )}
+                            {clubLoginAllowed && initialData.crearCuentaLogin !== false && (
                                 <>
                                     <div className="form-group">
                                         <label>Usuario de acceso *</label>
