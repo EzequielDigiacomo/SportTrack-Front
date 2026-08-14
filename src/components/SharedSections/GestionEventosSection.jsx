@@ -39,7 +39,7 @@ const GestionEventosSection = () => {
     const fedIdFromUrl = new URLSearchParams(location.search).get('fedId');
     const role = user?.rol?.trim();
     const isSuperAdmin = role?.toLowerCase() === 'superadmin' || user?.username === 'soporte_tecnico';
-    const isAdmin = role === 'Admin' || isSuperAdmin;
+    const isAdmin = role?.toLowerCase() === 'admin' || isSuperAdmin;
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'dashboard'
@@ -399,7 +399,7 @@ const GestionEventosSection = () => {
                             <h1 className="gradient-text" style={{ fontSize: '2.2rem', fontWeight: '800', margin: 0 }}>Gestión de Eventos</h1>
                         </div>
                         <div style={{ display: 'flex', gap: '0.8rem' }}>
-                            {isSuperAdmin && (
+                            {isAdmin && (
                                 <button className="btn-admin-secondary" style={{ border: '1px solid var(--color-primary)', color: 'var(--color-primary)' }} onClick={() => setView('crearControl')}>
                                     <Plus size={20} /> Nuevo Control
                                 </button>
@@ -516,11 +516,10 @@ const GestionEventosSection = () => {
                                 <label>Distancia</label>
                                 <select className="admin-select" value={form.controlDist} onChange={e => handleFieldChange('controlDist', e.target.value)}>
                                     <option value="">Seleccionar...</option>
-                                    <option value="6">1000m</option>
                                     <option value="1">200m</option>
                                     <option value="5">500m</option>
-                                    <option value="10">5000m</option>
-                                    <option value="9">3000m</option>
+                                    <option value="6">1000m</option>
+                                    <option value="8">2000m</option>
                                 </select>
                             </div>
                             <div className="form-group">
@@ -561,9 +560,12 @@ const GestionEventosSection = () => {
 
                                         setSaving(true);
                                         try {
-                                            const boteName = form.controlBote === "1" ? "K1" : form.controlBote === "2" ? "K2" : "K4";
-                                            const distName = form.controlDist === "6" ? "1000m" : "500m";
-                                            const sexName = form.controlSex === "1" ? "Masc" : "Fem";
+                                            const boteMap = { 1: 'K1', 2: 'K2', 3: 'K4', 4: 'C1', 5: 'C2' };
+                                            const distMap = { 1: '200m', 5: '500m', 6: '1000m', 8: '2000m', 9: '3000m', 10: '5000m' };
+                                            const sexMap = { 1: 'Masc', 2: 'Fem', 3: 'Mixto' };
+                                            const boteName = boteMap[form.controlBote] || 'K1';
+                                            const distName = distMap[form.controlDist] || '500m';
+                                            const sexName = sexMap[form.controlSex] || 'Masc';
                                             const extraName = form.controlNombreExtra ? ` - ${form.controlNombreExtra}` : '';
                                             
                                             // 1. Crear Evento
@@ -573,7 +575,8 @@ const GestionEventosSection = () => {
                                                 fechaFin: form.controlFecha,
                                                 estado: 'Programada',
                                                 inscripcionesHabilitadas: true,
-                                                clubId: form.clubId || null
+                                                clubId: form.clubId || null,
+                                                federacionId: scopeFedId != null ? Number(scopeFedId) : null,
                                             };
                                             const newEv = await EventoService.create(evPayload);
                                             
