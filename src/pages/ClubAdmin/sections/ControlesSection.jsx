@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Calendar, MapPin, Timer, ArrowLeft, Plus, Users, ClipboardList } from 'lucide-react';
+import { Activity, Calendar, MapPin, Timer, ArrowLeft, Plus, Users, ClipboardList, Trash2 } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import { PruebaService } from '../../../services/ConfigService';
 import { useAuth } from '../../../context/AuthContext';
-import { isControlTecnicoEvent, isControlTecnicoRole } from '../../../utils/controlTecnico';
+import { isControlTecnicoEvent, isControlTecnicoRole, isJudgeAdmin } from '../../../utils/controlTecnico';
 import { resolveScopeFederationId } from '../../../utils/apiHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import InscripcionAtletaModal from './InscripcionAtletaModal';
@@ -28,6 +28,7 @@ const ControlesSection = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const isOperator = isControlTecnicoRole(user);
+    const canDelete = isOperator || isJudgeAdmin(user);
     const [controles, setControles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
@@ -36,6 +37,7 @@ const ControlesSection = () => {
     const [selectedControl, setSelectedControl] = useState(null);
     const [showInscripcion, setShowInscripcion] = useState(false);
     const [validationErrors, setValidationErrors] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, control: null });
 
     const fedIdFromUrl = new URLSearchParams(window.location.search).get('fedId');
     const scopeFedId = resolveScopeFederationId({ fedIdFromUrl, user, clubes: [] });
@@ -55,6 +57,34 @@ const ControlesSection = () => {
             console.error('Error cargando controles:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const requestDelete = (control, e) => {
+        if (e) e.stopPropagation();
+        setDeleteConfirm({ show: true, control });
+    };
+
+    const confirmDelete = async () => {
+        const control = deleteConfirm.control;
+        if (!control?.id) return;
+        setSaving(true);
+        try {
+            await EventoService.delete(control.id);
+            setDeleteConfirm({ show: false, control: null });
+            if (selectedControl?.id === control.id) {
+                setSelectedControl(null);
+                setView('lista');
+            }
+            await loadControles();
+        } catch (err) {
+            setDeleteConfirm({ show: false, control: null });
+            setValidationErrors({
+                title: 'No se pudo eliminar',
+                list: [err.response?.data?.message || err.message || 'Error al eliminar el control.'],
+            });
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -152,6 +182,16 @@ const ControlesSection = () => {
                         >
                             <Timer size={18} /> Cronometrar
                         </button>
+                        {canDelete && (
+                            <button
+                                type="button"
+                                className="btn-admin-secondary"
+                                style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                                onClick={(e) => requestDelete(selectedControl, e)}
+                            >
+                                <Trash2 size={18} /> Eliminar
+                            </button>
+                        )}
                     </div>
                     <div className="dashboard-grid dashboard-grid-3col" style={{ marginBottom: '1.5rem' }}>
                         <div className="dashboard-card glass-effect clickable" onClick={() => setShowInscripcion(true)}>
@@ -304,7 +344,20 @@ const ControlesSection = () => {
                                     <p className="evento-location">
                                         <MapPin size={14} style={{ marginRight: 6 }} /> {control.ubicacion || 'Sin ubicación'}
                                     </p>
-                                    <div style={{ marginTop: '1rem' }}>{estadoBadge(control.estado)}</div>
+                                    <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                        {estadoBadge(control.estado)}
+                                        {canDelete && (
+                                            <button
+                                                type="button"
+                                                className="btn-admin-secondary"
+                                                style={{ color: '#ef4444', borderColor: '#ef444455', padding: '6px 10px' }}
+                                                onClick={(e) => requestDelete(control, e)}
+                                                title="Eliminar control"
+                                            >
+                                                <Trash2 size={16} /> Eliminar
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -319,6 +372,17 @@ const ControlesSection = () => {
                     )}
                 </>
             )}
+
+            <ConfirmDialog
+                isOpen={deleteConfirm.show}
+                onClose={() => setDeleteConfirm({ show: false, control: null })}
+                onConfirm={confirmDelete}
+                title="Eliminar control técnico"
+                message={`¿Eliminar "${deleteConfirm.control?.nombre}"? Se borran inscripciones, series y tiempos. Esta acción no se puede deshacer.`}
+                type="danger"
+                confirmText="Sí, eliminar"
+                loading={saving}
+            />
 
             <ConfirmDialog
                 isOpen={!!validationErrors}

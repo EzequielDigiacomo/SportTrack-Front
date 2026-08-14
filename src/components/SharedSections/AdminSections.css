@@ -595,6 +595,19 @@ form:invalid button[type="submit"] {
     border: 1px solid rgba(var(--color-error-rgb), 0.3) !important;
 }
 
+.admin-input.field-invalid,
+.admin-select.field-invalid {
+    border-color: var(--color-error) !important;
+    box-shadow: 0 0 0 1px rgba(var(--color-error-rgb), 0.35);
+}
+
+.field-invalid-hint {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--color-error);
+}
+
 .chip.inactive {
     background: rgba(255,255,255,0.03);
     border-color: rgba(255,255,255,0.06);

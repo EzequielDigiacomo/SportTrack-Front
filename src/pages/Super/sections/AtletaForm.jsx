@@ -1,19 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Save, ArrowLeft } from 'lucide-react';
+import { Save } from 'lucide-react';
 import FederacionService from '../../../services/FederacionService';
+import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import { getClubFederationId, pick } from '../../../utils/apiHelpers';
 
 const SEXO_OPTIONS = [
     { value: 1, label: 'Masculino' },
     { value: 2, label: 'Femenino' },
     { value: 3, label: 'Mixto' },
-];
-
-const ESTADO_PAGO_OPTIONS = [
-    { value: 0, label: 'Adeudado (Pendiente)' },
-    { value: 1, label: 'Abonado (Pagado)' },
-    { value: 2, label: 'Vencido' },
-    { value: 3, label: 'Parcial' },
 ];
 
 const AtletaForm = ({ 
@@ -33,7 +27,47 @@ const AtletaForm = ({
 }) => {
     const today = new Date().toISOString().split('T')[0];
     const [federacionesList, setFederacionesList] = useState(federaciones);
+    const [invalidFields, setInvalidFields] = useState([]);
+    const [missingAlert, setMissingAlert] = useState({ isOpen: false, message: '' });
     const effectiveFedId = initialData.federacionId || scopeFedId || '';
+    const clubRequired = showClubSelect && !hideClubSelect;
+
+    const markValid = (name) => {
+        setInvalidFields((prev) => prev.filter((f) => f !== name));
+    };
+
+    const handleChange = (name, value) => {
+        markValid(name);
+        onChange(name, value);
+    };
+
+    const collectMissingFields = () => {
+        const missing = [];
+        if (!String(initialData.nombre || '').trim()) missing.push({ id: 'nombre', label: 'Nombre' });
+        if (!String(initialData.apellido || '').trim()) missing.push({ id: 'apellido', label: 'Apellido' });
+        if (!String(initialData.dni || initialData.documento || '').trim()) missing.push({ id: 'dni', label: 'DNI / Documento' });
+        if (!initialData.fechaNacimiento) missing.push({ id: 'fechaNacimiento', label: 'Fecha de nacimiento' });
+        if (showFederationSelect && !initialData.federacionId) missing.push({ id: 'federacionId', label: 'Federación' });
+        if (clubRequired && !initialData.clubId && !initialData.idClub) missing.push({ id: 'clubId', label: 'Club / Entidad' });
+        return missing;
+    };
+
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+        const missing = collectMissingFields();
+        if (missing.length) {
+            setInvalidFields(missing.map((f) => f.id));
+            setMissingAlert({
+                isOpen: true,
+                message: `Completá estos datos para continuar:\n\n${missing.map((f) => `• ${f.label}`).join('\n')}`,
+            });
+            return;
+        }
+        onSubmit(e);
+    };
+
+    const isInvalid = (name) => invalidFields.includes(name);
+    const fieldClass = (base, name) => `${base}${isInvalid(name) ? ' field-invalid' : ''}`;
 
     useEffect(() => {
         if (!showFederationSelect) return undefined;
@@ -65,7 +99,7 @@ const AtletaForm = ({
     return (
         <div className="atleta-form-container fade-in">
             <div className="admin-form-card glass-effect">
-                <form onSubmit={onSubmit} className="admin-grid-form">
+                <form onSubmit={handleFormSubmit} className="admin-grid-form" noValidate>
 
                     {/* SECCIÓN: DATOS PERSONALES */}
                     <div className="form-section">
@@ -74,39 +108,37 @@ const AtletaForm = ({
                             <div className="form-group">
                                 <label>Nombre *</label>
                                 <input 
-                                    className="admin-input"
+                                    className={fieldClass('admin-input', 'nombre')}
                                     type="text" 
                                     name="nombre"
                                     value={initialData.nombre} 
-                                    onChange={(e) => onChange('nombre', e.target.value)} 
-                                    required 
-                                    minLength={2}
+                                    onChange={(e) => handleChange('nombre', e.target.value)} 
                                 />
+                                {isInvalid('nombre') && <span className="field-invalid-hint">Completá el nombre</span>}
                             </div>
                             <div className="form-group">
                                 <label>Apellido *</label>
                                 <input 
-                                    className="admin-input"
+                                    className={fieldClass('admin-input', 'apellido')}
                                     type="text" 
                                     name="apellido"
                                     value={initialData.apellido} 
-                                    onChange={(e) => onChange('apellido', e.target.value)} 
-                                    required 
-                                    minLength={2}
+                                    onChange={(e) => handleChange('apellido', e.target.value)} 
                                 />
+                                {isInvalid('apellido') && <span className="field-invalid-hint">Completá el apellido</span>}
                             </div>
                         </div>
                         <div className="form-row">
                             <div className="form-group">
                                 <label>DNI / Cédula / Documento *</label>
                                 <input 
-                                    className="admin-input"
+                                    className={fieldClass('admin-input', 'dni')}
                                     type="text" 
                                     name="dni"
                                     value={initialData.dni || initialData.documento || ''} 
-                                    onChange={(e) => { onChange('dni', e.target.value); onChange('documento', e.target.value); }} 
-                                    required 
+                                    onChange={(e) => { handleChange('dni', e.target.value); onChange('documento', e.target.value); }} 
                                 />
+                                {isInvalid('dni') && <span className="field-invalid-hint">Completá el documento</span>}
                             </div>
                             <div className="form-group">
                                 <label>Sexo</label>
@@ -114,7 +146,7 @@ const AtletaForm = ({
                                     className="admin-select"
                                     name="sexoId"
                                     value={initialData.sexoId || initialData.sexo || 1} 
-                                    onChange={(e) => { onChange('sexoId', parseInt(e.target.value)); onChange('sexo', parseInt(e.target.value)); }}
+                                    onChange={(e) => { handleChange('sexoId', parseInt(e.target.value)); onChange('sexo', parseInt(e.target.value)); }}
                                 >
                                     {SEXO_OPTIONS.map(o => (
                                         <option key={o.value} value={o.value}>{o.label}</option>
@@ -125,16 +157,17 @@ const AtletaForm = ({
                         <div className="form-group">
                             <label>Fecha de Nacimiento *</label>
                             <input 
-                                className="admin-input"
+                                className={fieldClass('admin-input', 'fechaNacimiento')}
                                 type="date" 
                                 name="fechaNacimiento"
                                 value={initialData.fechaNacimiento} 
-                                onChange={(e) => onChange('fechaNacimiento', e.target.value)} 
-                                required 
+                                onChange={(e) => handleChange('fechaNacimiento', e.target.value)} 
                                 min="1940-01-01"
                                 max={today}
                             />
-                            <small style={{color: 'var(--color-text-dim)', fontSize: '0.75rem'}}>Permitido desde 1940 hasta hoy</small>
+                            {isInvalid('fechaNacimiento')
+                                ? <span className="field-invalid-hint">Indicá la fecha de nacimiento</span>
+                                : <small style={{color: 'var(--color-text-dim)', fontSize: '0.75rem'}}>Permitido desde 1940 hasta hoy</small>}
                         </div>
                     </div>
 
@@ -149,7 +182,7 @@ const AtletaForm = ({
                                     type="email" 
                                     name="email"
                                     value={initialData.email} 
-                                    onChange={(e) => onChange('email', e.target.value)} 
+                                    onChange={(e) => handleChange('email', e.target.value)} 
                                     placeholder="ejemplo@correo.com"
                                 />
                             </div>
@@ -160,7 +193,7 @@ const AtletaForm = ({
                                     type="text" 
                                     name="telefono"
                                     value={initialData.telefono || ''} 
-                                    onChange={(e) => onChange('telefono', e.target.value)} 
+                                    onChange={(e) => handleChange('telefono', e.target.value)} 
                                     placeholder="+54 11 ..."
                                 />
                             </div>
@@ -172,7 +205,7 @@ const AtletaForm = ({
                                 type="text" 
                                 name="direccion"
                                 value={initialData.direccion || ''} 
-                                onChange={(e) => onChange('direccion', e.target.value)} 
+                                    onChange={(e) => handleChange('direccion', e.target.value)}
                                 placeholder="Ciudad, Provincia..."
                             />
                         </div>
@@ -183,7 +216,7 @@ const AtletaForm = ({
                                 type="text" 
                                 name="pais"
                                 value={initialData.pais || ''} 
-                                onChange={(e) => onChange('pais', e.target.value)} 
+                                    onChange={(e) => handleChange('pais', e.target.value)}
                             />
                         </div>
                         
@@ -193,21 +226,21 @@ const AtletaForm = ({
                                     <div className="form-group">
                                         <label>Federación *</label>
                                         <select 
-                                            className="admin-select"
+                                            className={fieldClass('admin-select', 'federacionId')}
                                             name="federacionId"
                                             value={initialData.federacionId || ''} 
                                             onChange={(e) => { 
-                                                onChange('federacionId', e.target.value); 
+                                                handleChange('federacionId', e.target.value); 
                                                 onChange('clubId', ''); 
                                                 onChange('idClub', ''); 
                                             }}
-                                            required
                                         >
                                             <option value="">Seleccionar Federación</option>
                                             {federacionesList.map(fed => (
                                                 <option key={fed.id} value={fed.id}>{fed.nombre}</option>
                                             ))}
                                         </select>
+                                        {isInvalid('federacionId') && <span className="field-invalid-hint">Seleccioná la federación</span>}
                                     </div>
                                 )}
                                 {fixedClubLabel && (
@@ -224,15 +257,15 @@ const AtletaForm = ({
                                 )}
                                 {showClubSelect && !hideClubSelect && (
                                     <div className="form-group">
-                                        <label>Club / Entidad</label>
+                                        <label>Club / Entidad *</label>
                                         <select 
-                                            className="admin-select"
+                                            className={fieldClass('admin-select', 'clubId')}
                                             name="clubId"
                                             value={initialData.clubId || initialData.idClub || ''} 
-                                            onChange={(e) => { onChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
+                                            onChange={(e) => { handleChange('clubId', e.target.value); onChange('idClub', e.target.value); }}
                                             disabled={showFederationSelect && !effectiveFedId}
                                         >
-                                            <option value="">Sin Asignar (Agente Libre)</option>
+                                            <option value="">Seleccionar club</option>
                                             {clubes
                                                 .filter(c => {
                                                     const clubFedId = getClubFederationId(c);
@@ -251,90 +284,11 @@ const AtletaForm = ({
                                                     );
                                                 })}
                                         </select>
+                                        {isInvalid('clubId') && <span className="field-invalid-hint">Seleccioná el club del atleta</span>}
                                     </div>
                                 )}
                             </div>
                         )}
-                    </div>
-
-                    {/* SECCIÓN: DATOS DEPORTIVOS */}
-                    <div className="form-section">
-                        <h4>Datos Deportivos y Administrativos</h4>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Estado de Pago (Matrícula)</label>
-                                <select 
-                                    className="admin-select"
-                                    name="estadoPago"
-                                    value={initialData.estadoPago ?? 0} 
-                                    onChange={(e) => onChange('estadoPago', parseInt(e.target.value))}
-                                >
-                                    {ESTADO_PAGO_OPTIONS.map(o => (
-                                        <option key={o.value} value={o.value}>{o.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="form-row">
-                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                                <input 
-                                    type="checkbox" 
-                                    id="presentoAptoMedico"
-                                    name="presentoAptoMedico" 
-                                    checked={initialData.presentoAptoMedico || false} 
-                                    onChange={(e) => onChange('presentoAptoMedico', e.target.checked)} 
-                                />
-                                <label htmlFor="presentoAptoMedico" style={{ marginBottom: 0 }}>Presentó Apto Médico</label>
-                            </div>
-                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                                <input 
-                                    type="checkbox" 
-                                    id="perteneceSeleccion"
-                                    name="perteneceSeleccion" 
-                                    checked={initialData.perteneceSeleccion || false} 
-                                    onChange={(e) => onChange('perteneceSeleccion', e.target.checked)} 
-                                />
-                                <label htmlFor="perteneceSeleccion" style={{ marginBottom: 0 }}>Pertenece a Selección</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SECCIÓN: BECAS */}
-                    <div className="form-section">
-                        <h4>Becas</h4>
-                        <div className="form-row">
-                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                                <input 
-                                    type="checkbox" 
-                                    id="becadoEnard"
-                                    name="becadoEnard" 
-                                    checked={initialData.becadoEnard || false} 
-                                    onChange={(e) => onChange('becadoEnard', e.target.checked)} 
-                                />
-                                <label htmlFor="becadoEnard" style={{ marginBottom: 0 }}>Becado ENARD</label>
-                            </div>
-                            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                                <input 
-                                    type="checkbox" 
-                                    id="becadoSdn"
-                                    name="becadoSdn" 
-                                    checked={initialData.becadoSdn || false} 
-                                    onChange={(e) => onChange('becadoSdn', e.target.checked)} 
-                                />
-                                <label htmlFor="becadoSdn" style={{ marginBottom: 0 }}>Becado SDN</label>
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label>Monto Beca</label>
-                            <input 
-                                className="admin-input"
-                                type="number" 
-                                name="montoBeca"
-                                value={initialData.montoBeca || 0} 
-                                onChange={(e) => onChange('montoBeca', parseFloat(e.target.value) || 0)}
-                                min="0"
-                            />
-                        </div>
                     </div>
 
                     <div className="form-footer-actions">
@@ -345,6 +299,16 @@ const AtletaForm = ({
                     </div>
                 </form>
             </div>
+            <ConfirmDialog
+                isOpen={missingAlert.isOpen}
+                onClose={() => setMissingAlert({ isOpen: false, message: '' })}
+                onConfirm={() => setMissingAlert({ isOpen: false, message: '' })}
+                title="Faltan datos"
+                message={missingAlert.message}
+                type="warning"
+                confirmText="Entendido"
+                cancelText=""
+            />
         </div>
     );
 };

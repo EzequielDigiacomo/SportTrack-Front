@@ -358,7 +358,7 @@ class TimingSignalRService {
                 const roleLower = String(this.role || '').toLowerCase();
                 const isOperator = [
                     'admin', 'superadmin', 'juezcontrol', 'largador',
-                    'cronometrista', 'soporte_tecnico', 'club'
+                    'cronometrista', 'controltecnico', 'soporte_tecnico', 'club'
                 ].some(r => roleLower.includes(r));
                 if (isOperator) {
                     try {

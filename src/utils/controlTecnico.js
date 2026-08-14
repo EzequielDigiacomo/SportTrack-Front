@@ -36,11 +36,11 @@ export const filterEventosForJudgeRole = (eventos, user) => {
 export const isSoloControlTecnicoMode = (user, evento) =>
     isControlTecnicoRole(user) || (isJudgeAdmin(user) && isControlTecnicoEvent(evento));
 
-export const saveControlTecnicoHandoff = ({ eventoId, faseId, t0Iso }) => {
+export const saveControlTecnicoHandoff = ({ eventoId, faseId, t0Iso, lanes = [] }) => {
     try {
         sessionStorage.setItem(
             CONTROL_TECNICO_HANDOFF_KEY,
-            JSON.stringify({ eventoId, faseId, t0Iso, at: Date.now() })
+            JSON.stringify({ eventoId, faseId, t0Iso, lanes, at: Date.now() })
         );
         if (eventoId != null) localStorage.setItem('finisher_event_id', String(eventoId));
         if (faseId != null) localStorage.setItem('finisher_fase_id', String(faseId));
@@ -58,3 +58,20 @@ export const readControlTecnicoHandoff = () => {
         return null;
     }
 };
+
+/** Handoff fresco (largada hace menos de 30s): no cortar SignalR ni el cronómetro. */
+export const isFreshControlTecnicoHandoff = (handoff, maxAgeMs = 30000) => {
+    if (!handoff?.t0Iso && !handoff?.faseId) return false;
+    const at = Number(handoff.at) || 0;
+    return Date.now() - at < maxAgeMs;
+};
+
+export const snapshotLanesForHandoff = (resultados = []) =>
+    (resultados || []).map((r) => ({
+        id: r.id,
+        carril: r.carril,
+        nombreAtleta: r.nombreAtleta || r.nombre || r.atletaNombre,
+        estadoCanto: r.estadoCanto || r.estado || 'Pendiente',
+        tiempoOficial: r.tiempoOficial || null,
+        status: r.tiempoOficial ? 'finished' : 'pending',
+    }));

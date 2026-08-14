@@ -2,6 +2,7 @@ import axios from 'axios'
 import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants'
 import { getStoredAuthToken } from '../utils/authHelpers'
 import { isNativePlatform } from '../utils/platformUtils'
+import { getUserFacingError } from '../utils/userFacingError'
 
 const isNative = isNativePlatform()
 
@@ -50,8 +51,7 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // Handle other errors
-        const errorMessage = error.response?.data?.message || error.message || 'Error desconocido'
+        const errorMessage = getUserFacingError(error)
 
         console.error('API Error:', error.response?.data || error.message);
 

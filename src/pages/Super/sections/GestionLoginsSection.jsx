@@ -21,6 +21,7 @@ import {
     getUsuarioFederationName,
 } from '../../../utils/apiHelpers';
 import { isSuperAdminUser, isFederationAdminUser } from '../../../utils/authHelpers';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import {
     canAccessControlesLive,
     canAccessDashboardClub,
@@ -269,7 +270,7 @@ const GestionLoginsSection = () => {
             setView('lista');
             loadData();
         } catch (err) {
-            showAlert('error', 'Error: ' + (err.response?.data?.message || err.message));
+            showAlert('error', getUserFacingError(err));
         } finally {
             setSaving(false);
         }
@@ -288,7 +289,7 @@ const GestionLoginsSection = () => {
                     setUsuarios(prev => prev.map(u => u.id === loginUser.id ? { ...u, activo: !u.activo } : u));
                     showAlert('success', `Cuenta "${loginUser.username}" ${loginUser.activo ? 'deshabilitada' : 'habilitada'} correctamente.`);
                 } catch (err) {
-                    showAlert('error', 'Error al cambiar el estado: ' + (err.response?.data?.message || err.message));
+                    showAlert('error', getUserFacingError(err, 'No se pudo cambiar el estado de la cuenta.'));
                 }
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             },

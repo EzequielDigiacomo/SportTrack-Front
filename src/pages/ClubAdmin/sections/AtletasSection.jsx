@@ -9,6 +9,7 @@ import AtletaGrid from '../../Super/sections/AtletaGrid';
 import AtletaForm from '../../Super/sections/AtletaForm';
 import { useAlert } from '../../../hooks/useAlert';
 import { matchesSearch } from '../../../utils/authHelpers';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
@@ -44,7 +45,8 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
         email: '',
         fechaNacimiento: '',
         sexoId: 1,
-        pais: ''
+        pais: '',
+        estadoPago: 1,
     });
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -86,7 +88,7 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
     };
 
     const handleOpenCrear = () => {
-        setForm({ nombre: '', apellido: '', dni: '', email: '', fechaNacimiento: '', sexoId: 1, pais: '' });
+        setForm({ nombre: '', apellido: '', dni: '', email: '', fechaNacimiento: '', sexoId: 1, pais: '', estadoPago: 1 });
         setView('crear');
     };
 
@@ -99,7 +101,8 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
             email: atleta.email || '',
             fechaNacimiento: atleta.fechaNacimiento ? atleta.fechaNacimiento.substring(0, 10) : '',
             sexoId: atleta.sexoId || 1,
-            pais: atleta.pais || ''
+            pais: atleta.pais || '',
+            estadoPago: atleta.estadoPago ?? 1,
         });
         setView('editar');
     };
@@ -132,7 +135,7 @@ const AtletasSection = ({ pagoAfiliacionAlDia = true }) => {
             setView('lista');
             loadAtletas();
         } catch (error) {
-            showAlert('error', 'Error: ' + (error.response?.data?.message || error.message));
+            showAlert('error', getUserFacingError(error, 'No se pudo guardar el atleta.'));
         } finally {
             setSaving(false);
         }

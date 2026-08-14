@@ -18,6 +18,7 @@ import {
     isControlTecnicoRole,
     isSoloControlTecnicoMode,
     readControlTecnicoHandoff,
+    isFreshControlTecnicoHandoff,
 } from '../../utils/controlTecnico';
 import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
@@ -61,6 +62,7 @@ const FinisherDashboard = () => {
     const timerRef = useRef(null);
     const startTimeRef = useRef(null);
     const pendingAbsRef = useRef([]); // { kind: 'lane'|'doubt', resultadoId?, finishAbs }
+    const handoffRef = useRef(readControlTecnicoHandoff());
     const [startReceiveLagSec, setStartReceiveLagSec] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
@@ -92,6 +94,38 @@ const FinisherDashboard = () => {
             unsubscribe();
             clearInterval(clockTick);
         };
+    }, []);
+
+    // Control técnico: carriles + t0 locales al instante (no esperar API / SignalR).
+    useEffect(() => {
+        const h = handoffRef.current;
+        if (!h) return;
+        if (Array.isArray(h.lanes) && h.lanes.length > 0) {
+            setResultados(
+                [...h.lanes]
+                    .sort((a, b) => (Number(a.carril) || 0) - (Number(b.carril) || 0))
+                    .map((r) => ({
+                        ...r,
+                        estadoCanto: r.estadoCanto || 'Pendiente',
+                        tiempoOficial: r.tiempoOficial || null,
+                        status: r.tiempoOficial ? 'finished' : 'pending',
+                    }))
+            );
+        }
+        if (h.t0Iso) {
+            const parsed = parseStartMs(h.t0Iso);
+            if (!Number.isNaN(parsed)) {
+                setIsRaceRunning(true);
+                setStartTime(parsed);
+                startTimeRef.current = parsed;
+                const now = timingSignalRService.getSyncedNow().getTime();
+                setElapsedTime(elapsedMs(parsed, now));
+                if (timerRef.current) clearInterval(timerRef.current);
+                timerRef.current = setInterval(() => {
+                    setElapsedTime(elapsedMs(parsed, timingSignalRService.getSyncedNow().getTime()));
+                }, 37);
+            }
+        }
     }, []);
 
     useEffect(() => {
@@ -146,37 +180,47 @@ const FinisherDashboard = () => {
             const f = fases.find(x => String(x.id) === String(savedFaseId));
             if (f) {
                 const t0Iso = handoff?.t0Iso;
-                if (t0Iso && !f.fechaHoraInicioReal) {
-                    setSelectedFase({ ...f, estado: 'En Carrera', fechaHoraInicioReal: t0Iso });
-                } else {
-                    setSelectedFase(f);
-                }
+                const lanes = handoff?.lanes;
+                setSelectedFase({
+                    ...f,
+                    estado: t0Iso ? 'En Carrera' : f.estado,
+                    fechaHoraInicioReal: t0Iso || f.fechaHoraInicioReal,
+                    resultados: (lanes?.length ? lanes : f.resultados),
+                });
             }
         }
     }, [fases]);
 
     useEffect(() => {
         if (!selectedEvento) {
-            // timingSignalRService.disconnect();
             return;
         }
 
-        // Limpiar inmediatamente los resultados de la carrera anterior y las dudas para evitar
-        // bugs de estado stale donde el comparador cree que ya terminó la nueva carrera.
-        if (selectedFase && selectedFase.estado === 'En Carrera') {
-            // No limpiamos resultados a [] para que no se dispare el autostop del timer al estar vacío
-            // ya que al recargar la fase se sobreescribirá correctamente.
-        } else {
-            setResultados([]);
-        }
-        setRawTimes([]);
+        const handoff = handoffRef.current;
+        const handoffForThisFase = handoff
+            && selectedFase
+            && String(handoff.faseId) === String(selectedFase.id)
+            && isFreshControlTecnicoHandoff(handoff);
 
-        // --- ARRANQUE SÍNCRONO DEL CRONÓMETRO ---
-        // Si la fase seleccionada ya está "En Carrera", arrancamos el cronómetro inmediatamente
-        // para evitar que el reloj se quede trabado o en 0 mientras se realiza la conexión lenta.
-        if (selectedFase && selectedFase.estado === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
-            const parsed = parseStartMs(selectedFase.fechaHoraInicioReal);
-            if (!isNaN(parsed)) {
+        if (handoff?.faseId && !selectedFase) {
+            return;
+        }
+
+        if (!handoffForThisFase && !(selectedFase && normalizeFaseEstado(selectedFase.estado) === 'En Carrera')) {
+            setResultados([]);
+            setRawTimes([]);
+        } else {
+            setRawTimes([]);
+        }
+
+        const t0Iso = selectedFase?.fechaHoraInicioReal || (handoffForThisFase ? handoff.t0Iso : null);
+        const raceOn = selectedFase && (
+            normalizeFaseEstado(selectedFase.estado) === 'En Carrera' || handoffForThisFase
+        );
+
+        if (raceOn && t0Iso) {
+            const parsed = parseStartMs(t0Iso);
+            if (!Number.isNaN(parsed) && startTimeRef.current !== parsed) {
                 setIsRaceRunning(true);
                 setStartTime(parsed);
                 startTimeRef.current = parsed;
@@ -186,7 +230,7 @@ const FinisherDashboard = () => {
                     setElapsedTime(elapsedMs(parsed, timingSignalRService.getSyncedNow().getTime()));
                 }, 37);
             }
-        } else {
+        } else if (!handoffForThisFase) {
             setElapsedTime(0);
             setIsRaceRunning(false);
             setStartTime(null);
@@ -221,8 +265,10 @@ const FinisherDashboard = () => {
                         if (selectedFase && String(selectedFase.id) === String(faseId)) {
                             const updated = newFases.find(x => String(x.id) === String(faseId));
                             if (updated) setSelectedFase(updated);
-                            const parsed = parseStartMs(serverTime);
-                            if (!isNaN(parsed)) startLocalTimer(parsed);
+                            if (!startTimeRef.current) {
+                                const parsed = parseStartMs(serverTime);
+                                if (!isNaN(parsed)) startLocalTimer(parsed);
+                            }
                         }
                         return newFases;
                     });
@@ -247,33 +293,35 @@ const FinisherDashboard = () => {
                             msLlegada: r.tiempoOficial ? parseTimeToMs(r.tiempoOficial) : null,
                             status: r.tiempoOficial ? 'finished' : 'pending'
                         }));
-                        setResultados(formattedData.sort((a,b) => a.carril - b.carril));
+                        const sortedApi = formattedData.sort((a,b) => a.carril - b.carril);
+                        if (sortedApi.length > 0) {
+                            setResultados(sortedApi);
+                        } else if (handoffForThisFase && handoff.lanes?.length) {
+                            setResultados(
+                                [...handoff.lanes].sort((a, b) => (Number(a.carril) || 0) - (Number(b.carril) || 0))
+                            );
+                        }
 
-                        // ✅ FIX: obtener estado FRESCO de la fase desde la API
-                        // Evita el bug de stale closure donde selectedFase.estado es viejo
                         try {
                             const fasesEvento = await FaseService.getByEvento(selectedFase.etapaEventoPruebaEventoId || selectedEvento?.id);
                             const mapped = mapFasesFromApi(fasesEvento);
                             const freshFase = mapped?.find(f => String(f.id) === String(selectedFase.id)) || selectedFase;
+                            const localT0 = startTimeRef.current || (handoffForThisFase ? parseStartMs(handoff.t0Iso) : null);
 
                             if (normalizeFaseEstado(freshFase.estado) === 'En Carrera' && freshFase.fechaHoraInicioReal) {
                                 const parsed = parseStartMs(freshFase.fechaHoraInicioReal);
-                                if (!isNaN(parsed)) startLocalTimer(parsed);
-                            } else {
-                                // Solo detener si explícitamente ya no está En Carrera
-                                if (normalizeFaseEstado(freshFase.estado) !== 'En Carrera') {
-                                    stopLocalTimer();
-                                }
+                                if (!isNaN(parsed) && !localT0) startLocalTimer(parsed);
+                            } else if (localT0) {
+                                // API aún no reflejó la largada: no resetear el t0 local.
+                            } else if (normalizeFaseEstado(freshFase.estado) !== 'En Carrera') {
+                                stopLocalTimer();
                             }
                         } catch {
-                            // fallback: usar el estado local
                             if (normalizeFaseEstado(selectedFase.estado) === 'En Carrera' && selectedFase.fechaHoraInicioReal) {
                                 const parsed = parseStartMs(selectedFase.fechaHoraInicioReal);
-                                if (!isNaN(parsed)) startLocalTimer(parsed);
-                            } else {
-                                if (normalizeFaseEstado(selectedFase.estado) !== 'En Carrera') {
-                                    stopLocalTimer();
-                                }
+                                if (!isNaN(parsed) && !startTimeRef.current) startLocalTimer(parsed);
+                            } else if (!startTimeRef.current && normalizeFaseEstado(selectedFase.estado) !== 'En Carrera') {
+                                stopLocalTimer();
                             }
                         }
                     };
@@ -293,8 +341,10 @@ const FinisherDashboard = () => {
                         });
 
                         if (String(id) === String(selectedFase.id)) {
-                            const parsed = parseStartMs(sTime);
-                            if (!isNaN(parsed)) startLocalTimer(parsed);
+                            if (!startTimeRef.current) {
+                                const parsed = parseStartMs(sTime);
+                                if (!isNaN(parsed)) startLocalTimer(parsed);
+                            }
                         }
                     });
 
@@ -347,6 +397,7 @@ const FinisherDashboard = () => {
         setupSignalR();
 
         return () => {
+            if (handoffForThisFase) return;
             stopLocalTimer();
             timingSignalRService.disconnect();
         };
@@ -644,6 +695,7 @@ const FinisherDashboard = () => {
                 .filter(n => Number.isFinite(n) && n > 0)
         )].sort((a, b) => a - b);
 
+        if (soloMode && occupied.length) return occupied;
         if (!occupied.length) return [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
         const max = occupied[occupied.length - 1];
@@ -651,7 +703,7 @@ const FinisherDashboard = () => {
         if (isClassicPista) return [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
         return occupied;
-    }, [resultados]);
+    }, [resultados, soloMode]);
 
     const isLargeFinishField = finishPadNumbers.length > 9
         || finishPadNumbers.some(n => n > 9);

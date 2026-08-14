@@ -28,7 +28,7 @@ async function setupNativeChrome() {
 setupNativeChrome().finally(() => {
     ReactDOM.createRoot(document.getElementById('root')).render(
         <React.StrictMode>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
                 <AuthProvider>
                     <ThemeProvider>
                         <ToastProvider>

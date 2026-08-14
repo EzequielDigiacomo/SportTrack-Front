@@ -13,6 +13,9 @@ import {
     isControlTecnicoRole,
     isSoloControlTecnicoMode,
     saveControlTecnicoHandoff,
+    snapshotLanesForHandoff,
+    readControlTecnicoHandoff,
+    isFreshControlTecnicoHandoff,
 } from '../../utils/controlTecnico';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
@@ -279,6 +282,7 @@ const StarterDashboard = () => {
 
         return () => {
             isMounted = false;
+            if (isFreshControlTecnicoHandoff(readControlTecnicoHandoff())) return;
             timingSignalRService.disconnect();
         };
     }, [selectedEvento?.id, selectedFase?.id]);
@@ -356,6 +360,7 @@ const StarterDashboard = () => {
                 eventoId: selectedEvento.id,
                 faseId: selectedFase.id,
                 t0Iso,
+                lanes: snapshotLanesForHandoff(selectedFase.resultados),
             });
             navigate('/jueces/llegada');
         };

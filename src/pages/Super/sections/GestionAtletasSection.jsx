@@ -14,6 +14,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { ENDPOINTS } from '../../../utils/constants';
 import { withFederationScope, getClubFederationId, pick, filterClubesByFederation, resolveScopeFederationId, athleteBelongsToFederation, getAtletaFederationName } from '../../../utils/apiHelpers';
 import { isSuperAdminUser, isFederationAdminUser } from '../../../utils/authHelpers';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionAtletasSection = () => {
@@ -59,7 +60,7 @@ const GestionAtletasSection = () => {
         clubId: '',
         idClub: '',
         pais: '',
-        estadoPago: 0,
+        estadoPago: 1,
         presentoAptoMedico: false,
         perteneceSeleccion: false,
         becadoEnard: false,
@@ -70,6 +71,7 @@ const GestionAtletasSection = () => {
     const [saving, setSaving] = useState(false);
     const { alert: msg, showAlert } = useAlert();
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
+    const [formAlert, setFormAlert] = useState({ show: false, title: '', message: '' });
     const [assignModal, setAssignModal] = useState({ show: false, atleta: null, clubId: '' });
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -143,7 +145,7 @@ const GestionAtletasSection = () => {
             idClub: parsedClubId,
             federacionId: defaultFedId || '',
             pais: '',
-            estadoPago: 0,
+            estadoPago: 1,
             presentoAptoMedico: false,
             perteneceSeleccion: false,
             becadoEnard: false,
@@ -172,7 +174,7 @@ const GestionAtletasSection = () => {
                 ? (getClubFederationId(clubes.find(c => pick(c, 'id', 'Id') === (atleta.clubId || atleta.idClub))) || '')
                 : (scopeFedId || ''),
             pais: atleta.pais || '',
-            estadoPago: atleta.estadoPago ?? 0,
+            estadoPago: atleta.estadoPago ?? 1,
             presentoAptoMedico: atleta.presentoAptoMedico || false,
             perteneceSeleccion: atleta.perteneceSeleccion || false,
             becadoEnard: atleta.becadoEnard || false,
@@ -188,19 +190,41 @@ const GestionAtletasSection = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const clubIdRaw = form.clubId || form.idClub;
+        const clubId = clubIdRaw ? parseInt(clubIdRaw, 10) : null;
+        if (!clubId) {
+            setFormAlert({
+                show: true,
+                title: 'Faltan datos',
+                message: 'Completá estos datos para continuar:\n\n• Club / Entidad',
+            });
+            return;
+        }
+
+        const payload = {
+            ...form,
+            clubId,
+            idClub: clubId,
+            estadoPago: form.estadoPago ?? 1,
+        };
+
         setSaving(true);
         try {
             if (view === 'editar') {
-                await AtletaService.update(selectedAtleta.id, form);
+                await AtletaService.update(selectedAtleta.id, payload);
                 showAlert('success', 'Atleta actualizado correctamente.');
             } else {
-                await AtletaService.create(form);
+                await AtletaService.create(payload);
                 showAlert('success', 'Atleta registrado exitosamente.');
             }
             setView('lista');
             loadData();
         } catch (error) {
-            showAlert('error', 'Error: ' + (error.response?.data?.message || error.message));
+            setFormAlert({
+                show: true,
+                title: 'No se pudo guardar',
+                message: getUserFacingError(error),
+            });
         } finally {
             setSaving(false);
         }
@@ -220,7 +244,7 @@ const GestionAtletasSection = () => {
             setDeleteConfirm({ show: false, id: null });
             loadData();
         } catch (error) {
-            showAlert('error', 'Error al eliminar: ' + (error.response?.data?.message || error.message));
+            showAlert('error', getUserFacingError(error, 'No se pudo eliminar el atleta.'));
         } finally {
             setSaving(false);
         }
@@ -245,7 +269,7 @@ const GestionAtletasSection = () => {
             setAssignModal({ show: false, atleta: null, clubId: '' });
             loadData();
         } catch (err) {
-            showAlert('error', 'Error al asignar: ' + (err.response?.data?.message || err.message));
+            showAlert('error', getUserFacingError(err, 'No se pudo asignar el club.'));
         } finally {
             setSaving(false);
         }
@@ -393,6 +417,17 @@ const GestionAtletasSection = () => {
                 type="danger"
                 confirmText="Sí, Eliminar"
                 loading={saving}
+            />
+
+            <ConfirmDialog
+                isOpen={formAlert.show}
+                onClose={() => setFormAlert({ show: false, title: '', message: '' })}
+                onConfirm={() => setFormAlert({ show: false, title: '', message: '' })}
+                title={formAlert.title || 'Atención'}
+                message={formAlert.message}
+                type="warning"
+                confirmText="Entendido"
+                cancelText=""
             />
 
             {/* MODAL ASIGNAR CLUB */}

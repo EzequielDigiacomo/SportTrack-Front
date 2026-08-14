@@ -70,7 +70,7 @@ const ConfirmDialog = ({
                 <div className={`confirm-icon ${type}`}>
                     {getIcon()}
                 </div>
-                <div className="confirm-message">
+                <div className="confirm-message" style={{ whiteSpace: 'pre-line' }}>
                     {message}
                 </div>
             </div>
