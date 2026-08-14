@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Plus,
     Calendar,
@@ -20,7 +20,7 @@ import FederacionService from '../../services/FederacionService';
 import EventGrid from './EventGrid';
 import EventForm from './EventForm';
 import { useAlert } from '../../hooks/useAlert';
-import { getEventFederationName, getUserFederationId, eventBelongsToFederation, resolveScopeFederationId } from '../../utils/apiHelpers';
+import { getEventFederationName, eventBelongsToFederation, resolveScopeFederationId, filterClubesByFederation } from '../../utils/apiHelpers';
 import {
     MODALIDAD_VELOCIDAD,
     isModalidadMaraton,
@@ -34,7 +34,9 @@ import './AdminSections.css';
 
 const GestionEventosSection = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
+    const fedIdFromUrl = new URLSearchParams(location.search).get('fedId');
     const role = user?.rol?.trim();
     const isSuperAdmin = role?.toLowerCase() === 'superadmin' || user?.username === 'soporte_tecnico';
     const isAdmin = role === 'Admin' || isSuperAdmin;
@@ -46,6 +48,14 @@ const GestionEventosSection = () => {
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [clubes, setClubes] = useState([]);
     const [federaciones, setFederaciones] = useState([]);
+    const scopeFedId = useMemo(
+        () => resolveScopeFederationId({ fedIdFromUrl, user, clubes }),
+        [fedIdFromUrl, user, clubes]
+    );
+    const clubesDelAlcance = useMemo(
+        () => filterClubesByFederation(clubes, scopeFedId),
+        [clubes, scopeFedId]
+    );
     const [allCategorias, setAllCategorias] = useState([]);
     const [allBotes, setAllBotes] = useState([]);
     const [allDistancias, setAllDistancias] = useState([]);
@@ -127,22 +137,25 @@ const GestionEventosSection = () => {
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
+    }, [fedIdFromUrl]);
 
     const loadEventos = async (clubesForFilter = clubes) => {
         setLoading(true);
         try {
-            const fedId = getUserFederationId(user);
-            const data = fedId && !isSuperAdmin
-                ? await EventoService.getAll(fedId, { asFederation: true })
+            const scopeFedId = resolveScopeFederationId({
+                fedIdFromUrl,
+                user,
+                clubes: clubesForFilter,
+            });
+            const data = scopeFedId
+                ? await EventoService.getAll(scopeFedId, { asFederation: true })
                 : await EventoService.getAll();
 
-            const scopeFedId = resolveScopeFederationId({ user, clubes: clubesForFilter });
             let filtered = isSuperAdmin
-                ? data
+                ? (data || [])
                 : (data || []).filter(e => !e.nombre?.toLowerCase().includes('control'));
 
-            if (!isSuperAdmin && scopeFedId != null) {
+            if (scopeFedId != null) {
                 filtered = filtered.filter(e =>
                     eventBelongsToFederation(e, clubesForFilter, scopeFedId, { trustApiScope: true })
                 );
@@ -285,6 +298,7 @@ const GestionEventosSection = () => {
         const payload = {
             ...form,
             clubId: form.clubId === "" ? null : parseInt(form.clubId),
+            federacionId: scopeFedId != null ? Number(scopeFedId) : (form.federacionId || null),
             modalidad: isModalidadMaraton(form.modalidad) ? 'Maraton' : 'Velocidad',
         };
 
@@ -441,7 +455,7 @@ const GestionEventosSection = () => {
                             onDelete={handleDelete}
                             onCopyLink={handleCopyLiveLink}
                             isAdmin={isAdmin}
-                            showFederation={isSuperAdmin}
+                            showFederation={isSuperAdmin && !scopeFedId}
                         />
                     )}
                 </div>
@@ -455,7 +469,7 @@ const GestionEventosSection = () => {
                     onCancel={() => setView('lista')}
                     onSubmit={handleSubmit}
                     onChange={handleFieldChange}
-                    clubes={clubes}
+                    clubes={clubesDelAlcance}
                     allCategorias={allCategorias}
                     allBotes={allBotes}
                     allDistancias={allDistancias}

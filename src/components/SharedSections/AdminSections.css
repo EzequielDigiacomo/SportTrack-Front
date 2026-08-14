@@ -200,6 +200,11 @@ td.actions-cell > *:last-child {
     margin-right: 0 !important;
 }
 
+.eventos-desktop-table.admin-table-wrapper {
+    overflow: visible;
+    max-height: none;
+}
+
 /* Event Grid specific alignment changes */
 .eventos-desktop-table .admin-table th,
 .eventos-desktop-table .admin-table td {

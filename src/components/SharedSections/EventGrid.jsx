@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Settings, Edit2, Trash2, Radio, Calendar, MapPin, Unlock, Lock } from 'lucide-react';
 import StatusBadge from '../Common/StatusBadge';
 import EmptyState from '../Common/EmptyState';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
+
+const PAGE_SIZE = 8;
 
 const ModalidadChip = ({ evento }) => (
     resolveIsMaratonEvent(evento) ? (
@@ -25,15 +27,55 @@ const EventGrid = ({
     isAdmin,
     showFederation = false,
 }) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil((eventos?.length || 0) / PAGE_SIZE));
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [eventos]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) setCurrentPage(totalPages);
+    }, [currentPage, totalPages]);
+
+    const pageEventos = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return (eventos || []).slice(start, start + PAGE_SIZE);
+    }, [eventos, currentPage]);
+
     if (!eventos || eventos.length === 0) {
         return <EmptyState message="No hay eventos creados aún" description="Pulsa en '+ Nuevo Evento' para comenzar." />;
     }
+
+    const pagination = eventos.length > PAGE_SIZE && (
+        <div className="admin-pagination">
+            <button
+                type="button"
+                className="btn-pagination"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+            >
+                Anterior
+            </button>
+            <span className="pagination-info">
+                Página <strong>{currentPage}</strong> de {totalPages}
+            </span>
+            <button
+                type="button"
+                className="btn-pagination"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+            >
+                Siguiente
+            </button>
+        </div>
+    );
 
     return (
         <>
             {/* VISTA MOBILE: Cards */}
             <div className="eventos-mobile-list fade-in">
-                {eventos.map(ev => (
+                {pageEventos.map(ev => (
                     <div key={ev.id} className="evento-native-card glass-effect">
                         <div className="evento-native-status-bar" style={{ background: 'var(--color-primary)' }} />
                         <div className="evento-native-info">
@@ -85,7 +127,7 @@ const EventGrid = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {eventos.map(ev => (
+                        {pageEventos.map(ev => (
                             <tr key={ev.id}>
                                 <td><strong>{ev.nombre}</strong></td>
                                 {showFederation && (
@@ -128,6 +170,7 @@ const EventGrid = ({
                     </tbody>
                 </table>
             </div>
+            {pagination}
         </>
     );
 };
