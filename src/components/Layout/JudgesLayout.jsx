@@ -76,10 +76,12 @@ const JudgesLayout = ({ children }) => {
 
     const isControlOrManual =
         location.pathname.includes('juez-control') ||
-        location.pathname.includes('carga-manual');
+        location.pathname.includes('carga-manual') ||
+        location.pathname.includes('control-tecnico');
 
     const getRoleName = () => {
         const path = location.pathname;
+        if (path.includes('control-tecnico')) return 'Control técnico';
         if (path.includes('largador')) return roleStr.includes('controltecnico') ? 'Control técnico' : 'Largador';
         if (path.includes('llegada')) return roleStr.includes('controltecnico') ? 'Control técnico' : 'Cronometrista';
         if (path.includes('juez-control')) return 'Juez de Control';
@@ -88,6 +90,12 @@ const JudgesLayout = ({ children }) => {
     };
 
     const handleBack = () => {
+        if (roleStr.includes('controltecnico')) {
+            if (location.pathname !== '/control-tecnico') {
+                navigate('/control-tecnico');
+            }
+            return;
+        }
         if (location.pathname.includes('carga-manual')) {
             navigate('/jueces');
             return;

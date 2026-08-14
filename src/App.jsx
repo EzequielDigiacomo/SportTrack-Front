@@ -10,6 +10,7 @@ import StarterDashboard from './pages/Judges/StarterDashboard'
 import FinisherDashboard from './pages/Judges/FinisherDashboard'
 import ManualTiming from './pages/Judges/ManualTiming'
 import JuezControlDashboard from './pages/JuezControl/JuezControlDashboard'
+import ControlesSection from './pages/ClubAdmin/sections/ControlesSection'
 import ProtectedRoute from './components/Common/ProtectedRoute'
 import { useToast } from './context/ToastContext'
 import ToastContainer from './components/Common/ToastContainer'
@@ -80,7 +81,13 @@ function App() {
                 </ProtectedRoute>
             } />
 
-            {/* Módulo de Jueces */}
+            <Route path="/control-tecnico" element={
+                <ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'ControlTecnico']} requiereControlesLive>
+                    <JudgesLayout>
+                        <ControlesSection />
+                    </JudgesLayout>
+                </ProtectedRoute>
+            } />
             <Route path="/jueces" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'Cronometrista', 'ControlTecnico']} requiereControlesLive><JudgesLayout><JudgesDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/largador" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Largador', 'ControlTecnico']} requiereControlesLive><JudgesLayout><StarterDashboard /></JudgesLayout></ProtectedRoute>} />
             <Route path="/jueces/llegada" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin', 'Cronometrista', 'ControlTecnico']} requiereControlesLive><JudgesLayout><FinisherDashboard /></JudgesLayout></ProtectedRoute>} />

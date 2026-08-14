@@ -7,7 +7,7 @@ import { matchesSearch } from '../../../utils/authHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import './InscripcionModal.css';
 
-const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true }) => {
+const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, modoAdmin = false }) => {
     const { user } = useAuth();
     const clubId = user?.clubId ?? user?.ClubId;
     const [pruebasHabilitadas, setPruebasHabilitadas] = useState([]);
@@ -56,6 +56,24 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
 
     const loadInscripcionesClub = async () => {
         try {
+            if (modoAdmin) {
+                const data = await InscripcionService.getRegistro({ eventoId: evento.id });
+                const mapped = (Array.isArray(data) ? data : []).map((item) => ({
+                    ...item,
+                    id: item.id ?? item.Id,
+                    eventoPruebaId: item.eventoPruebaId ?? item.EventoPruebaId,
+                    participanteId: item.participanteId ?? item.ParticipanteId,
+                    participanteNombreCompleto: item.participanteNombreCompleto
+                        ?? item.ParticipanteNombreCompleto
+                        ?? item.participanteNombre
+                        ?? item.ParticipanteNombre,
+                    tripulantes: (item.tripulantesNombres || item.TripulantesNombres || []).map((n) => ({
+                        participanteNombreCompleto: n,
+                    })),
+                }));
+                setInscripcionesActuales(mapped);
+                return;
+            }
             const data = await InscripcionService.getByEventoAndClub(evento.id, clubId);
             setInscripcionesActuales(data);
         } catch (e) {
@@ -64,7 +82,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
     };
 
     useEffect(() => {
-        if (!clubId) {
+        if (!modoAdmin && !clubId) {
             setLoading(false);
             return;
         }
@@ -72,10 +90,17 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
             try {
                 const [pruebas, atletas] = await Promise.all([
                     PruebaService.getByEvento(evento.id),
-                    AtletaService.getByClub(clubId) 
+                    modoAdmin ? AtletaService.getAll() : AtletaService.getByClub(clubId),
                 ]);
                 setPruebasHabilitadas(pruebas);
-                setAtletasClub(atletas);
+                const list = Array.isArray(atletas) ? atletas : [];
+                const conClub = modoAdmin
+                    ? list.filter((a) => {
+                        const cid = a.clubId ?? a.ClubId ?? a.idClub ?? a.club?.id ?? a.club?.idClub;
+                        return cid != null && Number(cid) > 0;
+                    })
+                    : list;
+                setAtletasClub(conClub);
                 await loadInscripcionesClub();
             } catch (e) {
                 console.error("Error loading inscripcion data", e);
@@ -84,7 +109,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
             }
         };
         loadInitial();
-    }, [evento.id, clubId]);
+    }, [evento.id, clubId, modoAdmin]);
 
     const getMaxTripulantes = (boteNombre) => {
         if (!boteNombre) return 1;
@@ -151,7 +176,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
     };
 
     const handleConfirmInscripcion = async () => {
-        if (!pagoAfiliacionAlDia) {
+        if (!modoAdmin && !pagoAfiliacionAlDia) {
             setMsg({ type: 'error', text: 'El registro de nuevas inscripciones está deshabilitado por afiliación anual vencida.' });
             return;
         }
@@ -248,12 +273,12 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
         <div className="admin-modal-overlay">
             <div className="inscripcion-modal glass-effect fade-in">
                 <div className="modal-header">
-                    <h2>Inscripción Atletas: {evento.nombre}</h2>
+                    <h2>{modoAdmin ? 'Carga de atletas (federación)' : 'Inscripción Atletas'}: {evento.nombre}</h2>
                     <button className="btn-close" onClick={onClose}>&times;</button>
                 </div>
 
                 {msg && <div className={`alert-msg ${msg.type}`}>{msg.text}</div>}
-                {!pagoAfiliacionAlDia && (
+                {!modoAdmin && !pagoAfiliacionAlDia && (
                     <div className="alert-msg error" style={{
                         background: 'rgba(239, 68, 68, 0.15)',
                         color: '#ef4444',
@@ -510,6 +535,9 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                                             </div>
                                             <div className="atleta-name">
                                                 {atleta.nombre} {atleta.apellido}
+                                                {modoAdmin && (atleta.clubNombre || atleta.club?.nombre) ? (
+                                                    <span className="no-eligible-reason"> · {atleta.clubNombre || atleta.club?.nombre}</span>
+                                                ) : null}
                                                 {!esElegible && <span className="no-eligible-reason">({razonNoElegible})</span>}
                                                 {limiteAlcanzado && !yaSeleccionado && !isAlreadyRegistered && <span className="no-eligible-reason">(Cupos llenos)</span>}
                                                 {esRefuerzoK4 && <span className="badge-refuerzo">Refuerzo K4</span>}
@@ -563,7 +591,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                             <button 
                                 className="btn-admin-primary"
                                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }}
-                                disabled={saving || !pagoAfiliacionAlDia || hasAnyIncompleteSelection}
+                                disabled={saving || (!modoAdmin && !pagoAfiliacionAlDia) || hasAnyIncompleteSelection}
                                 title={hasAnyIncompleteSelection ? 'Completá todos los botes antes de confirmar' : ''}
                                 onClick={async () => {
                                     if (hasAnyIncompleteSelection) {
@@ -625,7 +653,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true })
                                 saving ||
                                 inscripcionesCerradas ||
                                 botesDisponibles === 0 ||
-                                !pagoAfiliacionAlDia ||
+                                (!modoAdmin && !pagoAfiliacionAlDia) ||
                                 (currentSelectionStatus.hasSelection && !currentSelectionStatus.isComplete)
                             }
                             title={

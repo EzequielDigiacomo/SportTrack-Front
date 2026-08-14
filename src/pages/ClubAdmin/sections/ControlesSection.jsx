@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Calendar, MapPin, Timer, ArrowLeft, Plus } from 'lucide-react';
+import { Activity, Calendar, MapPin, Timer, ArrowLeft, Plus, Users, ClipboardList } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import { PruebaService } from '../../../services/ConfigService';
 import { useAuth } from '../../../context/AuthContext';
-import { isControlTecnicoEvent } from '../../../utils/controlTecnico';
+import { isControlTecnicoEvent, isControlTecnicoRole } from '../../../utils/controlTecnico';
 import { resolveScopeFederationId } from '../../../utils/apiHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import InscripcionAtletaModal from './InscripcionAtletaModal';
+import GestionResultadosSection from '../../../components/SharedSections/GestionResultadosSection';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
@@ -25,11 +27,14 @@ const emptyForm = () => ({
 const ControlesSection = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const isOperator = isControlTecnicoRole(user);
     const [controles, setControles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista');
     const [form, setForm] = useState(emptyForm);
     const [saving, setSaving] = useState(false);
+    const [selectedControl, setSelectedControl] = useState(null);
+    const [showInscripcion, setShowInscripcion] = useState(false);
     const [validationErrors, setValidationErrors] = useState(null);
 
     const fedIdFromUrl = new URLSearchParams(window.location.search).get('fedId');
@@ -125,7 +130,56 @@ const ControlesSection = () => {
 
     return (
         <div className="section-container fade-in">
-            {view === 'crear' ? (
+            {view === 'gestionar' && selectedControl ? (
+                <div className="fade-in">
+                    <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: '1.5rem' }}>
+                        <button
+                            className="btn-admin-secondary"
+                            onClick={() => { setSelectedControl(null); setView('lista'); }}
+                            style={{ padding: 0, width: 42, height: 42, borderRadius: '50%' }}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div>
+                            <h2 style={{ margin: 0 }}>{selectedControl.nombre}</h2>
+                            <p className="subtitle">Inscribí atletas de club y armá la start list</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="btn-admin-primary"
+                            style={{ marginLeft: 'auto' }}
+                            onClick={() => navigate('/jueces/largador')}
+                        >
+                            <Timer size={18} /> Cronometrar
+                        </button>
+                    </div>
+                    <div className="dashboard-grid dashboard-grid-3col" style={{ marginBottom: '1.5rem' }}>
+                        <div className="dashboard-card glass-effect clickable" onClick={() => setShowInscripcion(true)}>
+                            <div className="card-icon"><Users size={32} /></div>
+                            <h3>1. Inscribir atletas</h3>
+                            <p>Atletas con club asignado (más adelante: solo selección SIGDEF).</p>
+                        </div>
+                        <div className="dashboard-card glass-effect">
+                            <div className="card-icon"><ClipboardList size={32} /></div>
+                            <h3>2. Start list</h3>
+                            <p>Cerrá inscripciones, armá series y sorteá carriles (hasta 9 botes).</p>
+                        </div>
+                    </div>
+                    <GestionResultadosSection
+                        preselectedEventoId={selectedControl.id}
+                        defaultTab="startList"
+                        isEmbedded
+                        viewMode="startlist"
+                    />
+                    {showInscripcion && (
+                        <InscripcionAtletaModal
+                            evento={selectedControl}
+                            modoAdmin
+                            onClose={() => setShowInscripcion(false)}
+                        />
+                    )}
+                </div>
+            ) : view === 'crear' ? (
                 <>
                     <div className="section-header-row" style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                         <button
@@ -203,7 +257,7 @@ const ControlesSection = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                             <button
                                 className="btn-admin-secondary"
-                                onClick={() => navigate(-1)}
+                                onClick={() => (isOperator ? navigate('/control-tecnico') : navigate(-1))}
                                 title="Volver"
                                 style={{ padding: 0, width: 42, height: 42, borderRadius: '50%', flexShrink: 0 }}
                             >
@@ -219,9 +273,16 @@ const ControlesSection = () => {
                                 </div>
                             </div>
                         </div>
-                        <button type="button" className="btn-admin-primary" onClick={() => setView('crear')}>
-                            <Plus size={20} /> Nuevo Control
-                        </button>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {isOperator && (
+                                <button type="button" className="btn-admin-secondary" onClick={() => navigate('/jueces/largador')}>
+                                    <Timer size={18} /> Cronometrar
+                                </button>
+                            )}
+                            <button type="button" className="btn-admin-primary" onClick={() => setView('crear')}>
+                                <Plus size={20} /> Nuevo Control
+                            </button>
+                        </div>
                     </div>
 
                     {loading ? (
@@ -229,7 +290,12 @@ const ControlesSection = () => {
                     ) : controles.length > 0 ? (
                         <div className="eventos-grid">
                             {controles.map((control) => (
-                                <div key={control.id} className="evento-card glass-effect animate-card" style={{ borderTop: '4px solid #f59e0b' }}>
+                                <div
+                                    key={control.id}
+                                    className="evento-card glass-effect animate-card"
+                                    style={{ borderTop: '4px solid #f59e0b', cursor: 'pointer' }}
+                                    onClick={() => { setSelectedControl(control); setView('gestionar'); }}
+                                >
                                     <div className="evento-badge" style={{ background: '#f59e0b' }}>Control Técnico</div>
                                     <h3>{control.nombre}</h3>
                                     <p className="evento-date">

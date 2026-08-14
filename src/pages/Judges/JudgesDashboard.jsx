@@ -34,14 +34,24 @@ const JudgesDashboard = () => {
 
             <div className="judges-grid">
                 {isControlTecnico && !isAdmin && (
-                    <div className="judge-card starter" onClick={() => navigate('/jueces/largador')}>
+                    <>
+                    <div className="judge-card starter" onClick={() => navigate('/control-tecnico')}>
+                        <div className="card-icon">
+                            <Users size={48} />
+                        </div>
+                        <h2>Gestionar controles</h2>
+                        <p>Creá el evento, inscribí atletas de club y armá la start list.</p>
+                        <button className="btn-judge">Abrir gestión</button>
+                    </div>
+                    <div className="judge-card finisher" onClick={() => navigate('/jueces/largador')}>
                         <div className="card-icon">
                             <Play size={48} />
                         </div>
-                        <h2>Control técnico</h2>
-                        <p>Largá la prueba y pasá a llegada en el mismo dispositivo.</p>
+                        <h2>Cronometrar</h2>
+                        <p>Largá la prueba y tomá tiempos en el mismo dispositivo.</p>
                         <button className="btn-judge">Entrar</button>
                     </div>
+                    </>
                 )}
 
                 {isStarter && !(isControlTecnico && !isAdmin) && (
