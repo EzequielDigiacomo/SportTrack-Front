@@ -21,6 +21,7 @@ import { formatRaceTime, formatRaceTimeFromMs } from '../../utils/raceTimeUtils'
 import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
+import { isControlTecnicoRole, isJudgeAdmin } from '../../utils/controlTecnico';
 import MaratonStartListPanel from './maraton/MaratonStartListPanel';
 import MaratonResultadosGrids from './maraton/MaratonResultadosGrids';
 import { loadMaratonLargadaInscriptos } from './maraton/maratonStartListUtils';
@@ -64,7 +65,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const planNombre = user?.plan?.nombre?.toLowerCase() || 'bronce';
     const isBronce = planNombre === 'bronce';
     const role = user?.rol?.trim();
-    const isAdmin = role === 'Admin' || role === 'SuperAdmin' || user?.username === 'soporte_tecnico';
+    const isAdmin = isJudgeAdmin(user) || user?.username === 'soporte_tecnico';
+    const canManageStartList = isAdmin || isControlTecnicoRole(user);
     const isJuezControl = (role || '').toLowerCase().includes('juezcontrol') || (role || '').toLowerCase().includes('control');
     // Juez de control / mesa de llegada / admin: grilla editable en verificación
     const canEditResults = isAdmin || isJuezControl || viewMode === 'resultados' || viewMode === 'tiempos' || isManualTiming;
@@ -758,20 +760,20 @@ const connectedStarter = activeJudges.find(j => {
                 {/* TAB: START LIST / SIEMBRA (solo Velocidad / pista) */}
                 {currentTab === 'startList' && !isMaratonEvent && (
                     <div className="start-list-view fade-in">
-                        <div className="action-bar-premium glass-effect mb-md" style={{ padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="action-bar-premium start-list-toolbar glass-effect mb-md">
                             <div className="info-badge-modern">
                                 <List size={14} />
                                 <span><strong>{inscriptos.length}</strong> Inscritos</span>
                             </div>
                             
-                            <div className="flex-row gap-md">
-                                {isAdmin && seedingStatus.needsSeeds && (
+                            <div className="start-list-toolbar-actions">
+                                {canManageStartList && seedingStatus.needsSeeds && (
                                     <div className={`seeding-counter-badge ${seedingStatus.isComplete ? 'complete' : 'incomplete'}`}>
                                         <Star size={14} fill={seedingStatus.isComplete ? 'currentColor' : 'none'} />
                                         <span>{seedingStatus.currentSeeds}/{seedingStatus.requiredSeeds} cabezas de serie</span>
                                     </div>
                                 )}
-                                {isAdmin && (
+                                {canManageStartList && (
                                     <button
                                         className="btn-admin-action primary"
                                         onClick={handleSortearCarriles}
@@ -784,7 +786,7 @@ const connectedStarter = activeJudges.find(j => {
                                     </button>
                                 )}
                                 
-                                {isAdmin && (
+                                {canManageStartList && (
                                     <button
                                         className={`btn-admin-action secondary ${isManualMode ? 'active' : ''}`}
                                         onClick={() => {
@@ -822,7 +824,7 @@ const connectedStarter = activeJudges.find(j => {
                                     </button>
                                 )}
                                 
-                                {isAdmin && isManualMode && (
+                                {canManageStartList && isManualMode && (
                                     <button
                                         className="btn-admin-action accent"
                                         onClick={handleApplyManualGeneration}
@@ -868,7 +870,7 @@ const connectedStarter = activeJudges.find(j => {
                             </div>
                         </div>
 
-                        {isAdmin && inscriptos.length > 0 && (
+                        {canManageStartList && inscriptos.length > 0 && (
                             <div className={`inscriptos-seeding-panel glass-effect p-md mb-lg ${seedsBlockingSorteo ? 'seeding-incomplete' : ''}`} style={{ borderRadius: 'var(--radius-lg)', position: 'relative' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isNominaCollapsed ? '0' : '1rem' }}>
                                     <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary-light)' }}>
@@ -962,7 +964,7 @@ const connectedStarter = activeJudges.find(j => {
                                                                             onChange={(e) => handleManualPlacementChange(ins.id, 'serie', e.target.value)}
                                                                         />
                                                                     </div>
-                                                                ) : !isAdmin ? (
+                                                                ) : !canManageStartList ? (
                                                                     ins.esCabezaDeSerie ? (
                                                                         <Star size={16} fill="var(--color-accent)" color="var(--color-accent)" style={{ opacity: 0.8 }} />
                                                                     ) : (
