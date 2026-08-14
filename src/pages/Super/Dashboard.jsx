@@ -76,7 +76,12 @@ const SuperDashboard = () => {
     const role = user?.rol?.trim().toLowerCase();
     const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
     const { hasUnread } = useUnreadMessages(true);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(isSuper); // Siempre abierto por defecto para SuperAdmin
+    const [isMobile, setIsMobile] = useState(
+        () => typeof window !== 'undefined' && window.innerWidth <= 768
+    );
+    const [isSidebarOpen, setIsSidebarOpen] = useState(
+        () => isSuper && (typeof window === 'undefined' || window.innerWidth > 768)
+    );
     const timeoutRef = useRef(null);
     const inactivityRef = useRef(null);
 
@@ -133,11 +138,19 @@ const SuperDashboard = () => {
     ));
 
     useEffect(() => {
+        const onResize = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            if (mobile) setIsSidebarOpen(false);
+            else if (isSuper) setIsSidebarOpen(true);
+        };
+        window.addEventListener('resize', onResize);
         return () => {
+            window.removeEventListener('resize', onResize);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             if (inactivityRef.current) clearTimeout(inactivityRef.current);
         };
-    }, []);
+    }, [isSuper]);
 
     return (
         <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
@@ -150,11 +163,13 @@ const SuperDashboard = () => {
                 />
             )}
 
-            {!isSuper && (
-                <button 
+            {(isMobile || !isSuper) && (
+                <button
+                    type="button"
                     className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
                     onClick={() => setIsSidebarOpen(true)}
                     title="Abrir menú"
+                    aria-label="Abrir menú"
                 >
                     <Menu size={24} color="var(--color-primary-light)" />
                 </button>

@@ -486,7 +486,7 @@
 
     .admin-layout { 
         display: block; 
-        overflow-x: hidden;
+        overflow-x: clip;
     }
     .admin-sidebar { 
         position: fixed; 
@@ -503,11 +503,10 @@
         padding-left: 0;
         padding-right: 0;
         width: 100%;
-        overflow-x: hidden;
+        overflow-x: clip;
     }
     .admin-content-wrapper {
-        padding: 0 var(--spacing-lg);
-        padding-right: max(var(--spacing-lg), 5.5rem);
+        padding: 0 max(var(--spacing-lg), env(safe-area-inset-left), env(safe-area-inset-right));
         width: 100%;
         box-sizing: border-box;
     }
@@ -520,11 +519,20 @@
         display: flex;
     }
 
-    /* Mantener triggers fijos para fácil acceso */
     .sidebar-trigger-favicon, .top-right-actions {
         position: fixed !important;
-        top: 20px;
+        top: max(12px, env(safe-area-inset-top));
         z-index: 5000;
+    }
+    .sidebar-trigger-favicon {
+        left: max(12px, env(safe-area-inset-left));
+    }
+    .top-right-actions {
+        right: max(12px, env(safe-area-inset-right));
+    }
+    .super-quick-logout {
+        width: 44px;
+        height: 44px;
     }
 }
 
