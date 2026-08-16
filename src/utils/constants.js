@@ -100,4 +100,5 @@ export const STORAGE_KEYS = {
     REFRESH_TOKEN: 'sporttrack_refresh_token',
     USER_DATA: 'sporttrack_user_data',
     THEME: 'sporttrack_theme',
+    SIDEBAR_PINNED: 'sporttrack_sidebar_pinned',
 }

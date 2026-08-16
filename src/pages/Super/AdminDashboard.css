@@ -29,7 +29,52 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
     margin-bottom: var(--spacing-xl);
+    flex-shrink: 0;
+    min-height: 36px;
+}
+
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 36px;
+}
+
+.sidebar-pin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 0;
+}
+
+.sidebar-pin-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-primary-light);
+}
+
+.sidebar-pin-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.45);
+    color: var(--color-primary-light);
+}
+
+.sidebar-header-actions .theme-toggle-btn {
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
 }
 
@@ -39,14 +84,16 @@
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
     color: var(--color-text-secondary);
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all var(--transition-fast);
     flex-shrink: 0;
+    padding: 0;
+    line-height: 0;
 }
 .sidebar-close-btn:hover {
     background: rgba(255,87,87,0.15);
@@ -78,15 +125,19 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding-bottom: var(--spacing-lg);
-    /* border-bottom: 1px solid rgba(255,255,255,0.06); */
-    margin-bottom: 0;
+    padding: 0;
+    margin: 0;
+    min-height: 36px;
+    flex: 1;
+    min-width: 0;
 }
 
 .brand-logo-img {
     width: 32px;
     height: 32px;
     object-fit: contain;
+    display: block;
+    flex-shrink: 0;
     filter: drop-shadow(0 0 5px rgba(0, 150, 255, 0.2));
 }
 
@@ -95,7 +146,13 @@
     height: 28px;
 }
 
-.brand-name { font-size: 1.4rem; font-weight: 800; }
+.brand-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+    display: block;
+}
 
 .sidebar-user {
     display: flex;
@@ -356,6 +413,10 @@
 .admin-content-wrapper {
     max-width: 1100px;
     margin: 0 auto;
+}
+
+.admin-content-wrapper:has(.gestion-eventos-section) {
+    max-width: 1480px;
 }
 
 /* HOME DE ADMIN */
@@ -930,6 +991,52 @@
     text-overflow: ellipsis;
 }
 
+.activity-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.activity-page-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 0.45rem 1.1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.activity-page-btn:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+}
+
+.activity-page-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.activity-page-info {
+    font-size: 0.82rem;
+    color: var(--color-text-dim);
+}
+
+.activity-page-info strong {
+    color: var(--color-primary-light, #60a5fa);
+}
+
+.activity-page-count {
+    opacity: 0.7;
+}
+
 @media (max-width: 768px) {
     .detail-cell { display: none; }
     .activity-time-icon { display: none; }
@@ -945,6 +1052,23 @@
     .recent-activity-container { padding: 0.8rem; }
     
     .module-badge { min-width: 38px; text-align: center; display: inline-block; }
+
+    .activity-pagination {
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .activity-page-btn {
+        padding: 0.4rem 0.85rem;
+        font-size: 0.72rem;
+    }
+
+    .activity-page-info {
+        font-size: 0.72rem;
+        order: -1;
+        width: 100%;
+        text-align: center;
+    }
 }
 
 @media (max-width: 480px) {

@@ -381,7 +381,7 @@ const GestionEventosSection = () => {
     };
 
     return (
-        <div className="admin-section-container">
+        <div className="admin-section-container gestion-eventos-section">
             {msg && <div className={`alert-msg ${msg.type} fade-in`}>{msg.text}</div>}
 
             {view === 'lista' && (

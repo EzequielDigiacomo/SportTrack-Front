@@ -47,6 +47,15 @@ import {
 } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
+import { STORAGE_KEYS } from '../../utils/constants';
+
+const readSidebarPinned = () => {
+    try {
+        return localStorage.getItem(STORAGE_KEYS.SIDEBAR_PINNED) === 'true';
+    } catch {
+        return false;
+    }
+};
 
 const NAV_ITEMS = [
     { id: 'inicio', path: '', icon: <LayoutDashboard size={20} />, label: 'Inicio', exact: true },
@@ -79,31 +88,55 @@ const SuperDashboard = () => {
     const [isMobile, setIsMobile] = useState(
         () => typeof window !== 'undefined' && window.innerWidth <= 768
     );
+    const [sidebarPinned, setSidebarPinned] = useState(readSidebarPinned);
+    const isSidebarFixed = isSuper || (sidebarPinned && !isMobile);
     const [isSidebarOpen, setIsSidebarOpen] = useState(
-        () => isSuper && (typeof window === 'undefined' || window.innerWidth > 768)
+        () => {
+            const mobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+            return (isSuper || readSidebarPinned()) && !mobile;
+        }
     );
     const timeoutRef = useRef(null);
     const inactivityRef = useRef(null);
 
-    const closeSidebar = () => setIsSidebarOpen(false);
+    const closeSidebar = () => {
+        if (isSidebarFixed) return;
+        setIsSidebarOpen(false);
+    };
 
     const resetInactivity = () => {
         // Removiendo auto-cierre por inactividad a pedido del usuario
     };
 
     const handleMouseEnter = () => {
-        if (isSuper) return; // Si es super, ya está fijo
+        if (isSidebarFixed) return;
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setIsSidebarOpen(true);
         resetInactivity();
     };
 
     const handleMouseLeave = () => {
-        if (isSuper) return; // Si es super, se queda fijo
+        if (isSidebarFixed) return;
         // En desktop se cierra al salir, en mobile es manual
         if (window.innerWidth > 768) {
             timeoutRef.current = setTimeout(() => setIsSidebarOpen(false), 800);
         }
+    };
+
+    const handleTogglePin = () => {
+        setSidebarPinned((prev) => {
+            const next = !prev;
+            try {
+                localStorage.setItem(STORAGE_KEYS.SIDEBAR_PINNED, String(next));
+            } catch {
+                /* ignore */
+            }
+            if (next) {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                setIsSidebarOpen(true);
+            }
+            return next;
+        });
     };
 
     const handleLogout = async () => {
@@ -112,7 +145,7 @@ const SuperDashboard = () => {
     };
 
     const handleNavClick = () => {
-        if (window.innerWidth <= 768) closeSidebar();
+        if (window.innerWidth <= 768) setIsSidebarOpen(false);
     };
 
     const filteredNavItems = NAV_ITEMS.filter(item => {
@@ -142,7 +175,7 @@ const SuperDashboard = () => {
             const mobile = window.innerWidth <= 768;
             setIsMobile(mobile);
             if (mobile) setIsSidebarOpen(false);
-            else if (isSuper) setIsSidebarOpen(true);
+            else if (isSuper || readSidebarPinned()) setIsSidebarOpen(true);
         };
         window.addEventListener('resize', onResize);
         return () => {
@@ -155,7 +188,7 @@ const SuperDashboard = () => {
     return (
         <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
             {/* Edge Sensor for Sidebar */}
-            {!isSuper && (
+            {!isSidebarFixed && (
                 <div 
                     className="sidebar-edge-sensor" 
                     onMouseEnter={handleMouseEnter}
@@ -163,7 +196,7 @@ const SuperDashboard = () => {
                 />
             )}
 
-            {(isMobile || !isSuper) && (
+            {(isMobile || !isSidebarFixed) && (
                 <button
                     type="button"
                     className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
@@ -183,7 +216,9 @@ const SuperDashboard = () => {
             </div>
 
             {/* Mobile Overlay */}
-            {isSidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar} />}
+            {isSidebarOpen && !isSidebarFixed && (
+                <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+            )}
 
             <AdminSidebar 
                 isOpen={isSidebarOpen}
@@ -195,6 +230,9 @@ const SuperDashboard = () => {
                 onClose={closeSidebar}
                 onLogout={handleLogout}
                 onNavClick={handleNavClick}
+                showPinToggle={!isSuper}
+                sidebarPinned={sidebarPinned}
+                onTogglePin={handleTogglePin}
             />
 
             <main className="admin-main">

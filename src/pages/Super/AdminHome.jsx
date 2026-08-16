@@ -40,6 +40,8 @@ import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 import { isSuperAdminUser } from '../../utils/authHelpers';
 import AudienceSaturationBar from './AudienceSaturationBar';
 
+const LOGS_PAGE_SIZE = 8;
+
 const AdminHome = () => {
     const navigate = useNavigate();
     const { id } = useParams(); // ID de federación opcional para SuperAdmin
@@ -50,10 +52,18 @@ const AdminHome = () => {
     const [scopeFedId, setScopeFedId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [recentLogs, setRecentLogs] = useState([]);
+    const [logsPage, setLogsPage] = useState(1);
     const [fedEvents, setFedEvents] = useState([]);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedDay, setSelectedDay] = useState(null);
     const [isCalendarMinimized, setIsCalendarMinimized] = useState(false);
+
+    const logsTotalPages = Math.max(1, Math.ceil(recentLogs.length / LOGS_PAGE_SIZE));
+    const safeLogsPage = Math.min(logsPage, logsTotalPages);
+    const pagedLogs = recentLogs.slice(
+        (safeLogsPage - 1) * LOGS_PAGE_SIZE,
+        safeLogsPage * LOGS_PAGE_SIZE
+    );
 
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState('agenda');
@@ -75,7 +85,7 @@ const AdminHome = () => {
             if (isSuper && !id) {
                 const [metricsData, logs, events, saasInfo, allClubs, federaciones] = await Promise.all([
                     SaaSService.getGlobalMetrics().catch(() => ({})),
-                    SupportService.getLogs({ limit: 8 }).catch(() => []),
+                    SupportService.getLogs({ limit: 100 }).catch(() => []),
                     EventoService.getAll().catch(() => []),
                     SaaSService.getClubesStatus().catch(() => []),
                     ClubService.getAll().catch(() => []),
@@ -90,6 +100,7 @@ const AdminHome = () => {
                     federaciones,
                 });
                 setRecentLogs(logs);
+                setLogsPage(1);
             } else if (isSuper && id) {
                 const [clubesStatus, events, allClubs, federaciones] = await Promise.all([
                     SaaSService.getClubesStatus().catch(() => []),
@@ -918,8 +929,8 @@ const AdminHome = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {recentLogs.length > 0 ? (
-                                    recentLogs.map((log) => (
+                                {pagedLogs.length > 0 ? (
+                                    pagedLogs.map((log) => (
                                         <tr key={log.id} className="activity-row">
                                             <td className="time-cell">
                                                 <Clock size={14} className="activity-time-icon mr-1 opacity-60" />
@@ -985,6 +996,31 @@ const AdminHome = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {recentLogs.length > LOGS_PAGE_SIZE && (
+                        <div className="activity-pagination">
+                            <button
+                                type="button"
+                                className="activity-page-btn"
+                                disabled={safeLogsPage === 1}
+                                onClick={() => setLogsPage((p) => Math.max(1, p - 1))}
+                            >
+                                Anterior
+                            </button>
+                            <span className="activity-page-info">
+                                Página <strong>{safeLogsPage}</strong> de {logsTotalPages}
+                                <span className="activity-page-count"> · {recentLogs.length} movimientos</span>
+                            </span>
+                            <button
+                                type="button"
+                                className="activity-page-btn"
+                                disabled={safeLogsPage === logsTotalPages}
+                                onClick={() => setLogsPage((p) => Math.min(logsTotalPages, p + 1))}
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <style>{`

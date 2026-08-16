@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, X, Pin, PinOff } from 'lucide-react';
 import ThemeToggle from '../Common/ThemeToggle';
 
 const AdminSidebar = ({ 
@@ -12,11 +12,14 @@ const AdminSidebar = ({
     user, 
     onLogout, 
     logo,
-    onNavClick
+    onNavClick,
+    showPinToggle = false,
+    sidebarPinned = false,
+    onTogglePin,
 }) => {
     return (
         <aside 
-            className={`admin-sidebar glass-effect ${isOpen ? 'open' : ''}`}
+            className={`admin-sidebar glass-effect ${isOpen ? 'open' : ''} ${sidebarPinned ? 'is-pinned' : ''}`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >
@@ -25,7 +28,19 @@ const AdminSidebar = ({
                     <img src={logo} alt="Logo" className="brand-logo-img" />
                     <span className="brand-name gradient-text">SportTrack</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="sidebar-header-actions">
+                    {showPinToggle && (
+                        <button
+                            type="button"
+                            className={`sidebar-pin-btn ${sidebarPinned ? 'active' : ''}`}
+                            onClick={onTogglePin}
+                            title={sidebarPinned ? 'Desfijar menú' : 'Fijar menú'}
+                            aria-label={sidebarPinned ? 'Desfijar menú' : 'Fijar menú'}
+                            aria-pressed={sidebarPinned}
+                        >
+                            {sidebarPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                        </button>
+                    )}
                     <ThemeToggle />
                     <button className="sidebar-close-btn" onClick={onClose} aria-label="Cerrar menú">
                         <X size={20} />
@@ -78,8 +93,6 @@ const AdminSidebar = ({
                     </div>
                 </div>
             </div>
-
-            {/* Removemos el badge anterior y dejamos la integración en el texto de arriba */}
 
             <nav className="sidebar-nav">
                 {navItems.map(item => (

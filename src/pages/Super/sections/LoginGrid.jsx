@@ -1,4 +1,7 @@
-import { Key, Power, PowerOff, User, Mail, Phone, Building2, Edit } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Key, Power, PowerOff, Mail, Phone, Building2, Edit } from 'lucide-react';
+
+const PAGE_SIZE = 10;
 
 const getLoginRole = (u) => u?.rol || u?.rolFederacion || u?.RolFederacion || '';
 
@@ -53,11 +56,51 @@ const EstadoBadge = ({ activo }) => (
 );
 
 const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, showFederation = false }) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil((usuarios?.length || 0) / PAGE_SIZE));
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [usuarios]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) setCurrentPage(totalPages);
+    }, [currentPage, totalPages]);
+
+    const pageUsuarios = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return (usuarios || []).slice(start, start + PAGE_SIZE);
+    }, [usuarios, currentPage]);
+
+    const pagination = (usuarios?.length || 0) > PAGE_SIZE && (
+        <div className="admin-pagination">
+            <button
+                type="button"
+                className="btn-pagination"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+            >
+                Anterior
+            </button>
+            <span className="pagination-info">
+                Página <strong>{currentPage}</strong> de {totalPages}
+            </span>
+            <button
+                type="button"
+                className="btn-pagination"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+            >
+                Siguiente
+            </button>
+        </div>
+    );
+
     return (
         <div className="login-grid-container fade-in">
             {/* Mobile View */}
             <div className="logins-mobile-list">
-                {usuarios.map(u => (
+                {pageUsuarios.map(u => (
                     <div key={u.id} className="admin-native-card glass-effect mb-sm" style={{ opacity: u.activo === false ? 0.6 : 1 }}>
                         <div className="card-accent-bar ecu-yellow" />
                         <div className="card-content">
@@ -129,7 +172,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                         </tr>
                     </thead>
                     <tbody>
-                        {usuarios.map(u => (
+                        {pageUsuarios.map(u => (
                             <tr key={u.id} style={{ opacity: u.activo === false ? 0.55 : 1, transition: 'opacity 0.3s' }}>
                                 <td>
                                     <EstadoBadge activo={u.activo} />
@@ -201,6 +244,7 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                     </tbody>
                 </table>
             </div>
+            {pagination}
         </div>
     );
 };

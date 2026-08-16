@@ -7,7 +7,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 5100; /* por encima del logout fijo (z-index 5000) */
     padding: var(--spacing-md);
     animation: fadeIn 0.3s ease;
 }

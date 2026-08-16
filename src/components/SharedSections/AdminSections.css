@@ -205,19 +205,50 @@ td.actions-cell > *:last-child {
     max-height: none;
 }
 
+.logins-desktop-table.admin-table-wrapper {
+    overflow: visible;
+    max-height: none;
+}
+
 /* Event Grid specific alignment changes */
 .eventos-desktop-table .admin-table th,
 .eventos-desktop-table .admin-table td {
     text-align: center;
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
 }
 
 .eventos-desktop-table .admin-table th:first-child,
 .eventos-desktop-table .admin-table td:first-child {
     text-align: left;
+    padding-left: 1rem;
 }
 
 .eventos-desktop-table .actions-cell {
     text-align: center !important;
+    min-width: 200px;
+    width: 1%;
+    padding-left: 0.5rem;
+    padding-right: 1rem;
+}
+
+.eventos-desktop-table .actions-cell-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+}
+
+.eventos-desktop-table .actions-cell-inner > * {
+    margin-right: 0 !important;
+    flex-shrink: 0;
+}
+
+.eventos-desktop-table .actions-cell .btn-dirigir {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    gap: 0.35rem;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
