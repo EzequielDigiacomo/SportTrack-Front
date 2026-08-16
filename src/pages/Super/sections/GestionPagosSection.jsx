@@ -26,6 +26,7 @@ import {
     getClubIdsForFederation,
     getClubFederationName,
 } from '../../../utils/apiHelpers';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionPagosSection = () => {
@@ -273,7 +274,7 @@ const GestionPagosSection = () => {
             showAlert('success', 'Pago registrado formalmente. Se ha actualizado el estado de afiliación.');
             loadAllData();
         } catch (err) {
-            showAlert('error', 'Error al registrar el pago: ' + (err.response?.data?.message || err.message));
+            showAlert('error', getUserFacingError(err, 'No se pudo registrar el pago.'));
         }
     };
 

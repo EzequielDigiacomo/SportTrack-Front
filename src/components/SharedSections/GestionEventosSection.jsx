@@ -30,6 +30,7 @@ import {
     isCategoriaMaratonEligible,
 } from '../../utils/pruebaLabelUtils';
 import { liveResultsUrl } from '../../utils/constants';
+import { getUserFacingError } from '../../utils/userFacingError';
 import './AdminSections.css';
 
 const GestionEventosSection = () => {
@@ -316,7 +317,7 @@ const GestionEventosSection = () => {
             // En lugar de toast, mostramos el error del servidor en el modal
             setValidationErrors({ 
                 title: "Error al Guardar", 
-                list: [err.message || "Ocurrió un error inesperado al procesar la solicitud."] 
+                list: [getUserFacingError(err, 'No se pudo guardar el evento. Revisá los datos e intentá de nuevo.')] 
             });
         } finally { setSaving(false); }
     };
@@ -376,7 +377,7 @@ const GestionEventosSection = () => {
             setDeleteConfirm({ show: false, evento: null });
             loadEventos();
         } catch (err) {
-            showAlert('error', 'Error al eliminar: ' + err.message);
+            showAlert('error', getUserFacingError(err, 'No se pudo eliminar el evento.'));
         } finally { setSaving(false); }
     };
 
@@ -596,7 +597,7 @@ const GestionEventosSection = () => {
                                         } catch (err) {
                                             setValidationErrors({ 
                                                 title: "Error al Crear Control", 
-                                                list: [err.message || "Error al conectar con el servidor."] 
+                                                list: [getUserFacingError(err, 'No se pudo crear el control. Revisá los datos e intentá de nuevo.')] 
                                             });
                                         } finally { setSaving(false); }
                                     }}

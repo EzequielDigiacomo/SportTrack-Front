@@ -9,6 +9,7 @@ import { resolveScopeFederationId } from '../../../utils/apiHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import InscripcionAtletaModal from './InscripcionAtletaModal';
 import GestionResultadosSection from '../../../components/SharedSections/GestionResultadosSection';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 import './Sections.css';
 
@@ -81,7 +82,7 @@ const ControlesSection = () => {
             setDeleteConfirm({ show: false, control: null });
             setValidationErrors({
                 title: 'No se pudo eliminar',
-                list: [err.response?.data?.message || err.message || 'Error al eliminar el control.'],
+                list: [getUserFacingError(err, 'No se pudo eliminar el control.')],
             });
         } finally {
             setSaving(false);
@@ -134,7 +135,7 @@ const ControlesSection = () => {
         } catch (err) {
             setValidationErrors({
                 title: 'Error al crear control',
-                list: [err.message || 'Error al conectar con el servidor.'],
+                list: [getUserFacingError(err, 'No se pudo crear el control. Revisá los datos e intentá de nuevo.')],
             });
         } finally {
             setSaving(false);

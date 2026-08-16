@@ -11,6 +11,7 @@ import SchedulerService from '../../services/SchedulerService';
 import { getClubFederationId, getUserFederationId } from '../../utils/apiHelpers';
 import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
+import { getUserFacingError } from '../../utils/userFacingError';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
     const { user } = useAuth();
@@ -375,7 +376,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                     await loadCronograma();
                 } catch (error) {
                     console.error("Error al promover:", error);
-                    setMessage("❌ Error al promover etapa: " + (error.response?.data?.message || error.message));
+                    setMessage("❌ Error al promover etapa: " + getUserFacingError(error, 'No se pudo promover la etapa.'));
                 } finally {
                     setSaving(false);
                 }
@@ -595,8 +596,8 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             }
         } catch (err) {
             setMessage(finalize
-                ? '❌ Error al guardar u oficializar: ' + (err.response?.data?.message || err.message)
-                : '❌ Error interno al procesar.');
+                ? '❌ ' + getUserFacingError(err, 'No se pudo guardar u oficializar los resultados.')
+                : '❌ No se pudieron guardar los tiempos. Intentá de nuevo.');
         } finally {
             setSaving(false);
         }

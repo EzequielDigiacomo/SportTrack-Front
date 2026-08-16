@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SaaSService from '../../../services/SaaSService';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import { useToast } from '../../../context/ToastContext';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import { 
     Cloud, 
     Plus,
@@ -131,7 +132,7 @@ const SaaSManagement = () => {
             console.error("Error fetching SaaS data:", error);
             setClubesStatus([]);
             addToast(
-                error?.message || "No se pudo cargar el listado de federaciones. Revisá la consola o reintentá.",
+                getUserFacingError(error, 'No se pudo cargar el listado de federaciones. Intentá de nuevo.'),
                 "error"
             );
         } finally {
@@ -389,8 +390,7 @@ const SaaSManagement = () => {
             await fetchData();
         } catch (err) {
             console.error("Error saving federation", err);
-            const errorMsg = err.response?.data?.message || err.message || "Error desconocido al guardar la federación.";
-            addToast(errorMsg, "error");
+            addToast(getUserFacingError(err, 'No se pudo guardar la federación.'), "error");
         }
     };
 

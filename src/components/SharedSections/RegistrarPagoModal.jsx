@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DollarSign, X, CheckCircle } from 'lucide-react';
+import { getUserFacingError } from '../../utils/userFacingError';
 
 const RegistrarPagoModal = ({ isOpen, onClose, onSubmit, paymentType, entityId, entityName }) => {
     const [monto, setMonto] = useState('');
@@ -34,7 +35,7 @@ const RegistrarPagoModal = ({ isOpen, onClose, onSubmit, paymentType, entityId, 
             });
             onClose();
         } catch (err) {
-            setError(err.message || 'Ocurrió un error al registrar el pago.');
+            setError(getUserFacingError(err, 'No se pudo registrar el pago.'));
         } finally {
             setLoading(false);
         }

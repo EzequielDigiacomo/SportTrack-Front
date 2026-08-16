@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Building2 } from 'lucide-react';
 import ClubService from '../../../services/ClubService';
 import { useAuth } from '../../../context/AuthContext';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import './Sections.css';
 
 const PerfilClubSection = () => {
@@ -55,7 +56,7 @@ const PerfilClubSection = () => {
             setMsg({ type: 'success', text: '¡Información del club actualizada con éxito!' });
             setTimeout(() => setMsg(null), 4000);
         } catch (err) {
-            setMsg({ type: 'error', text: 'Error al actualizar: ' + err.message });
+            setMsg({ type: 'error', text: getUserFacingError(err, 'No se pudo actualizar el perfil del club.') });
         } finally {
             setSaving(false);
         }

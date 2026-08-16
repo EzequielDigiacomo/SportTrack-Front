@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../../services/ConfigService';
 import ConfirmDialog from '../../Common/ConfirmDialog';
 import { pick } from '../../../utils/apiHelpers';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import {
     collapseMaratonLargadas,
     getEpGrupoId,
@@ -148,7 +149,7 @@ const ConfigurarMaratonModal = ({ evento, onClose, onRefresh }) => {
             setModalConfig({
                 show: true,
                 title: 'Error al guardar',
-                message: err?.response?.data?.message || err.message || 'No se pudo guardar la largada.',
+                message: getUserFacingError(err, 'No se pudo guardar la largada.'),
             });
         } finally {
             setSaving(false);

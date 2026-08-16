@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, RefreshCw, Users, Eye, Shield, Trophy, Settings2 } from 'lucide-react';
 import AudienceService from '../../../services/AudienceService';
 import { useToast } from '../../../context/ToastContext';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import './AudiencePeaksSection.css';
 
 const formatFecha = (dateStr) => {
@@ -41,7 +42,7 @@ const AudiencePeaksSection = () => {
             }
         } catch (err) {
             console.error(err);
-            addToast(err?.message || 'No se pudo cargar la audiencia', 'error');
+            addToast(getUserFacingError(err, 'No se pudo cargar la audiencia'), 'error');
         } finally {
             setLoading(false);
         }
@@ -66,7 +67,7 @@ const AudiencePeaksSection = () => {
             setLive(liveData);
         } catch (err) {
             console.error(err);
-            addToast(err?.message || 'No se pudo guardar la configuración', 'error');
+            addToast(getUserFacingError(err, 'No se pudo guardar la configuración'), 'error');
         } finally {
             setSaving(false);
         }

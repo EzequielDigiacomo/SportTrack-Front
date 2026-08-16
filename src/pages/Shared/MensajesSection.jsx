@@ -10,6 +10,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { pick } from '../../utils/apiHelpers';
 import { isSuperAdminUser, isFederationAdminUser, isClubUser } from '../../utils/authHelpers';
+import { getUserFacingError } from '../../utils/userFacingError';
 import '../../components/SharedSections/AdminSections.css';
 import './MensajesSection.css';
 
@@ -391,7 +392,7 @@ const MensajesSection = ({ modo: modoProp = 'auto' }) => {
             }
         } catch (error) {
             console.error(error);
-            addToast(error.message || 'No se pudo enviar el mensaje', 'error');
+            addToast(getUserFacingError(error, 'No se pudo enviar el mensaje'), 'error');
         } finally {
             setSending(false);
         }
@@ -413,7 +414,7 @@ const MensajesSection = ({ modo: modoProp = 'auto' }) => {
             await loadHilos();
         } catch (error) {
             console.error(error);
-            addToast(error.message || 'No se pudo enviar la respuesta', 'error');
+            addToast(getUserFacingError(error, 'No se pudo enviar la respuesta'), 'error');
         } finally {
             setSending(false);
         }

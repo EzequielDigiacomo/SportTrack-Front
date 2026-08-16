@@ -6,6 +6,7 @@ import SaaSService from '../../../services/SaaSService';
 import { pick } from '../../../utils/apiHelpers';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 
 const GestionFederacionesSection = () => {
@@ -196,14 +197,7 @@ const GestionFederacionesSection = () => {
             loadFederaciones();
         } catch (err) {
             console.error(err);
-            const status = err.status ?? err.response?.status;
-            let message = err.message || err.response?.data?.message;
-            if (status === 401) {
-                message = 'Sesión expirada o token inválido. Cerrá sesión, volvé a entrar como SuperAdmin (admin) e intentá de nuevo.';
-            } else if (status === 403) {
-                message = 'No tenés permisos de SuperAdmin para crear federaciones.';
-            }
-            showAlert('error', 'Error al crear federación: ' + (message || 'Error desconocido'));
+            showAlert('error', getUserFacingError(err, 'No se pudo crear la federación.'));
         } finally {
             setSaving(false);
         }
@@ -223,7 +217,7 @@ const GestionFederacionesSection = () => {
             loadFederaciones();
         } catch (err) {
             console.error(err);
-            showAlert('error', 'Error al actualizar: ' + (err.response?.data?.message || err.message));
+            showAlert('error', getUserFacingError(err, 'No se pudo actualizar la federación.'));
         } finally {
             setSaving(false);
         }

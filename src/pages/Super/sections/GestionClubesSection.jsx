@@ -22,6 +22,7 @@ import {
     extractPlanFromUser,
     normalizePlan,
 } from '../../../utils/planHelpers';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 
 const enrichFederacionesWithPlan = (federacionesData, saasStatus, planes) => {
@@ -253,11 +254,11 @@ const GestionClubesSection = () => {
                         });
                         showAlert('success', 'Club y cuenta de acceso creados correctamente.');
                     } catch (regErr) {
-                        const msgText = regErr.response?.data?.message || regErr.message || '';
-                        if (/no incluye dashboard\/login Club/i.test(msgText)) {
+                        const msgText = getUserFacingError(regErr, '');
+                        if (/no incluye dashboard\/login Club/i.test(msgText) || /no incluye dashboard\/login Club/i.test(regErr?.message || '')) {
                             showAlert('success', 'Club creado. El login de club no aplica en este plan; se puede dar de alta si más adelante contratan SIGDEF Profesional o Pack Dúo.');
                         } else {
-                            showAlert('error', `Club creado, pero falló la cuenta de acceso: ${msgText}. Podés vincularla desde Logins.`);
+                            showAlert('error', `Club creado, pero no se pudo crear la cuenta de acceso. ${getUserFacingError(regErr, 'Podés vincularla desde Logins.')}`);
                         }
                     }
                 } else if (!allowClubLogin) {
@@ -269,7 +270,7 @@ const GestionClubesSection = () => {
             setView('lista');
             loadData();
         } catch (err) {
-            showAlert('error', 'Error: ' + (err.response?.data?.message || err.message));
+            showAlert('error', getUserFacingError(err, 'No se pudo guardar el club.'));
         } finally {
             setSaving(false);
         }

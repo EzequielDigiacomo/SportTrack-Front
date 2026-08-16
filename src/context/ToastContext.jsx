@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { sanitizeUserFacingText } from '../utils/userFacingError';
 
 const ToastContext = createContext(null);
 
@@ -20,6 +21,14 @@ export const ToastProvider = ({ children }) => {
             type = 'info';
             message = typeof arg1 === 'string' ? arg1 : String(arg2 ?? '');
         }
+
+        if (type === 'error') {
+            message = sanitizeUserFacingText(
+                message,
+                'No se pudo completar la operación. Revisá los datos e intentá de nuevo.'
+            );
+        }
+
         const id = Date.now() + Math.random();
         setToasts(prev => [...prev, { id, type, message, duration }]);
     }, []);

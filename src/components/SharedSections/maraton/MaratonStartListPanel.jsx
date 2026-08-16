@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { List, RotateCcw, RefreshCw, Pencil, Save, X, Trash2 } from 'lucide-react';
 import ClubService from '../../../services/ClubService';
 import ConfirmDialog from '../../Common/ConfirmDialog';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import {
     loadMaratonLargadaInscriptos,
     sortearYArmarLargadaMaraton,
@@ -101,10 +102,7 @@ const MaratonStartListPanel = ({
             );
         } catch (err) {
             console.error(err);
-            const apiMsg = err?.response?.data?.message || err?.message;
-            onMessage?.(apiMsg
-                ? `❌ ${apiMsg}`
-                : '❌ Error al sortear números / armar largada.');
+            onMessage?.('❌ ' + getUserFacingError(err, 'No se pudo sortear números / armar largada.'));
         } finally {
             setSaving(false);
         }
@@ -187,8 +185,7 @@ const MaratonStartListPanel = ({
             onMessage?.('✅ Nómina actualizada (inscripción, tripulación y fase si aplica).');
         } catch (err) {
             console.error(err);
-            const apiMsg = err?.response?.data?.message || err?.message;
-            onMessage?.(apiMsg ? `❌ ${apiMsg}` : '❌ No se pudo guardar la fila.');
+            onMessage?.('❌ ' + getUserFacingError(err, 'No se pudo guardar la fila.'));
         } finally {
             setSavingRow(false);
         }
@@ -209,10 +206,7 @@ const MaratonStartListPanel = ({
             onMessage?.('✅ Inscripción eliminada de la nómina.');
         } catch (err) {
             console.error(err);
-            const apiMsg = err?.response?.data?.message || err?.message;
-            onMessage?.(apiMsg
-                ? `❌ ${apiMsg}`
-                : '❌ No se pudo eliminar. Si el evento ya cerró inscripciones, necesitás rol Admin.');
+            onMessage?.('❌ ' + getUserFacingError(err, 'No se pudo eliminar. Si el evento ya cerró inscripciones, necesitás rol Admin.'));
         } finally {
             setDeleting(false);
         }

@@ -8,6 +8,7 @@ import ConfigurarMaratonModal from './maraton/ConfigurarMaratonModal';
 import './ConfigurarPruebas.css';
 
 import { pick } from '../../utils/apiHelpers';
+import { getUserFacingError } from '../../utils/userFacingError';
 
 const parseEnabledIds = (value) => {
     if (!value || typeof value !== 'string') return null;
@@ -362,7 +363,7 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
             setModalConfig({
                 show: true,
                 title: 'Error al guardar',
-                message: err?.response?.data?.message || err.message || 'No se pudo guardar la largada.',
+                message: getUserFacingError(err, 'No se pudo guardar la largada.'),
                 type: 'warning'
             });
             return false;

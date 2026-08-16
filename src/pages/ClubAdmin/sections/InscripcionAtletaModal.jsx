@@ -5,6 +5,7 @@ import InscripcionService from '../../../services/InscripcionService';
 import { useAuth } from '../../../context/AuthContext';
 import { matchesSearch } from '../../../utils/authHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import './InscripcionModal.css';
 
 const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, modoAdmin = false }) => {
@@ -226,7 +227,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
             // Limpiar mensaje después de un tiempo
             setTimeout(() => setMsg(null), 3000);
         } catch (err) {
-            setMsg({ type: 'error', text: 'Error al inscribir: ' + err.message });
+            setMsg({ type: 'error', text: getUserFacingError(err, 'No se pudo completar la inscripción.') });
         } finally {
             setSaving(false);
         }
@@ -249,7 +250,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
             await loadInscripcionesClub();
             setTimeout(() => setMsg(null), 3000);
         } catch (err) {
-            setMsg({ type: 'error', text: 'Error al eliminar: ' + err.message });
+            setMsg({ type: 'error', text: getUserFacingError(err, 'No se pudo eliminar la inscripción.') });
         } finally {
             setSaving(false);
         }
@@ -635,7 +636,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
                                         await loadInscripcionesClub();
                                         setTimeout(() => setMsg(null), 3000);
                                     } catch (err) {
-                                        setMsg({ type: 'error', text: 'Error al inscribir: ' + err.message });
+                                        setMsg({ type: 'error', text: getUserFacingError(err, 'No se pudo completar la inscripción.') });
                                     } finally {
                                         setSaving(false);
                                     }

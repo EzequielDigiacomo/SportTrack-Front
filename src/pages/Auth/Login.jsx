@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/AuthService';
 import { getDashboardPathForRole, getUserRole } from '../../utils/authHelpers';
+import { getUserFacingError } from '../../utils/userFacingError';
 import './Login.css';
 
 const Login = () => {
@@ -41,21 +42,13 @@ const Login = () => {
             navigate(getDashboardPathForRole(getUserRole(data)), { replace: true });
             
         } catch (err) {
-            // api.js puede rechazar { status, message, data } (no siempre es AxiosError)
-            const status = err.response?.status ?? err.status;
-            const serverMsg =
-                err.response?.data?.message ||
-                err.data?.message ||
-                err.message;
-
-            if (serverMsg && serverMsg !== 'Network Error' && !String(serverMsg).includes('status code')) {
-                setError(serverMsg);
-            } else if (status === 401) {
+            const status = err?.status ?? err?.response?.status;
+            if (status === 401) {
                 setError('Usuario o contraseña incorrectos');
             } else if (status === 403) {
                 setError('Acceso denegado o cuenta suspendida');
             } else {
-                setError('No se pudo conectar con el servidor. Revisá la consola (API Context).');
+                setError(getUserFacingError(err, 'No se pudo iniciar sesión. Revisá usuario y contraseña.'));
             }
         } finally {
             setLoading(false);

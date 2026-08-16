@@ -11,6 +11,7 @@ import {
 import BackupService from '../../../services/BackupService';
 import FederacionService from '../../../services/FederacionService';
 import { useToast } from '../../../context/ToastContext';
+import { getUserFacingError } from '../../../utils/userFacingError';
 import './BackupsSection.css';
 
 const formatFecha = (dateStr) => {
@@ -36,7 +37,7 @@ const BackupsSection = () => {
             setHistory(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error(err);
-            addToast(err?.message || 'No se pudo cargar el historial de backups', 'error');
+            addToast(getUserFacingError(err, 'No se pudo cargar el historial de backups'), 'error');
             setHistory([]);
         } finally {
             setLoadingHistory(false);
@@ -66,7 +67,7 @@ const BackupsSection = () => {
             await loadHistory();
         } catch (err) {
             console.error(err);
-            addToast(err?.message || 'Error al generar el backup', 'error');
+            addToast(getUserFacingError(err, 'No se pudo generar el backup'), 'error');
         } finally {
             setDownloading(false);
         }
