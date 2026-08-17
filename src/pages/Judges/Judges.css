@@ -1,17 +1,16 @@
 .judges-container {
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: var(--spacing-xl);
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
     border-radius: var(--radius-lg);
-    min-height: 70vh;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
 }
 
 .judges-header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 0;
     position: relative;
 }
 
@@ -39,7 +38,7 @@
 }
 
 .judges-header h1 {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -48,8 +47,8 @@
 
 .judges-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: var(--spacing-xl);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
 }
 
 .judge-card {
@@ -75,8 +74,8 @@
 }
 
 .card-icon {
-    width: 100px;
-    height: 100px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -168,9 +167,19 @@
 
 @media (max-width: 768px) {
     .judges-container {
-        margin: 20px;
+        margin: 0;
         padding: var(--spacing-md);
     }
+}
+
+/* Hub de jueces: evitar scroll innecesario por min-height + padding acumulado */
+.admin-main:has(.judges-container) {
+    min-height: 0;
+    padding-top: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* ── JUDGES TOP HEADER (Unified for Web & Mobile) ── */
@@ -207,6 +216,11 @@
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-sizing: border-box;
+}
+
+/* Sidebar abierto/fijado por encima del navbar del panel de control */
+.admin-layout:not(.sidebar-collapsed) .admin-sidebar {
+    z-index: 1100;
 }
 
 .admin-main .control-panel-navbar {

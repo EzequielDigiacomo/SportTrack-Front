@@ -79,6 +79,62 @@ export function getClasificacionTitleFromEventoPrueba(ep) {
     return [cat, sex, bot].filter(x => x && x !== '—').join(' · ');
 }
 
+/** Resuelve categoría y bote de un resultado Maratón vía EventoPrueba / inscripción. */
+export function resolveMaratonEventoPruebaForResultado(res, pruebas = [], inscripcionEpMap = null) {
+    if (!res) return null;
+
+    const epById = new Map((pruebas || []).map(p => [String(p.id), p]));
+    let epId = res.eventoPruebaId || res.EventoPruebaId;
+    if (!epId && inscripcionEpMap) {
+        const inscId = String(res.inscripcionId || res.InscripcionId || '');
+        epId = inscripcionEpMap?.get?.(inscId) ?? inscripcionEpMap?.[inscId];
+    }
+
+    return epById.get(String(epId)) || null;
+}
+
+export function resolveMaratonClasificacionKeyForResultado(res, pruebas = [], inscripcionEpMap = null) {
+    const ep = resolveMaratonEventoPruebaForResultado(res, pruebas, inscripcionEpMap);
+    return ep ? getClasificacionKeyFromEventoPrueba(ep) : null;
+}
+
+export function resolveMaratonClasificacionTitleForResultado(res, pruebas = [], inscripcionEpMap = null) {
+    const ep = resolveMaratonEventoPruebaForResultado(res, pruebas, inscripcionEpMap);
+    return ep ? getClasificacionTitleFromEventoPrueba(ep) : null;
+}
+
+/** Limita resultados a la misma clasificación (Categoría · Sexo · Bote) que el origen. */
+export function filterMaratonResultadosByClasificacion(resultados = [], sourceRes, pruebas = [], inscripcionEpMap = null) {
+    const sourceKey = resolveMaratonClasificacionKeyForResultado(sourceRes, pruebas, inscripcionEpMap);
+    if (!sourceKey) return resultados;
+
+    return resultados.filter((r) =>
+        resolveMaratonClasificacionKeyForResultado(r, pruebas, inscripcionEpMap) === sourceKey
+    );
+}
+
+export function resolveMaratonLabelsForResultado(res, pruebas = [], inscripcionEpMap = null) {
+    if (!res) return { categoriaLabel: null, boteLabel: null };
+
+    const ep = resolveMaratonEventoPruebaForResultado(res, pruebas, inscripcionEpMap);
+    if (!ep) return { categoriaLabel: null, boteLabel: null };
+
+    return {
+        categoriaLabel: getCategoriaLabelFromEventoPrueba(ep),
+        boteLabel: getBoteLabelFromEventoPrueba(ep),
+    };
+}
+
+/** Enriquece opciones de traspaso con categoría/bote en eventos Maratón. */
+export function enrichTransferOptionsForMaraton(options = [], resultados = [], pruebas = [], inscripcionEpMap = null) {
+    const byId = new Map((resultados || []).map(r => [String(r.id), r]));
+    return options.map(o => {
+        const res = byId.get(String(o.id));
+        const labels = resolveMaratonLabelsForResultado(res, pruebas, inscripcionEpMap);
+        return { ...o, ...labels };
+    });
+}
+
 /** Agrupa inscritos duplicados de tripulación (mismo criterio que pista). */
 export function uniqueBoatsFromIncripciones(rawInscs = []) {
     const uniqueBoats = [];

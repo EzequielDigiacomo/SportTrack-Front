@@ -20,34 +20,12 @@ import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
 import AudiencePeaksSection from './sections/AudiencePeaksSection';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
-import { canAccessControlesLive, extractPlanFromUser } from '../../utils/planHelpers';
-import RegistroInscripcionesSection from '../ClubAdmin/sections/RegistroInscripcionesSection';
-
-
-import { 
-    LayoutDashboard, 
-    Calendar, 
-    Building2, 
-    Key, 
-    Users, 
-    Timer, 
-    List,
-    Settings, 
-    LogOut,
-    Menu,
-    Terminal as TerminalIcon,
-    Cloud,
-    CreditCard,
-    FileText,
-    Globe,
-    Mail,
-    ClipboardList,
-    Database,
-    Activity
-} from 'lucide-react';
+import { filterAdminNavItems } from '../../config/adminNavItems';
+import { STORAGE_KEYS } from '../../utils/constants';
+import { LogOut, Menu } from 'lucide-react';
 import logo from '../../assets/logo-sporttrack.png';
 import './AdminDashboard.css';
-import { STORAGE_KEYS } from '../../utils/constants';
+import RegistroInscripcionesSection from '../ClubAdmin/sections/RegistroInscripcionesSection';
 
 const readSidebarPinned = () => {
     try {
@@ -56,28 +34,6 @@ const readSidebarPinned = () => {
         return false;
     }
 };
-
-const NAV_ITEMS = [
-    { id: 'inicio', path: '', icon: <LayoutDashboard size={20} />, label: 'Inicio', exact: true },
-    { id: 'federaciones', path: 'federaciones', icon: <Globe size={20} />, label: 'Federaciones' },
-    { id: 'mensajes', path: 'mensajes', icon: <Mail size={20} />, label: 'Mensajes' },
-    { id: 'atletas', path: 'atletas', icon: <Users size={20} />, label: 'Atletas' },
-    { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
-    { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
-    { id: 'registro-inscripciones', path: 'registro-inscripciones', icon: <ClipboardList size={20} />, label: 'Registro Inscripciones' },
-    { id: 'pagos', path: 'pagos', icon: <CreditCard size={20} />, label: 'Control de Pagos' },
-    { id: 'controles', path: 'controles', icon: <Timer size={20} />, label: 'Controles Técnicos' },
-    { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },
-    { id: 'resultados', path: 'resultados', icon: <Timer size={20} />, label: 'Resultados' },
-    { id: 'auditoria', path: 'auditoria', icon: <FileText size={20} />, label: 'Auditoría Progresión' },
-    { id: 'audiencia', path: 'audiencia', icon: <Activity size={20} />, label: 'Audiencia / Picos', superOnly: true },
-    { id: 'carga-manual', path: '/jueces/carga-manual', icon: <List size={20} />, label: 'Carga Manual', isExternal: true },
-    { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Cronometraje (Jueces)', isExternal: true, requiereControlesLive: true },
-    { id: 'saas', path: 'saas', icon: <Cloud size={20} />, label: 'Suscripciones SaaS', isSupport: true },
-    { id: 'backups', path: 'backups', icon: <Database size={20} />, label: 'Backups DB', isSupport: true },
-    { id: 'configuracion', path: 'configuracion', icon: <Settings size={20} />, label: 'Configuración' },
-    { id: 'soporte', path: 'soporte', icon: <TerminalIcon size={20} />, label: 'Auditoría / Logs', isSupport: true },
-];
 
 const SuperDashboard = () => {
     const { user, logout } = useAuth();
@@ -148,27 +104,7 @@ const SuperDashboard = () => {
         if (window.innerWidth <= 768) setIsSidebarOpen(false);
     };
 
-    const filteredNavItems = NAV_ITEMS.filter(item => {
-        const role = user?.rol?.trim().toLowerCase();
-        const isSuper = role === 'superadmin' || user?.username === 'soporte_tecnico';
-        const plan = extractPlanFromUser(user);
-
-        // Módulos EXCLUSIVOS para SuperAdmin
-        if (item.id === 'saas' || item.id === 'soporte' || item.id === 'backups' || item.id === 'configuracion' || item.id === 'federaciones' || item.id === 'audiencia' || item.superOnly) {
-            return isSuper;
-        }
-
-        // Consolas juez: solo Ecosistema (ids 6/9); SuperAdmin siempre ve el ítem
-        if (item.requiereControlesLive && !isSuper && !canAccessControlesLive(plan)) {
-            return false;
-        }
-
-        return true;
-    }).map(item => (
-        item.id === 'mensajes'
-            ? { ...item, showDot: hasUnread }
-            : item
-    ));
+    const filteredNavItems = filterAdminNavItems(user, { hasUnread });
 
     useEffect(() => {
         const onResize = () => {
@@ -186,7 +122,7 @@ const SuperDashboard = () => {
     }, [isSuper]);
 
     return (
-        <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
+        <div className={`admin-layout ${!isSidebarOpen && !isSidebarFixed ? 'sidebar-collapsed' : ''}`}>
             {/* Edge Sensor for Sidebar */}
             {!isSidebarFixed && (
                 <div 
@@ -221,7 +157,7 @@ const SuperDashboard = () => {
             )}
 
             <AdminSidebar 
-                isOpen={isSidebarOpen}
+                isOpen={isSidebarOpen || isSidebarFixed}
                 user={user}
                 logo={logo}
                 navItems={filteredNavItems}

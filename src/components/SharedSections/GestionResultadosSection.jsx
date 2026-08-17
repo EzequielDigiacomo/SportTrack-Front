@@ -24,7 +24,7 @@ import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
 import { isControlTecnicoRole, isJudgeAdmin } from '../../utils/controlTecnico';
 import MaratonStartListPanel from './maraton/MaratonStartListPanel';
 import MaratonResultadosGrids from './maraton/MaratonResultadosGrids';
-import { loadMaratonLargadaInscriptos } from './maraton/maratonStartListUtils';
+import { loadMaratonLargadaInscriptos, enrichTransferOptionsForMaraton, filterMaratonResultadosByClasificacion, resolveMaratonClasificacionTitleForResultado } from './maraton/maratonStartListUtils';
 
 function getFaseStatusBadge(fase) {
     if (!fase) return null;
@@ -521,14 +521,35 @@ const handleStatusChange = (id, status) => {
 
 const openTransferModal = (sourceId, sourcePos) => {
     if (!faseSeleccionada?.resultados) return;
-    const options = getTransferablePositions(faseSeleccionada.resultados, tiemposLocales)
-        .filter(o => String(o.id) !== String(sourceId));
+
+    const sourceRes = faseSeleccionada.resultados.find(r => String(r.id) === String(sourceId));
+    const resultadosScope = (isMaratonEvent && sourceRes)
+        ? filterMaratonResultadosByClasificacion(
+            faseSeleccionada.resultados,
+            sourceRes,
+            pruebas,
+            maratonInscripcionEpMap
+        )
+        : faseSeleccionada.resultados;
+
+    let allPositions = getTransferablePositions(resultadosScope, tiemposLocales);
+    if (isMaratonEvent) {
+        allPositions = enrichTransferOptionsForMaraton(
+            allPositions,
+            resultadosScope,
+            pruebas,
+            maratonInscripcionEpMap
+        );
+    }
+    const options = allPositions.filter(o => String(o.id) !== String(sourceId));
     if (options.length === 0) {
-        showAlert('warning', 'No hay otros puestos para traspasar.');
+        showAlert('warning', 'No hay otros puestos para traspasar en esta clasificación.');
         return;
     }
-    const sourceOpt = getTransferablePositions(faseSeleccionada.resultados, tiemposLocales)
-        .find(o => String(o.id) === String(sourceId));
+    const sourceOpt = allPositions.find(o => String(o.id) === String(sourceId));
+    const clasificacionTitle = (isMaratonEvent && sourceRes)
+        ? resolveMaratonClasificacionTitleForResultado(sourceRes, pruebas, maratonInscripcionEpMap)
+        : null;
     const defaultTarget = options.find(o => o.posicion === sourcePos + 1) || options[0];
     setTransferModal({
         sourceId,
@@ -543,6 +564,8 @@ const openTransferModal = (sourceId, sourcePos) => {
         editSourceTime: defaultTarget.tiempo || '',
         editTargetTime: sourceOpt?.tiempo || '',
         options,
+        resultadosScope,
+        clasificacionTitle,
     });
 };
 
@@ -565,9 +588,10 @@ const updateTransferTarget = (targetPos) => {
 
 const applyTransfer = () => {
     if (!transferModal || !faseSeleccionada?.resultados) return;
-    const { sourceId, targetPos, mode, editSourceTime, editTargetTime } = transferModal;
+    const { sourceId, targetPos, mode, editSourceTime, editTargetTime, resultadosScope } = transferModal;
+    const scopedResultados = resultadosScope?.length ? resultadosScope : faseSeleccionada.resultados;
     setTiemposLocales(prev => transferAthleteToPosition(
-        faseSeleccionada.resultados,
+        scopedResultados,
         prev,
         sourceId,
         targetPos,
@@ -1374,6 +1398,9 @@ const connectedStarter = activeJudges.find(j => {
                 <p className="transfer-modal-lead">
                     Movés el resultado de <strong>{transferModal.sourceNombre || 'Atleta'}</strong> (puesto {transferModal.sourcePos})
                     sin reescribir nombres ni clubes: se intercambian los tiempos con el puesto destino.
+                    {transferModal.clasificacionTitle && (
+                        <> Solo se listan atletas de <strong>{transferModal.clasificacionTitle}</strong>.</>
+                    )}
                 </p>
 
                 <label className="transfer-field">
@@ -1382,11 +1409,16 @@ const connectedStarter = activeJudges.find(j => {
                         value={transferModal.targetPos}
                         onChange={(e) => updateTransferTarget(e.target.value)}
                     >
-                        {transferModal.options.map(o => (
-                            <option key={o.id} value={o.posicion}>
-                                #{o.posicion} — {o.nombre || 'Sin nombre'} ({formatRaceTime(o.tiempo) || '—'})
-                            </option>
-                        ))}
+                        {transferModal.options.map(o => {
+                            const clasificacion = isMaratonEvent && (o.categoriaLabel || o.boteLabel)
+                                ? ` · ${[o.categoriaLabel, o.boteLabel].filter(x => x && x !== '—').join(' · ')}`
+                                : '';
+                            return (
+                                <option key={o.id} value={o.posicion}>
+                                    #{o.posicion} — {o.nombre || 'Sin nombre'}{clasificacion} ({formatRaceTime(o.tiempo) || '—'})
+                                </option>
+                            );
+                        })}
                     </select>
                 </label>
 

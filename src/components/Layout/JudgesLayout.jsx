@@ -3,12 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from './AdminSidebar';
 import ThemeToggle from '../Common/ThemeToggle';
+import useUnreadMessages from '../../hooks/useUnreadMessages';
+import { filterAdminNavItems } from '../../config/adminNavItems';
 import {
-    LayoutDashboard,
-    Calendar,
-    Building2,
-    Users,
-    Timer,
     LogOut,
     ArrowLeft,
     Menu,
@@ -17,40 +14,75 @@ import {
 import logo from '../../assets/logo-sporttrack.png';
 import '../../pages/Super/AdminDashboard.css';
 import '../../pages/Judges/Judges.css';
+import { STORAGE_KEYS } from '../../utils/constants';
 
-const NAV_ITEMS = [
-    { id: 'inicio', path: '/super', icon: <LayoutDashboard size={20} />, label: 'Inicio Admin' },
-    { id: 'atletas', path: '/super/atletas', icon: <Users size={20} />, label: 'Atletas' },
-    { id: 'clubes', path: '/super/clubes', icon: <Building2 size={20} />, label: 'Clubes' },
-    { id: 'eventos', path: '/super/eventos', icon: <Calendar size={20} />, label: 'Eventos' },
-    { id: 'resultados', path: '/super/resultados', icon: <Timer size={20} />, label: 'Resultados' },
-    { id: 'control', path: '/juez-control', icon: <Users size={20} />, label: 'Panel de Control' },
-    { id: 'jueces', path: '/jueces', icon: <Timer size={20} />, label: 'Módulo Jueces', exact: true },
-];
+const readSidebarPinned = () => {
+    try {
+        return localStorage.getItem(STORAGE_KEYS.SIDEBAR_PINNED) === 'true';
+    } catch {
+        return false;
+    }
+};
 
 const JudgesLayout = ({ children }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { hasUnread } = useUnreadMessages(true);
+    const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
+    const isSuper = roleStr === 'superadmin' || user?.username === 'soporte_tecnico';
+    const isAdmin = roleStr.includes('admin');
+    const canSeeSidebar = isAdmin;
+    const filteredNavItems = filterAdminNavItems(user, { hasUnread });
+
+    const [isMobile, setIsMobile] = useState(
+        () => typeof window !== 'undefined' && window.innerWidth <= 768
+    );
+    const [sidebarPinned, setSidebarPinned] = useState(readSidebarPinned);
+    const isSidebarFixed = isSuper || (sidebarPinned && !isMobile);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+        const mobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+        return (isSuper || readSidebarPinned()) && !mobile;
+    });
     const timeoutRef = useRef(null);
-    const inactivityRef = useRef(null);
 
-    const closeSidebar = () => setIsSidebarOpen(false);
-
-    const resetInactivity = () => {
-        if (inactivityRef.current) clearTimeout(inactivityRef.current);
-        inactivityRef.current = setTimeout(closeSidebar, 5000);
+    const closeSidebar = () => {
+        if (isSidebarFixed) return;
+        setIsSidebarOpen(false);
     };
 
     const handleMouseEnter = () => {
+        if (isSidebarFixed) return;
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setIsSidebarOpen(true);
-        resetInactivity();
     };
 
+    const isControlOrManual =
+        location.pathname.includes('juez-control') ||
+        location.pathname.includes('carga-manual') ||
+        location.pathname.includes('control-tecnico');
+
     const handleMouseLeave = () => {
-        timeoutRef.current = setTimeout(() => setIsSidebarOpen(false), 800);
+        if (isSidebarFixed) return;
+        if (window.innerWidth > 768) {
+            timeoutRef.current = setTimeout(() => setIsSidebarOpen(false), 800);
+        }
+    };
+
+    const handleTogglePin = () => {
+        setSidebarPinned((prev) => {
+            const next = !prev;
+            try {
+                localStorage.setItem(STORAGE_KEYS.SIDEBAR_PINNED, String(next));
+            } catch {
+                /* ignore */
+            }
+            if (next) {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                setIsSidebarOpen(true);
+            }
+            return next;
+        });
     };
 
     const handleLogout = async () => {
@@ -59,25 +91,22 @@ const JudgesLayout = ({ children }) => {
     };
 
     const handleNavClick = () => {
-        if (window.innerWidth <= 768) closeSidebar();
+        if (window.innerWidth <= 768 && !isSidebarFixed) closeSidebar();
     };
 
     useEffect(() => {
-        return () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            if (inactivityRef.current) clearTimeout(inactivityRef.current);
+        const onResize = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            if (mobile) setIsSidebarOpen(false);
+            else if (isSuper || readSidebarPinned()) setIsSidebarOpen(true);
         };
-    }, []);
-
-    const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
-    const isAdmin = roleStr.includes('admin');
-    // canSeeSidebar solo para admins reales. Jueces (incluyendo Control) usan el nav simplificado.
-    const canSeeSidebar = isAdmin;
-
-    const isControlOrManual =
-        location.pathname.includes('juez-control') ||
-        location.pathname.includes('carga-manual') ||
-        location.pathname.includes('control-tecnico');
+        window.addEventListener('resize', onResize);
+        return () => {
+            window.removeEventListener('resize', onResize);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, [isSuper]);
 
     const getRoleName = () => {
         const path = location.pathname;
@@ -110,7 +139,11 @@ const JudgesLayout = ({ children }) => {
 
     const handleMenuClick = () => {
         if (canSeeSidebar) {
-            setIsSidebarOpen((open) => !open);
+            if (isSidebarFixed) {
+                setIsSidebarOpen(true);
+            } else {
+                setIsSidebarOpen((open) => !open);
+            }
             return;
         }
         navigate('/');
@@ -162,50 +195,51 @@ const JudgesLayout = ({ children }) => {
     );
 
     return (
-        <div className={`admin-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>
+        <div className={`admin-layout ${!isSidebarOpen && !isSidebarFixed ? 'sidebar-collapsed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>
             {canSeeSidebar && (
                 <>
-                    {!isControlOrManual && (
-                        <>
-                            <div
-                                className="sidebar-edge-sensor"
-                                onMouseEnter={handleMouseEnter}
-                                onClick={handleMouseEnter}
-                            />
-
-                            <button
-                                className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
-                                onClick={() => setIsSidebarOpen(true)}
-                                title="Abrir menú"
-                            >
-                                <Menu size={24} color="var(--color-primary-light)" />
-                            </button>
-
-                            <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
-                                <button type="button" className="super-quick-logout" onClick={handleLogout} title="Cerrar Sesión" aria-label="Cerrar Sesión">
-                                    <LogOut size={22} strokeWidth={2.25} />
-                                </button>
-                            </div>
-                        </>
+                    {!isSidebarFixed && (
+                        <div
+                            className="sidebar-edge-sensor"
+                            onMouseEnter={handleMouseEnter}
+                            onClick={handleMouseEnter}
+                        />
                     )}
 
-                    {isSidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar} />}
+                    {(isMobile || !isSidebarFixed) && !isControlOrManual && (
+                        <button
+                            className={`sidebar-trigger-favicon glass-effect ${isSidebarOpen ? 'active' : ''}`}
+                            onClick={() => setIsSidebarOpen(true)}
+                            title="Abrir menú"
+                            aria-label="Abrir menú"
+                        >
+                            <Menu size={24} color="var(--color-primary-light)" />
+                        </button>
+                    )}
+
+                    {!isControlOrManual && (
+                        <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
+                            <button type="button" className="super-quick-logout" onClick={handleLogout} title="Cerrar Sesión" aria-label="Cerrar Sesión">
+                                <LogOut size={22} strokeWidth={2.25} />
+                            </button>
+                        </div>
+                    )}
+
+                    {isSidebarOpen && !isSidebarFixed && <div className="sidebar-overlay" onClick={closeSidebar} />}
 
                     <AdminSidebar
-                        isOpen={isSidebarOpen}
+                        isOpen={isSidebarOpen || isSidebarFixed}
                         user={user}
                         logo={logo}
-                        navItems={NAV_ITEMS.filter(item => {
-                            const isBronce = user?.plan?.nombre?.toLowerCase() === 'bronce';
-                            if (isBronce && ['control', 'jueces'].includes(item.id)) return false;
-                            if (roleStr.includes('admin')) return true;
-                            return ['control', 'jueces'].includes(item.id);
-                        })}
-                        onMouseEnter={canSeeSidebar ? handleMouseEnter : undefined}
-                        onMouseLeave={canSeeSidebar ? handleMouseLeave : undefined}
+                        navItems={filteredNavItems}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
                         onClose={closeSidebar}
                         onLogout={handleLogout}
                         onNavClick={handleNavClick}
+                        showPinToggle={!isSuper}
+                        sidebarPinned={sidebarPinned}
+                        onTogglePin={handleTogglePin}
                     />
                 </>
             )}
