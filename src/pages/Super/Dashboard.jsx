@@ -45,7 +45,7 @@ const SuperDashboard = () => {
         () => typeof window !== 'undefined' && window.innerWidth <= 768
     );
     const [sidebarPinned, setSidebarPinned] = useState(readSidebarPinned);
-    const isSidebarFixed = isSuper || (sidebarPinned && !isMobile);
+    const isSidebarFixed = (isSuper || sidebarPinned) && !isMobile;
     const [isSidebarOpen, setIsSidebarOpen] = useState(
         () => {
             const mobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -151,11 +151,7 @@ const SuperDashboard = () => {
                 </button>
             </div>
 
-            {/* Mobile Overlay */}
-            {isSidebarOpen && !isSidebarFixed && (
-                <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
-            )}
-
+            {/* Mobile Overlay — después del sidebar para no interferir con el drawer */}
             <AdminSidebar 
                 isOpen={isSidebarOpen || isSidebarFixed}
                 user={user}
@@ -170,6 +166,10 @@ const SuperDashboard = () => {
                 sidebarPinned={sidebarPinned}
                 onTogglePin={handleTogglePin}
             />
+
+            {isSidebarOpen && !isSidebarFixed && (
+                <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+            )}
 
             <main className="admin-main">
                 <div className="admin-content-wrapper">

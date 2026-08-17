@@ -3,7 +3,16 @@ import { NavLink } from 'react-router-dom';
 import { LogOut, X, Pin, PinOff } from 'lucide-react';
 import ThemeToggle from '../Common/ThemeToggle';
 
-const AdminSidebar = ({ 
+const getRoleLabel = (user) => {
+    if (user?.rol === 'SuperAdmin') return 'Super Administrador';
+    if (user?.rol === 'Admin') {
+        const planName = user?.plan?.nombre?.trim();
+        return planName ? `Administrador ${planName}` : 'Administrador';
+    }
+    return user?.rol || 'Usuario';
+};
+
+const AdminSidebar = ({
     isOpen, 
     onMouseEnter, 
     onMouseLeave, 
@@ -52,45 +61,7 @@ const AdminSidebar = ({
                 <div className="user-avatar">{user?.username?.[0]?.toUpperCase() || 'A'}</div>
                 <div className="user-info-text">
                     <p className="user-name">{user?.username}</p>
-                    <div className="user-plan-status">
-                        <p className="user-role" style={{ 
-                            color: user?.plan?.nombre?.toLowerCase() === 'oro' ? '#FFD700' : 
-                                   user?.plan?.nombre?.toLowerCase() === 'plata' ? '#E0E0E0' : 
-                                   user?.plan?.nombre?.toLowerCase() === 'bronce' ? '#CD7F32' : 'var(--color-primary-light)',
-                            fontWeight: 'bold',
-                            fontSize: '0.75rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            margin: 0
-                        }}>
-                            {user?.rol === 'SuperAdmin' ? 'Super Administrador' : `Administrador ${user?.plan?.nombre || ''}`}
-                        </p>
-                        {user?.rol === 'Admin' && user?.fechaVencimientoPlan && (
-                            <div style={{
-                                marginTop: '8px',
-                                padding: '6px 10px',
-                                background: 'rgba(255, 255, 255, 0.04)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                borderRadius: '8px',
-                                fontSize: '0.7rem',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                            }}>
-                                <span style={{ display: 'block', color: 'var(--color-text-secondary)', fontWeight: '500', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Plan {user?.frecuenciaPago || 'Mensual'}
-                                </span>
-                                <span style={{ 
-                                    display: 'block', 
-                                    fontWeight: 'bold',
-                                    color: new Date(user.fechaVencimientoPlan) < new Date() ? '#EF4444' : 'var(--color-primary-light)',
-                                    marginTop: '2px'
-                                }}>
-                                    Vence: {new Date(user.fechaVencimientoPlan).toLocaleDateString()}
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                    <p className="user-role">{getRoleLabel(user)}</p>
                 </div>
             </div>
 

@@ -218,9 +218,11 @@
     box-sizing: border-box;
 }
 
-/* Sidebar abierto/fijado por encima del navbar del panel de control */
-.admin-layout:not(.sidebar-collapsed) .admin-sidebar {
-    z-index: 1100;
+/* Sidebar abierto/fijado por encima del navbar del panel de control (solo desktop) */
+@media (min-width: 769px) {
+    .admin-layout:not(.sidebar-collapsed) .admin-sidebar {
+        z-index: 1100;
+    }
 }
 
 .admin-main .control-panel-navbar {

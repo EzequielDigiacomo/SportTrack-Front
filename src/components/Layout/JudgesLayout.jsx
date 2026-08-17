@@ -39,7 +39,7 @@ const JudgesLayout = ({ children }) => {
         () => typeof window !== 'undefined' && window.innerWidth <= 768
     );
     const [sidebarPinned, setSidebarPinned] = useState(readSidebarPinned);
-    const isSidebarFixed = isSuper || (sidebarPinned && !isMobile);
+    const isSidebarFixed = (isSuper || sidebarPinned) && !isMobile;
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         const mobile = typeof window !== 'undefined' && window.innerWidth <= 768;
         return (isSuper || readSidebarPinned()) && !mobile;
@@ -225,8 +225,6 @@ const JudgesLayout = ({ children }) => {
                         </div>
                     )}
 
-                    {isSidebarOpen && !isSidebarFixed && <div className="sidebar-overlay" onClick={closeSidebar} />}
-
                     <AdminSidebar
                         isOpen={isSidebarOpen || isSidebarFixed}
                         user={user}
@@ -241,6 +239,8 @@ const JudgesLayout = ({ children }) => {
                         sidebarPinned={sidebarPinned}
                         onTogglePin={handleTogglePin}
                     />
+
+                    {isSidebarOpen && !isSidebarFixed && <div className="sidebar-overlay" onClick={closeSidebar} />}
                 </>
             )}
 

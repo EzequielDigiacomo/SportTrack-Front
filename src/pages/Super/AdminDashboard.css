@@ -169,10 +169,14 @@
     border-radius: var(--radius-md);
     background: var(--color-bg-tertiary);
     margin-bottom: var(--spacing-xl);
-    flex-shrink: 1;
-    min-height: 0;
-    max-height: min(220px, 38vh);
-    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: var(--color-primary-light);
+    font-weight: 700;
+    margin: 0;
 }
 
 .user-avatar {
@@ -192,12 +196,6 @@
 .user-name {
     font-weight: 700;
     font-size: 0.9rem;
-    margin: 0;
-}
-
-.user-role {
-    font-size: 0.75rem;
-    color: var(--color-primary-light);
     margin: 0;
 }
 
@@ -544,14 +542,16 @@
 }
 
 @media (max-width: 768px) {
-    /* Overlay que cubre el resto de la pantalla */
+    /* Overlay solo sobre el contenido, no sobre el drawer */
     .sidebar-overlay {
         display: block;
         position: fixed;
-        inset: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: min(80vw, 320px);
         background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(2px);
-        z-index: 1999; /* justo debajo del sidebar (2000) */
+        z-index: 1999;
         animation: fadeIn 0.2s ease;
     }
 
@@ -559,14 +559,24 @@
         display: block; 
         overflow-x: clip;
     }
-    .admin-sidebar { 
+    .admin-layout:not(.sidebar-collapsed) .admin-sidebar,
+    .admin-sidebar,
+    .admin-sidebar.glass-effect { 
         position: fixed; 
         top: 0; 
         left: 0; 
         height: 100vh; 
         width: 80%; 
         max-width: 320px; 
-        z-index: 2000; 
+        z-index: 2000;
+        background: var(--color-bg-secondary) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-radius: 0;
+        border: none;
+        border-right: 1px solid var(--color-surface-hover);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+        isolation: isolate;
     }
     .admin-main { 
         margin-left: 0; 
