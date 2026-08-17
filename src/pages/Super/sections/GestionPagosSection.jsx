@@ -12,11 +12,15 @@ import {
     RefreshCw, 
     Check,
     CreditCard,
-    Plus
+    Plus,
+    ChevronDown,
+    ChevronUp,
+    MapPin
 } from 'lucide-react';
 import api from '../../../services/api';
 import { ENDPOINTS } from '../../../utils/constants';
 import PagoService from '../../../services/PagoService';
+import EventoService from '../../../services/EventoService';
 import RegistrarPagoModal from '../../../components/SharedSections/RegistrarPagoModal';
 import { useAlert } from '../../../hooks/useAlert';
 import { useAuth } from '../../../context/AuthContext';
@@ -29,6 +33,56 @@ import {
 import { getUserFacingError } from '../../../utils/userFacingError';
 import '../../../components/SharedSections/AdminSections.css';
 
+const parseFechaMs = (value) => {
+    if (!value) return 0;
+    const t = new Date(value).getTime();
+    return Number.isNaN(t) ? 0 : t;
+};
+
+const formatFechaEvento = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const atletaInscripcionKey = (ins) => {
+    const pid = ins.participanteId ?? ins.ParticipanteId;
+    if (pid != null && pid !== 0) return `p-${pid}`;
+    const nombre = (ins.participanteNombreCompleto || 'Tripulación Colectiva').trim().toLowerCase();
+    const club = (ins.clubNombre || '').trim().toLowerCase();
+    return `n-${nombre}|${club}`;
+};
+
+const agruparAtletasPorInscripciones = (lista = []) => {
+    const map = new Map();
+    lista.forEach((ins) => {
+        const key = atletaInscripcionKey(ins);
+        if (!map.has(key)) {
+            map.set(key, {
+                key,
+                participanteId: ins.participanteId ?? ins.ParticipanteId ?? null,
+                nombre: ins.participanteNombreCompleto || 'Tripulación Colectiva',
+                clubNombre: ins.clubNombre || '',
+                inscripciones: [],
+            });
+        }
+        map.get(key).inscripciones.push(ins);
+    });
+
+    return Array.from(map.values())
+        .map((row) => {
+            const pruebas = [...new Set(row.inscripciones.map((i) => i.pruebaNombre).filter(Boolean))];
+            return {
+                ...row,
+                pagado: row.inscripciones.length > 0 && row.inscripciones.every((i) => i.pagado),
+                pruebasCount: pruebas.length || row.inscripciones.length,
+                representativa: row.inscripciones[0],
+            };
+        })
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+};
+
 const GestionPagosSection = () => {
     const { user } = useAuth();
     const { alert: msg, showAlert } = useAlert();
@@ -40,7 +94,9 @@ const GestionPagosSection = () => {
     const [clubes, setClubes] = useState([]);
     const [atletas, setAtletas] = useState([]);
     const [inscripciones, setInscripciones] = useState([]);
+    const [eventos, setEventos] = useState([]);
     const [historial, setHistorial] = useState([]);
+    const [collapsedEventos, setCollapsedEventos] = useState(() => new Set());
 
     // Filtros de Búsqueda
     const [searchClub, setSearchClub] = useState('');
@@ -56,16 +112,11 @@ const GestionPagosSection = () => {
 
     // Paginación
     const [currentPageAtletas, setCurrentPageAtletas] = useState(1);
-    const [currentPageInscripciones, setCurrentPageInscripciones] = useState(1);
     const itemsPerPage = 9;
 
     useEffect(() => {
         setCurrentPageAtletas(1);
     }, [searchAtleta, selectedClubFilterAtletas]);
-
-    useEffect(() => {
-        setCurrentPageInscripciones(1);
-    }, [searchInscripcion, selectedClubFilterInscripciones]);
 
     // Modal de Registro de Pago
     const [modalOpen, setModalOpen] = useState(false);
@@ -86,6 +137,7 @@ const GestionPagosSection = () => {
                 loadClubes(),
                 loadAtletas(),
                 loadInscripciones(),
+                loadEventos(),
                 loadHistorial()
             ]);
         } catch (err) {
@@ -157,6 +209,20 @@ const GestionPagosSection = () => {
         }
     };
 
+    const loadEventos = async () => {
+        try {
+            const role = user?.rol?.trim().toLowerCase();
+            const fedId = getUserFederationId(user);
+            const data = (role === 'admin' && fedId)
+                ? await EventoService.getAll(fedId, { asFederation: true })
+                : await EventoService.getAll();
+            setEventos(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error loading events for payment grouping:', err);
+            setEventos([]);
+        }
+    };
+
     const loadHistorial = async () => {
         const data = await PagoService.getHistorial();
         setHistorial(data);
@@ -185,28 +251,28 @@ const GestionPagosSection = () => {
         }
     };
 
-    const handleToggleInscripcion = async (inscripcionId, currentStatus) => {
-        try {
-            await PagoService.toggleInscripcionStatus(inscripcionId, !currentStatus);
-            showAlert('success', `Estado de pago de inscripción actualizado.`);
-            loadInscripciones();
-            loadHistorial();
-        } catch (err) {
-            showAlert('error', 'Error al cambiar estado de inscripción.');
-        }
-    };
-
     const handleBulkToggleInscripciones = async (targetInscripciones, targetStatus) => {
         if (!targetInscripciones || targetInscripciones.length === 0) {
             showAlert('warning', 'No hay inscripciones para actualizar.');
             return;
         }
+
+        const uniquePorAtletaEvento = [];
+        const seen = new Set();
+        targetInscripciones.forEach((ins) => {
+            const eventoKey = ins.eventoId ?? ins.eventoNombre ?? '';
+            const key = `${eventoKey}|${atletaInscripcionKey(ins)}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            uniquePorAtletaEvento.push(ins);
+        });
+
         setLoading(true);
         try {
             await Promise.all(
-                targetInscripciones.map(ins => PagoService.toggleInscripcionStatus(ins.id, targetStatus))
+                uniquePorAtletaEvento.map(ins => PagoService.toggleInscripcionStatus(ins.id, targetStatus))
             );
-            showAlert('success', `Se actualizaron ${targetInscripciones.length} inscripciones exitosamente.`);
+            showAlert('success', `Se actualizaron ${uniquePorAtletaEvento.length} inscripción(es) al evento.`);
             await Promise.all([
                 loadInscripciones(),
                 loadHistorial()
@@ -292,7 +358,14 @@ const GestionPagosSection = () => {
     };
 
     const getInscripcionesPendientesCount = () => {
-        return inscripciones.filter(i => !i.pagado).length;
+        const estadoPorAtletaEvento = new Map();
+        inscripciones.forEach((i) => {
+            const eventoKey = i.eventoId ?? i.eventoNombre ?? 'evento';
+            const key = `${eventoKey}|${atletaInscripcionKey(i)}`;
+            if (!estadoPorAtletaEvento.has(key)) estadoPorAtletaEvento.set(key, true);
+            if (!i.pagado) estadoPorAtletaEvento.set(key, false);
+        });
+        return Array.from(estadoPorAtletaEvento.values()).filter((pagado) => !pagado).length;
     };
 
     // Filtrados de búsqueda
@@ -319,10 +392,77 @@ const GestionPagosSection = () => {
             const matchesSearch = !searchInscripcion ||
                 (i.participanteNombreCompleto && i.participanteNombreCompleto.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
                 (i.clubNombre && i.clubNombre.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
-                (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase()));
+                (i.eventoNombre && i.eventoNombre.toLowerCase().includes(searchInscripcion.toLowerCase())) ||
+                (i.pruebaNombre && i.pruebaNombre.toLowerCase().includes(searchInscripcion.toLowerCase()));
             return matchesClub && matchesSearch;
         });
     }, [inscripciones, selectedClubFilterInscripciones, searchInscripcion]);
+
+    const inscripcionesPorEvento = React.useMemo(() => {
+        const eventosById = new Map();
+        const eventosByNombre = new Map();
+        eventos.forEach((ev) => {
+            const id = ev.id ?? ev.Id;
+            const nombre = (ev.nombre ?? ev.Nombre ?? '').trim();
+            const fecha = ev.fecha ?? ev.Fecha ?? ev.fechaInicio ?? ev.FechaInicio;
+            const catalog = {
+                id,
+                nombre,
+                fecha,
+                ubicacion: ev.ubicacion ?? ev.Ubicacion ?? null,
+            };
+            if (id != null) eventosById.set(Number(id), catalog);
+            if (nombre) eventosByNombre.set(nombre.toLowerCase(), catalog);
+        });
+
+        const groups = new Map();
+        filteredInscripciones.forEach((ins) => {
+            const nombre = (ins.eventoNombre || 'Evento sin nombre').trim();
+            const eventoIdRaw = ins.eventoId ?? ins.EventoId;
+            const catalog = (eventoIdRaw != null ? eventosById.get(Number(eventoIdRaw)) : null)
+                || eventosByNombre.get(nombre.toLowerCase())
+                || null;
+            const eventoId = eventoIdRaw ?? catalog?.id ?? null;
+            const key = eventoId != null ? `id-${eventoId}` : `nombre-${nombre.toLowerCase()}`;
+
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    eventoId,
+                    nombre: catalog?.nombre || nombre,
+                    fecha: ins.fechaEvento || ins.fechaInicioEvento || catalog?.fecha || null,
+                    ubicacion: catalog?.ubicacion || null,
+                    inscripciones: [],
+                });
+            }
+
+            const group = groups.get(key);
+            group.inscripciones.push(ins);
+            const insFecha = ins.fechaEvento || ins.fechaInicioEvento;
+            if (insFecha) group.fecha = insFecha;
+            else if (!group.fecha && catalog?.fecha) group.fecha = catalog.fecha;
+        });
+
+        return Array.from(groups.values())
+            .map((group) => ({
+                ...group,
+                atletas: agruparAtletasPorInscripciones(group.inscripciones),
+            }))
+            .sort((a, b) => {
+                const diff = parseFechaMs(b.fecha) - parseFechaMs(a.fecha);
+                if (diff !== 0) return diff;
+                return a.nombre.localeCompare(b.nombre, 'es');
+            });
+    }, [filteredInscripciones, eventos]);
+
+    const toggleEventoCollapsed = (key) => {
+        setCollapsedEventos((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    };
 
     // Atletas Pagination
     const totalPagesAtletas = Math.max(1, Math.ceil(filteredAtletas.length / itemsPerPage));
@@ -330,13 +470,6 @@ const GestionPagosSection = () => {
         const start = (currentPageAtletas - 1) * itemsPerPage;
         return filteredAtletas.slice(start, start + itemsPerPage);
     }, [filteredAtletas, currentPageAtletas]);
-
-    // Inscripciones Pagination
-    const totalPagesInscripciones = Math.max(1, Math.ceil(filteredInscripciones.length / itemsPerPage));
-    const paginatedInscripciones = React.useMemo(() => {
-        const start = (currentPageInscripciones - 1) * itemsPerPage;
-        return filteredInscripciones.slice(start, start + itemsPerPage);
-    }, [filteredInscripciones, currentPageInscripciones]);
 
     const filteredHistorial = historial.filter(h => 
         (h.clubNombre && h.clubNombre.toLowerCase().includes(searchHistorial.toLowerCase())) ||
@@ -357,7 +490,7 @@ const GestionPagosSection = () => {
                         <CreditCard size={32} color="var(--color-primary-light)" /> Control de Pagos Manuales
                     </h1>
                     <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>
-                        Gestione afiliaciones de clubes, atletas e inscripciones a regatas sin pasarelas externas.
+                        Gestione afiliaciones de clubes, atletas e inscripciones a eventos sin pasarelas externas.
                     </p>
                 </div>
                 <button 
@@ -409,7 +542,7 @@ const GestionPagosSection = () => {
                     </div>
                     <div className="stat-info">
                         <h3>{getInscripcionesPendientesCount()}</h3>
-                        <p>Regatas Impagas</p>
+                        <p>Inscripciones Impagas</p>
                     </div>
                 </div>
             </div>
@@ -480,7 +613,7 @@ const GestionPagosSection = () => {
                         gap: '0.5rem'
                     }}
                 >
-                    <Calendar size={18} /> Inscripciones Regatas
+                    <Calendar size={18} /> Inscripciones a Eventos
                 </button>
                 <button 
                     className={`tab-btn ${activeTab === 'historial' ? 'active' : ''}`}
@@ -909,7 +1042,7 @@ const GestionPagosSection = () => {
                                     <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dim)' }} />
                                     <input 
                                         type="text" 
-                                        placeholder="Buscar inscripción por atleta, club, evento..." 
+                                        placeholder="Buscar inscripción por atleta, club o evento..." 
                                         className="admin-input with-search-icon" 
                                         value={searchInscripcion}
                                         onChange={e => setSearchInscripcion(e.target.value)}
@@ -941,7 +1074,7 @@ const GestionPagosSection = () => {
                                             <Calendar size={18} /> Master Switch (Todos)
                                         </h4>
                                         <p className="pagos-masivos-desc">
-                                            Marcar todas las inscripciones como Pagadas o Impagas
+                                            Marcar todas las inscripciones a eventos como Pagadas o Impagas
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1043,78 +1176,86 @@ const GestionPagosSection = () => {
                                 </div>
                             </div>
 
-                            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px', marginBottom: '1.5rem' }}>
-                                <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid var(--color-surface-hover)', textAlign: 'left' }}>
-                                            <th style={{ padding: '1rem' }}>Competidor</th>
-                                            <th style={{ padding: '1rem' }}>Regata / Categoría</th>
-                                            <th style={{ padding: '1rem' }}>Estado Pago</th>
-                                            <th style={{ padding: '1rem' }}>Interruptor Rápido</th>
-                                            <th style={{ padding: '1rem', textAlign: 'center' }}>Registrar Cobro</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredInscripciones.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                                                    No se encontraron inscripciones impagas.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginatedInscripciones.map(ins => (
-                                                <tr key={ins.id} style={{ borderBottom: '1px solid var(--color-surface-hover)' }}>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                            <strong>{ins.participanteNombreCompleto || 'Tripulación Colectiva'}</strong>
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>Club: {ins.clubNombre}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                            <strong>{ins.eventoNombre || 'Evento'}</strong>
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--color-primary-light)' }}>Dorsal: #{ins.numeroCompetidor || 'PENDIENTE'}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <span className={`badge-pill ${ins.pagado ? 'positive' : 'warning'}`} style={{
-                                                            padding: '4px 10px',
-                                                            borderRadius: '20px',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 700,
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.35rem',
-                                                            background: ins.pagado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                                                            color: ins.pagado ? '#10B981' : '#F59E0B',
-                                                            boxShadow: ins.pagado ? '0 0 10px rgba(16, 185, 129, 0.2)' : '0 0 10px rgba(245, 158, 11, 0.2)'
-                                                        }}>
-                                                            {ins.pagado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                                            {ins.pagado ? 'Pagado' : 'Impago'}
+                            {inscripcionesPorEvento.length === 0 ? (
+                                <div className="admin-grid-card glass-effect pagos-evento-empty">
+                                    No se encontraron inscripciones.
+                                </div>
+                            ) : (
+                                <div className="pagos-eventos-list">
+                                    {inscripcionesPorEvento.map((grupo) => {
+                                        const isCollapsed = collapsedEventos.has(grupo.key);
+                                        const pagadas = grupo.atletas.filter(a => a.pagado).length;
+                                        const pendientes = grupo.atletas.length - pagadas;
+                                        const allPaid = grupo.atletas.length > 0 && pendientes === 0;
+                                        const fechaLabel = formatFechaEvento(grupo.fecha);
+
+                                        return (
+                                            <article key={grupo.key} className="pagos-evento-card glass-effect">
+                                                <header className="pagos-evento-card-header">
+                                                    <button
+                                                        type="button"
+                                                        className="pagos-evento-card-toggle"
+                                                        onClick={() => toggleEventoCollapsed(grupo.key)}
+                                                        aria-expanded={!isCollapsed}
+                                                    >
+                                                        <span className="pagos-evento-card-title-wrap">
+                                                            <span className="pagos-evento-card-icon">
+                                                                <Calendar size={18} />
+                                                            </span>
+                                                            <span>
+                                                                <h3 className="pagos-evento-card-title">{grupo.nombre}</h3>
+                                                                <span className="pagos-evento-card-meta">
+                                                                    {fechaLabel && (
+                                                                        <span>
+                                                                            <Calendar size={12} /> {fechaLabel}
+                                                                        </span>
+                                                                    )}
+                                                                    {grupo.ubicacion && (
+                                                                        <span>
+                                                                            <MapPin size={12} /> {grupo.ubicacion}
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </span>
                                                         </span>
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <label className="toggle-switch" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: 'pointer' }}>
-                                                            <input 
-                                                                type="checkbox" 
-                                                                checked={ins.pagado} 
-                                                                onChange={() => handleToggleInscripcion(ins.id, ins.pagado)}
+                                                        {isCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                                                    </button>
+
+                                                    <div className="pagos-evento-card-aside">
+                                                        <span className="pagos-evento-stat">
+                                                            {grupo.atletas.length} insc.
+                                                        </span>
+                                                        <span className="pagos-evento-stat is-success">
+                                                            {pagadas} pagadas
+                                                        </span>
+                                                        <span className={`pagos-evento-stat ${pendientes > 0 ? 'is-warning' : 'is-success'}`}>
+                                                            {pendientes > 0 ? `${pendientes} impagas` : 'Al día'}
+                                                        </span>
+                                                        <label
+                                                            className="toggle-switch"
+                                                            title="Marcar todas las inscripciones de este evento"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: 'pointer' }}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={allPaid}
+                                                                onChange={() => handleBulkToggleInscripciones(grupo.inscripciones, !allPaid)}
                                                                 style={{ opacity: 0, width: 0, height: 0 }}
                                                             />
                                                             <span className="slider" style={{
                                                                 position: 'absolute',
                                                                 cursor: 'pointer',
                                                                 top: 0, left: 0, right: 0, bottom: 0,
-                                                                background: ins.pagado ? 'var(--color-primary)' : 'var(--color-surface-hover)',
+                                                                background: allPaid ? 'var(--color-primary)' : 'var(--color-surface-hover)',
                                                                 borderRadius: '34px',
                                                                 transition: '.3s',
-                                                                boxShadow: ins.pagado ? '0 0 8px var(--color-primary-light)' : 'none'
+                                                                boxShadow: allPaid ? '0 0 8px var(--color-primary-light)' : 'none'
                                                             }}>
                                                                 <span style={{
                                                                     position: 'absolute',
-                                                                    content: '""',
                                                                     height: '16px', width: '16px',
-                                                                    left: ins.pagado ? '26px' : '4px',
+                                                                    left: allPaid ? '26px' : '4px',
                                                                     bottom: '4px',
                                                                     background: 'white',
                                                                     borderRadius: '50%',
@@ -1122,50 +1263,108 @@ const GestionPagosSection = () => {
                                                                 }}></span>
                                                             </span>
                                                         </label>
-                                                    </td>
-                                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                                        <button 
-                                                            className="btn-admin-primary"
-                                                            onClick={() => handleOpenRegistrar('InscripcionEvento', ins.id, `${ins.participanteNombreCompleto || 'Atleta'} - Dorsal ${ins.numeroCompetidor || ''}`)}
-                                                            style={{
-                                                                padding: '6px 12px',
-                                                                fontSize: '0.8rem',
-                                                                background: 'linear-gradient(135deg, #10B981, #059669)',
-                                                                borderColor: 'transparent',
-                                                                color: '#fff',
-                                                                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
-                                                            }}
-                                                        >
-                                                            <Plus size={14} /> Registrar Recibo
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                    </div>
+                                                </header>
 
-                            {/* Pagination Controls */}
-                            {totalPagesInscripciones > 1 && (
-                                <div className="admin-pagination">
-                                    <button 
-                                        className="btn-pagination" 
-                                        disabled={currentPageInscripciones === 1} 
-                                        onClick={() => setCurrentPageInscripciones(p => Math.max(1, p - 1))}
-                                    >
-                                        Anterior
-                                    </button>
-                                    <span className="pagination-info">
-                                        Página <strong>{currentPageInscripciones}</strong> de {totalPagesInscripciones}
-                                    </span>
-                                    <button 
-                                        className="btn-pagination" 
-                                        disabled={currentPageInscripciones === totalPagesInscripciones} 
-                                        onClick={() => setCurrentPageInscripciones(p => Math.min(totalPagesInscripciones, p + 1))}
-                                    >
-                                        Siguiente
-                                    </button>
+                                                {!isCollapsed && (
+                                                    <div className="pagos-evento-card-body">
+                                                        <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                            <thead>
+                                                                <tr style={{ borderBottom: '1px solid var(--color-surface-hover)', textAlign: 'left' }}>
+                                                                    <th style={{ padding: '0.85rem 1rem' }}>Atleta</th>
+                                                                    <th style={{ padding: '0.85rem 1rem' }}>Pruebas</th>
+                                                                    <th style={{ padding: '0.85rem 1rem' }}>Estado Pago</th>
+                                                                    <th style={{ padding: '0.85rem 1rem' }}>Interruptor</th>
+                                                                    <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Registrar Cobro</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {grupo.atletas.map(atleta => (
+                                                                    <tr key={atleta.key} style={{ borderBottom: '1px solid var(--color-surface-hover)' }}>
+                                                                        <td style={{ padding: '0.85rem 1rem' }}>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                                <strong>{atleta.nombre}</strong>
+                                                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>Club: {atleta.clubNombre || '—'}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td style={{ padding: '0.85rem 1rem' }}>
+                                                                            <strong>{atleta.pruebasCount} {atleta.pruebasCount === 1 ? 'prueba' : 'pruebas'}</strong>
+                                                                        </td>
+                                                                        <td style={{ padding: '0.85rem 1rem' }}>
+                                                                            <span className={`badge-pill ${atleta.pagado ? 'positive' : 'warning'}`} style={{
+                                                                                padding: '4px 10px',
+                                                                                borderRadius: '20px',
+                                                                                fontSize: '0.75rem',
+                                                                                fontWeight: 700,
+                                                                                display: 'inline-flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '0.35rem',
+                                                                                background: atleta.pagado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                                                                                color: atleta.pagado ? '#10B981' : '#F59E0B',
+                                                                                boxShadow: atleta.pagado ? '0 0 10px rgba(16, 185, 129, 0.2)' : '0 0 10px rgba(245, 158, 11, 0.2)'
+                                                                            }}>
+                                                                                {atleta.pagado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                                                                {atleta.pagado ? 'Pagado' : 'Impago'}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td style={{ padding: '0.85rem 1rem' }}>
+                                                                            <label className="toggle-switch" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: 'pointer' }}>
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={atleta.pagado}
+                                                                                    onChange={() => handleBulkToggleInscripciones(atleta.inscripciones, !atleta.pagado)}
+                                                                                    style={{ opacity: 0, width: 0, height: 0 }}
+                                                                                />
+                                                                                <span className="slider" style={{
+                                                                                    position: 'absolute',
+                                                                                    cursor: 'pointer',
+                                                                                    top: 0, left: 0, right: 0, bottom: 0,
+                                                                                    background: atleta.pagado ? 'var(--color-primary)' : 'var(--color-surface-hover)',
+                                                                                    borderRadius: '34px',
+                                                                                    transition: '.3s',
+                                                                                    boxShadow: atleta.pagado ? '0 0 8px var(--color-primary-light)' : 'none'
+                                                                                }}>
+                                                                                    <span style={{
+                                                                                        position: 'absolute',
+                                                                                        height: '16px', width: '16px',
+                                                                                        left: atleta.pagado ? '26px' : '4px',
+                                                                                        bottom: '4px',
+                                                                                        background: 'white',
+                                                                                        borderRadius: '50%',
+                                                                                        transition: '.3s'
+                                                                                    }}></span>
+                                                                                </span>
+                                                                            </label>
+                                                                        </td>
+                                                                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                                                            <button
+                                                                                className="btn-admin-primary"
+                                                                                onClick={() => handleOpenRegistrar(
+                                                                                    'InscripcionEvento',
+                                                                                    atleta.representativa.id,
+                                                                                    `${atleta.nombre} — ${grupo.nombre}`
+                                                                                )}
+                                                                                style={{
+                                                                                    padding: '6px 12px',
+                                                                                    fontSize: '0.8rem',
+                                                                                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                                                                                    borderColor: 'transparent',
+                                                                                    color: '#fff',
+                                                                                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                                                                                }}
+                                                                            >
+                                                                                <Plus size={14} /> Registrar Recibo
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                            </article>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

@@ -23,6 +23,51 @@ import timingSignalRService from '../../../services/TimingSignalRService';
 import { getClubFederationName } from '../../../utils/apiHelpers';
 import '../../../components/SharedSections/AdminSections.css';
 
+const parseFechaMs = (value) => {
+    if (!value) return 0;
+    const t = new Date(value).getTime();
+    return Number.isNaN(t) ? 0 : t;
+};
+
+const formatFechaEvento = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const atletaInscripcionKey = (ins) => {
+    const pid = ins.participanteId ?? ins.ParticipanteId;
+    if (pid != null && pid !== 0) return `p-${pid}`;
+    const nombre = (ins.participanteNombreCompleto || ins.ParticipanteNombreCompleto || 'Tripulación Colectiva').trim().toLowerCase();
+    return `n-${nombre}`;
+};
+
+const agruparAtletasPorInscripciones = (lista = []) => {
+    const map = new Map();
+    lista.forEach((ins) => {
+        const key = atletaInscripcionKey(ins);
+        if (!map.has(key)) {
+            map.set(key, {
+                key,
+                nombre: ins.participanteNombreCompleto || ins.ParticipanteNombreCompleto || 'Tripulación Colectiva',
+                inscripciones: [],
+            });
+        }
+        map.get(key).inscripciones.push(ins);
+    });
+    return Array.from(map.values())
+        .map((row) => {
+            const pruebas = [...new Set(row.inscripciones.map((i) => i.pruebaNombre || i.PruebaNombre).filter(Boolean))];
+            return {
+                ...row,
+                pagado: row.inscripciones.length > 0 && row.inscripciones.every((i) => i.pagado || i.Pagado),
+                pruebasCount: pruebas.length || row.inscripciones.length,
+            };
+        })
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+};
+
 const PagosClubSection = () => {
     const { user } = useAuth();
     const { alert: msg, showAlert } = useAlert();
@@ -117,7 +162,14 @@ const PagosClubSection = () => {
     };
 
     const getInscripcionesPendientesCount = () => {
-        return inscripciones.filter(i => !i.pagado).length;
+        const estadoPorAtletaEvento = new Map();
+        inscripciones.forEach((i) => {
+            const eventoKey = i.eventoId ?? i.eventoNombre ?? i.EventoNombre ?? 'evento';
+            const key = `${eventoKey}|${atletaInscripcionKey(i)}`;
+            if (!estadoPorAtletaEvento.has(key)) estadoPorAtletaEvento.set(key, true);
+            if (!(i.pagado || i.Pagado)) estadoPorAtletaEvento.set(key, false);
+        });
+        return Array.from(estadoPorAtletaEvento.values()).filter((pagado) => !pagado).length;
     };
 
     // Filter lists
@@ -139,6 +191,34 @@ const PagosClubSection = () => {
         )
     );
 
+    const inscripcionesPorEvento = React.useMemo(() => {
+        const groups = new Map();
+        filteredInscripciones.forEach((ins) => {
+            const nombre = (ins.eventoNombre || ins.EventoNombre || 'Evento sin nombre').trim();
+            const eventoId = ins.eventoId ?? ins.EventoId ?? null;
+            const key = eventoId != null ? `id-${eventoId}` : `nombre-${nombre.toLowerCase()}`;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    nombre,
+                    fecha: ins.fechaEvento || ins.fechaInicioEvento || ins.FechaEvento || null,
+                    inscripciones: [],
+                });
+            }
+            const group = groups.get(key);
+            group.inscripciones.push(ins);
+            const insFecha = ins.fechaEvento || ins.fechaInicioEvento || ins.FechaEvento;
+            if (insFecha) group.fecha = insFecha;
+        });
+        return Array.from(groups.values())
+            .map((group) => ({ ...group, atletas: agruparAtletasPorInscripciones(group.inscripciones) }))
+            .sort((a, b) => {
+                const diff = parseFechaMs(b.fecha) - parseFechaMs(a.fecha);
+                if (diff !== 0) return diff;
+                return a.nombre.localeCompare(b.nombre, 'es');
+            });
+    }, [filteredInscripciones]);
+
     const isAlDia = clubInfo?.pagoAfiliacionAlDia || clubInfo?.PagoAfiliacionAlDia;
 
     return (
@@ -152,7 +232,7 @@ const PagosClubSection = () => {
                         <CreditCard size={32} color="var(--color-primary-light)" /> Estado de Pagos del Club
                     </h1>
                     <p className="section-subtitle" style={{ margin: '0.2rem 0 0 0' }}>
-                        Supervise su afiliación anual con la federación, las cuotas de sus atletas y las inscripciones a regatas.
+                        Supervise su afiliación anual con la federación, las cuotas de sus atletas y las inscripciones a eventos.
                     </p>
                 </div>
                 <button 
@@ -294,7 +374,7 @@ const PagosClubSection = () => {
                         gap: '0.5rem'
                     }}
                 >
-                    <Calendar size={18} /> Pagos de Inscripción
+                    <Calendar size={18} /> Inscripciones a Eventos
                 </button>
             </div>
 
@@ -463,7 +543,6 @@ const PagosClubSection = () => {
                     {/* TAB 3: PAGOS DE INSCRIPCION */}
                     {activeTab === 'inscripciones' && (
                         <div>
-                            {/* Search bar */}
                             <div className="search-bar-container mb-md" style={{ display: 'flex', gap: '1rem' }}>
                                 <div style={{ position: 'relative', flex: 1 }}>
                                     <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dim)' }} />
@@ -478,62 +557,85 @@ const PagosClubSection = () => {
                                 </div>
                             </div>
 
-                            <div className="admin-grid-card glass-effect" style={{ overflowX: 'auto', borderRadius: '16px' }}>
-                                <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'left' }}>
-                                            <th style={{ padding: '1rem' }}>Competidor</th>
-                                            <th style={{ padding: '1rem' }}>Regata / Evento</th>
-                                            <th style={{ padding: '1rem' }}>Prueba</th>
-                                            <th style={{ padding: '1rem' }}>Nº Dorsal</th>
-                                            <th style={{ padding: '1rem' }}>Estado de Pago</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredInscripciones.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
-                                                    No se encontraron inscripciones.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredInscripciones.map(ins => (
-                                                <tr key={ins.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <strong>{ins.participanteNombreCompleto || 'Tripulación Colectiva'}</strong>
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        {ins.eventoNombre || 'Evento'}
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        {ins.pruebaNombre || '—'}
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <span style={{ fontFamily: 'monospace', color: 'var(--color-primary-light)' }}>#{ins.numeroCompetidor || 'PENDIENTE'}</span>
-                                                    </td>
-                                                    <td style={{ padding: '1rem' }}>
-                                                        <span className={`badge-pill ${ins.pagado ? 'positive' : 'warning'}`} style={{
-                                                            padding: '4px 10px',
-                                                            borderRadius: '20px',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 700,
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.35rem',
-                                                            background: ins.pagado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                                                            color: ins.pagado ? '#10B981' : '#F59E0B',
-                                                            boxShadow: ins.pagado ? '0 0 10px rgba(16, 185, 129, 0.2)' : '0 0 10px rgba(245, 158, 11, 0.2)'
-                                                        }}>
-                                                            {ins.pagado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                                            {ins.pagado ? 'Abonado' : 'Impago'}
+                            {inscripcionesPorEvento.length === 0 ? (
+                                <div className="admin-grid-card glass-effect pagos-evento-empty">
+                                    No se encontraron inscripciones.
+                                </div>
+                            ) : (
+                                <div className="pagos-eventos-list">
+                                    {inscripcionesPorEvento.map((grupo) => {
+                                        const pagadas = grupo.atletas.filter(a => a.pagado).length;
+                                        const pendientes = grupo.atletas.length - pagadas;
+                                        const fechaLabel = formatFechaEvento(grupo.fecha);
+                                        return (
+                                            <article key={grupo.key} className="pagos-evento-card glass-effect">
+                                                <header className="pagos-evento-card-header">
+                                                    <div className="pagos-evento-card-title-wrap">
+                                                        <span className="pagos-evento-card-icon">
+                                                            <Calendar size={18} />
                                                         </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                        <span>
+                                                            <h3 className="pagos-evento-card-title">{grupo.nombre}</h3>
+                                                            {fechaLabel && (
+                                                                <span className="pagos-evento-card-meta">
+                                                                    <span><Calendar size={12} /> {fechaLabel}</span>
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <div className="pagos-evento-card-aside">
+                                                        <span className="pagos-evento-stat">{grupo.atletas.length} insc.</span>
+                                                        <span className="pagos-evento-stat is-success">{pagadas} pagadas</span>
+                                                        <span className={`pagos-evento-stat ${pendientes > 0 ? 'is-warning' : 'is-success'}`}>
+                                                            {pendientes > 0 ? `${pendientes} impagas` : 'Al día'}
+                                                        </span>
+                                                    </div>
+                                                </header>
+                                                <div className="pagos-evento-card-body">
+                                                    <table className="custom-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                        <thead>
+                                                            <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'left' }}>
+                                                                <th style={{ padding: '1rem' }}>Atleta</th>
+                                                                <th style={{ padding: '1rem' }}>Pruebas</th>
+                                                                <th style={{ padding: '1rem' }}>Estado de Pago</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {grupo.atletas.map(atleta => (
+                                                                <tr key={atleta.key} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                                                                    <td style={{ padding: '1rem' }}>
+                                                                        <strong>{atleta.nombre}</strong>
+                                                                    </td>
+                                                                    <td style={{ padding: '1rem' }}>
+                                                                        {atleta.pruebasCount} {atleta.pruebasCount === 1 ? 'prueba' : 'pruebas'}
+                                                                    </td>
+                                                                    <td style={{ padding: '1rem' }}>
+                                                                        <span className={`badge-pill ${atleta.pagado ? 'positive' : 'warning'}`} style={{
+                                                                            padding: '4px 10px',
+                                                                            borderRadius: '20px',
+                                                                            fontSize: '0.75rem',
+                                                                            fontWeight: 700,
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '0.35rem',
+                                                                            background: atleta.pagado ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                                                                            color: atleta.pagado ? '#10B981' : '#F59E0B',
+                                                                            boxShadow: atleta.pagado ? '0 0 10px rgba(16, 185, 129, 0.2)' : '0 0 10px rgba(245, 158, 11, 0.2)'
+                                                                        }}>
+                                                                            {atleta.pagado ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                                                            {atleta.pagado ? 'Abonado' : 'Impago'}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
 
