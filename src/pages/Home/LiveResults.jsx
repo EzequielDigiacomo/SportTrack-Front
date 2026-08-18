@@ -742,6 +742,39 @@ const LiveResults = () => {
     const activeBanner = getRaceBannerLabel(activeRace);
     const nextBanner = getRaceBannerLabel(nextRace);
 
+    const allCancelled = allFases.length > 0 && allFases.every(f => {
+        const est = (f.estado || f.Estado || '').toUpperCase();
+        return est === 'CANCELADO' || est === 'CANCELADA';
+    });
+
+    const getEventBadge = () => {
+        if (activeRace) {
+            return { label: 'EN VIVO', className: 'live-badge status-green', dotColor: '#10b981' };
+        }
+        if (allFinished) {
+            if (allCancelled) {
+                return { label: 'RECESO / CANCELADO', className: 'live-badge status-red', dotColor: '#ef4444' };
+            }
+            return { label: 'RESULTADOS FINALES', className: 'live-badge status-grey', dotColor: '#eab308' };
+        }
+
+        const est = (
+            selectedPrueba?.estado || selectedPrueba?.Estado
+            || evento?.estado || evento?.Estado || ''
+        ).toUpperCase();
+
+        if (est === 'FINALIZADO' || est === 'FINALIZADA') {
+            return { label: 'RESULTADOS FINALES', className: 'live-badge status-grey', dotColor: '#eab308' };
+        }
+        if (est === 'CANCELADO' || est === 'CANCELADA') {
+            return { label: 'RECESO / CANCELADO', className: 'live-badge status-red', dotColor: '#ef4444' };
+        }
+
+        return { label: 'EN VIVO', className: 'live-badge status-green', dotColor: '#10b981' };
+    };
+
+    const eventBadge = getEventBadge();
+
     return (
         <div className="live-results-page fade-in">
             <div className="results-bg-glow"></div>
@@ -760,28 +793,9 @@ const LiveResults = () => {
 
                 <div className="header-main">
                     <div className="event-info">
-                        {(() => {
-                            const est = (selectedPrueba?.estado || selectedPrueba?.Estado || '').toUpperCase();
-                            let badgeLabel = 'EN VIVO';
-                            let badgeClass = 'live-badge status-green';
-                            let dotColor = '#10b981'; // default green
-
-                            if (est === 'FINALIZADO') {
-                                badgeLabel = 'RESULTADOS FINALES';
-                                dotColor = '#eab308'; // Oro para la medalla
-                                badgeClass = 'live-badge status-grey';
-                            } else if (est === 'CANCELADO') {
-                                badgeLabel = 'RECESO / CANCELADO';
-                                dotColor = '#ef4444'; // rojo
-                                badgeClass = 'live-badge status-red';
-                            }
-
-                            return (
-                                <div className={badgeClass}>
-                                    <span className="dot" style={{ backgroundColor: dotColor }}></span> {badgeLabel}
-                                </div>
-                            );
-                        })()}
+                        <div className={eventBadge.className}>
+                            <span className="dot" style={{ backgroundColor: eventBadge.dotColor }}></span> {eventBadge.label}
+                        </div>
                         <h1>{evento.nombre}</h1>
                         <div className="event-meta">
                             <span><MapPin size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> {evento.ubicacion}</span>
