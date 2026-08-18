@@ -39,6 +39,12 @@ import {
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 import { isSuperAdminUser } from '../../utils/authHelpers';
 import AudienceSaturationBar from './AudienceSaturationBar';
+import {
+    getEventStartDate,
+    formatLocalDateShort,
+    isSameMonthYear,
+    isSameDayOfMonth,
+} from '../../utils/dateUtils';
 
 const LOGS_PAGE_SIZE = 8;
 
@@ -332,8 +338,8 @@ const AdminHome = () => {
     }, [globalStats?.federaciones]);
 
     const getFederationPalette = (fedId) => {
-        if (!fedId) return FEDERATION_PALETTES[0];
-        return federationColorMap[fedId] || FEDERATION_PALETTES[0];
+        if (fedId == null || fedId === '') return FEDERATION_PALETTES[0];
+        return federationColorMap[fedId] ?? federationColorMap[String(fedId)] ?? FEDERATION_PALETTES[0];
     };
 
     const getFederationIdForClub = (clubId) => {
@@ -347,6 +353,25 @@ const AdminHome = () => {
         const feds = globalStats?.federaciones || [];
         const fed = feds.find(f => f.nombre.toLowerCase().trim() === nombre.toLowerCase().trim());
         return fed ? fed.id : null;
+    };
+
+    const resolveEventFedId = (evento) => {
+        const fedId = getEventFederationId(evento, globalStats?.allClubs);
+        if (fedId != null && fedId !== '') return fedId;
+
+        const fedName = evento?.federacionNombre || evento?.FederacionNombre;
+        if (fedName) {
+            const byName = getFederationIdByName(fedName);
+            if (byName) return byName;
+        }
+
+        const orgName = evento?.clubNombre || evento?.ClubNombre;
+        if (orgName) {
+            const byOrg = getFederationIdByName(orgName);
+            if (byOrg) return byOrg;
+        }
+
+        return null;
     };
 
     if (loading) return <div className="loader-container"><div className="loader"></div></div>;
@@ -456,8 +481,7 @@ const AdminHome = () => {
                                     return d.getMonth() === idx && d.getFullYear() === currentYear;
                                 });
                                 const monthEvents = (globalStats.uncompletedEvents || []).filter(item => {
-                                    const d = new Date(item.fecha);
-                                    return d.getMonth() === idx && d.getFullYear() === currentYear;
+                                    return isSameMonthYear(getEventStartDate(item), idx, currentYear);
                                 });
 
                                 const isSelected = selectedMonth === idx;
@@ -516,8 +540,7 @@ const AdminHome = () => {
                                     return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
                                 });
                                 const mEvts = (globalStats.uncompletedEvents || []).filter(item => {
-                                    const d = new Date(item.fecha);
-                                    return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                    return isSameMonthYear(getEventStartDate(item), selectedMonth, currentYear);
                                 });
 
                                 return (
@@ -536,8 +559,8 @@ const AdminHome = () => {
                                                 }
 
                                                 // Calcular actividades para este día específico
-                                                const dayExps = mExps.filter(e => new Date(e.fechaVencimientoPlan).getDate() === day);
-                                                const dayEvts = mEvts.filter(e => new Date(e.fecha).getDate() === day);
+                                                const dayExps = mExps.filter(e => isSameDayOfMonth(e.fechaVencimientoPlan, day));
+                                                const dayEvts = mEvts.filter(e => isSameDayOfMonth(getEventStartDate(e), day));
                                                 const hasExps = dayExps.length > 0;
                                                 const hasEvts = dayEvts.length > 0;
 
@@ -545,7 +568,7 @@ const AdminHome = () => {
                                                 const fedIdsOnDay = new Set();
                                                 dayExps.forEach(e => { if (e.clubId) fedIdsOnDay.add(e.clubId); });
                                                 dayEvts.forEach(e => {
-                                                    const parentFedId = getFederationIdForClub(e.clubId);
+                                                    const parentFedId = resolveEventFedId(e);
                                                     if (parentFedId) fedIdsOnDay.add(parentFedId);
                                                 });
                                                 
@@ -682,13 +705,12 @@ const AdminHome = () => {
                                                 return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
                                             });
                                             let mEvts = (globalStats.uncompletedEvents || []).filter(item => {
-                                                const d = new Date(item.fecha);
-                                                return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                                                return isSameMonthYear(getEventStartDate(item), selectedMonth, currentYear);
                                             });
 
                                             if (selectedDay !== null) {
-                                                mExps = mExps.filter(item => new Date(item.fechaVencimientoPlan).getDate() === selectedDay);
-                                                mEvts = mEvts.filter(item => new Date(item.fecha).getDate() === selectedDay);
+                                                mExps = mExps.filter(item => isSameDayOfMonth(item.fechaVencimientoPlan, selectedDay));
+                                                mEvts = mEvts.filter(item => isSameDayOfMonth(getEventStartDate(item), selectedDay));
                                             }
 
                                             if (mExps.length === 0 && mEvts.length === 0) {
@@ -739,9 +761,8 @@ const AdminHome = () => {
                                                             </span>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                                                 {mEvts.map((evt, idx) => {
-                                                                    const dateObj = new Date(evt.fecha);
-                                                                    const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                                                                    const parentFedId = getFederationIdForClub(evt.clubId);
+                                                                    const formattedDate = formatLocalDateShort(getEventStartDate(evt));
+                                                                    const parentFedId = resolveEventFedId(evt);
                                                                     const palette = getFederationPalette(parentFedId);
                                                                     return (
                                                                         <div key={idx} style={{ padding: '0.5rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1188,8 +1209,7 @@ const AdminHome = () => {
                 }
 
                 const mEvts = fedEvents.filter(item => {
-                    const d = new Date(item.fecha);
-                    return d.getMonth() === selectedMonth && d.getFullYear() === currentYear;
+                    return isSameMonthYear(getEventStartDate(item), selectedMonth, currentYear);
                 });
 
                 return (
@@ -1278,7 +1298,7 @@ const AdminHome = () => {
                                             }
 
                                             // Calcular eventos para este día
-                                            const dayEvts = mEvts.filter(e => new Date(e.fecha).getDate() === day);
+                                            const dayEvts = mEvts.filter(e => isSameDayOfMonth(getEventStartDate(e), day));
                                             const hasEvts = dayEvts.length > 0;
                                             const isDaySelected = selectedDay === day;
                                             
@@ -1358,7 +1378,7 @@ const AdminHome = () => {
                                     {(() => {
                                         let dayFilteredEvts = mEvts;
                                         if (selectedDay !== null) {
-                                            dayFilteredEvts = mEvts.filter(item => new Date(item.fecha).getDate() === selectedDay);
+                                            dayFilteredEvts = mEvts.filter(item => isSameDayOfMonth(getEventStartDate(item), selectedDay));
                                         }
 
                                         if (dayFilteredEvts.length === 0) {
@@ -1375,8 +1395,7 @@ const AdminHome = () => {
                                         return (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                                                 {dayFilteredEvts.map((evt, idx) => {
-                                                    const dateObj = new Date(evt.fecha);
-                                                    const formattedDate = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                                    const formattedDate = formatLocalDateShort(getEventStartDate(evt));
                                                     return (
                                                         <div key={idx} style={{ padding: '0.6rem', background: palette.lightBg, border: `1px solid ${palette.border}`, borderLeft: `4px solid ${palette.primary}`, borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div>

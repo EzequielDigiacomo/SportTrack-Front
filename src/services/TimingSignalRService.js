@@ -49,6 +49,10 @@ class TimingSignalRService {
         this._lapRecordedCallback = null;
         this._paymentCallback = null;
         this._resultadoActualizadoCallback = null;
+        this._newMessageCallback = null;
+        this._newEventCallback = null;
+        this._notificationFederacionId = null;
+        this._joinNotifications = false;
         this._handlersRegistered = false;
     }
 
@@ -132,6 +136,18 @@ class TimingSignalRService {
         this.connection.on("paymentstatuschangerequested", (data) => {
             if (this._paymentCallback) this._paymentCallback(data);
         });
+
+        const handleNewMessage = (payload) => {
+            if (this._newMessageCallback) this._newMessageCallback(payload);
+        };
+        this.connection.on("newMessageReceived", handleNewMessage);
+        this.connection.on("newmessagereceived", handleNewMessage);
+
+        const handleNewEvent = (payload) => {
+            if (this._newEventCallback) this._newEventCallback(payload);
+        };
+        this.connection.on("newEventCreated", handleNewEvent);
+        this.connection.on("neweventcreated", handleNewEvent);
 
         this.connection.on("RacePresenceUpdated", (presenceList) => {
             if (this._presenceCallback) this._presenceCallback(presenceList);
@@ -228,6 +244,7 @@ class TimingSignalRService {
                     console.warn("[SignalR] Error re-joining race group after reconnect:", err);
                 }
             }
+            await this._joinNotificationGroups();
             this._notifyReconnected();
             await this.flushPendingRaceStart();
         });
@@ -289,9 +306,31 @@ class TimingSignalRService {
         }
     }
 
-    async connect(eventoId = null, faseId = null, userName = null, role = null) {
+    async _joinNotificationGroups() {
+        if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) return;
+        if (!this._joinNotifications) return;
+
+        try {
+            await this.connection.invoke("JoinUserNotificationsGroup");
+        } catch (err) {
+            console.warn("[SignalR] JoinUserNotificationsGroup skipped:", err?.message || err);
+        }
+
+        const fedId = Number(this._notificationFederacionId);
+        if (Number.isFinite(fedId) && fedId > 0) {
+            try {
+                await this.connection.invoke("JoinFederationNotificationsGroup", fedId);
+            } catch (err) {
+                console.warn("[SignalR] JoinFederationNotificationsGroup skipped:", err?.message || err);
+            }
+        }
+    }
+
+    async connect(eventoId = null, faseId = null, userName = null, role = null, options = {}) {
         this.userName = userName || this.userName || "Usuario";
         this.role = role || this.role || "Espectador";
+        this._joinNotifications = options.joinNotifications !== false;
+        this._notificationFederacionId = options.federacionId ?? this._notificationFederacionId ?? null;
 
         if (this.connectionPromise) {
             await this.connectionPromise;
@@ -367,6 +406,8 @@ class TimingSignalRService {
                         console.warn("[SignalR] JoinOperatorsGroup skipped:", err?.message || err);
                     }
                 }
+
+                await this._joinNotificationGroups();
 
                 await this.flushPendingRaceStart();
             } catch (err) {
@@ -573,6 +614,14 @@ class TimingSignalRService {
 
     onPaymentStatusChangeRequested(callback) {
         this._paymentCallback = callback;
+    }
+
+    onNewMessageReceived(callback) {
+        this._newMessageCallback = callback;
+    }
+
+    onNewEventCreated(callback) {
+        this._newEventCallback = callback;
     }
 
     async requestPaymentStatusChange(clubNombre, clubId) {

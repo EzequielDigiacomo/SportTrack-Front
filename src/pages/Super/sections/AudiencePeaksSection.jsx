@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, RefreshCw, Users, Eye, Shield, Trophy, Settings2 } from 'lucide-react';
 import AudienceService from '../../../services/AudienceService';
 import { useToast } from '../../../context/ToastContext';
 import { getUserFacingError } from '../../../utils/userFacingError';
 import './AudiencePeaksSection.css';
+
+const PEAKS_PAGE_SIZE = 12;
 
 const formatFecha = (dateStr) => {
     if (!dateStr) return '—';
@@ -26,6 +28,22 @@ const AudiencePeaksSection = () => {
     const [customValue, setCustomValue] = useState(200);
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [peaksPage, setPeaksPage] = useState(1);
+
+    const sortedPeaks = useMemo(() => (
+        [...peaks].sort((a, b) => {
+            const timeA = new Date(a.capturedAtUtc || 0).getTime();
+            const timeB = new Date(b.capturedAtUtc || 0).getTime();
+            return timeB - timeA;
+        })
+    ), [peaks]);
+
+    const peaksTotalPages = Math.max(1, Math.ceil(sortedPeaks.length / PEAKS_PAGE_SIZE));
+    const safePeaksPage = Math.min(peaksPage, peaksTotalPages);
+    const pagedPeaks = sortedPeaks.slice(
+        (safePeaksPage - 1) * PEAKS_PAGE_SIZE,
+        safePeaksPage * PEAKS_PAGE_SIZE
+    );
 
     const load = useCallback(async () => {
         try {
@@ -192,7 +210,14 @@ const AudiencePeaksSection = () => {
             )}
 
             <div className="audience-peaks-card glass-effect">
-                <h3>Historial de picos / muestras</h3>
+                <div className="audience-peaks-card-header">
+                    <h3>Historial de picos / muestras</h3>
+                    {sortedPeaks.length > 0 && (
+                        <span className="audience-peaks-count">
+                            {sortedPeaks.length} muestra{sortedPeaks.length === 1 ? '' : 's'}
+                        </span>
+                    )}
+                </div>
                 <div className="audience-peaks-table-wrap">
                     <table className="audience-peaks-table">
                         <thead>
@@ -208,14 +233,14 @@ const AudiencePeaksSection = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {peaks.length === 0 ? (
+                            {sortedPeaks.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="audience-empty">
                                         Todavía no hay muestras. Se registran cuando hay conexiones activas.
                                     </td>
                                 </tr>
                             ) : (
-                                peaks.map((p) => (
+                                pagedPeaks.map((p) => (
                                     <tr key={p.id} className={p.isPeakRecord ? 'is-peak' : ''}>
                                         <td>{formatFecha(p.capturedAtUtc)}</td>
                                         <td>{p.totalConnections}</td>
@@ -237,6 +262,33 @@ const AudiencePeaksSection = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {sortedPeaks.length > PEAKS_PAGE_SIZE && (
+                    <div className="audience-peaks-pagination">
+                        <button
+                            type="button"
+                            className="audience-peaks-page-btn"
+                            disabled={safePeaksPage === 1}
+                            onClick={() => setPeaksPage((page) => Math.max(1, page - 1))}
+                        >
+                            Anterior
+                        </button>
+                        <span className="audience-peaks-page-info">
+                            Página <strong>{safePeaksPage}</strong> de {peaksTotalPages}
+                            <span className="audience-peaks-page-count">
+                                {' · '}{sortedPeaks.length} muestras
+                            </span>
+                        </span>
+                        <button
+                            type="button"
+                            className="audience-peaks-page-btn"
+                            disabled={safePeaksPage === peaksTotalPages}
+                            onClick={() => setPeaksPage((page) => Math.min(peaksTotalPages, page + 1))}
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

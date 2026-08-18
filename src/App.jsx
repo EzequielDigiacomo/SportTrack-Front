@@ -17,8 +17,14 @@ import { useToast } from './context/ToastContext'
 import ToastContainer from './components/Common/ToastContainer'
 import JudgesLayout from './components/Layout/JudgesLayout'
 import NotificationCenter from './components/Common/NotificationCenter'
+import AppFooter from './components/Layout/AppFooter'
 import { useAuth } from './context/AuthContext'
 import PlanDetails from './pages/Home/PlanDetails'
+import {
+    canSeeEventNotifications,
+    canSeeMessageNotifications,
+    canSeeOperationalNotifications,
+} from './utils/notificationHelpers'
 
 function ScrollToTop() {
     const { pathname } = useLocation()
@@ -34,27 +40,23 @@ function App() {
     
 
     const location = useLocation();
-    const isHomePage = location.pathname === '/';
 
-    const roleStr = (user?.rol || user?.Rol || user?.role || '').toLowerCase();
-    const isJudgeOrAdmin = user && (
-        roleStr.includes('admin') || 
-        roleStr.includes('superadmin') ||
-        roleStr.includes('juezcontrol') || 
-        roleStr.includes('control')
-    );
-
-    const showNotificationCenter = isJudgeOrAdmin && (
-        location.pathname.startsWith('/club') || 
-        location.pathname.startsWith('/super') || 
-        location.pathname.startsWith('/admin') || 
-        location.pathname.startsWith('/juez-control') || 
+    const showNotificationCenter = user && (
+        location.pathname.startsWith('/club') ||
+        location.pathname.startsWith('/super') ||
+        location.pathname.startsWith('/admin') ||
+        location.pathname.startsWith('/juez-control') ||
         location.pathname.startsWith('/jueces')
+    ) && (
+        canSeeOperationalNotifications(user) ||
+        canSeeMessageNotifications(user) ||
+        canSeeEventNotifications(user)
     );
 
     return (
-        <>
+        <div className="app-shell">
         <ScrollToTop />
+        <div className="app-shell-content">
         <Routes>
             {/* Rutas públicas */}
             <Route path="/login" element={<MainLayout><Login /></MainLayout>} />
@@ -103,9 +105,11 @@ function App() {
             {/* Carga manual: SportTrack S/M/L (no exige consolas juez / Ecosistema) */}
             <Route path="/jueces/carga-manual" element={<ProtectedRoute requiredRole={['Admin', 'SuperAdmin']}><JudgesLayout><ManualTiming /></JudgesLayout></ProtectedRoute>} />
         </Routes>
-        {showNotificationCenter && <NotificationCenter isAdmin={isJudgeOrAdmin} />}
+        {showNotificationCenter && <NotificationCenter />}
+        </div>
+        <AppFooter />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
-        </>
+        </div>
     )
 }
 

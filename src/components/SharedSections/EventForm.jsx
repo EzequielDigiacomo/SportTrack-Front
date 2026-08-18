@@ -174,53 +174,60 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                             />
                         </div>
                         
-                        {!isMaraton && (
-                            <div className="form-rules-container glass-effect mt-md">
-                                <h4>Reglas Técnicas Federativas</h4>
-                                <div className="rules-grid">
-                                    <label className="checkbox-label rule-card">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={initialData.restringirSoloCategoriaPropia} 
-                                            onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
-                                        />
-                                        <div className="rule-info">
-                                            <strong>Solo permitir categoría propia</strong>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={initialData.permitirSub23EnSenior} 
-                                            onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
-                                        />
-                                        <div className="rule-info">
-                                            <strong>Permitir Sub23 en Senior</strong>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={initialData.permitirMasterBajarASenior} 
-                                            onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
-                                        />
-                                        <div className="rule-info">
-                                            <strong>Permitir Master en Senior</strong>
-                                        </div>
-                                    </label>
-                                    <label className="checkbox-label rule-card">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={initialData.limitacionBotesAB} 
-                                            onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
-                                        />
-                                        <div className="rule-info">
-                                            <strong>Límite Botes A/B por Club</strong>
-                                        </div>
-                                    </label>
-                                </div>
+                        <div className="form-rules-container glass-effect mt-md">
+                            <h4>{isMaraton ? 'Reglas de Inscripción (Maratón)' : 'Reglas Técnicas Federativas'}</h4>
+                            <div className="rules-grid">
+                                {!isMaraton && (
+                                    <>
+                                        <label className="checkbox-label rule-card">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={initialData.restringirSoloCategoriaPropia} 
+                                                onChange={(e) => onChange('restringirSoloCategoriaPropia', e.target.checked)} 
+                                            />
+                                            <div className="rule-info">
+                                                <strong>Solo permitir categoría propia</strong>
+                                            </div>
+                                        </label>
+                                        <label className="checkbox-label rule-card">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={initialData.permitirMasterBajarASenior} 
+                                                onChange={(e) => onChange('permitirMasterBajarASenior', e.target.checked)} 
+                                            />
+                                            <div className="rule-info">
+                                                <strong>Permitir Master en Senior</strong>
+                                            </div>
+                                        </label>
+                                        <label className="checkbox-label rule-card">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={initialData.limitacionBotesAB} 
+                                                onChange={(e) => onChange('limitacionBotesAB', e.target.checked)} 
+                                            />
+                                            <div className="rule-info">
+                                                <strong>Límite Botes A/B por Club</strong>
+                                            </div>
+                                        </label>
+                                    </>
+                                )}
+                                <label className="checkbox-label rule-card">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={initialData.permitirSub23EnSenior} 
+                                        onChange={(e) => onChange('permitirSub23EnSenior', e.target.checked)} 
+                                    />
+                                    <div className="rule-info">
+                                        <strong>Permitir Sub23 en Senior</strong>
+                                        {isMaraton && (
+                                            <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                                Los Sub-23 podrán inscribirse en pruebas Senior y figurarán como Senior en resultados.
+                                            </span>
+                                        )}
+                                    </div>
+                                </label>
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     <div className="form-section">

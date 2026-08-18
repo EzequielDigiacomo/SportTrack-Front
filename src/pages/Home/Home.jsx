@@ -11,7 +11,6 @@ import HomeFeatures from './sections/HomeFeatures'
 import HomeUltimoEvento from './sections/HomeUltimoEvento'
 import HomePlanes from './sections/HomePlanes'
 import HomeContacto from './sections/HomeContacto'
-import HomeFooter from './sections/HomeFooter'
 import './Home.css'
 
 function Home() {
@@ -80,7 +79,6 @@ function Home() {
         setNivelInteres={setNivelInteres}
         onSubmit={() => addToast('success', '¡Mensaje enviado! Nos contactaremos pronto.')}
       />
-      <HomeFooter />
     </div>
   )
 }

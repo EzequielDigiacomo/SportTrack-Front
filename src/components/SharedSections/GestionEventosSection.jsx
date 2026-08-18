@@ -257,7 +257,6 @@ const GestionEventosSection = () => {
                 next.distanciasHabilitadas = distIds.join(',');
                 next.categoriasHabilitadas = catIds.join(',');
                 next.restringirSoloCategoriaPropia = false;
-                next.permitirSub23EnSenior = false;
                 next.permitirMasterBajarASenior = false;
                 next.limitacionBotesAB = false;
                 next.usarGapVariable = false;

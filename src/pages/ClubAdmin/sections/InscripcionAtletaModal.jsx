@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { matchesSearch } from '../../../utils/authHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import { getUserFacingError } from '../../../utils/userFacingError';
+import { atletaCalificaBaseSenior, evaluarElegibilidadAtleta } from '../../../utils/inscripcionEligibilityUtils';
 import './InscripcionModal.css';
 
 const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, modoAdmin = false }) => {
@@ -440,65 +441,38 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
 
                                     // LÓGICA DE ELEGIBILIDAD SEGÚN REGLAS DEL EVENTO
                                     const catPrueba = selectedPrueba.prueba.categoria;
-                                    const edadAtleta = atleta.edad;
                                     const esK4 = getMaxTripulantes(selectedPrueba.prueba.bote?.tipo) === 4;
                                     
-                                    let esElegible = true;
-                                    let razonNoElegible = "";
+                                    let { esElegible, razonNoElegible } = evaluarElegibilidadAtleta({
+                                        evento,
+                                        catPrueba,
+                                        atleta,
+                                    });
                                     let esRefuerzoK4 = false;
 
-                                    // 0. Regla Especial: CONTROL (Permite a todas las categorías)
-                                    // Comprobamos ID 11 o el nombre "Control" para mayor robustez
-                                    const isControlPrueba = (catPrueba?.id === 11 || String(catPrueba?.id) === "11" || catPrueba?.nombre === "Control");
-                                    
-                                    if (isControlPrueba) {
-                                        esElegible = true;
-                                        razonNoElegible = "";
-                                    } 
-                                    // 1. Regla: Categoría Única
-                                    else if (evento.restringirSoloCategoriaPropia) {
-                                        if (atleta.categoriaId !== catPrueba?.id) {
-                                            esElegible = false;
-                                            razonNoElegible = "Regla de Categoría Única";
-                                        }
-                                    } else {
-                                        // 2. Validación estándar por rango de edad
-                                        const cumpleRango = (edadAtleta >= (catPrueba.edadMin || 0)) && (edadAtleta <= (catPrueba.edadMax || 99));
+                                    // Regla Extra: Refuerzo K4 (solo si no califica por reglas normales)
+                                    if (!esElegible && evento.permitirCompletarK4 && esK4) {
+                                        const catRefuerzoId = (catPrueba.id === 7 || catPrueba.id === 6) ? 5 : (catPrueba.id === 5 ? 4 : null);
                                         
-                                        // 3. Reglas Especiales de Excepción
-                                        const esSub23EnSenior = evento.permitirSub23EnSenior && (catPrueba.id === 7) && (atleta.categoriaId === 6 || (edadAtleta >= 18 && edadAtleta <= 22));
-                                        const esMasterEnSenior = evento.permitirMasterBajarASenior && (catPrueba.id === 7) && (atleta.categoriaId === 8 || (edadAtleta >= 40 && edadAtleta <= 49));
+                                        if (atleta.categoriaId === catRefuerzoId) {
+                                            const baseAthletes = selectedAtletas.filter(a =>
+                                                atletaCalificaBaseSenior({ evento, catPrueba, atleta: a })
+                                                || (
+                                                    (a.edad >= (catPrueba.edadMin || 0))
+                                                    && (a.edad <= (catPrueba.edadMax || 99))
+                                                )
+                                            );
+                                            const currentRefuerzos = selectedAtletas.filter(a => a.categoriaId === catRefuerzoId);
 
-                                        if (!cumpleRango && !esSub23EnSenior && !esMasterEnSenior) {
-                                            esElegible = false;
-                                            razonNoElegible = "Fuera de rango de edad";
-
-                                            // 4. Regla Extra: Refuerzo K4 (Solo si no califica por edad normal)
-                                            if (evento.permitirCompletarK4 && esK4) {
-                                                const catRefuerzoId = (catPrueba.id === 7 || catPrueba.id === 6) ? 5 : (catPrueba.id === 5 ? 4 : null);
-                                                
-                                                if (atleta.categoriaId === catRefuerzoId) {
-                                                    // Es de la categoría inferior permitida
-                                                    const baseAthletes = selectedAtletas.filter(a => {
-                                                        const ageA = a.edad;
-                                                        const isOriginal = (ageA >= (catPrueba.edadMin || 0)) && (ageA <= (catPrueba.edadMax || 99));
-                                                        const isS23S = evento.permitirSub23EnSenior && catPrueba.id === 7 && (a.categoriaId === 6 || (ageA >= 18 && ageA <= 22));
-                                                        return isOriginal || isS23S;
-                                                    });
-                                                    const currentRefuerzos = selectedAtletas.filter(a => a.categoriaId === catRefuerzoId);
-
-                                                    // Solo permitimos si hay exactamente 3 base y 0 refuerzos (o si este ya está seleccionado)
-                                                    const yaSeleccionado = selectedAtletas.find(a => a.id === atleta.id);
-                                                    if ((baseAthletes.length === 3 && currentRefuerzos.length === 0) || yaSeleccionado) {
-                                                        esElegible = true;
-                                                        esRefuerzoK4 = true;
-                                                        razonNoElegible = "";
-                                                    } else if (baseAthletes.length < 3) {
-                                                        razonNoElegible = "Faltan 3 de la cat. base";
-                                                    } else {
-                                                        razonNoElegible = "Ya hay un refuerzo";
-                                                    }
-                                                }
+                                            const yaSeleccionado = selectedAtletas.find(a => a.id === atleta.id);
+                                            if ((baseAthletes.length === 3 && currentRefuerzos.length === 0) || yaSeleccionado) {
+                                                esElegible = true;
+                                                esRefuerzoK4 = true;
+                                                razonNoElegible = '';
+                                            } else if (baseAthletes.length < 3) {
+                                                razonNoElegible = 'Faltan 3 de la cat. base';
+                                            } else {
+                                                razonNoElegible = 'Ya hay un refuerzo';
                                             }
                                         }
                                     }

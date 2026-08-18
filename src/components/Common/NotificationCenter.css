@@ -110,6 +110,62 @@
     padding: 0.5rem;
 }
 
+.notification-section + .notification-section {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--color-surface-hover);
+}
+
+.notification-section-title {
+    padding: 0.35rem 0.75rem 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.notification-item--urgent {
+    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.06);
+}
+
+.notif-category {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+
+.notif-desc {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    display: block;
+    margin-top: 2px;
+    line-height: 1.2;
+}
+
+.notif-icon--review {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.notif-icon--payment {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--color-primary-light);
+}
+
+.notif-icon--message {
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+}
+
+.notif-icon--event {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+}
+
 .empty-notifications {
     padding: 3rem 1.5rem;
     text-align: center;
@@ -173,4 +229,51 @@
 .notif-action {
     color: #475569;
     font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .notification-center-container {
+        bottom: auto;
+        z-index: 5001;
+    }
+
+    .notification-center-container.in-admin-shell {
+        top: max(12px, env(safe-area-inset-top, 0px));
+        right: max(68px, calc(env(safe-area-inset-right, 0px) + 56px));
+    }
+
+    .notification-center-container.in-main-layout {
+        top: max(64px, calc(env(safe-area-inset-top, 0px) + 56px));
+        right: max(12px, env(safe-area-inset-right, 0px));
+    }
+
+    .notification-trigger {
+        width: 44px;
+        height: 44px;
+    }
+
+    .notification-trigger svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .notification-center-container.in-admin-shell .notification-panel {
+        position: fixed;
+        top: max(68px, calc(env(safe-area-inset-top, 0px) + 56px));
+        bottom: auto;
+        right: max(12px, env(safe-area-inset-right, 0px));
+        left: max(12px, env(safe-area-inset-left, 0px));
+        width: auto;
+        max-height: min(400px, calc(100vh - 88px));
+    }
+
+    .notification-center-container.in-main-layout .notification-panel {
+        position: fixed;
+        top: max(120px, calc(env(safe-area-inset-top, 0px) + 112px));
+        bottom: auto;
+        right: max(12px, env(safe-area-inset-right, 0px));
+        left: max(12px, env(safe-area-inset-left, 0px));
+        width: auto;
+        max-height: min(400px, calc(100vh - 140px));
+    }
 }

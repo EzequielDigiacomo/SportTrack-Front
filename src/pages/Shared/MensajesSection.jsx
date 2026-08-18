@@ -10,6 +10,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { pick } from '../../utils/apiHelpers';
 import { isSuperAdminUser, isFederationAdminUser, isClubUser } from '../../utils/authHelpers';
+import { MENSAJES_PENDING_HILO_KEY } from '../../utils/notificationHelpers';
 import { getUserFacingError } from '../../utils/userFacingError';
 import '../../components/SharedSections/AdminSections.css';
 import './MensajesSection.css';
@@ -325,6 +326,22 @@ const MensajesSection = ({ modo: modoProp = 'auto' }) => {
         setRespuesta('');
         await loadHiloDetalle(hiloId);
     };
+
+    useEffect(() => {
+        const pendingHiloId = sessionStorage.getItem(MENSAJES_PENDING_HILO_KEY);
+        if (!pendingHiloId) return undefined;
+
+        sessionStorage.removeItem(MENSAJES_PENDING_HILO_KEY);
+        const hiloId = Number(pendingHiloId);
+        if (!Number.isFinite(hiloId) || hiloId <= 0) return undefined;
+
+        const timer = setTimeout(() => {
+            handleSelectHilo(hiloId);
+        }, 0);
+
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const openCampana = async (campanaId) => {
         setLoadingDetalle(true);
