@@ -57,6 +57,8 @@ export const resolveUserFederacionId = (user) =>
     ?? user?.club?.idFederacion
     ?? null;
 
+export const getMensajesPath = (user) => (isClubUser(user) ? '/club/mensajes' : '/super/mensajes');
+
 export const getEventosPath = (user) => (isClubUser(user) ? '/club/eventos' : '/super/eventos');
 
 export const canSeeOperationalNotifications = (user) => {
