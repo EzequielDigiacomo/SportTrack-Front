@@ -418,6 +418,52 @@ const PdfExportService = {
         doc.save(`${eventoInfo.nombre}_${pruebaNombre}_Completo.pdf`.replace(/\s+/g, '_'));
     },
 
+    /**
+     * Grilla de largada Maratón — orden de sorteo (Nº 1…N) tras armar la largada.
+     * inscriptos: filas enriquecidas de loadMaratonLargadaInscriptos (con numeroCompetidor).
+     */
+    exportMaratonLargadaStartList: async (inscriptos, eventoOrName, options = {}) => {
+        const { largadaLabel = '', fechaHora = null } = options;
+        const list = [...(inscriptos || [])]
+            .filter(i => i.numeroCompetidor && String(i.numeroCompetidor).trim() !== '')
+            .sort((a, b) => {
+                const na = parseInt(a.numeroCompetidor, 10);
+                const nb = parseInt(b.numeroCompetidor, 10);
+                if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+                return String(a.numeroCompetidor).localeCompare(String(b.numeroCompetidor));
+            });
+        if (!list.length) return;
+
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const resultados = list.map(ins => ({
+            carril: ins.numeroCompetidor,
+            participanteNombre: ins.participanteNombreCompleto || ins.participanteNombre || 'Atleta',
+            tripulantes: (ins.tripulantes || []).map(t => ({
+                participanteNombre: t.participanteNombreCompleto || t.participanteNombre,
+                participanteNombreCompleto: t.participanteNombreCompleto,
+            })),
+            clubNombre: ins.clubNombre,
+            clubSigla: ins.clubSigla,
+        }));
+
+        const fase = {
+            nombreFase: 'Orden de largada',
+            fechaHoraProgramada: fechaHora,
+            _pdfSubtitleOverride: largadaLabel,
+            resultados,
+        };
+
+        renderStackedPages(doc, [fase], eventoInfo, 'Grilla de Largada', 'Maratón', 'startList', logo);
+
+        const safeLabel = String(largadaLabel || 'Largada')
+            .replace(/[^\w\d\-+·]+/g, '_')
+            .slice(0, 48);
+        doc.save(`${eventoInfo.nombre}_${safeLabel}_Grilla_Largada.pdf`.replace(/\s+/g, '_'));
+    },
+
     /** Full event start list — 4 grids per page, 1 column */
     exportCronogramaCompleto: async (cronograma, eventoOrName) => {
         if (!cronograma?.length) return;

@@ -774,6 +774,7 @@ const connectedStarter = activeJudges.find(j => {
                 <MaratonStartListPanel
                     pruebas={pruebas}
                     selectedPrueba={selectedPrueba}
+                    evento={eventoActual}
                     isAdmin={isAdmin}
                     onMessage={setMessage}
                 />

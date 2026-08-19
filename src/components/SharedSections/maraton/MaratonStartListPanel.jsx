@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { List, RotateCcw, RefreshCw, Pencil, Save, X, Trash2 } from 'lucide-react';
+import { List, RotateCcw, RefreshCw, Pencil, Save, X, Trash2, FileDown } from 'lucide-react';
 import ClubService from '../../../services/ClubService';
+import PdfExportService from '../../../services/PdfExportService';
 import ConfirmDialog from '../../Common/ConfirmDialog';
 import { getUserFacingError } from '../../../utils/userFacingError';
 import {
@@ -9,6 +10,7 @@ import {
     sortearYArmarLargadaMaraton,
     sortInscriptosByNumero,
     buildMaratonClasificacionOptions,
+    buildMaratonLargadaOptions,
     updateMaratonNominaRow,
     buildCrewFromInscripcion,
     removeMaratonNominaRow,
@@ -25,6 +27,7 @@ import '../ConfigurarPruebas.css';
 const MaratonStartListPanel = ({
     pruebas = [],
     selectedPrueba,
+    evento = null,
     isAdmin = true,
     onMessage,
 }) => {
@@ -39,6 +42,14 @@ const MaratonStartListPanel = ({
     const [clubes, setClubes] = useState([]);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [exportingPdf, setExportingPdf] = useState(false);
+
+    const selectedLargada = useMemo(() => {
+        if (!selectedPrueba) return null;
+        return buildMaratonLargadaOptions(pruebas).find(o =>
+            o.memberIds.some(id => String(id) === String(selectedPrueba))
+        ) || null;
+    }, [pruebas, selectedPrueba]);
 
     const clasificacionOptions = useMemo(
         () => buildMaratonClasificacionOptions(pruebas, selectedPrueba),
@@ -215,6 +226,26 @@ const MaratonStartListPanel = ({
     const hasNumeros = inscriptos.some(i => i.numeroCompetidor && String(i.numeroCompetidor).trim() !== '');
     const isCrewBoat = (form?.crew?.length || 0) > 1;
 
+    const handleExportGrillaPdf = async () => {
+        if (!hasNumeros) return;
+        setExportingPdf(true);
+        try {
+            await PdfExportService.exportMaratonLargadaStartList(
+                inscriptos,
+                evento || 'Evento',
+                {
+                    largadaLabel: selectedLargada?.label || 'Largada',
+                    fechaHora: selectedLargada?.fechaHora || null,
+                }
+            );
+        } catch (err) {
+            console.error(err);
+            onMessage?.('❌ No se pudo generar el PDF de la grilla de largada.');
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
     const deleteLabel = deleteTarget
         ? (deleteTarget.tripulantes?.length
             ? [deleteTarget.participanteNombreCompleto, ...deleteTarget.tripulantes.map(t => t.participanteNombreCompleto)].filter(Boolean).join(' - ')
@@ -369,16 +400,30 @@ const MaratonStartListPanel = ({
                             <span><strong>{inscriptos.length}</strong> Inscritos en la largada</span>
                         </div>
 
-                        {isAdmin && (
-                            <button
-                                className="btn-admin-action primary"
-                                onClick={handleSortearYArmar}
-                                disabled={saving || !inscriptos.length}
-                            >
-                                <RotateCcw size={16} />
-                                {hasNumeros ? 'Regenerar números y largada' : 'Sortear números y armar largada'}
-                            </button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {isAdmin && (
+                                <button
+                                    className="btn-admin-action primary"
+                                    onClick={handleSortearYArmar}
+                                    disabled={saving || !inscriptos.length}
+                                >
+                                    <RotateCcw size={16} />
+                                    {hasNumeros ? 'Regenerar números y largada' : 'Sortear números y armar largada'}
+                                </button>
+                            )}
+                            {hasNumeros && (
+                                <button
+                                    type="button"
+                                    className="btn-admin-action secondary"
+                                    onClick={handleExportGrillaPdf}
+                                    disabled={exportingPdf}
+                                    title="Descargar PDF con el orden de sorteo (Nº 1…N)"
+                                >
+                                    <FileDown size={16} />
+                                    {exportingPdf ? 'Generando PDF…' : 'PDF Grilla de largada'}
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="seeding-status-banner info mb-md">
