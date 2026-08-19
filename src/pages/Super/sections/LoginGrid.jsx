@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Key, Power, PowerOff, Mail, Phone, Building2, Edit } from 'lucide-react';
+import { Key, Power, PowerOff, Mail, Phone, Building2, Edit, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
@@ -55,9 +55,40 @@ const EstadoBadge = ({ activo }) => (
     </span>
 );
 
+const getSortValue = (u, key) => {
+    switch (key) {
+        case 'username':
+            return (u.username || '').toLowerCase();
+        case 'federacionNombre':
+            return (u.federacionNombre || '').toLowerCase();
+        case 'clubNombre':
+            return (u.clubNombre || '').toLowerCase();
+        case 'rol': {
+            const rol = getLoginRole(u);
+            return (ROL_LABEL[rol]?.label || rol || '').toLowerCase();
+        }
+        default:
+            return '';
+    }
+};
+
 const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, showFederation = false }) => {
     const [currentPage, setCurrentPage] = useState(1);
+    const [sortConfig, setSortConfig] = useState({ key: 'username', direction: 'asc' });
     const totalPages = Math.max(1, Math.ceil((usuarios?.length || 0) / PAGE_SIZE));
+
+    const requestSort = (key) => {
+        setSortConfig((prev) => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+        setCurrentPage(1);
+    };
+
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <ArrowUpDown size={14} />;
+        return sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+    };
 
     useEffect(() => {
         setCurrentPage(1);
@@ -67,10 +98,21 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
         if (currentPage > totalPages) setCurrentPage(totalPages);
     }, [currentPage, totalPages]);
 
+    const sortedUsuarios = useMemo(() => {
+        const list = [...(usuarios || [])];
+        list.sort((a, b) => {
+            const aVal = getSortValue(a, sortConfig.key);
+            const bVal = getSortValue(b, sortConfig.key);
+            const cmp = aVal.localeCompare(bVal, 'es', { sensitivity: 'base' });
+            return sortConfig.direction === 'asc' ? cmp : -cmp;
+        });
+        return list;
+    }, [usuarios, sortConfig]);
+
     const pageUsuarios = useMemo(() => {
         const start = (currentPage - 1) * PAGE_SIZE;
-        return (usuarios || []).slice(start, start + PAGE_SIZE);
-    }, [usuarios, currentPage]);
+        return sortedUsuarios.slice(start, start + PAGE_SIZE);
+    }, [sortedUsuarios, currentPage]);
 
     const pagination = (usuarios?.length || 0) > PAGE_SIZE && (
         <div className="admin-pagination">
@@ -163,11 +205,21 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                     <thead>
                         <tr>
                             <th>Estado</th>
-                            <th>Usuario</th>
-                            {showFederation && <th>Federación</th>}
-                            <th>Institución a la que pertenece</th>
+                            <th className="sortable" onClick={() => requestSort('username')}>
+                                Usuario <span className="sort-icon">{getSortIcon('username')}</span>
+                            </th>
+                            {showFederation && (
+                                <th className="sortable" onClick={() => requestSort('federacionNombre')}>
+                                    Federación <span className="sort-icon">{getSortIcon('federacionNombre')}</span>
+                                </th>
+                            )}
+                            <th className="sortable" onClick={() => requestSort('clubNombre')}>
+                                Institución a la que pertenece <span className="sort-icon">{getSortIcon('clubNombre')}</span>
+                            </th>
                             <th>Email</th>
-                            <th>Rol</th>
+                            <th className="sortable" onClick={() => requestSort('rol')}>
+                                Rol <span className="sort-icon">{getSortIcon('rol')}</span>
+                            </th>
                             <th style={{ width: '110px', textAlign: 'center' }}>Acciones</th>
                         </tr>
                     </thead>
