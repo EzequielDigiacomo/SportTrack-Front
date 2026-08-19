@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import EventoService from '../../services/EventoService';
-import ClubService from '../../services/ClubService';
 import { PruebaService } from '../../services/ConfigService';
 import InscripcionService from '../../services/InscripcionService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
-import { getClubFederationId, getUserFederationId } from '../../utils/apiHelpers';
+import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
 import { getUserFacingError } from '../../utils/userFacingError';
@@ -179,21 +177,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
     const loadEventos = async () => {
         try {
-            let data;
-            if (user?.rol === 'Club' && user?.clubId) {
-                const club = await ClubService.getById(user.clubId);
-                const fedId = getClubFederationId(club);
-                data = fedId
-                    ? await EventoService.getAll(fedId, { asFederation: true })
-                    : await EventoService.getAll(user.clubId);
-            } else if (user?.rol === 'Admin') {
-                const fedId = getUserFederationId(user);
-                data = fedId
-                    ? await EventoService.getAll(fedId, { asFederation: true })
-                    : await EventoService.getAll();
-            } else {
-                data = await EventoService.getAll();
-            }
+            const data = await fetchEventosForUser(user);
             setEventos(data || []);
         } catch (error) {
             setMessage("Error al cargar eventos.");

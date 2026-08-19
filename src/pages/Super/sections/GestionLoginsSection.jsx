@@ -226,8 +226,8 @@ const GestionLoginsSection = () => {
                 }
             }
             if (ROLES_JUEZ.includes(form.rol)) {
-                const fedId = form.federacionId || effectiveFedId;
-                if (isSuper && !fedId) {
+                const fedId = form.federacionId || effectiveFedId || getUserFederationId(user);
+                if (!fedId) {
                     showAlert('error', 'Seleccioná la federación antes de crear un usuario juez.');
                     return;
                 }

@@ -8,8 +8,8 @@ import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { getJudgeDisplayName, mapFasesFromApi, canStartFase, isFaseCerrada, normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
+import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import {
-    filterEventosForJudgeRole,
     isControlTecnicoRole,
     isSoloControlTecnicoMode,
     saveControlTecnicoHandoff,
@@ -117,7 +117,7 @@ const StarterDashboard = () => {
 
     useEffect(() => {
         const loadEventos = async () => {
-            const data = filterEventosForJudgeRole(await EventoService.getAll(), user);
+            const data = await fetchEventosForUser(user);
             setEventos(data);
             
             // Solo seleccionar el primero si no hay nada guardado en localStorage

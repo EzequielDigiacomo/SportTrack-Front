@@ -13,8 +13,8 @@ import ResultadoService from '../../services/ResultadoService';
 import { useAlert } from '../../hooks/useAlert';
 import timingSignalRService from '../../services/TimingSignalRService';
 import { getJudgeDisplayName, mapFasesFromApi, normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
+import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import {
-    filterEventosForJudgeRole,
     isControlTecnicoRole,
     isSoloControlTecnicoMode,
     readControlTecnicoHandoff,
@@ -130,7 +130,7 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         const loadEventos = async () => {
-            const data = filterEventosForJudgeRole(await EventoService.getAll(), user);
+            const data = await fetchEventosForUser(user);
             setEventos(data);
 
             const handoff = readControlTecnicoHandoff();
