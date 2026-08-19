@@ -427,6 +427,10 @@
     max-width: 1480px;
 }
 
+.admin-content-wrapper:has(.login-grid-container) {
+    max-width: 1480px;
+}
+
 /* HOME DE ADMIN */
 .admin-home-header {
     margin-bottom: var(--spacing-2xl);

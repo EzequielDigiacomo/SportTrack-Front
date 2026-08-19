@@ -96,6 +96,7 @@ const GestionLoginsSection = () => {
         title: '',
         message: '',
         type: 'warning',
+        confirmText: 'Confirmar',
         onConfirm: null,
     });
 
@@ -296,6 +297,37 @@ const GestionLoginsSection = () => {
         });
     };
 
+    const handleDeleteLogin = (loginUser) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Eliminar credencial',
+            message: `¿Eliminar permanentemente la cuenta "${loginUser.username}"?\n\nEsta acción no se puede deshacer.`,
+            type: 'danger',
+            confirmText: 'Eliminar',
+            onConfirm: async () => {
+                const usuarioId = pick(loginUser, 'id', 'Id', 'idUsuario', 'IdUsuario');
+                if (usuarioId == null) {
+                    showAlert('error', 'No se pudo identificar el usuario a eliminar. Recargá la página e intentá de nuevo.');
+                    setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                    return;
+                }
+                try {
+                    await AuthService.deleteUsuario(usuarioId);
+                    setUsuarios((prev) => prev.filter((u) => pick(u, 'id', 'Id', 'idUsuario', 'IdUsuario') !== usuarioId));
+                    showAlert('success', `Credencial "${loginUser.username}" eliminada correctamente.`);
+                } catch (err) {
+                    const isMissingEndpoint = err?.status === 404
+                        && !err?.data?.message?.includes('Usuario con ID');
+                    const message = isMissingEndpoint
+                        ? 'El servidor aún no tiene la función de eliminar credenciales. Ejecutá el backend local con los últimos cambios o desplegá SportTrack-Sigdef en Render.'
+                        : getUserFacingError(err, 'No se pudo eliminar la credencial.');
+                    showAlert('error', message);
+                }
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+            },
+        });
+    };
+
     const usuariosConFederacion = useMemo(
         () => usuarios.map(u => ({
             ...u,
@@ -357,6 +389,9 @@ const GestionLoginsSection = () => {
                         onEditPassword={handleOpenEditar}
                         onEditProfile={handleOpenEditarPerfil}
                         onToggleActivo={handleToggleActivo}
+                        onDelete={handleDeleteLogin}
+                        currentUserId={user?.id ?? user?.Id}
+                        currentUsername={user?.username}
                         showFederation={isSuper && !effectiveFedId}
                     />
                 )
@@ -385,6 +420,7 @@ const GestionLoginsSection = () => {
                     title={confirmDialog.title}
                     message={confirmDialog.message}
                     type={confirmDialog.type}
+                    confirmText={confirmDialog.confirmText}
                 />
             )}
         </div>

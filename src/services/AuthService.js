@@ -58,6 +58,15 @@ const AuthService = {
         return response.data;
     },
 
+    deleteUsuario: async (id) => {
+        const usuarioId = Number(id);
+        if (!usuarioId || Number.isNaN(usuarioId)) {
+            throw new Error('Identificador de usuario inválido.');
+        }
+        const response = await api.delete(`/auth/usuarios/${usuarioId}`);
+        return response.data;
+    },
+
     logout: async () => {
         try {
             const response = await api.post('/auth/logout');

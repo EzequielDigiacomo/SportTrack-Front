@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Key, Power, PowerOff, Mail, Phone, Building2, Edit, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Key, Power, PowerOff, Mail, Phone, Building2, Edit, Trash2, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
@@ -72,7 +72,17 @@ const getSortValue = (u, key) => {
     }
 };
 
-const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, showFederation = false }) => {
+const PROTECTED_ROLES = ['SuperAdmin', 'soporte_tecnico'];
+
+const canDeleteLogin = (u, currentUserId, currentUsername) => {
+    const rol = getLoginRole(u);
+    if (PROTECTED_ROLES.some((r) => r.toLowerCase() === rol.toLowerCase())) return false;
+    if (currentUserId != null && String(u.id) === String(currentUserId)) return false;
+    if (currentUsername && u.username?.toLowerCase() === currentUsername.toLowerCase()) return false;
+    return true;
+};
+
+const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, onDelete, currentUserId, currentUsername, showFederation = false }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortConfig, setSortConfig] = useState({ key: 'username', direction: 'asc' });
     const totalPages = Math.max(1, Math.ceil((usuarios?.length || 0) / PAGE_SIZE));
@@ -194,6 +204,15 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                                     {u.activo === false ? <Power size={15} /> : <PowerOff size={15} />}
                                 </button>
                             )}
+                            {onDelete && canDeleteLogin(u, currentUserId, currentUsername) && (
+                                <button
+                                    className="btn-icon-delete"
+                                    onClick={() => onDelete(u)}
+                                    title="Eliminar credencial"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -205,22 +224,22 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                     <thead>
                         <tr>
                             <th>Estado</th>
-                            <th className="sortable" onClick={() => requestSort('username')}>
+                            <th className="sortable login-col-usuario" onClick={() => requestSort('username')}>
                                 Usuario <span className="sort-icon">{getSortIcon('username')}</span>
                             </th>
                             {showFederation && (
-                                <th className="sortable" onClick={() => requestSort('federacionNombre')}>
+                                <th className="sortable login-col-federacion" onClick={() => requestSort('federacionNombre')}>
                                     Federación <span className="sort-icon">{getSortIcon('federacionNombre')}</span>
                                 </th>
                             )}
-                            <th className="sortable" onClick={() => requestSort('clubNombre')}>
+                            <th className="sortable login-col-institucion" onClick={() => requestSort('clubNombre')}>
                                 Institución a la que pertenece <span className="sort-icon">{getSortIcon('clubNombre')}</span>
                             </th>
-                            <th>Email</th>
-                            <th className="sortable" onClick={() => requestSort('rol')}>
+                            <th className="login-col-email">Email</th>
+                            <th className="sortable login-col-rol" onClick={() => requestSort('rol')}>
                                 Rol <span className="sort-icon">{getSortIcon('rol')}</span>
                             </th>
-                            <th style={{ width: '110px', textAlign: 'center' }}>Acciones</th>
+                            <th className="login-col-acciones">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -229,17 +248,17 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                                 <td>
                                     <EstadoBadge activo={u.activo} />
                                 </td>
-                                <td style={{ fontWeight: 'bold', color: u.activo === false ? '#64748b' : 'inherit' }}>
+                                <td style={{ fontWeight: 'bold', color: u.activo === false ? '#64748b' : 'inherit' }} className="login-col-usuario">
                                     {u.username}
                                 </td>
                                 {showFederation && (
-                                    <td>
+                                    <td className="login-col-federacion">
                                         <span className="chip chip-ecu-yellow" style={{ fontSize: '0.75rem' }}>
                                             {u.federacionNombre || '—'}
                                         </span>
                                     </td>
                                 )}
-                                <td>
+                                <td className="login-col-institucion">
                                     {u.clubNombre ? (
                                         <span style={{ fontWeight: '800' }}>{u.clubNombre}</span>
                                     ) : (
@@ -247,9 +266,9 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                                     )}
                                     {u.telefono && <span className="login-grid-meta-sub"><Phone size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {u.telefono}</span>}
                                 </td>
-                                <td>{u.email || '—'}</td>
-                                <td><RolBadge rol={getLoginRole(u)} /></td>
-                                <td className="actions-cell" style={{ textAlign: 'center' }}>
+                                <td className="login-col-email">{u.email || '—'}</td>
+                                <td className="login-col-rol"><RolBadge rol={getLoginRole(u)} /></td>
+                                <td className="actions-cell login-col-acciones">
                                     <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
                                         <button
                                             className="btn-icon-view"
@@ -287,6 +306,15 @@ const LoginGrid = ({ usuarios, onEditPassword, onEditProfile, onToggleActivo, sh
                                                     ? <Power size={15} />
                                                     : <PowerOff size={15} />
                                                 }
+                                            </button>
+                                        )}
+                                        {onDelete && canDeleteLogin(u, currentUserId, currentUsername) && (
+                                            <button
+                                                className="btn-icon-delete"
+                                                onClick={() => onDelete(u)}
+                                                title="Eliminar credencial"
+                                            >
+                                                <Trash2 size={16} />
                                             </button>
                                         )}
                                     </div>
