@@ -195,7 +195,7 @@ const JudgesLayout = ({ children }) => {
     );
 
     return (
-        <div className={`admin-layout ${!isSidebarOpen && !isSidebarFixed ? 'sidebar-collapsed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>
+        <div className={`admin-layout ${!isSidebarOpen && !isSidebarFixed ? 'sidebar-collapsed' : ''} ${isSidebarFixed ? 'sidebar-fixed' : ''} ${!canSeeSidebar ? 'no-sidebar' : ''}`}>
             {canSeeSidebar && (
                 <>
                     {!isSidebarFixed && (
@@ -217,7 +217,7 @@ const JudgesLayout = ({ children }) => {
                         </button>
                     )}
 
-                    {!isControlOrManual && (
+                    {!isControlOrManual && !isSidebarFixed && (
                         <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
                             <button type="button" className="super-quick-logout" onClick={handleLogout} title="Cerrar Sesión" aria-label="Cerrar Sesión">
                                 <LogOut size={22} strokeWidth={2.25} />

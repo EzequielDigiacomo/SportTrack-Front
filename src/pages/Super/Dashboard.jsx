@@ -122,7 +122,7 @@ const SuperDashboard = () => {
     }, [isSuper]);
 
     return (
-        <div className={`admin-layout ${!isSidebarOpen && !isSidebarFixed ? 'sidebar-collapsed' : ''}`}>
+        <div className={`admin-layout ${!isSidebarOpen && !isSidebarFixed ? 'sidebar-collapsed' : ''} ${isSidebarFixed ? 'sidebar-fixed' : ''}`}>
             {/* Edge Sensor for Sidebar */}
             {!isSidebarFixed && (
                 <div 
@@ -144,12 +144,14 @@ const SuperDashboard = () => {
                 </button>
             )}
 
-            {/* Quick Actions (Top Right) */}
-            <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
-                <button type="button" className="super-quick-logout" onClick={handleLogout} title="Cerrar Sesión" aria-label="Cerrar Sesión">
-                    <LogOut size={22} strokeWidth={2.25} />
-                </button>
-            </div>
+            {/* Quick Actions (Top Right) — solo cuando el sidebar no está fijado (logout ya está en el menú lateral) */}
+            {!isSidebarFixed && (
+                <div className={`top-right-actions ${isSidebarOpen ? 'active' : ''}`}>
+                    <button type="button" className="super-quick-logout" onClick={handleLogout} title="Cerrar Sesión" aria-label="Cerrar Sesión">
+                        <LogOut size={22} strokeWidth={2.25} />
+                    </button>
+                </div>
+            )}
 
             {/* Mobile Overlay — después del sidebar para no interferir con el drawer */}
             <AdminSidebar 
