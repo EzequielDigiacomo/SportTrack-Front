@@ -8,6 +8,7 @@ import ResultadosHeader from './ResultadosHeader';
 import FaseCard from './FaseCard';
 import ResultadosTable from './ResultadosTable';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import ReiniciarFaseDialog from '../Common/ReiniciarFaseDialog';
 import Modal from '../Common/Modal';
 import { useAlert } from '../../hooks/useAlert';
 import PdfExportService from '../../services/PdfExportService';
@@ -79,7 +80,8 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         filtroVisualFase, setFiltroVisualFase,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
+        openReiniciarDialog, closeReiniciarDialog, confirmReiniciarFase, reiniciarDialog,
         handleGenerarManual,
         handleRecalcularCronograma, handleSelectRegata,
         loadDatosPrueba, setMessage,
@@ -1277,11 +1279,14 @@ const connectedStarter = activeJudges.find(j => {
                                             )}
                                             <button
                                                 className="btn-admin-secondary"
-                                                onClick={() => handleResetFase(faseSeleccionada.id)}
+                                                onClick={() => openReiniciarDialog(faseSeleccionada, isMaratonEvent)}
                                                 style={{ borderColor: 'rgba(255, 100, 100, 0.3)', color: '#ff6b6b' }}
-                                                title="Borrar todos los tiempos y reiniciar cronómetro"
+                                                title={isMaratonEvent
+                                                    ? 'Borrar tiempos y reiniciar la largada (conserva inscripciones)'
+                                                    : 'Borrar todos los tiempos y reiniciar la serie (conserva carriles)'}
                                             >
-                                                <RotateCcw size={14} style={{ marginRight: '6px' }} /> Reiniciar Fase
+                                                <RotateCcw size={14} style={{ marginRight: '6px' }} />
+                                                {isMaratonEvent ? 'Reiniciar Largada' : 'Reiniciar Fase'}
                                             </button>
                                         </div>
                                         <button
@@ -1489,6 +1494,15 @@ const connectedStarter = activeJudges.find(j => {
         type={confirmDialog.type}
         confirmText={confirmDialog.confirmText}
         loading={saving}
+    />
+    <ReiniciarFaseDialog
+        isOpen={reiniciarDialog.isOpen}
+        onClose={closeReiniciarDialog}
+        onConfirm={confirmReiniciarFase}
+        loading={saving}
+        faseNombre={reiniciarDialog.faseNombre}
+        faseEstado={reiniciarDialog.faseEstado}
+        isMaraton={reiniciarDialog.isMaraton}
     />
     </>
 );

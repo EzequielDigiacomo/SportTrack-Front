@@ -40,6 +40,13 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         confirmText: 'Confirmar',
         onConfirm: null,
     });
+    const [reiniciarDialog, setReiniciarDialog] = useState({
+        isOpen: false,
+        faseId: null,
+        faseNombre: '',
+        faseEstado: '',
+        isMaraton: false,
+    });
 
     const closeConfirmDialog = useCallback(() => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false, onConfirm: null }));
@@ -402,32 +409,45 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         });
     };
 
-    const handleResetFase = async (id) => {
-        openConfirmDialog({
-            title: 'Reiniciar fase',
-            message: '¿Estás seguro de reiniciar esta fase? Se borrarán todos los tiempos oficiales y posiciones de esta serie, pero se conservarán los carriles.',
-            type: 'warning',
-            confirmText: 'Reiniciar',
-            onConfirm: async () => {
-                setSaving(true);
-                try {
-                    await FaseService.reiniciar(id);
-
-                    const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
-                    const newLocked = locked.filter(itemId => itemId !== selectedPrueba);
-                    localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
-
-                    setIsLocked(false);
-                    setMessage("✅ Fase reiniciada correctamente. Tiempos borrados.");
-                    await loadDatosPrueba(selectedPrueba);
-                } catch (error) {
-                    setMessage("❌ Error al reiniciar la fase.");
-                } finally {
-                    setSaving(false);
-                }
-            },
+    const openReiniciarDialog = useCallback((fase, isMaraton = false) => {
+        if (!fase?.id) return;
+        setReiniciarDialog({
+            isOpen: true,
+            faseId: fase.id,
+            faseNombre: fase.nombreFase || '',
+            faseEstado: fase.estado || '',
+            isMaraton,
         });
-    };
+    }, []);
+
+    const closeReiniciarDialog = useCallback(() => {
+        setReiniciarDialog((prev) => ({ ...prev, isOpen: false }));
+    }, []);
+
+    const confirmReiniciarFase = useCallback(async ({ categoria, motivo }) => {
+        const { faseId } = reiniciarDialog;
+        if (!faseId) return;
+
+        setSaving(true);
+        try {
+            await FaseService.reiniciar(faseId, { motivo, categoria });
+
+            const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
+            const newLocked = locked.filter((itemId) => itemId !== selectedPrueba);
+            localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
+
+            setIsLocked(false);
+            setMessage(reiniciarDialog.isMaraton
+                ? '✅ Largada reiniciada correctamente. Tiempos borrados.'
+                : '✅ Fase reiniciada correctamente. Tiempos borrados.');
+            closeReiniciarDialog();
+            await loadDatosPrueba(selectedPrueba);
+        } catch (error) {
+            setMessage(`❌ ${getUserFacingError(error, 'Error al reiniciar la fase.')}`);
+        } finally {
+            setSaving(false);
+        }
+    }, [reiniciarDialog, selectedPrueba, closeReiniciarDialog, loadDatosPrueba]);
 
     const handleFinalizarFase = async (id) => {
         openConfirmDialog({
@@ -837,7 +857,9 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         filtroVisualFase, setFiltroVisualFase: handleSelectFaseVisual,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
-        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase, handleResetFase, handleFinalizarFase,
+        handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
+        openReiniciarDialog, closeReiniciarDialog, confirmReiniciarFase, reiniciarDialog,
+        handleFinalizarFase,
         handleGenerarManual,
         handleRecalcularCronograma,
         handleSelectRegata, loadCronograma,

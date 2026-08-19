@@ -525,14 +525,16 @@ class TimingSignalRService {
         return result.ok;
     }
 
-    async requestResetRace(faseId) {
+    async requestResetRace(faseId, { motivo, categoria } = {}) {
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             await this.connect(null, faseId);
         }
         if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
             throw new Error("No hay conexión activa con el servidor de tiempos");
         }
-        await this.connection.invoke("RequestResetRace", parseInt(faseId));
+        const reason = motivo || 'Partida en falso confirmada por largador';
+        const cat = categoria || 'mala_largada';
+        await this.connection.invoke("RequestResetRace", parseInt(faseId), reason, cat);
     }
 
     async sendTime(faseId, resultadoId, timeStr, ms) {

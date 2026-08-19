@@ -41,8 +41,11 @@ const FaseService = {
         const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Finalizar`);
         return response.data;
     },
-    reiniciar: async (id) => {
-        const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Reiniciar`);
+    reiniciar: async (id, { motivo, categoria } = {}) => {
+        const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/Reiniciar`, {
+            motivo,
+            categoria,
+        });
         return response.data;
     },
     enviarARevision: async (id) => {

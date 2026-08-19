@@ -508,7 +508,10 @@ const StarterDashboard = () => {
                     }
                     
                     setStartingStatus('resetting');
-                    await timingSignalRService.requestResetRace(selectedFase.id);
+                    await timingSignalRService.requestResetRace(selectedFase.id, {
+                        motivo: 'Partida en falso confirmada por largador',
+                        categoria: 'mala_largada',
+                    });
                     addToast("Carrera reiniciada con éxito (Vía WebSocket)", "success");
                     setStartingStatus('success_reset');
                     setTimeout(() => setStartingStatus(null), 1500);
@@ -517,7 +520,10 @@ const StarterDashboard = () => {
                     setStartingStatus('fallback_http');
                     addToast("Fallo en red de tiempo real. Usando canal secundario...", "warning");
                     try {
-                        await FaseService.reiniciar(selectedFase.id);
+                        await FaseService.reiniciar(selectedFase.id, {
+                            motivo: 'Partida en falso confirmada por largador',
+                            categoria: 'mala_largada',
+                        });
                         addToast("Carrera reiniciada con éxito", "success");
                         setStartingStatus('success_reset');
                         setTimeout(() => setStartingStatus(null), 1500);
