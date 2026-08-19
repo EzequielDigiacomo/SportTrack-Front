@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Calendar, MapPin, Timer, ArrowLeft, Plus, Users, ClipboardList, Trash2 } from 'lucide-react';
+import { Activity, Calendar, MapPin, Timer, ArrowLeft, Plus, Users, ClipboardList, Trash2, Construction } from 'lucide-react';
 import EventoService from '../../../services/EventoService';
 import { PruebaService } from '../../../services/ConfigService';
 import { useAuth } from '../../../context/AuthContext';
-import { isControlTecnicoEvent, isControlTecnicoRole, isJudgeAdmin } from '../../../utils/controlTecnico';
+import {
+    isControlTecnicoEvent,
+    isControlTecnicoRole,
+    isJudgeAdmin,
+    isControlesTecnicosCreationBlocked,
+} from '../../../utils/controlTecnico';
 import { resolveScopeFederationId } from '../../../utils/apiHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import InscripcionAtletaModal from './InscripcionAtletaModal';
@@ -42,10 +47,21 @@ const ControlesSection = () => {
 
     const fedIdFromUrl = new URLSearchParams(window.location.search).get('fedId');
     const scopeFedId = resolveScopeFederationId({ fedIdFromUrl, user, clubes: [] });
+    const effectiveFedId = scopeFedId ?? user?.federacionId ?? user?.FederacionId ?? null;
+    const controlesCreationBlocked = useMemo(
+        () => isControlesTecnicosCreationBlocked(effectiveFedId),
+        [effectiveFedId]
+    );
 
     useEffect(() => {
         loadControles();
     }, []);
+
+    useEffect(() => {
+        if (controlesCreationBlocked && view === 'crear') {
+            setView('lista');
+        }
+    }, [controlesCreationBlocked, view]);
 
     const loadControles = async () => {
         setLoading(true);
@@ -94,6 +110,14 @@ const ControlesSection = () => {
     };
 
     const handleCreate = async () => {
+        if (controlesCreationBlocked) {
+            setValidationErrors({
+                title: 'Módulo en construcción',
+                list: ['Los Controles Técnicos todavía no están disponibles para esta federación.'],
+            });
+            return;
+        }
+
         const missing = [];
         if (!form.controlBote) missing.push('Bote / Embarcación');
         if (!form.controlDist) missing.push('Distancia');
@@ -159,8 +183,22 @@ const ControlesSection = () => {
         );
     };
 
+    const constructionBanner = controlesCreationBlocked && (
+        <div className="controles-construction-banner" role="status">
+            <Construction size={22} aria-hidden />
+            <div>
+                <strong>Controles Técnicos en construcción</strong>
+                <p>
+                    Este módulo todavía no está habilitado para su federación.
+                    Podés consultar el historial si hubiera registros previos; la creación de nuevos controles estará disponible próximamente.
+                </p>
+            </div>
+        </div>
+    );
+
     return (
         <div className="section-container fade-in">
+            {constructionBanner}
             {view === 'gestionar' && selectedControl ? (
                 <div className="fade-in">
                     <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: '1.5rem' }}>
@@ -320,9 +358,11 @@ const ControlesSection = () => {
                                     <Timer size={18} /> Cronometrar
                                 </button>
                             )}
-                            <button type="button" className="btn-admin-primary" onClick={() => setView('crear')}>
-                                <Plus size={20} /> Nuevo Control
-                            </button>
+                            {!controlesCreationBlocked && (
+                                <button type="button" className="btn-admin-primary" onClick={() => setView('crear')}>
+                                    <Plus size={20} /> Nuevo Control
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -365,10 +405,16 @@ const ControlesSection = () => {
                     ) : (
                         <div className="empty-state">
                             <Activity size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                            <p>No se han registrado controles técnicos en esta federación</p>
-                            <button type="button" className="btn-admin-primary" style={{ marginTop: '1rem' }} onClick={() => setView('crear')}>
-                                <Plus size={18} /> Crear el primero
-                            </button>
+                            <p>
+                                {controlesCreationBlocked
+                                    ? 'Los Controles Técnicos están en construcción para esta federación.'
+                                    : 'No se han registrado controles técnicos en esta federación'}
+                            </p>
+                            {!controlesCreationBlocked && (
+                                <button type="button" className="btn-admin-primary" style={{ marginTop: '1rem' }} onClick={() => setView('crear')}>
+                                    <Plus size={18} /> Crear el primero
+                                </button>
+                            )}
                         </div>
                     )}
                 </>

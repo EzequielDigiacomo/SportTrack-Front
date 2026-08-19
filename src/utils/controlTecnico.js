@@ -20,6 +20,15 @@ export const isControlTecnicoEvent = (evento) => {
     return nombre.includes('control');
 };
 
+/** Federaciones donde Controles Técnicos aún no está habilitado (producción / clientes reales). */
+export const CONTROLES_TECNICOS_BLOCKED_FEDERATION_IDS = [1];
+
+export const isControlesTecnicosCreationBlocked = (federacionId) => {
+    if (federacionId == null || federacionId === '') return false;
+    const id = Number(federacionId);
+    return Number.isFinite(id) && CONTROLES_TECNICOS_BLOCKED_FEDERATION_IDS.includes(id);
+};
+
 export const filterEventosForJudgeRole = (eventos, user) => {
     const list = eventos || [];
     if (isControlTecnicoRole(user) && !isJudgeAdmin(user)) {

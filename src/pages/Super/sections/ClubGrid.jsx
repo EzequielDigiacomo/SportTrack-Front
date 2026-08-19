@@ -1,11 +1,54 @@
+import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Users, Mail, MapPin } from 'lucide-react';
 import { getClubFederationId, getClubFederationName, pick } from '../../../utils/apiHelpers';
 
+const PAGE_SIZE = 10;
+
 const ClubGrid = ({ clubes, onEdit, onViewAtletas, showFederation = true }) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil((clubes?.length || 0) / PAGE_SIZE));
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [clubes]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) setCurrentPage(totalPages);
+    }, [currentPage, totalPages]);
+
+    const pageClubes = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return (clubes || []).slice(start, start + PAGE_SIZE);
+    }, [clubes, currentPage]);
+
+    const pagination = (clubes?.length || 0) > PAGE_SIZE && (
+        <div className="admin-pagination">
+            <button
+                type="button"
+                className="btn-pagination"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+            >
+                Anterior
+            </button>
+            <span className="pagination-info">
+                Página <strong>{currentPage}</strong> de {totalPages}
+            </span>
+            <button
+                type="button"
+                className="btn-pagination"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+            >
+                Siguiente
+            </button>
+        </div>
+    );
+
     return (
         <div className="club-grid-container fade-in">
             <div className="clubes-mobile-list">
-                {clubes.map(c => {
+                {pageClubes.map(c => {
                     const clubId = pick(c, 'id', 'Id');
                     const fedName = getClubFederationName(c);
 
@@ -51,7 +94,13 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, showFederation = true }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {clubes.map(c => {
+                        {pageClubes.length === 0 ? (
+                            <tr>
+                                <td colSpan={showFederation ? 7 : 6} className="empty-row">
+                                    No hay clubes registrados.
+                                </td>
+                            </tr>
+                        ) : pageClubes.map(c => {
                             const clubId = pick(c, 'id', 'Id');
                             const fedName = getClubFederationName(c);
 
@@ -79,6 +128,8 @@ const ClubGrid = ({ clubes, onEdit, onViewAtletas, showFederation = true }) => {
                     </tbody>
                 </table>
             </div>
+
+            {pagination}
         </div>
     );
 };

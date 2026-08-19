@@ -255,4 +255,35 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.controles-construction-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: var(--color-text-primary);
+}
+
+.controles-construction-banner svg {
+    flex-shrink: 0;
+    color: #f59e0b;
+    margin-top: 2px;
+}
+
+.controles-construction-banner strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+    color: #fbbf24;
+}
+
+.controles-construction-banner p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
 

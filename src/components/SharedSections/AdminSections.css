@@ -212,6 +212,16 @@ td.actions-cell > *:last-child {
     width: 100%;
 }
 
+.clubes-desktop-table.admin-table-wrapper {
+    overflow: visible;
+    max-height: none;
+    width: 100%;
+}
+
+.clubes-desktop-table .admin-table thead th {
+    position: static;
+}
+
 .logins-desktop-table .admin-table {
     min-width: 1180px;
     width: 100%;
