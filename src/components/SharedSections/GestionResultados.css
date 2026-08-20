@@ -1777,3 +1777,175 @@
     }
 }
 
+/* Light mode: contraste alto (verdes, grises, textos) */
+[data-theme='light'] .alert-message {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(30, 64, 175, 0.4);
+    color: #0f172a;
+}
+
+[data-theme='light'] .info-badge-modern {
+    background: #cbd5e1;
+    border-color: #64748b;
+    color: #334155;
+}
+
+[data-theme='light'] .info-badge-modern strong {
+    color: #0f172a;
+}
+
+[data-theme='light'] .fase-status-badge.saved {
+    color: #064e3b;
+    background: #a7f3d0;
+    border-color: #047857;
+}
+
+[data-theme='light'] .fase-status-badge.saved .fase-status-dot {
+    background: #047857;
+    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.25);
+}
+
+[data-theme='light'] .fase-status-badge.running {
+    color: #1e3a8a;
+    background: #bfdbfe;
+    border-color: #1d4ed8;
+    box-shadow: none;
+}
+
+[data-theme='light'] .fase-status-badge.verifying {
+    color: #92400e;
+    background: #fde68a;
+    border-color: #b45309;
+}
+
+[data-theme='light'] .official-badge {
+    background: #a7f3d0;
+    color: #064e3b;
+    border: 1px solid #047857;
+}
+
+[data-theme='light'] .input-official {
+    border-color: #047857 !important;
+    background: #d1fae5 !important;
+    color: #064e3b !important;
+}
+
+[data-theme='light'] .club-badge {
+    background: #cbd5e1;
+    color: #0f172a;
+    border: 1px solid #64748b;
+}
+
+[data-theme='light'] .btn-transfer-pos {
+    background: #93c5fd;
+    border-color: #1d4ed8;
+    color: #0f172a;
+}
+
+[data-theme='light'] .btn-transfer-pos:hover:not(:disabled) {
+    background: #60a5fa;
+    border-color: #1e3a8a;
+    color: #0f172a;
+}
+
+[data-theme='light'] .btn-status-toggle {
+    background: #cbd5e1;
+    border-color: #64748b;
+    color: #0f172a;
+}
+
+[data-theme='light'] .btn-status-toggle:hover:not(:disabled) {
+    background: #94a3b8;
+    color: #0f172a;
+}
+
+[data-theme='light'] .seeding-status-banner.info {
+    background: #bfdbfe;
+    border-color: #1d4ed8;
+    color: #0f172a;
+}
+
+[data-theme='light'] .seeding-status-banner.info strong {
+    color: #1e3a8a;
+}
+
+[data-theme='light'] .seeding-status-banner.complete {
+    background: #a7f3d0;
+    border-color: #047857;
+    color: #064e3b;
+}
+
+[data-theme='light'] .seeding-status-banner.incomplete {
+    background: #fecaca;
+    border-color: #b91c1c;
+    color: #7f1d1d;
+}
+
+[data-theme='light'] .promotion-status-banner.ready {
+    background: #a7f3d0;
+    border-color: #047857;
+    color: #064e3b;
+}
+
+[data-theme='light'] .promotion-status-banner.info {
+    background: #bfdbfe;
+    border-color: #1d4ed8;
+    color: #0f172a;
+}
+
+[data-theme='light'] .grid-athlete-name,
+[data-theme='light'] .crew-member-main {
+    color: #0f172a;
+}
+
+[data-theme='light'] .bote-id-badge {
+    background: #1e3a8a;
+    color: #ffffff;
+}
+
+[data-theme='light'] .resultados-table td {
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+[data-theme='light'] .resultados-table tbody tr {
+    background: #f1f5f9;
+}
+
+[data-theme='light'] .resultados-table thead th {
+    background: #cbd5e1;
+    color: #0f172a;
+    border-color: #64748b;
+}
+
+[data-theme='light'] .alert-msg.warning span {
+    color: inherit;
+}
+
+[data-theme='light'] .live-timer-inline {
+    color: #1e3a8a;
+}
+
+.alert-oficial-publicado {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid #059669;
+    background: rgba(5, 150, 105, 0.12);
+}
+
+.alert-oficial-publicado span {
+    color: #34d399;
+    font-weight: 600;
+}
+
+[data-theme='light'] .alert-oficial-publicado {
+    border-left-color: #047857;
+    background: #a7f3d0;
+}
+
+[data-theme='light'] .alert-oficial-publicado span {
+    color: #064e3b;
+}
+

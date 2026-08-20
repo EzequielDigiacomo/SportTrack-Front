@@ -192,3 +192,27 @@
         overflow: hidden;
     }
 }
+
+/* Light mode */
+[data-theme='light'] .jc-header {
+    background: rgba(241, 245, 249, 0.95);
+    border-bottom-color: var(--color-border);
+}
+
+[data-theme='light'] .jc-back-btn {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.12);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .jc-back-btn:hover {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme='light'] .jc-brand-name {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .jc-brand-sub {
+    color: var(--color-text-secondary);
+}

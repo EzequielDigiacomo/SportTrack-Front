@@ -1224,8 +1224,8 @@ const connectedStarter = activeJudges.find(j => {
                                             </span>
                                         </div>
                                     ) : (
-                                        <div className="alert-msg warning fade-in" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
-                                            <span style={{ color: '#10b981', fontWeight: 600 }}>
+                                        <div className="alert-msg warning fade-in alert-oficial-publicado">
+                                            <span>
                                                 {faseSeleccionada.estado === "Pendiente de Validación"
                                                     ? '🏁 Serie completada. Podés descalificar (DSQ), traspasar puestos con «Mover» y luego «Guardar y Hacer Oficial».'
                                                     : '✅ Resultados oficiales publicados.'}

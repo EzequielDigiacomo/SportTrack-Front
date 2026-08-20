@@ -770,3 +770,39 @@
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+
+/* Light mode: badges con más contraste */
+[data-theme='light'] .badge-sexo.masc {
+    background: #bfdbfe;
+    color: #1e3a8a;
+    border-color: #1d4ed8;
+}
+
+[data-theme='light'] .badge-sexo.fem {
+    background: #fbcfe8;
+    color: #9d174d;
+    border-color: #be185d;
+}
+
+[data-theme='light'] .badge-sexo.mix {
+    background: #99f6e4;
+    color: #115e59;
+    border-color: #0f766e;
+}
+
+[data-theme='light'] .badge-bote {
+    background: #ddd6fe;
+    color: #5b21b6;
+    border: 1px solid #7c3aed;
+}
+
+[data-theme='light'] .badge-inscritos {
+    background: #bfdbfe;
+    color: #1e3a8a;
+}
+
+[data-theme='light'] .badge-distancia {
+    background: #fde68a;
+    color: #92400e;
+    border-color: #b45309;
+}

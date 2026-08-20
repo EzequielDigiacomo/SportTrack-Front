@@ -1688,6 +1688,20 @@ th.sortable:hover .sort-icon {
     color: white;
 }
 
+[data-theme='light'] .admin-input-small {
+    background: #cbd5e1 !important;
+    border: 1px solid #64748b !important;
+    color: #0f172a !important;
+}
+
+[data-theme='light'] .admin-input-small:disabled,
+[data-theme='light'] .admin-input-small[readonly] {
+    background: #94a3b8 !important;
+    border-color: #64748b !important;
+    color: #0f172a !important;
+    opacity: 1;
+}
+
 .admin-table.mini th, .admin-table.mini td {
     padding: 0.5rem 0.6rem !important;
     font-size: 0.8rem !important;

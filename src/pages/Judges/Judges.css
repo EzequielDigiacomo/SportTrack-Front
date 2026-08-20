@@ -3065,3 +3065,245 @@
     }
 }
 
+
+/* ===== LIGHT MODE: jueces / largador / mesa / sync ===== */
+[data-theme='light'] .judges-top-header {
+    background: rgba(241, 245, 249, 0.92);
+    border-bottom-color: var(--color-border);
+}
+
+[data-theme='light'] .global-sync-bar {
+    background: rgba(241, 245, 249, 0.95);
+    border-bottom-color: var(--color-border);
+}
+
+[data-theme='light'] .judges-sync-card {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: var(--color-border);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme='light'] .judges-sync-card:hover {
+    background: rgba(15, 23, 42, 0.06);
+    border-color: rgba(15, 23, 42, 0.15);
+}
+
+[data-theme='light'] .control-panel-navbar {
+    border-color: var(--color-border);
+}
+
+[data-theme='light'] .sync-role-name {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .sync-user-pill.connected {
+    color: #064e3b;
+    background: #6ee7b7;
+    border-color: #047857;
+    box-shadow: none;
+}
+
+[data-theme='light'] .sync-user-pill.disconnected {
+    color: #7f1d1d;
+    background: #fca5a5;
+    border-color: #b91c1c;
+}
+
+[data-theme='light'] .starter-live-clock,
+[data-theme='light'] .finisher-wall-clock {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .starter-live-clock-icon,
+[data-theme='light'] .finisher-wall-clock-icon {
+    color: #1d4ed8;
+}
+
+[data-theme='light'] .starter-live-clock-time,
+[data-theme='light'] .finisher-wall-clock-time {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .prueba-item-mini {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .prueba-item-mini.finished {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+[data-theme='light'] .prueba-item-mini:hover,
+[data-theme='light'] .prueba-item-mini.active {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.06) 100%);
+    color: var(--color-text-primary);
+    border-color: #1e3a8a;
+}
+
+[data-theme='light'] .prueba-item-mini.active .status-dot.finished {
+    background: #059669;
+    box-shadow: 0 0 6px rgba(5, 150, 105, 0.5);
+}
+
+[data-theme='light'] .connection-state-alert-bar.fase-cerrada-banner {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #1e3a8a;
+}
+
+[data-theme='light'] .connection-state-alert-bar.disconnected {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(185, 28, 28, 0.35);
+    color: #991b1b;
+}
+
+[data-theme='light'] .start-lag-chip {
+    color: #1e3a8a;
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
+[data-theme='light'] .btn-refresh-sync {
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+[data-theme='light'] .btn-refresh-sync:hover:not(:disabled) {
+    color: #1e3a8a;
+    background: rgba(37, 99, 235, 0.18);
+    border-color: rgba(37, 99, 235, 0.55);
+}
+
+[data-theme='light'] .race-meta {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .meta-item {
+    background: rgba(15, 23, 42, 0.05);
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .checkin-row,
+[data-theme='light'] .finish-row,
+[data-theme='light'] .quick-nav-footer {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .athlete-name,
+[data-theme='light'] .checkin-row .athlete-name,
+[data-theme='light'] .a-name {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .club-tag,
+[data-theme='light'] .a-club,
+[data-theme='light'] .nav-index {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .lane-badge,
+[data-theme='light'] .checkin-row .lane-badge {
+    background: #1e3a8a;
+    color: #ffffff;
+}
+
+[data-theme='light'] .lane-circle {
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .fase-btn,
+[data-theme='light'] .fase-mini-btn {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.12);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .fase-btn.active,
+[data-theme='light'] .fase-mini-btn.active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: #ffffff;
+}
+
+[data-theme='light'] .btn-view-toggle {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.12);
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .btn-view-toggle:hover {
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .btn-back-header:hover {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .btn-nav-step:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.06);
+}
+
+[data-theme='light'] .alert-card-content p {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .global-race-alert {
+    background: linear-gradient(145deg, #ffffff, #f1f5f9);
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .lane-btn {
+    color: var(--color-text-primary);
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+}
+
+[data-theme='light'] .lane-btn.empty {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: rgba(15, 23, 42, 0.25);
+}
+
+[data-theme='light'] .arrival-lane {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .a-name,
+[data-theme='light'] .arr-name {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .arr-club {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .a-time {
+    color: #047857;
+}
+
+[data-theme='light'] .finisher-actions {
+    border-top-color: var(--color-border);
+}
+
+[data-theme='light'] .starting-overlay-card h2 {
+    color: var(--color-text-primary);
+}
+
+[data-theme='light'] .status-desc {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .cronograma-drawer,
+[data-theme='light'] .starter-sidebar,
+[data-theme='light'] .finisher-sidebar {
+    color: var(--color-text-primary);
+}

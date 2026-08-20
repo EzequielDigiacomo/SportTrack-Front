@@ -76,7 +76,11 @@ const MaratonResultadosGrids = ({
                             {g.title}
                         </h3>
                         <span className="badge-inscritos">{g.resultados.length}</span>
-                        <span className="badge-sexo mix">{g.sexoLabel}</span>
+                        <span className={`badge-sexo ${
+                            String(g.sexoLabel || '').toLowerCase().startsWith('masc') ? 'masc'
+                                : String(g.sexoLabel || '').toLowerCase().startsWith('fem') ? 'fem'
+                                    : 'mix'
+                        }`}>{g.sexoLabel}</span>
                         <span className="badge-bote">{g.boteLabel}</span>
                     </div>
                     <ResultadosTable
