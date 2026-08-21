@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { List, RotateCcw, RefreshCw, Pencil, Save, X, Trash2, FileDown } from 'lucide-react';
+import { List, RotateCcw, RefreshCw, Pencil, Save, X, Trash2 } from 'lucide-react';
 import ClubService from '../../../services/ClubService';
 import PdfExportService from '../../../services/PdfExportService';
 import ConfirmDialog from '../../Common/ConfirmDialog';
@@ -30,6 +30,7 @@ const MaratonStartListPanel = ({
     evento = null,
     isAdmin = true,
     onMessage,
+    onPdfStateChange,
 }) => {
     const [inscriptos, setInscriptos] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -226,7 +227,19 @@ const MaratonStartListPanel = ({
     const hasNumeros = inscriptos.some(i => i.numeroCompetidor && String(i.numeroCompetidor).trim() !== '');
     const isCrewBoat = (form?.crew?.length || 0) > 1;
 
-    const handleExportGrillaPdf = async () => {
+    const clasificacionGroups = useMemo(() => {
+        const map = new Map();
+        for (const ins of inscriptos) {
+            if (!ins.numeroCompetidor || String(ins.numeroCompetidor).trim() === '') continue;
+            const key = ins.clasificacionKey || 'sin-clasificacion';
+            const title = ins.clasificacionTitle || 'Sin clasificación';
+            if (!map.has(key)) map.set(key, { key, title, count: 0 });
+            map.get(key).count += 1;
+        }
+        return [...map.values()].sort((a, b) => a.title.localeCompare(b.title, 'es'));
+    }, [inscriptos]);
+
+    const runExport = async (options = {}) => {
         if (!hasNumeros) return;
         setExportingPdf(true);
         try {
@@ -236,6 +249,7 @@ const MaratonStartListPanel = ({
                 {
                     largadaLabel: selectedLargada?.label || 'Largada',
                     fechaHora: selectedLargada?.fechaHora || null,
+                    ...options,
                 }
             );
         } catch (err) {
@@ -245,6 +259,24 @@ const MaratonStartListPanel = ({
             setExportingPdf(false);
         }
     };
+
+    const handleExportGrillaPdf = () => runExport();
+    const handleExportSubdividedPdf = () => runExport({ subdivide: true });
+    const handleExportGroupPdf = (clasificacionKey) => runExport({ clasificacionKey });
+
+    useEffect(() => {
+        if (!onPdfStateChange) return undefined;
+        onPdfStateChange({
+            hasNumeros,
+            groups: clasificacionGroups,
+            exporting: exportingPdf,
+            onExportFull: handleExportGrillaPdf,
+            onExportSubdivided: handleExportSubdividedPdf,
+            onExportGroup: handleExportGroupPdf,
+        });
+    }, [hasNumeros, clasificacionGroups, exportingPdf, selectedPrueba, selectedLargada, inscriptos, evento, onPdfStateChange]);
+
+    useEffect(() => () => onPdfStateChange?.(null), [onPdfStateChange]);
 
     const deleteLabel = deleteTarget
         ? (deleteTarget.tripulantes?.length
@@ -409,18 +441,6 @@ const MaratonStartListPanel = ({
                                 >
                                     <RotateCcw size={16} />
                                     {hasNumeros ? 'Regenerar números y largada' : 'Sortear números y armar largada'}
-                                </button>
-                            )}
-                            {hasNumeros && (
-                                <button
-                                    type="button"
-                                    className="btn-admin-action secondary"
-                                    onClick={handleExportGrillaPdf}
-                                    disabled={exportingPdf}
-                                    title="Descargar PDF con el orden de sorteo (Nº 1…N)"
-                                >
-                                    <FileDown size={16} />
-                                    {exportingPdf ? 'Generando PDF…' : 'PDF Grilla de largada'}
                                 </button>
                             )}
                         </div>

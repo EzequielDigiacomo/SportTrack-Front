@@ -1337,6 +1337,55 @@
     flex-wrap: wrap;
 }
 
+.maraton-header-pdf .maraton-pdf-hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    line-height: 1.35;
+}
+
+.maraton-pdf-actions {
+    margin-top: 0.35rem;
+    align-items: center;
+}
+
+.maraton-pdf-dropdown {
+    position: relative;
+}
+
+.maraton-pdf-menu {
+    right: 0;
+    left: auto;
+    min-width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 40;
+}
+
+.maraton-pdf-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.maraton-pdf-group-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+[data-theme='light'] .maraton-header-pdf .maraton-pdf-hint {
+    color: #475569;
+}
+
+[data-theme='light'] .btn-pdf-mini {
+    background: #cbd5e1 !important;
+    color: #0f172a !important;
+    border: 1px solid #64748b !important;
+}
+
 .btn-pdf-mini {
     padding: 0 8px !important;
     font-size: 10px !important;

@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { formatTime } from '../../utils/dateUtils';
-import { Calendar, Search, List, FileText } from 'lucide-react';
+import { Calendar, Search, List, FileText, FileDown, ChevronDown } from 'lucide-react';
 import { buildMaratonLargadaOptions } from './maraton/maratonStartListUtils';
 
 const CATEGORIA_NAMES = {
@@ -34,7 +34,27 @@ const ResultadosHeader = ({
     onSelectRegata,
     selectedFaseId,
     isMaraton = false,
+    /** Post-sorteo Maratón: { hasNumeros, groups, exporting, onExportFull, onExportSubdivided, onExportGroup } */
+    maratonPdf = null,
 }) => {
+    const [showMaratonPdfMenu, setShowMaratonPdfMenu] = useState(false);
+    const maratonPdfMenuRef = useRef(null);
+
+    useEffect(() => {
+        if (!showMaratonPdfMenu) return undefined;
+        const onDocClick = (e) => {
+            if (maratonPdfMenuRef.current && !maratonPdfMenuRef.current.contains(e.target)) {
+                setShowMaratonPdfMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [showMaratonPdfMenu]);
+
+    useEffect(() => {
+        setShowMaratonPdfMenu(false);
+    }, [selectedPrueba, selectedEvento]);
+
     const CATEGORIA_COLORS = {
         1: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
         2: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' },
@@ -155,6 +175,76 @@ const ResultadosHeader = ({
                         </select>
                     )}
                 </div>
+
+                {/* PDF Maratón — derecha del selector Evento/Largada, posterior al sorteo */}
+                {isMaraton && currentTab === 'startList' && (
+                <div className="form-group maraton-header-pdf">
+                    <div className="regata-label-row">
+                        <label className="resultados-field-label" style={{ margin: 0 }}>
+                            <FileText size={14} className="text-accent" /> Exportar PDF
+                        </label>
+                    </div>
+                    {!selectedMaratonLargadaKey ? (
+                        <p className="maraton-pdf-hint">Seleccioná una largada para exportar.</p>
+                    ) : !maratonPdf?.hasNumeros ? (
+                        <p className="maraton-pdf-hint">Disponible después del sorteo de números.</p>
+                    ) : (
+                        <div className="regata-pdf-actions maraton-pdf-actions" ref={maratonPdfMenuRef}>
+                            <button
+                                type="button"
+                                className="btn-admin-secondary compact btn-pdf-mini"
+                                disabled={maratonPdf.exporting}
+                                onClick={() => maratonPdf.onExportFull?.()}
+                                title="PDF con el orden completo de la largada (Nº 1…N)"
+                            >
+                                <FileDown size={10} />
+                                {maratonPdf.exporting ? 'Generando…' : 'PDF Grilla'}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-admin-secondary compact btn-pdf-mini"
+                                disabled={maratonPdf.exporting}
+                                onClick={() => maratonPdf.onExportSubdivided?.()}
+                                title="PDF con una tabla por Categoría · Sexo · Bote"
+                            >
+                                <FileDown size={10} />
+                                PDF Clasificaciones
+                            </button>
+                            {(maratonPdf.groups?.length || 0) > 0 && (
+                                <div className="pdf-dropdown-container maraton-pdf-dropdown">
+                                    <button
+                                        type="button"
+                                        className="btn-admin-secondary compact btn-pdf-mini"
+                                        disabled={maratonPdf.exporting}
+                                        onClick={() => setShowMaratonPdfMenu(v => !v)}
+                                        title="Descargar PDF de una clasificación"
+                                    >
+                                        <FileDown size={10} />
+                                        Por categoría <ChevronDown size={10} />
+                                    </button>
+                                    {showMaratonPdfMenu && (
+                                        <div className="pdf-dropdown-menu fade-in maraton-pdf-menu">
+                                            {maratonPdf.groups.map(g => (
+                                                <button
+                                                    key={g.key}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowMaratonPdfMenu(false);
+                                                        maratonPdf.onExportGroup?.(g.key);
+                                                    }}
+                                                >
+                                                    <span>{g.title}</span>
+                                                    <span className="maraton-pdf-group-count">{g.count}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                )}
 
                 {/* Regata Selector — solo pista (Maratón no usa heats/carriles) */}
                 {!isMaraton && (

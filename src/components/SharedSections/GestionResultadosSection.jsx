@@ -62,6 +62,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         location.pathname.includes('juez-control') ||
         location.pathname.includes('carga-manual');
     const [showPdfMenu, setShowPdfMenu] = useState(false);
+    const [maratonPdf, setMaratonPdf] = useState(null);
     
     const planNombre = user?.plan?.nombre?.toLowerCase() || 'bronce';
     const isBronce = planNombre === 'bronce';
@@ -761,6 +762,7 @@ const connectedStarter = activeJudges.find(j => {
             onSelectRegata={handleSelectRegata}
             selectedFaseId={selectedFaseIdForHeader}
             isMaraton={isMaratonEvent}
+            maratonPdf={isMaratonEvent && currentTab === 'startList' ? maratonPdf : null}
         />
 
         {isControlOrManualPage && (
@@ -779,6 +781,7 @@ const connectedStarter = activeJudges.find(j => {
                     evento={eventoActual}
                     isAdmin={isAdmin}
                     onMessage={setMessage}
+                    onPdfStateChange={setMaratonPdf}
                 />
             </div>
         ) : selectedPrueba ? (

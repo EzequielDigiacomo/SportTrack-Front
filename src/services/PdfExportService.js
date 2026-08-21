@@ -421,9 +421,17 @@ const PdfExportService = {
     /**
      * Grilla de largada Maratón — orden de sorteo (Nº 1…N) tras armar la largada.
      * inscriptos: filas enriquecidas de loadMaratonLargadaInscriptos (con numeroCompetidor).
+     * options.subdivide: una tabla por Categoría · Sexo · Bote
+     * options.clasificacionKey: exportar solo esa clasificación
      */
     exportMaratonLargadaStartList: async (inscriptos, eventoOrName, options = {}) => {
-        const { largadaLabel = '', fechaHora = null } = options;
+        const {
+            largadaLabel = '',
+            fechaHora = null,
+            subdivide = false,
+            clasificacionKey = null,
+        } = options;
+
         const list = [...(inscriptos || [])]
             .filter(i => i.numeroCompetidor && String(i.numeroCompetidor).trim() !== '')
             .sort((a, b) => {
@@ -434,11 +442,7 @@ const PdfExportService = {
             });
         if (!list.length) return;
 
-        const logo = await getPdfLogo();
-        const eventoInfo = normalizeEventoInfo(eventoOrName);
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-        const resultados = list.map(ins => ({
+        const toResultado = (ins) => ({
             carril: ins.numeroCompetidor,
             participanteNombre: ins.participanteNombreCompleto || ins.participanteNombre || 'Atleta',
             tripulantes: (ins.tripulantes || []).map(t => ({
@@ -447,21 +451,62 @@ const PdfExportService = {
             })),
             clubNombre: ins.clubNombre,
             clubSigla: ins.clubSigla,
-        }));
+        });
 
-        const fase = {
-            nombreFase: 'Orden de largada',
-            fechaHoraProgramada: fechaHora,
-            _pdfSubtitleOverride: largadaLabel,
-            resultados,
-        };
+        const logo = await getPdfLogo();
+        const eventoInfo = normalizeEventoInfo(eventoOrName);
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        renderStackedPages(doc, [fase], eventoInfo, 'Grilla de Largada', 'Maratón', 'startList', logo);
+        let fases;
+        let docSubtitle = 'Maratón';
+        let fileSuffix = 'Grilla_Largada';
+
+        if (subdivide || clasificacionKey) {
+            const groupsMap = new Map();
+            for (const ins of list) {
+                const key = ins.clasificacionKey || 'sin-clasificacion';
+                const title = ins.clasificacionTitle || 'Sin clasificación';
+                if (!groupsMap.has(key)) {
+                    groupsMap.set(key, { key, title, items: [] });
+                }
+                groupsMap.get(key).items.push(ins);
+            }
+
+            let groups = [...groupsMap.values()];
+            if (clasificacionKey) {
+                groups = groups.filter(g => g.key === clasificacionKey);
+            }
+            if (!groups.length) return;
+
+            fases = groups.map(g => ({
+                nombreFase: g.title,
+                fechaHoraProgramada: fechaHora,
+                _pdfSubtitleOverride: largadaLabel,
+                resultados: g.items.map(toResultado),
+            }));
+
+            if (clasificacionKey && groups.length === 1) {
+                docSubtitle = groups[0].title;
+                fileSuffix = String(groups[0].title).replace(/[^\w\d\-+·]+/g, '_').slice(0, 40);
+            } else {
+                docSubtitle = 'Por clasificación';
+                fileSuffix = 'StartList_Clasificaciones';
+            }
+        } else {
+            fases = [{
+                nombreFase: 'Orden de largada',
+                fechaHoraProgramada: fechaHora,
+                _pdfSubtitleOverride: largadaLabel,
+                resultados: list.map(toResultado),
+            }];
+        }
+
+        renderStackedPages(doc, fases, eventoInfo, 'Grilla de Largada', docSubtitle, 'startList', logo);
 
         const safeLabel = String(largadaLabel || 'Largada')
             .replace(/[^\w\d\-+·]+/g, '_')
             .slice(0, 48);
-        doc.save(`${eventoInfo.nombre}_${safeLabel}_Grilla_Largada.pdf`.replace(/\s+/g, '_'));
+        doc.save(`${eventoInfo.nombre}_${safeLabel}_${fileSuffix}.pdf`.replace(/\s+/g, '_'));
     },
 
     /** Full event start list — 4 grids per page, 1 column */
