@@ -1845,6 +1845,54 @@
     color: #0f172a;
 }
 
+[data-theme='light'] .filter-group label {
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .resultados-header-status {
+    color: var(--color-text-secondary);
+    border-top-color: var(--color-border);
+}
+
+[data-theme='light'] .status-pill {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #475569;
+}
+
+[data-theme='light'] .status-pill strong {
+    color: #0f172a;
+}
+
+[data-theme='light'] .admin-tabs-nav-modern {
+    background: #cbd5e1;
+}
+
+[data-theme='light'] .tab-link {
+    color: #475569;
+}
+
+[data-theme='light'] .tab-link:hover {
+    color: #0f172a;
+}
+
+[data-theme='light'] .tab-link.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+[data-theme='light'] .btn-admin-icon {
+    background: #e2e8f0;
+    border: 1px solid #64748b;
+    color: #0f172a;
+}
+
+[data-theme='light'] .btn-admin-icon:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+}
+
 [data-theme='light'] .info-badge-modern {
     background: #cbd5e1;
     border-color: #64748b;

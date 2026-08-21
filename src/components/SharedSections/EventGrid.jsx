@@ -8,11 +8,11 @@ const PAGE_SIZE = 8;
 
 const ModalidadChip = ({ evento }) => (
     resolveIsMaratonEvent(evento) ? (
-        <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>
+        <span className="chip chip-modalidad chip-modalidad-maraton">
             Maratón
         </span>
     ) : (
-        <span className="chip" style={{ fontSize: '0.7rem', background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd' }}>
+        <span className="chip chip-modalidad chip-modalidad-velocidad">
             Velocidad
         </span>
     )

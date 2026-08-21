@@ -91,7 +91,7 @@ const AtletaGrid = ({ atletas, onEdit, onDelete, onAssignClub, sortConfig, reque
                             <tr key={atleta.id} style={!atleta.clubNombre ? { borderLeft: '3px solid var(--color-accent-orange)' } : {}}>
                                 <td>
                                     <div style={{ fontWeight: 'bold' }}>{atleta.nombre} {atleta.apellido}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>{atleta.email || 'Sin email'}</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{atleta.email || 'Sin email'}</div>
                                 </td>
                                 <td>{atleta.dni || '—'}</td>
                                 {showFederation && (

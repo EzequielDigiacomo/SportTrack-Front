@@ -543,7 +543,7 @@ const MaratonStartListPanel = ({
                                                     </strong>
                                                 </td>
                                                 <td>{ins.clubNombre || ins.clubSigla || 'Independiente'}</td>
-                                                <td style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{ins.categoriaLabel || '—'}</td>
+                                                <td className="nomina-categoria-cell">{ins.categoriaLabel || '—'}</td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <span className={`badge-sexo ${
                                                         String(ins.sexoLabel || '').toLowerCase().startsWith('masc') ? 'masc'

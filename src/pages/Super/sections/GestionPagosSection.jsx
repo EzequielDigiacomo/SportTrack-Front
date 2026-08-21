@@ -1284,7 +1284,7 @@ const GestionPagosSection = () => {
                                                                         <td style={{ padding: '0.85rem 1rem' }}>
                                                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                                                 <strong>{atleta.nombre}</strong>
-                                                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>Club: {atleta.clubNombre || '—'}</span>
+                                                                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Club: {atleta.clubNombre || '—'}</span>
                                                                             </div>
                                                                         </td>
                                                                         <td style={{ padding: '0.85rem 1rem' }}>

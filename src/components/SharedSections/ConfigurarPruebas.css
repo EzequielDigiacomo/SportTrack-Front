@@ -199,6 +199,15 @@
     background: rgba(239, 68, 68, 0.15) !important;
 }
 
+.nomina-categoria-cell {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+[data-theme='light'] .nomina-categoria-cell {
+    color: #334155;
+}
+
 @media (max-width: 560px) {
     .nomina-edit-grid--2,
     .nomina-edit-grid--numero-clasif {

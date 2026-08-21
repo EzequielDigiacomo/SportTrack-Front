@@ -635,9 +635,9 @@ const GestionEventosSection = () => {
                                 </p>
                                 <div className="dashboard-chips">
                                     {resolveIsMaratonEvent(selectedEvento) ? (
-                                        <span className="chip" style={{ background: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc' }}>Maratón</span>
+                                        <span className="chip chip-modalidad chip-modalidad-maraton">Maratón</span>
                                     ) : (
-                                        <span className="chip" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd' }}>Velocidad</span>
+                                        <span className="chip chip-modalidad chip-modalidad-velocidad">Velocidad</span>
                                     )}
                                     {selectedEvento.restringirSoloCategoriaPropia && <span className="chip chip-ecu-yellow">Categoría Única</span>}
                                     {selectedEvento.permitirSub23EnSenior && <span className="chip chip-ecu-blue">S23 en Senior</span>}
