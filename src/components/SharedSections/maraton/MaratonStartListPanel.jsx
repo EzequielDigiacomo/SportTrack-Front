@@ -14,8 +14,14 @@ import {
     updateMaratonNominaRow,
     buildCrewFromInscripcion,
     removeMaratonNominaRow,
+    getCategoriaLabelFromEventoPrueba,
 } from './maratonStartListUtils';
 import '../ConfigurarPruebas.css';
+
+const stripCategoryAges = (text) => String(text || '')
+    .replace(/\s*\([^)]*años?\)/gi, '')
+    .replace(/\s*\(\d+\s*[-–]\s*\d+[^)]*\)/g, '')
+    .trim();
 
 /**
  * Start List exclusivo de Maratón.
@@ -239,6 +245,16 @@ const MaratonStartListPanel = ({
         return [...map.values()].sort((a, b) => a.title.localeCompare(b.title, 'es'));
     }, [inscriptos]);
 
+    const categoriasLabelCorta = useMemo(() => {
+        const members = selectedLargada?.members || [];
+        const cats = [...new Set(
+            members
+                .map(ep => stripCategoryAges(getCategoriaLabelFromEventoPrueba(ep)))
+                .filter(c => c && c !== '—')
+        )];
+        return cats.join(' + ');
+    }, [selectedLargada]);
+
     const runExport = async (options = {}) => {
         if (!hasNumeros) return;
         setExportingPdf(true);
@@ -249,6 +265,7 @@ const MaratonStartListPanel = ({
                 {
                     largadaLabel: selectedLargada?.label || 'Largada',
                     fechaHora: selectedLargada?.fechaHora || null,
+                    categoriasLabel: categoriasLabelCorta,
                     ...options,
                 }
             );
@@ -260,9 +277,9 @@ const MaratonStartListPanel = ({
         }
     };
 
-    const handleExportGrillaPdf = () => runExport();
-    const handleExportSubdividedPdf = () => runExport({ subdivide: true });
-    const handleExportGroupPdf = (clasificacionKey) => runExport({ clasificacionKey });
+    const handleExportGrillaPdf = () => runExport({ pdfKind: 'Grilla Completa' });
+    const handleExportSubdividedPdf = () => runExport({ subdivide: true, pdfKind: 'Grilla Completa por Categ' });
+    const handleExportGroupPdf = (clasificacionKey) => runExport({ clasificacionKey, pdfKind: 'Grilla Completa' });
 
     useEffect(() => {
         if (!onPdfStateChange) return undefined;

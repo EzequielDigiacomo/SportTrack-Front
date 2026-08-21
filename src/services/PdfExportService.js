@@ -20,6 +20,52 @@ const DISTANCIA_NAMES = {
 };
 const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
+/** Quita rangos de edad: "Cadete (15-16 años)" → "Cadete" */
+const stripCategoryAges = (text) => String(text || '')
+    .replace(/\s*\([^)]*años?\)/gi, '')
+    .replace(/\s*\(\d+\s*[-–]\s*\d+[^)]*\)/g, '')
+    .trim();
+
+/** Parte segura para nombre de archivo (sin _ ni caracteres inválidos). */
+const sanitizePdfFilePart = (text) => String(text || '')
+    .replace(/[<>:"/\\|?*_\u0000-\u001f]/g, ' ')
+    .replace(/\s*·\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** Categorías cortas desde label de largada o lista explícita. */
+const buildCategoriasForFilename = (categoriasLabel, largadaLabel) => {
+    if (categoriasLabel) {
+        return sanitizePdfFilePart(
+            String(categoriasLabel)
+                .split(/\s*\+\s*/)
+                .map(stripCategoryAges)
+                .filter(Boolean)
+                .join(' + ')
+        );
+    }
+    // Fallback: sacar categorías del label "10:45 · Cadete (15-16 años) + Junior … · K1/C1 · …"
+    const raw = String(largadaLabel || '');
+    const withoutTime = raw.replace(/^\d{1,2}:\d{2}\s*[·.]\s*/, '');
+    const catChunk = withoutTime.split(/\s*[·.]\s*/)[0] || '';
+    return sanitizePdfFilePart(
+        catChunk
+            .split(/\s*\+\s*/)
+            .map(stripCategoryAges)
+            .filter(Boolean)
+            .join(' + ')
+    );
+};
+
+const buildMaratonStartListFilename = (eventoNombre, categoriasLabel, largadaLabel, pdfKind) => {
+    const parts = [
+        sanitizePdfFilePart(eventoNombre || 'Evento'),
+        buildCategoriasForFilename(categoriasLabel, largadaLabel),
+        sanitizePdfFilePart(pdfKind || 'Grilla Completa'),
+    ].filter(Boolean);
+    return `${parts.join(' ')}.pdf`;
+};
+
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
 const getPruebaInfo = (faseOrPrueba) => {
@@ -430,6 +476,8 @@ const PdfExportService = {
             fechaHora = null,
             subdivide = false,
             clasificacionKey = null,
+            categoriasLabel = '',
+            pdfKind = null,
         } = options;
 
         const list = [...(inscriptos || [])]
@@ -459,7 +507,8 @@ const PdfExportService = {
 
         let fases;
         let docSubtitle = 'Maratón';
-        let fileSuffix = 'Grilla_Largada';
+        let resolvedPdfKind = pdfKind || 'Grilla Completa';
+        let resolvedCategorias = categoriasLabel;
 
         if (subdivide || clasificacionKey) {
             const groupsMap = new Map();
@@ -487,10 +536,11 @@ const PdfExportService = {
 
             if (clasificacionKey && groups.length === 1) {
                 docSubtitle = groups[0].title;
-                fileSuffix = String(groups[0].title).replace(/[^\w\d\-+·]+/g, '_').slice(0, 40);
+                resolvedCategorias = stripCategoryAges(groups[0].title).replace(/\s*·\s*/g, ' ');
+                resolvedPdfKind = pdfKind || 'Grilla Completa';
             } else {
                 docSubtitle = 'Por clasificación';
-                fileSuffix = 'StartList_Clasificaciones';
+                resolvedPdfKind = pdfKind || 'Grilla Completa por Categ';
             }
         } else {
             fases = [{
@@ -499,14 +549,17 @@ const PdfExportService = {
                 _pdfSubtitleOverride: largadaLabel,
                 resultados: list.map(toResultado),
             }];
+            resolvedPdfKind = pdfKind || 'Grilla Completa';
         }
 
         renderStackedPages(doc, fases, eventoInfo, 'Grilla de Largada', docSubtitle, 'startList', logo);
 
-        const safeLabel = String(largadaLabel || 'Largada')
-            .replace(/[^\w\d\-+·]+/g, '_')
-            .slice(0, 48);
-        doc.save(`${eventoInfo.nombre}_${safeLabel}_${fileSuffix}.pdf`.replace(/\s+/g, '_'));
+        doc.save(buildMaratonStartListFilename(
+            eventoInfo.nombre,
+            resolvedCategorias,
+            largadaLabel,
+            resolvedPdfKind
+        ));
     },
 
     /** Full event start list — 4 grids per page, 1 column */

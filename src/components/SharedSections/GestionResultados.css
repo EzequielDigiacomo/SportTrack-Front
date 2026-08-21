@@ -1309,11 +1309,15 @@
 .resultados-header-section {
     padding: 1.5rem 2rem;
     margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 30; /* por encima de action-bar-premium (z-index: 10) para el menú PDF */
+    overflow: visible;
 }
 
 .resultados-header-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
+    overflow: visible;
 }
 
 .resultados-field-label {
@@ -1337,6 +1341,12 @@
     flex-wrap: wrap;
 }
 
+.maraton-header-pdf {
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+}
+
 .maraton-header-pdf .maraton-pdf-hint {
     margin: 0.35rem 0 0;
     font-size: 0.78rem;
@@ -1347,10 +1357,12 @@
 .maraton-pdf-actions {
     margin-top: 0.35rem;
     align-items: center;
+    overflow: visible;
 }
 
 .maraton-pdf-dropdown {
     position: relative;
+    z-index: var(--z-dropdown);
 }
 
 .maraton-pdf-menu {
@@ -1359,7 +1371,7 @@
     min-width: 220px;
     max-height: 280px;
     overflow-y: auto;
-    z-index: 40;
+    z-index: var(--z-dropdown);
 }
 
 .maraton-pdf-menu button {

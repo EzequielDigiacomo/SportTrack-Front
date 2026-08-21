@@ -198,7 +198,7 @@ const ResultadosHeader = ({
                                 title="PDF con el orden completo de la largada (Nº 1…N)"
                             >
                                 <FileDown size={10} />
-                                {maratonPdf.exporting ? 'Generando…' : 'PDF Grilla'}
+                                {maratonPdf.exporting ? 'Generando…' : 'Grilla Completa'}
                             </button>
                             <button
                                 type="button"
@@ -208,7 +208,7 @@ const ResultadosHeader = ({
                                 title="PDF con una tabla por Categoría · Sexo · Bote"
                             >
                                 <FileDown size={10} />
-                                PDF Clasificaciones
+                                Grilla Completa por Categ
                             </button>
                             {(maratonPdf.groups?.length || 0) > 0 && (
                                 <div className="pdf-dropdown-container maraton-pdf-dropdown">
