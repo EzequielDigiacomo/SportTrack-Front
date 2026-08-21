@@ -3,6 +3,7 @@ import React from 'react';
 const StatusBadge = ({ estado }) => {
     const map = {
         'Programado': { color: '#60a5fa', label: 'Programado' },
+        'Programada': { color: '#60a5fa', label: 'Programada' },
         'EnCurso': { color: '#34d399', label: 'En Curso' },
         'Finalizado': { color: '#9ca3af', label: 'Finalizado' },
         'Cancelado': { color: '#f87171', label: 'Cancelado' },

@@ -748,29 +748,31 @@ const LiveResults = () => {
     });
 
     const getEventBadge = () => {
+        const eventoEst = String(evento?.estado || evento?.Estado || '')
+            .replace(/\s+/g, '')
+            .toUpperCase();
+
+        if (eventoEst === 'CANCELADO' || eventoEst === 'CANCELADA') {
+            return { label: 'RECESO / CANCELADO', className: 'live-badge status-red', dotColor: '#ef4444' };
+        }
+
+        // EN VIVO solo cuando hay una prueba largada (también en eventos Finalizado).
         if (activeRace) {
             return { label: 'EN VIVO', className: 'live-badge status-green', dotColor: '#10b981' };
         }
-        if (allFinished) {
+
+        if (eventoEst === 'FINALIZADO' || eventoEst === 'FINALIZADA' || allFinished) {
             if (allCancelled) {
                 return { label: 'RECESO / CANCELADO', className: 'live-badge status-red', dotColor: '#ef4444' };
             }
             return { label: 'RESULTADOS FINALES', className: 'live-badge status-grey', dotColor: '#eab308' };
         }
 
-        const est = (
-            selectedPrueba?.estado || selectedPrueba?.Estado
-            || evento?.estado || evento?.Estado || ''
-        ).toUpperCase();
-
-        if (est === 'FINALIZADO' || est === 'FINALIZADA') {
-            return { label: 'RESULTADOS FINALES', className: 'live-badge status-grey', dotColor: '#eab308' };
-        }
-        if (est === 'CANCELADO' || est === 'CANCELADA') {
-            return { label: 'RECESO / CANCELADO', className: 'live-badge status-red', dotColor: '#ef4444' };
+        if (eventoEst === 'ENCURSO') {
+            return { label: 'EN CURSO', className: 'live-badge status-green', dotColor: '#10b981' };
         }
 
-        return { label: 'EN VIVO', className: 'live-badge status-green', dotColor: '#10b981' };
+        return { label: 'PROGRAMADO', className: 'live-badge status-grey', dotColor: '#94a3b8' };
     };
 
     const eventBadge = getEventBadge();
@@ -805,39 +807,72 @@ const LiveResults = () => {
                     </div>
 
                     {/* LIVE STATUS BOARD BANNERS */}
-                    {activeBanner ? (
-                        <div className="live-status-board running fade-in">
-                            <div className="live-board-header">
-                                <span className="live-pulse-dot"></span>
-                                <span className="board-title">Se está corriendo</span>
-                            </div>
-                            <div className="board-race-num">#{activeBanner.number}</div>
-                            <div className="board-race-details">
-                                <div className="board-race-fase">{activeBanner.faseName}</div>
-                                <div className="board-race-cat">{activeBanner.details}</div>
-                            </div>
-                        </div>
-                    ) : nextBanner ? (
-                        <div className="live-status-board scheduled fade-in">
-                            <div className="live-board-header">
-                                <Clock size={12} className="board-icon-grey" />
-                                <span className="board-title">Continúa</span>
-                            </div>
-                            <div className="board-race-num upcoming">#{nextBanner.number}</div>
-                            <div className="board-race-details">
-                                <div className="board-race-fase upcoming">{nextBanner.faseName}</div>
-                                <div className="board-race-cat">{nextBanner.details}</div>
-                            </div>
-                        </div>
-                    ) : allFinished ? (
-                        <div className="live-status-board finished fade-in">
-                            <div className="live-board-header">
-                                <Trophy size={12} className="board-icon-gold" />
-                                <span className="board-title">Finalizado</span>
-                            </div>
-                            <div className="board-finished-msg">Todas las regatas han concluido.</div>
-                        </div>
-                    ) : null}
+                    {(() => {
+                        const eventoEst = String(evento?.estado || evento?.Estado || '')
+                            .replace(/\s+/g, '')
+                            .toUpperCase();
+                        const eventoFinalizado = eventoEst === 'FINALIZADO' || eventoEst === 'FINALIZADA' || allFinished;
+                        const eventoCancelado = eventoEst === 'CANCELADO' || eventoEst === 'CANCELADA' || allCancelled;
+
+                        // Con prueba largada: mostrar carrera activa (también si el evento ya figura Finalizado).
+                        if (activeBanner) {
+                            return (
+                                <div className="live-status-board running fade-in">
+                                    <div className="live-board-header">
+                                        <span className="live-pulse-dot"></span>
+                                        <span className="board-title">Se está corriendo</span>
+                                    </div>
+                                    <div className="board-race-num">#{activeBanner.number}</div>
+                                    <div className="board-race-details">
+                                        <div className="board-race-fase">{activeBanner.faseName}</div>
+                                        <div className="board-race-cat">{activeBanner.details}</div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        if (eventoCancelado) {
+                            return (
+                                <div className="live-status-board finished fade-in">
+                                    <div className="live-board-header">
+                                        <Trophy size={12} className="board-icon-gold" />
+                                        <span className="board-title">Cancelado</span>
+                                    </div>
+                                    <div className="board-finished-msg">El evento fue cancelado.</div>
+                                </div>
+                            );
+                        }
+
+                        if (eventoFinalizado) {
+                            return (
+                                <div className="live-status-board finished fade-in">
+                                    <div className="live-board-header">
+                                        <Trophy size={12} className="board-icon-gold" />
+                                        <span className="board-title">Finalizado</span>
+                                    </div>
+                                    <div className="board-finished-msg">Todas las regatas han concluido.</div>
+                                </div>
+                            );
+                        }
+
+                        if (nextBanner) {
+                            return (
+                                <div className="live-status-board scheduled fade-in">
+                                    <div className="live-board-header">
+                                        <Clock size={12} className="board-icon-grey" />
+                                        <span className="board-title">Continúa</span>
+                                    </div>
+                                    <div className="board-race-num upcoming">#{nextBanner.number}</div>
+                                    <div className="board-race-details">
+                                        <div className="board-race-fase upcoming">{nextBanner.faseName}</div>
+                                        <div className="board-race-cat">{nextBanner.details}</div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        return null;
+                    })()}
                 </div>
             </header>
 
