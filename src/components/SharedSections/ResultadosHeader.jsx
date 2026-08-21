@@ -36,9 +36,13 @@ const ResultadosHeader = ({
     isMaraton = false,
     /** Post-sorteo Maratón: { hasNumeros, groups, exporting, onExportFull, onExportSubdivided, onExportGroup } */
     maratonPdf = null,
+    /** Resultados Maratón: { hasFases, faseLabel, etapas, exporting, onExportFase, onExportGrupo, onExportPrueba, onExportCsv } */
+    resultadosPdf = null,
 }) => {
     const [showMaratonPdfMenu, setShowMaratonPdfMenu] = useState(false);
+    const [showResultadosPdfMenu, setShowResultadosPdfMenu] = useState(false);
     const maratonPdfMenuRef = useRef(null);
+    const resultadosPdfMenuRef = useRef(null);
 
     useEffect(() => {
         if (!showMaratonPdfMenu) return undefined;
@@ -52,8 +56,20 @@ const ResultadosHeader = ({
     }, [showMaratonPdfMenu]);
 
     useEffect(() => {
+        if (!showResultadosPdfMenu) return undefined;
+        const onDocClick = (e) => {
+            if (resultadosPdfMenuRef.current && !resultadosPdfMenuRef.current.contains(e.target)) {
+                setShowResultadosPdfMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [showResultadosPdfMenu]);
+
+    useEffect(() => {
         setShowMaratonPdfMenu(false);
-    }, [selectedPrueba, selectedEvento]);
+        setShowResultadosPdfMenu(false);
+    }, [selectedPrueba, selectedEvento, currentTab]);
 
     const CATEGORIA_COLORS = {
         1: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
@@ -176,7 +192,7 @@ const ResultadosHeader = ({
                     )}
                 </div>
 
-                {/* PDF Maratón — derecha del selector Evento/Largada, posterior al sorteo */}
+                {/* PDF Maratón Start List — debajo/al lado del selector Largada */}
                 {isMaraton && currentTab === 'startList' && (
                 <div className="form-group maraton-header-pdf">
                     <div className="regata-label-row">
@@ -241,6 +257,99 @@ const ResultadosHeader = ({
                                     )}
                                 </div>
                             )}
+                        </div>
+                    )}
+                </div>
+                )}
+
+                {/* PDF Maratón Resultados — mismo lugar que Start List, debajo del selector Largada */}
+                {isMaraton && currentTab === 'resultados' && (
+                <div className="form-group maraton-header-pdf">
+                    <div className="regata-label-row">
+                        <label className="resultados-field-label" style={{ margin: 0 }}>
+                            <FileText size={14} className="text-accent" /> Exportar PDF
+                        </label>
+                    </div>
+                    {!selectedMaratonLargadaKey ? (
+                        <p className="maraton-pdf-hint">Seleccioná una largada para exportar.</p>
+                    ) : !resultadosPdf?.hasFases ? (
+                        <p className="maraton-pdf-hint">Sin fases para exportar en esta largada.</p>
+                    ) : (
+                        <div className="regata-pdf-actions maraton-pdf-actions" ref={resultadosPdfMenuRef}>
+                            {resultadosPdf.faseLabel && (
+                                <button
+                                    type="button"
+                                    className="btn-admin-secondary compact btn-pdf-mini"
+                                    disabled={resultadosPdf.exporting}
+                                    onClick={() => resultadosPdf.onExportFase?.()}
+                                    title={`PDF solo de ${resultadosPdf.faseLabel}`}
+                                >
+                                    <FileDown size={10} />
+                                    Solo: {resultadosPdf.faseLabel}
+                                </button>
+                            )}
+                            {(resultadosPdf.etapas?.length || 0) === 1 && (
+                                <button
+                                    type="button"
+                                    className="btn-admin-secondary compact btn-pdf-mini"
+                                    disabled={resultadosPdf.exporting}
+                                    onClick={() => resultadosPdf.onExportGrupo?.(resultadosPdf.etapas[0])}
+                                    title={`PDF de todas las ${resultadosPdf.etapas[0]}`}
+                                >
+                                    <FileDown size={10} />
+                                    Todas las {resultadosPdf.etapas[0]}
+                                </button>
+                            )}
+                            {(resultadosPdf.etapas?.length || 0) > 1 && (
+                                <div className="pdf-dropdown-container maraton-pdf-dropdown">
+                                    <button
+                                        type="button"
+                                        className="btn-admin-secondary compact btn-pdf-mini"
+                                        disabled={resultadosPdf.exporting}
+                                        onClick={() => setShowResultadosPdfMenu(v => !v)}
+                                        title="Exportar todas las fases de una etapa"
+                                    >
+                                        <FileDown size={10} />
+                                        Todas las… <ChevronDown size={10} />
+                                    </button>
+                                    {showResultadosPdfMenu && (
+                                        <div className="pdf-dropdown-menu fade-in maraton-pdf-menu">
+                                            {resultadosPdf.etapas.map(etapa => (
+                                                <button
+                                                    key={etapa}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowResultadosPdfMenu(false);
+                                                        resultadosPdf.onExportGrupo?.(etapa);
+                                                    }}
+                                                >
+                                                    Todas las {etapa}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                className="btn-admin-secondary compact btn-pdf-mini"
+                                disabled={resultadosPdf.exporting}
+                                onClick={() => resultadosPdf.onExportPrueba?.()}
+                                title="PDF de la prueba / largada completa"
+                            >
+                                <FileDown size={10} />
+                                Prueba Completa
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-admin-secondary compact btn-pdf-mini btn-pdf-mini-excel"
+                                disabled={resultadosPdf.exporting}
+                                onClick={() => resultadosPdf.onExportCsv?.()}
+                                title="Exportar Excel (.csv)"
+                            >
+                                <FileDown size={10} />
+                                Excel (.csv)
+                            </button>
                         </div>
                     )}
                 </div>

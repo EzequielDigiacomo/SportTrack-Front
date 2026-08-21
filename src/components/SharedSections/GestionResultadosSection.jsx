@@ -763,6 +763,16 @@ const connectedStarter = activeJudges.find(j => {
             selectedFaseId={selectedFaseIdForHeader}
             isMaraton={isMaratonEvent}
             maratonPdf={isMaratonEvent && currentTab === 'startList' ? maratonPdf : null}
+            resultadosPdf={isMaratonEvent && currentTab === 'resultados' ? {
+                hasFases: (fases?.length || 0) > 0,
+                faseLabel: faseSeleccionada?.nombreFase || null,
+                etapas: etiquetasEtapas,
+                exporting: false,
+                onExportFase: handleExportFase,
+                onExportGrupo: handleExportGrupo,
+                onExportPrueba: handleExportPrueba,
+                onExportCsv: handleExportCsv,
+            } : null}
         />
 
         {isControlOrManualPage && (
@@ -1171,7 +1181,7 @@ const connectedStarter = activeJudges.find(j => {
                                     </button>
                                 )}
 
-                                {fases.length > 0 && (
+                                {fases.length > 0 && !isMaratonEvent && (
                                     <div style={{ position: 'relative' }}>
                                         <button
                                             className="btn-admin-action secondary"

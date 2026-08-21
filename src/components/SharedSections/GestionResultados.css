@@ -1398,6 +1398,17 @@
     border: 1px solid #64748b !important;
 }
 
+.btn-pdf-mini-excel {
+    color: #34d399 !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
+[data-theme='light'] .btn-pdf-mini-excel {
+    color: #047857 !important;
+    border-color: #059669 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+}
+
 .btn-pdf-mini {
     padding: 0 8px !important;
     font-size: 10px !important;
