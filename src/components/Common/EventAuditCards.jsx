@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, ChevronDown, ChevronUp, Clock, History, User } from 'lucide-react';
 import AuditoriaService from '../../services/AuditoriaService';
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
-import { getUserFacingError } from '../../utils/userFacingError';
 import './EventAuditCards.css';
 
 const formatWhen = (iso) => {
@@ -32,13 +31,7 @@ const EventAuditCards = ({ eventosLimit = 12, logsPerEvento = 6, compact = false
             }
         } catch (err) {
             console.error('[EventAuditCards]', err);
-            const msg = getUserFacingError(err, 'No se pudo cargar la auditoría por evento.');
-            const hint = err?.status === 404
-                ? ' El backend aún no tiene desplegado el endpoint /Auditoria/por-eventos.'
-                : (msg.includes('servidor') || msg.includes('conectar')
-                    ? ' Verificá que el backend esté actualizado y que corriste la migración AddAuditoriaEventoScope en la base.'
-                    : '');
-            setError(`${msg}${hint}`);
+            setError('No se pudo armar la actividad por evento. Probá recargar la página.');
         } finally {
             setLoading(false);
         }
