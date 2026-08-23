@@ -60,7 +60,9 @@ export const savePendingTimingBackup = (faseId, {
             estadoCanto: r.estadoCanto || 'Pendiente',
         })),
         // Queda anclado al respaldo: se sincroniza a auditoría al recuperar el envío
-        submitFailure: submitFailure || prev.submitFailure || null,
+        ...(submitFailure || prev.submitFailure
+            ? { submitFailure: submitFailure || prev.submitFailure }
+            : {}),
     };
     writeAll(all);
 };

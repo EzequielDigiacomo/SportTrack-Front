@@ -10,10 +10,12 @@ import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
 import TelemetryService from './services/TelemetryService'
 import { initAuditActionQueue } from './services/auditActionQueue'
+import { repairPendingTimingAuditGaps } from './services/timingAuditRepair'
 import { initPlatformDetection, isNativePlatform } from './utils/platformUtils'
 
 TelemetryService.init();
 initAuditActionQueue();
+repairPendingTimingAuditGaps();
 initPlatformDetection();
 
 async function setupNativeChrome() {
