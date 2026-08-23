@@ -28,11 +28,12 @@ import { getUserFacingError } from '../../utils/userFacingError';
 import { retryWithBackoff, TIMING_SUBMIT_RETRY_DELAYS_MS } from '../../utils/retryWithBackoff';
 import PdfExportService from '../../services/PdfExportService';
 import {
-    clearPendingTimingBackup,
-    getPendingTimingBackup,
-    listPendingTimingBackups,
-    savePendingTimingBackup,
-} from '../../services/timingBackupService';
+    clearTimingSubmitQueue,
+    enqueueFailedTimingSubmit,
+    flushPendingTimingSubmits,
+    getMergedPendingTimingBackups,
+    getPendingTimingEntry,
+} from '../../services/timingSubmitQueue';
 import { trackJudgeButton, trackJudgeModuleOpen } from '../../services/auditActionTracker';
 
 const CATEGORIA_NAMES = {
@@ -85,11 +86,17 @@ const FinisherDashboard = () => {
     const [pendingBackupsAll, setPendingBackupsAll] = useState([]);
     const { addToast } = useToast();
 
-    const refreshPendingBackups = useCallback(() => {
-        setPendingBackupsAll(listPendingTimingBackups());
-        if (selectedFase?.id) {
-            setHasPendingBackup(!!getPendingTimingBackup(selectedFase.id));
-        } else {
+    const refreshPendingBackups = useCallback(async () => {
+        try {
+            const merged = await getMergedPendingTimingBackups();
+            setPendingBackupsAll(merged);
+            if (selectedFase?.id) {
+                setHasPendingBackup(merged.some(b => String(b.faseId) === String(selectedFase.id)));
+            } else {
+                setHasPendingBackup(false);
+            }
+        } catch {
+            setPendingBackupsAll([]);
             setHasPendingBackup(false);
         }
     }, [selectedFase?.id]);
@@ -570,18 +577,63 @@ const FinisherDashboard = () => {
             if (!silent) addToast('Resultados enviados y fase enviada a revisión', 'success');
         }
 
-        clearPendingTimingBackup(fase.id);
-        refreshPendingBackups();
+        await clearTimingSubmitQueue(fase.id);
+        await refreshPendingBackups();
         return true;
     }, [addToast, buildTimingSavePayload, refreshPendingBackups, resultados, soloMode]);
 
-    const handleRetryPending = useCallback(async ({ auto = false } = {}) => {
-        if (!selectedFase || loading) return;
-        const backup = getPendingTimingBackup(selectedFase.id);
-        const rows = backup?.resultados?.length ? backup.resultados : resultados;
+    const runPendingFlush = useCallback(async ({ auto = false, faseOverride = null } = {}) => {
+        const targetFase = faseOverride || selectedFase;
+        if (!targetFase || loading) return false;
+
+        const submitDirect = async (entry) => {
+            if (String(entry.faseId) !== String(targetFase.id) && faseOverride == null && auto) {
+                return false;
+            }
+            const faseCtx = entry.faseId === targetFase.id
+                ? targetFase
+                : fases.find(f => String(f.id) === String(entry.faseId)) || targetFase;
+            const rows = entry.resultados?.length ? entry.resultados : resultados;
+            return submitTimingResults(faseCtx, { rows, silent: auto });
+        };
 
         setLoading(true);
         try {
+            const results = await flushPendingTimingSubmits({
+                submitDirect: async (entry) => {
+                    if (auto && String(entry.faseId) !== String(targetFase.id)) return false;
+                    return submitDirect(entry);
+                },
+                onSuccess: () => refreshPendingBackups(),
+            });
+
+            const relevant = results.filter(r => String(r.faseId) === String(targetFase.id));
+            const delivered = relevant.some(r => r.delivered) || results.some(r => r.delivered);
+            if (delivered && auto) addToast('Conexión restablecida: tiempos enviados.', 'success');
+            await refreshPendingBackups();
+            return delivered;
+        } catch (err) {
+            console.error('[Finisher] flush cola pendiente:', err);
+            if (!auto) {
+                addToast(getUserFacingError(err, 'No se pudo reenviar. Usá el PDF de respaldo si persiste.'), 'error');
+            }
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }, [addToast, fases, loading, refreshPendingBackups, resultados, selectedFase, submitTimingResults]);
+
+    const handleRetryPending = useCallback(async ({ auto = false } = {}) => {
+        if (!selectedFase || loading) return;
+        const backup = getPendingTimingEntry(selectedFase.id);
+        if (!backup && auto) {
+            await runPendingFlush({ auto: true });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const rows = backup?.resultados?.length ? backup.resultados : resultados;
             const ok = await submitTimingResults(selectedFase, { rows, silent: auto });
             if (ok && auto) addToast('Conexión restablecida: tiempos enviados.', 'success');
         } catch (err) {
@@ -592,7 +644,7 @@ const FinisherDashboard = () => {
         } finally {
             setLoading(false);
         }
-    }, [addToast, loading, resultados, selectedFase, submitTimingResults]);
+    }, [addToast, loading, resultados, runPendingFlush, selectedFase, submitTimingResults]);
 
     useEffect(() => {
         if (!selectedFase?.id || !hasPendingBackup) return undefined;
@@ -600,6 +652,21 @@ const FinisherDashboard = () => {
         window.addEventListener('online', onOnline);
         return () => window.removeEventListener('online', onOnline);
     }, [selectedFase?.id, hasPendingBackup, handleRetryPending]);
+
+    useEffect(() => {
+        if (!hasPendingBackup) return undefined;
+        const tick = setInterval(() => {
+            if (navigator.onLine) handleRetryPending({ auto: true });
+        }, 45000);
+        return () => clearInterval(tick);
+    }, [hasPendingBackup, handleRetryPending]);
+
+    useEffect(() => {
+        refreshPendingBackups();
+        if (navigator.onLine) {
+            flushPendingTimingSubmits().then(() => refreshPendingBackups()).catch(() => {});
+        }
+    }, [refreshPendingBackups]);
 
     const parseTimeToMs = (timeStr) => {
         if (!timeStr) return 0;
@@ -861,7 +928,7 @@ const FinisherDashboard = () => {
 
     const handleExportBackupPdf = async () => {
         if (!selectedFase) return;
-        const backup = getPendingTimingBackup(selectedFase.id);
+        const backup = getPendingTimingEntry(selectedFase.id);
         const rows = getTimingRowsForSave(backup?.resultados?.length ? backup.resultados : resultados);
         if (!rows.length) {
             addToast('No hay tiempos para respaldar.', 'warning');
@@ -899,14 +966,14 @@ const FinisherDashboard = () => {
             await submitTimingResults(selectedFase);
         } catch (err) {
             console.error('Error al finalizar carga:', err);
-            savePendingTimingBackup(selectedFase.id, {
+            await enqueueFailedTimingSubmit(selectedFase.id, {
                 eventoId: selectedEvento?.id,
                 eventoNombre: selectedEvento?.nombre,
                 faseNombre: selectedFase.nombreFase,
                 resultados: getTimingRowsForSave(),
                 soloMode,
             });
-            refreshPendingBackups();
+            await refreshPendingBackups();
             const msg = getUserFacingError(err, 'Error al guardar resultados');
             addToast(`${msg} Los tiempos quedaron guardados en este dispositivo. Usá Reintentar o descargá el PDF.`, 'error');
         } finally {

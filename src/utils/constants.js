@@ -59,6 +59,14 @@ export const ENDPOINTS = {
         BY_FASE: (id) => `/resultados/Fase/${id}`,
     },
 
+    TIMING_OUTBOX: {
+        BASE: '/timing-outbox',
+        PENDING: '/timing-outbox/pending',
+        FLUSH: '/timing-outbox/flush',
+        COMMIT: (faseId) => `/timing-outbox/${faseId}/commit`,
+        REMOVE: (faseId) => `/timing-outbox/${faseId}`,
+    },
+
     // Catalogos
     BOTES: '/botes',
     CATEGORIAS: '/categorias',

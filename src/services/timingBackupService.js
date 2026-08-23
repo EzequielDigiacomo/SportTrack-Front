@@ -1,8 +1,29 @@
 const STORAGE_KEY = 'sporttrack_pending_timing_saves';
+/** Alineado con sesión extendida del cronometrista (24 h). */
+const BACKUP_TTL_MS = 24 * 60 * 60 * 1000;
+
+const isBackupExpired = (entry) => {
+    if (!entry?.capturedAt) return true;
+    const age = Date.now() - new Date(entry.capturedAt).getTime();
+    return !Number.isFinite(age) || age > BACKUP_TTL_MS;
+};
 
 const readAll = () => {
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        let changed = false;
+        const fresh = {};
+        for (const [key, entry] of Object.entries(raw)) {
+            if (isBackupExpired(entry)) {
+                changed = true;
+                continue;
+            }
+            fresh[key] = entry;
+        }
+        if (changed) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+        }
+        return fresh;
     } catch {
         return {};
     }
