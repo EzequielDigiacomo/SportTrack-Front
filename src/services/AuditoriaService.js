@@ -32,6 +32,8 @@ const isEventRelatedLog = (log) => {
     const accion = log?.accion || log?.Accion || '';
     if (EVENT_MODULES.has(modulo)) return true;
     if (accion.startsWith('CLICK_') || accion.startsWith('OPEN_')) return true;
+    if (accion.startsWith('TIMING_') || accion.startsWith('RACE_START_')) return true;
+    if (accion.endsWith('_FAILED')) return true;
     return false;
 };
 

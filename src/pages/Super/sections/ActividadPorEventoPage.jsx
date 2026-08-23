@@ -12,7 +12,7 @@ import {
     User,
 } from 'lucide-react';
 import AuditoriaService from '../../../services/AuditoriaService';
-import { formatAuditAction, formatAuditDetail } from '../../../utils/auditHelpers';
+import { formatAuditAction, formatAuditDetail, isOperationalIssueAction } from '../../../utils/auditHelpers';
 import './ActividadPorEventoPage.css';
 
 const formatWhen = (iso, withSeconds = false) => {
@@ -47,6 +47,7 @@ const ActividadPorEventoPage = () => {
     const [eventoSearch, setEventoSearch] = useState('');
     const [logSearch, setLogSearch] = useState('');
     const [moduloFilter, setModuloFilter] = useState('');
+    const [soloProblemas, setSoloProblemas] = useState(false);
     const [expandedLogId, setExpandedLogId] = useState(null);
 
     const selectedEventoId = Number(searchParams.get('evento')) || null;
@@ -105,6 +106,9 @@ const ActividadPorEventoPage = () => {
         if (moduloFilter) {
             logs = logs.filter(l => l.modulo === moduloFilter);
         }
+        if (soloProblemas) {
+            logs = logs.filter(l => isOperationalIssueAction(l.accion));
+        }
         const q = logSearch.trim().toLowerCase();
         if (q) {
             logs = logs.filter(l =>
@@ -115,7 +119,7 @@ const ActividadPorEventoPage = () => {
             );
         }
         return logs.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    }, [selectedCard, moduloFilter, logSearch]);
+    }, [selectedCard, moduloFilter, logSearch, soloProblemas]);
 
     const selectEvento = (id) => {
         setSearchParams({ evento: String(id) });
@@ -173,6 +177,7 @@ const ActividadPorEventoPage = () => {
                         <ul className="actividad-evento-page__event-list">
                             {filteredCards.map(card => {
                                 const active = Number(card.eventoId) === Number(selectedEventoId);
+                                const issueCount = (card.logs || []).filter(l => isOperationalIssueAction(l.accion)).length;
                                 return (
                                     <li key={card.eventoId}>
                                         <button
@@ -184,6 +189,11 @@ const ActividadPorEventoPage = () => {
                                             <div className="actividad-evento-page__event-meta">
                                                 {card.eventoEstado && (
                                                     <span className="badge">{card.eventoEstado}</span>
+                                                )}
+                                                {issueCount > 0 && (
+                                                    <span className="actividad-evento-page__issue-badge">
+                                                        {issueCount} problema{issueCount !== 1 ? 's' : ''}
+                                                    </span>
                                                 )}
                                                 <span>{card.totalRegistros} reg.</span>
                                             </div>
@@ -240,6 +250,14 @@ const ActividadPorEventoPage = () => {
                                         <option key={m} value={m}>{m}</option>
                                     ))}
                                 </select>
+                                <label className="actividad-evento-page__filter-check">
+                                    <input
+                                        type="checkbox"
+                                        checked={soloProblemas}
+                                        onChange={(e) => setSoloProblemas(e.target.checked)}
+                                    />
+                                    Solo envíos fallidos / sin conexión
+                                </label>
                             </div>
 
                             {selectedCard.totalRegistros > (selectedCard.logs?.length || 0) && (
@@ -263,13 +281,17 @@ const ActividadPorEventoPage = () => {
                                     <tbody>
                                         {filteredLogs.map(log => {
                                             const isOpen = expandedLogId === log.id;
+                                            const isIssue = isOperationalIssueAction(log.accion);
                                             const parsed = parseDetalleJson(log.detalle);
                                             return (
                                                 <React.Fragment key={log.id}>
-                                                    <tr className={isOpen ? 'is-expanded' : ''}>
+                                                    <tr className={`${isOpen ? 'is-expanded' : ''} ${isIssue ? 'is-error' : ''}`}>
                                                         <td>{formatWhen(log.fecha, true)}</td>
                                                         <td><span className="mod-pill">{log.modulo}</span></td>
-                                                        <td><strong>{formatAuditAction(log.accion)}</strong></td>
+                                                        <td>
+                                                            <strong>{formatAuditAction(log.accion)}</strong>
+                                                            {isIssue && <span className="actividad-evento-page__error-tag">Problema</span>}
+                                                        </td>
                                                         <td>
                                                             <span className="user-cell">
                                                                 <User size={13} /> {log.usuario || '—'}

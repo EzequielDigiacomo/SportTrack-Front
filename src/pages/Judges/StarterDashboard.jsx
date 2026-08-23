@@ -18,7 +18,7 @@ import {
     isFreshControlTecnicoHandoff,
 } from '../../utils/controlTecnico';
 import { useToast } from '../../context/ToastContext';
-import { trackJudgeButton, trackJudgeModuleOpen } from '../../services/auditActionTracker';
+import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError } from '../../services/auditActionTracker';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
 
@@ -407,12 +407,39 @@ const StarterDashboard = () => {
                 goToLlegadaIfSolo();
             } else {
                 addToast('Sin red: la largada quedó en cola con el instante del click. Se reenvía al reconectar.', 'warning');
+                trackOperationalError({
+                    accion: 'RACE_START_QUEUED',
+                    modulo: 'Largador',
+                    eventoId: selectedEvento?.id,
+                    message: 'Largada guardada localmente sin conexión al servidor',
+                    context: {
+                        faseId: selectedFase.id,
+                        faseNombre: selectedFase.nombreFase,
+                        eventoNombre: selectedEvento?.nombre,
+                        t0Iso,
+                        queuedLocally: true,
+                    },
+                });
                 setStartingStatus('queued');
                 setTimeout(() => setStartingStatus(null), 2500);
                 goToLlegadaIfSolo();
             }
         } catch (err) {
             console.error('Error delivering race start:', err);
+            trackOperationalError({
+                accion: 'RACE_START_FAILED',
+                modulo: 'Largador',
+                eventoId: selectedEvento?.id,
+                message: 'No se pudo confirmar la largada en el servidor',
+                err,
+                context: {
+                    faseId: selectedFase.id,
+                    faseNombre: selectedFase.nombreFase,
+                    eventoNombre: selectedEvento?.nombre,
+                    t0Iso,
+                    queuedLocally: true,
+                },
+            });
             addToast('Largada local marcada; reintentando envío en segundo plano.', 'warning');
             setStartingStatus('queued');
             setTimeout(() => setStartingStatus(null), 2500);

@@ -1,3 +1,23 @@
+/** Acciones de problemas operativos (conexión, envío de tiempos, largada, etc.) */
+export const OPERATIONAL_ISSUE_ACTIONS = new Set([
+    'TIMING_SUBMIT_FAILED',
+    'TIMING_RETRY_FAILED',
+    'TIMING_FLUSH_FAILED',
+    'TIMING_QUEUED_OFFLINE',
+    'RACE_START_QUEUED',
+    'RACE_START_FAILED',
+]);
+
+export const OPERATIONAL_RECOVERY_ACTIONS = new Set([
+    'TIMING_RECOVERED',
+    'RACE_START_RECOVERED',
+]);
+
+export const isOperationalIssueAction = (accion) => OPERATIONAL_ISSUE_ACTIONS.has(accion);
+
+export const isOperationalAuditAction = (accion) =>
+    isOperationalIssueAction(accion) || OPERATIONAL_RECOVERY_ACTIONS.has(accion);
+
 /** Etiquetas legibles para acciones de auditoría */
 export const formatAuditAction = (accion) => ({
     LOGIN_SUCCESS: 'Inicio de sesión',
@@ -25,6 +45,14 @@ export const formatAuditAction = (accion) => ({
     CLICK_SEND_TIMES: 'Botón Enviar (cronometrista)',
     CLICK_SAVE_OFFICIAL: 'Guardar tiempos oficiales',
     CLICK_START_RACE: 'Botón Largar',
+    TIMING_SUBMIT_FAILED: 'Envío de tiempos falló',
+    TIMING_RETRY_FAILED: 'Reintento de envío falló',
+    TIMING_FLUSH_FAILED: 'Cola de tiempos no se pudo vaciar',
+    TIMING_QUEUED_OFFLINE: 'Tiempos guardados sin conexión',
+    TIMING_RECOVERED: 'Tiempos enviados tras reconexión',
+    RACE_START_QUEUED: 'Largada en cola sin conexión',
+    RACE_START_FAILED: 'Largada no pudo enviarse',
+    RACE_START_RECOVERED: 'Largada enviada tras reconexión',
 }[accion] || accion);
 
 /** Corrige texto guardado con encoding roto (UTF-8 leído como Latin-1) */
@@ -46,9 +74,46 @@ export const fixAuditEncoding = (text) => {
     }
 };
 
+const parseAuditDetalleObject = (detalle) => {
+    if (!detalle) return null;
+    if (typeof detalle === 'object') return detalle;
+    try {
+        const parsed = JSON.parse(detalle);
+        if (parsed?.text && typeof parsed.text === 'string' && parsed.text.trim().startsWith('{')) {
+            try {
+                return { ...parsed, ...JSON.parse(parsed.text) };
+            } catch {
+                return parsed;
+            }
+        }
+        return parsed;
+    } catch {
+        return null;
+    }
+};
+
+const formatOperationalDetail = (detalle) => {
+    const parsed = parseAuditDetalleObject(detalle);
+    if (!parsed) return fixAuditEncoding(typeof detalle === 'string' ? detalle : '');
+
+    const parts = [];
+    if (parsed.message) parts.push(parsed.message);
+    if (parsed.faseNombre) parts.push(`Serie: ${parsed.faseNombre}`);
+    else if (parsed.faseId) parts.push(`Fase #${parsed.faseId}`);
+    if (parsed.filas != null) parts.push(`${parsed.filas} tiempos`);
+    if (parsed.online === false) parts.push('Sin conexión');
+    if (parsed.queuedLocally) parts.push('Respaldo local activo');
+    if (parsed.auto) parts.push('Reintento automático');
+    return fixAuditEncoding(parts.filter(Boolean).join(' · '));
+};
+
 /** Texto amigable para la columna de detalle */
 export const formatAuditDetail = (log) => {
     if (!log?.detalle) return '';
+
+    if (isOperationalAuditAction(log.accion)) {
+        return formatOperationalDetail(log.detalle);
+    }
 
     if (log.accion === 'ERROR_FATAL') {
         try {

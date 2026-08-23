@@ -189,7 +189,18 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
+    align-items: center;
     margin: 1rem 0;
+}
+
+.actividad-evento-page__filter-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    user-select: none;
 }
 
 .actividad-evento-page__filters .actividad-evento-page__search {
@@ -211,6 +222,34 @@
     font-size: 0.82rem;
     color: var(--color-text-secondary);
     margin: 0 0 0.75rem;
+}
+
+.actividad-evento-page__issue-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.35);
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+}
+
+.actividad-evento-page__error-tag {
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #f87171;
+}
+
+.actividad-evento-page__table tr.is-error td {
+    background: rgba(248, 113, 113, 0.07);
+}
+
+.actividad-evento-page__table tr.is-error .mod-pill {
+    color: #f87171;
 }
 
 .actividad-evento-page__table-wrap {

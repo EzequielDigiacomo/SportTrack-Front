@@ -1,4 +1,5 @@
 import AuditoriaService from './AuditoriaService';
+import { getUserFacingError } from '../utils/userFacingError';
 
 /** Registra acciones de UI (módulo abierto, botón apretado) sin bloquear la pantalla. */
 export const trackAuditAction = ({
@@ -40,5 +41,60 @@ export const trackJudgeButton = ({ accion, modulo, eventoId, eventoPruebaId, det
         eventoId,
         eventoPruebaId,
         detalle,
+    });
+};
+
+/** Fallos operativos del cronometrista/largador (sin conexión, envío fallido, etc.). */
+export const trackOperationalError = ({
+    accion,
+    modulo = 'Cronometrista',
+    eventoId,
+    eventoPruebaId,
+    message,
+    err,
+    context = {},
+}) => {
+    const detalle = {
+        message: message || getUserFacingError(err, 'Operación fallida'),
+        online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+        path: typeof window !== 'undefined' ? window.location.pathname : null,
+        ...context,
+    };
+
+    const status = err?.status ?? err?.response?.status;
+    if (status) detalle.httpStatus = status;
+
+    const raw = err?.message;
+    if (raw && typeof raw === 'string' && raw.length <= 180) {
+        detalle.technicalHint = raw;
+    }
+
+    trackAuditAction({
+        accion,
+        detalle,
+        modulo,
+        eventoId,
+        eventoPruebaId,
+    });
+};
+
+export const trackOperationalRecovery = ({
+    accion,
+    modulo = 'Cronometrista',
+    eventoId,
+    eventoPruebaId,
+    message,
+    context = {},
+}) => {
+    trackAuditAction({
+        accion,
+        detalle: {
+            message: message || 'Operación completada tras reconexión',
+            online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+            ...context,
+        },
+        modulo,
+        eventoId,
+        eventoPruebaId,
     });
 };

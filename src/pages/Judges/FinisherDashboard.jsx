@@ -34,7 +34,7 @@ import {
     getMergedPendingTimingBackups,
     getPendingTimingEntry,
 } from '../../services/timingSubmitQueue';
-import { trackJudgeButton, trackJudgeModuleOpen } from '../../services/auditActionTracker';
+import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError, trackOperationalRecovery } from '../../services/auditActionTracker';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -609,11 +609,38 @@ const FinisherDashboard = () => {
 
             const relevant = results.filter(r => String(r.faseId) === String(targetFase.id));
             const delivered = relevant.some(r => r.delivered) || results.some(r => r.delivered);
-            if (delivered && auto) addToast('Conexión restablecida: tiempos enviados.', 'success');
+            if (delivered && auto) {
+                addToast('Conexión restablecida: tiempos enviados.', 'success');
+                trackOperationalRecovery({
+                    accion: 'TIMING_RECOVERED',
+                    modulo: 'Cronometrista',
+                    eventoId: selectedEvento?.id,
+                    context: {
+                        faseId: targetFase.id,
+                        faseNombre: targetFase.nombreFase,
+                        eventoNombre: selectedEvento?.nombre,
+                        auto: true,
+                        source: 'flush',
+                    },
+                });
+            }
             await refreshPendingBackups();
             return delivered;
         } catch (err) {
             console.error('[Finisher] flush cola pendiente:', err);
+            trackOperationalError({
+                accion: 'TIMING_FLUSH_FAILED',
+                modulo: 'Cronometrista',
+                eventoId: selectedEvento?.id,
+                message: getUserFacingError(err, 'No se pudo vaciar la cola de tiempos'),
+                err,
+                context: {
+                    faseId: targetFase?.id,
+                    faseNombre: targetFase?.nombreFase,
+                    eventoNombre: selectedEvento?.nombre,
+                    auto,
+                },
+            });
             if (!auto) {
                 addToast(getUserFacingError(err, 'No se pudo reenviar. Usá el PDF de respaldo si persiste.'), 'error');
             }
@@ -621,7 +648,7 @@ const FinisherDashboard = () => {
         } finally {
             setLoading(false);
         }
-    }, [addToast, fases, loading, refreshPendingBackups, resultados, selectedFase, submitTimingResults]);
+    }, [addToast, fases, loading, refreshPendingBackups, resultados, selectedEvento, selectedFase, submitTimingResults]);
 
     const handleRetryPending = useCallback(async ({ auto = false } = {}) => {
         if (!selectedFase || loading) return;
@@ -635,16 +662,44 @@ const FinisherDashboard = () => {
         try {
             const rows = backup?.resultados?.length ? backup.resultados : resultados;
             const ok = await submitTimingResults(selectedFase, { rows, silent: auto });
-            if (ok && auto) addToast('Conexión restablecida: tiempos enviados.', 'success');
+            if (ok && auto) {
+                addToast('Conexión restablecida: tiempos enviados.', 'success');
+                trackOperationalRecovery({
+                    accion: 'TIMING_RECOVERED',
+                    modulo: 'Cronometrista',
+                    eventoId: selectedEvento?.id,
+                    context: {
+                        faseId: selectedFase.id,
+                        faseNombre: selectedFase.nombreFase,
+                        eventoNombre: selectedEvento?.nombre,
+                        filas: rows?.length,
+                        auto: true,
+                        source: 'retry',
+                    },
+                });
+            }
         } catch (err) {
             console.error('[Finisher] reintento envío:', err);
+            trackOperationalError({
+                accion: 'TIMING_RETRY_FAILED',
+                modulo: 'Cronometrista',
+                eventoId: selectedEvento?.id,
+                message: getUserFacingError(err, 'Reintento de envío fallido'),
+                err,
+                context: {
+                    faseId: selectedFase.id,
+                    faseNombre: selectedFase.nombreFase,
+                    eventoNombre: selectedEvento?.nombre,
+                    auto,
+                },
+            });
             if (!auto) {
                 addToast(getUserFacingError(err, 'No se pudo reenviar. Usá el PDF de respaldo si persiste.'), 'error');
             }
         } finally {
             setLoading(false);
         }
-    }, [addToast, loading, resultados, runPendingFlush, selectedFase, submitTimingResults]);
+    }, [addToast, loading, resultados, runPendingFlush, selectedEvento, selectedFase, submitTimingResults]);
 
     useEffect(() => {
         if (!selectedFase?.id || !hasPendingBackup) return undefined;
@@ -971,15 +1026,31 @@ const FinisherDashboard = () => {
             await submitTimingResults(selectedFase);
         } catch (err) {
             console.error('Error al finalizar carga:', err);
+            const rowsToSave = getTimingRowsForSave();
             await enqueueFailedTimingSubmit(selectedFase.id, {
                 eventoId: selectedEvento?.id,
                 eventoNombre: selectedEvento?.nombre,
                 faseNombre: selectedFase.nombreFase,
-                resultados: getTimingRowsForSave(),
+                resultados: rowsToSave,
                 soloMode,
             });
             await refreshPendingBackups();
             const msg = getUserFacingError(err, 'Error al guardar resultados');
+            trackOperationalError({
+                accion: 'TIMING_SUBMIT_FAILED',
+                modulo: 'Cronometrista',
+                eventoId: selectedEvento?.id,
+                message: msg,
+                err,
+                context: {
+                    faseId: selectedFase.id,
+                    faseNombre: selectedFase.nombreFase,
+                    eventoNombre: selectedEvento?.nombre,
+                    filas: rowsToSave.length,
+                    queuedLocally: true,
+                    soloMode,
+                },
+            });
             addToast(`${msg} Los tiempos quedaron guardados en este dispositivo. Usá Reintentar o descargá el PDF.`, 'error');
         } finally {
             setLoading(false);
