@@ -11,8 +11,8 @@ import {
     Search,
     User,
 } from 'lucide-react';
-import AuditoriaService from '../../services/AuditoriaService';
-import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
+import AuditoriaService from '../../../services/AuditoriaService';
+import { formatAuditAction, formatAuditDetail } from '../../../utils/auditHelpers';
 import './ActividadPorEventoPage.css';
 
 const formatWhen = (iso, withSeconds = false) => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LogOut, X, Pin, PinOff } from 'lucide-react';
 import ThemeToggle from '../Common/ThemeToggle';
 
@@ -26,6 +26,15 @@ const AdminSidebar = ({
     sidebarPinned = false,
     onTogglePin,
 }) => {
+    const location = useLocation();
+    const adminBase = location.pathname.startsWith('/admin') ? '/admin' : '/super';
+
+    const resolveNavPath = (item) => {
+        if (item.isExternal || item.path.startsWith('/')) return item.path;
+        if (item.path === '') return adminBase;
+        return `${adminBase}/${item.path}`;
+    };
+
     return (
         <aside 
             className={`admin-sidebar glass-effect ${isOpen ? 'open' : ''} ${sidebarPinned ? 'is-pinned' : ''}`}
@@ -69,7 +78,7 @@ const AdminSidebar = ({
                 {navItems.map(item => (
                     <NavLink
                         key={item.id}
-                        to={item.isExternal || item.path.startsWith('/') ? item.path : (item.path === '' ? '/super' : `/super/${item.path}`)}
+                        to={resolveNavPath(item)}
                         end={item.exact}
                         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                         onClick={onNavClick}

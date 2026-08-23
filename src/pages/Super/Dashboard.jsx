@@ -19,6 +19,7 @@ import ProgressionAuditPage from './sections/ProgressionAuditPage';
 import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
 import ActividadPorEventoPage from './sections/ActividadPorEventoPage';
+import AudiencePeaksSection from './sections/AudiencePeaksSection';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
 import { filterAdminNavItems } from '../../config/adminNavItems';
 import { STORAGE_KEYS } from '../../utils/constants';
