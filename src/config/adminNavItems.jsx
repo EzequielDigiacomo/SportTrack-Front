@@ -16,6 +16,7 @@ import {
     ClipboardList,
     Database,
     Activity,
+    History,
 } from 'lucide-react';
 import { canAccessControlesLive, extractPlanFromUser } from '../utils/planHelpers';
 
@@ -26,6 +27,7 @@ export const ADMIN_NAV_ITEMS = [
     { id: 'atletas', path: 'atletas', icon: <Users size={20} />, label: 'Atletas' },
     { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
+    { id: 'actividad-eventos', path: 'actividad-eventos', icon: <History size={20} />, label: 'Actividad por evento' },
     { id: 'registro-inscripciones', path: 'registro-inscripciones', icon: <ClipboardList size={20} />, label: 'Registro Inscripciones' },
     { id: 'pagos', path: 'pagos', icon: <CreditCard size={20} />, label: 'Control de Pagos' },
     { id: 'controles', path: 'controles', icon: <Timer size={20} />, label: 'Controles Técnicos' },

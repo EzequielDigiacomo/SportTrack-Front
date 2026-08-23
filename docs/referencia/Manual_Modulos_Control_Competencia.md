@@ -363,6 +363,8 @@ Durante la operación muestra:
 
 El sistema recuerda el último evento y fase seleccionados (`starter_event_id`, `starter_fase_id` en localStorage).
 
+> **Documentación actualizada (mala señal / respaldo de tiempos):** ver carpeta `docs/guias-usuario/` — especialmente `guia-cronometrista-mala-senal.md` y sección 7 de `modulos-control-competencia.md`.
+
 ---
 
 ## 7. Cronometrista — Mesa de llegada (`/jueces/llegada`)

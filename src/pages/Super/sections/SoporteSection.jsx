@@ -221,7 +221,7 @@ const SoporteSection = () => {
                         />
                     </div>
 
-                    <EventAuditCards eventosLimit={8} logsPerEvento={5} compact />
+                    <EventAuditCards preview eventosLimit={3} />
 
                     <div className="timing-outbox-panel glass-effect">
                         <div className="timing-outbox-header">

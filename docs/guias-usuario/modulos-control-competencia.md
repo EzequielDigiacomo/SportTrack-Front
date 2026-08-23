@@ -23,8 +23,9 @@ Está pensado para operadores, jueces y administradores. Refleja el comportamien
 11. [Exportación PDF y CSV](#11-exportación-pdf-y-csv)
 12. [Plan Bronce vs Plan con Controles Live](#12-plan-bronce-vs-plan-con-controles-live)
 13. [Notificaciones y centro de alertas](#13-notificaciones-y-centro-de-alertas)
-14. [Preguntas frecuentes y resolución de problemas](#14-preguntas-frecuentes-y-resolución-de-problemas)
-15. [Modalidad Maratón (resumen)](#15-modalidad-maratón-resumen)
+14. [Soporte técnico — Tiempos pendientes de envío](#14-soporte-técnico--tiempos-pendientes-de-envío)
+15. [Preguntas frecuentes y resolución de problemas](#15-preguntas-frecuentes-y-resolución-de-problemas)
+16. [Modalidad Maratón (resumen)](#16-modalidad-maratón-resumen)
 
 ---
 
@@ -269,6 +270,8 @@ Al entrar aparece un aviso (se oculta solo a los 10 segundos):
 5. En **Start List**: revisar grilla de carriles (pista) o nómina con números (Maratón).
 6. Durante la regata: pestaña **Resultados** → monitor **EN VIVO**.
 7. Cuando el cronometrista pulsa **Enviar** → la fase pasa a **Pendiente de Validación**.
+
+> **Tiempos con retraso por mala señal:** el cronometrista puede mandar la serie **minutos u horas después** si tuvo problemas de Wi‑Fi. Cuando el envío se confirma, vas a ver la serie en **Pendiente de Validación** igual que en un envío normal. Si mesa reporta tiempos en el dispositivo del cronometrista pero no en tu panel, pedí que use **Reintentar envío** o contactá al administrador / soporte.
 8. Revisar / corregir tiempos si hace falta.
 9. Pulsar **Guardar y Hacer Oficial** → confirma → fase **Finalizada**.
 10. En Velocidad, si corresponde: **Promover Etapa** al completar la ronda.
@@ -414,17 +417,63 @@ Atletas pendientes sin tiempo asignado:
 
 | Botón | Función |
 |-------|---------|
-| **Reiniciar** | Reinicia **solo localmente** el reloj y tiempos capturados en pantalla. **No** reinicia la fase en servidor |
-| **Enviar** | Guarda tiempos en BD + envía fase a **Pendiente de Validación** |
+| **Reiniciar** | Borra el reloj y los tiempos que ves en pantalla. **No** borra lo que ya se envió al servidor |
+| **PDF respaldo** | Descarga un PDF con los tiempos de esta serie (útil si no hay internet o falló el envío) |
+| **Reintentar envío** | Vuelve a intentar mandar los tiempos guardados en el dispositivo (solo aparece si hubo un fallo previo) |
+| **Enviar** | Guarda los tiempos y manda la serie a revisión del juez de control |
 
 **Enviar** queda deshabilitado si:
 - Hay dudas sin asignar, o
 - No hay ningún arribo registrado
 
-Al enviar:
-1. `ResultadoService.batchUpdate` — persiste tiempos
-2. `FaseService.enviarARevision` — fase → Pendiente de Validación
-3. Notificación al juez de control: **Por Validar**
+Al enviar con éxito:
+1. Los tiempos quedan guardados en el sistema
+2. La serie pasa a **Pendiente de Validación**
+3. El juez de control recibe el aviso **Por Validar**
+
+### Si falla la internet o la señal es mala
+
+SportTrack **guarda una copia de seguridad** de los tiempos en tu navegador para que no se pierdan.
+
+#### Qué vas a ver
+
+| Señal en pantalla | Qué significa |
+|-------------------|---------------|
+| Recuadro naranja: *“Hay tiempos sin enviar al servidor…”* | Los tiempos están en tu dispositivo pero **aún no llegaron** al sistema central |
+| **Sin enviar (1)** en el cronograma (menú lateral) | Hay al menos una serie pendiente de envío |
+| Punto naranja en la serie del cronograma | Esa serie tiene tiempos sin confirmar |
+| Botón **Reintentar envío** | Podés volver a mandar los tiempos cuando vuelva la conexión |
+
+#### Qué hace el sistema solo (sin que aprietes nada)
+
+1. Al apretar **Enviar** sin conexión, intenta **varias veces** (espera unos segundos entre cada intento).
+2. Si sigue fallando, **guarda los tiempos en el dispositivo** y te avisa.
+3. Cuando **vuelve internet**, intenta enviarlos **automáticamente** (también reintenta cada cierto tiempo mientras haya pendientes).
+4. Si el envío sale bien, **borra la copia local** y desaparece el aviso naranja.
+
+> **Importante:** No cierres el navegador en modo “borrar datos” ni limpies el historial del sitio el día de la regata. La copia de seguridad vive en tu navegador hasta que el envío se confirme (hasta **24 horas**).
+
+#### Qué podés hacer vos
+
+| Situación | Acción recomendada |
+|-----------|-------------------|
+| Sin Wi‑Fi al apretar Enviar | Esperá a recuperar señal; el sistema reintenta solo. Si querés, usá **Reintentar envío** |
+| Te vas del predio y volvés más tarde | Entrá de nuevo como cronometrista (tu sesión dura **24 horas**) y usá **Reintentar envío** si sigue el aviso naranja |
+| No confiás en la conexión | Descargá **PDF respaldo** y entregalo a mesa de control |
+| Ya se envió bien | El aviso naranja desaparece solo; el juez de control debe ver la serie en **Pendiente de Validación** |
+
+#### Copia en el servidor (solo soporte)
+
+Si hubo **un poco** de señal pero no alcanzó para completar el envío, el sistema puede guardar una **copia extra** en el servidor. Eso lo gestiona **Soporte técnico** desde el panel de administración (ver [sección 14](#14-soporte-técnico--tiempos-pendientes-de-envío)). Vos como cronometrista solo necesitás preocuparte por el aviso naranja y **Reintentar envío**.
+
+### Sesión del cronometrista (24 horas)
+
+Tu usuario de cronometrista permanece activo **hasta 24 horas** desde que iniciaste sesión. Eso permite:
+
+- Cerrar la notebook después de la regata
+- Volver al día siguiente para **Reintentar envío** sin tener que pedir contraseña de nuevo (dentro de ese plazo)
+
+Los demás roles (administrador, etc.) siguen con sesiones más cortas por seguridad.
 
 ### Comportamiento automático
 
@@ -433,13 +482,15 @@ Al enviar:
 
 ### Flujo operativo — Cronometrista
 
-1. Conectarse y seleccionar evento/fase (o saltar desde alerta de largada).
-2. Esperar largada → cronómetro arranca.
-3. Registrar llegadas (clic o teclado 1–9).
-4. Usar **DUDA** + **Espacio** para tiempos ambiguos; resolver en “Atletas por Clasificar”.
-5. Verificar que no queden pendientes ni dudas.
-6. Pulsar **Enviar**.
-7. El juez de control recibe la serie para oficializar.
+1. Entrar y elegir evento y serie (o ir desde la alerta de largada).
+2. Esperar la largada → el cronómetro arranca.
+3. Registrar llegadas (clic o teclas 1–9).
+4. Resolver dudas en “Atletas por Clasificar”.
+5. Apretar **Enviar** cuando la serie esté lista.
+6. Si no hay internet: esperar señal o usar **PDF respaldo** / **Reintentar envío**.
+7. El juez de control valida cuando la serie aparece en **Pendiente de Validación**.
+
+> **Guía rápida solo para mala señal:** [guia-cronometrista-mala-senal.md](./guia-cronometrista-mala-senal.md)
 
 ---
 
@@ -631,7 +682,67 @@ Destino según rol:
 
 ---
 
-## 14. Preguntas frecuentes y resolución de problemas
+## 14. Soporte técnico — Tiempos pendientes de envío
+
+**Acceso:** SuperAdmin o usuario de soporte técnico  
+**Dónde:** Panel **Soporte** → sección **“Colas temporales de tiempos (cronometrista)”**
+
+### Para qué sirve
+
+Cuando un cronometrista aprieta **Enviar** pero la conexión falla, el sistema puede dejar una **copia de los tiempos esperando** en el servidor (además de la copia en su dispositivo). Desde Soporte podés ver esos envíos y **confirmarlos manualmente** si hace falta.
+
+### Qué muestra la tabla
+
+| Columna | Significado |
+|---------|-------------|
+| Evento / Fase | Qué serie tiene tiempos pendientes |
+| Cronometrista | Qué usuario los registró |
+| Tiempos | Cuántos llegadas hay guardadas |
+| Capturado | Cuándo se intentó enviar |
+| Expira | Hasta cuándo se conserva la copia (**24 horas**) |
+| Intentos | Cuántas veces el sistema ya intentó confirmarlos |
+
+### Acciones
+
+| Botón | Cuándo usarlo |
+|-------|----------------|
+| **Confirmar** | Los tiempos **aún no están** en resultados oficiales y querés cargarlos desde la copia pendiente |
+| **Descartar** | Los tiempos **ya están** cargados por otro medio (carga manual, reintento del cronometrista, etc.) y solo querés limpiar la cola |
+
+> **Descartar** no borra resultados ya guardados; solo elimina la copia pendiente del servidor.
+
+### Cuándo interviene soporte
+
+- El cronometrista tiene aviso naranja pero la conexión en el predio no mejora
+- Mesa de control confirma que **no** llegaron los tiempos y el cronometrista ya se fue
+- Hay que cerrar el día y dejar los tiempos registrados antes de que expire la copia (24 h)
+
+---
+
+## 15. Preguntas frecuentes y resolución de problemas
+
+### Apreté Enviar sin internet — ¿se perdieron los tiempos?
+
+**No.** Deberías ver el aviso naranja y **Sin enviar** en el cronograma. Los tiempos quedan en tu dispositivo. Cuando vuelva la señal, el sistema intenta mandarlos solo. También podés usar **Reintentar envío**.
+
+### Reconecté el Wi‑Fi y el aviso desapareció solo
+
+Significa que el **envío automático funcionó**: los tiempos ya están en el sistema y la serie debería estar en **Pendiente de Validación**. Pedile al juez de control que lo confirme en su panel.
+
+### ¿Cuándo uso PDF respaldo?
+
+Cuando:
+- No tenés señal y te tenés que ir
+- Querés una prueba impresa o por WhatsApp para mesa de control
+- Falló el envío varias veces y necesitás respaldo extra
+
+El PDF **no reemplaza** el envío normal; es para que mesa de control pueda cargar los tiempos si hace falta.
+
+### ¿Cuánto tiempo tengo para reenviar?
+
+- **Copia en el dispositivo:** hasta **24 horas** desde el intento fallido
+- **Sesión de cronometrista:** **24 horas** desde que entraste (podés volver sin loguearte de nuevo)
+- **Copia en servidor (soporte):** también **24 horas**; después se borra sola
 
 ### El largador no puede largar
 
@@ -676,7 +787,7 @@ Destino según rol:
 
 ---
 
-## 15. Modalidad Maratón (resumen)
+## 16. Modalidad Maratón (resumen)
 
 En eventos con modalidad **Maratón**:
 

@@ -930,7 +930,7 @@ const AdminHome = () => {
                     </div>
                 </div>
 
-                <EventAuditCards eventosLimit={10} logsPerEvento={6} />
+                <EventAuditCards preview eventosLimit={4} />
 
                 <div className="recent-activity-container glass-effect">
                     <div className="activity-header">

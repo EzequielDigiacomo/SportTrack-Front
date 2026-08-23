@@ -18,7 +18,7 @@ import GestionPagosSection from './sections/GestionPagosSection';
 import ProgressionAuditPage from './sections/ProgressionAuditPage';
 import GestionFederacionesSection from './sections/GestionFederacionesSection';
 import MensajesSection from '../Shared/MensajesSection';
-import AudiencePeaksSection from './sections/AudiencePeaksSection';
+import ActividadPorEventoPage from './sections/ActividadPorEventoPage';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
 import { filterAdminNavItems } from '../../config/adminNavItems';
 import { STORAGE_KEYS } from '../../utils/constants';
@@ -193,6 +193,7 @@ const SuperDashboard = () => {
                         <Route path="backups" element={<BackupsSection />} />
                         <Route path="audiencia" element={<AudiencePeaksSection />} />
                         <Route path="federacion/:id" element={<AdminHome />} />
+                        <Route path="actividad-eventos" element={<ActividadPorEventoPage />} />
                         <Route path="soporte" element={<SoporteSection />} />
                     </Routes>
                 </div>
