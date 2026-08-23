@@ -157,10 +157,11 @@ const AuditoriaService = {
             eventoId: eventoId ?? null,
             eventoPruebaId: eventoPruebaId ?? null,
         };
+        // Jueces y operadores usan /Auditoria; /support queda como fallback legacy.
         try {
-            await api.post('/support/client-action', payload);
+            await api.post(ENDPOINTS.AUDITORIA.CLIENT_ACTION, payload, { silent: true });
         } catch {
-            await api.post(ENDPOINTS.AUDITORIA.CLIENT_ACTION, payload);
+            await api.post('/support/client-action', payload, { silent: true });
         }
     },
 };

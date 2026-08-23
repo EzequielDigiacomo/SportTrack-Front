@@ -663,10 +663,15 @@ const FinisherDashboard = () => {
 
     useEffect(() => {
         refreshPendingBackups();
-        if (navigator.onLine) {
-            flushPendingTimingSubmits().then(() => refreshPendingBackups()).catch(() => {});
-        }
     }, [refreshPendingBackups]);
+
+    useEffect(() => {
+        if (!hasPendingBackup || !navigator.onLine) return undefined;
+        flushPendingTimingSubmits()
+            .then(() => refreshPendingBackups())
+            .catch(() => {});
+        return undefined;
+    }, [hasPendingBackup]);
 
     const parseTimeToMs = (timeStr) => {
         if (!timeStr) return 0;

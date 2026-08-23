@@ -53,18 +53,22 @@ api.interceptors.response.use(
 
         const errorMessage = getUserFacingError(error)
 
-        console.error('API Error:', error.response?.data || error.message);
+        const isSilent = originalRequest?.silent === true;
 
-        const baseURL = error.config?.baseURL || API_BASE_URL;
-        const fullUrl = `${baseURL || ''}${error.config?.url || ''}`;
+        if (!isSilent) {
+            console.error('API Error:', error.response?.data || error.message);
 
-        console.error('API Context:', {
-            status: error.response?.status,
-            message: errorMessage,
-            url: error.config?.url,
-            baseURL,
-            fullUrl,
-        })
+            const baseURL = error.config?.baseURL || API_BASE_URL;
+            const fullUrl = `${baseURL || ''}${error.config?.url || ''}`;
+
+            console.error('API Context:', {
+                status: error.response?.status,
+                message: errorMessage,
+                url: error.config?.url,
+                baseURL,
+                fullUrl,
+            })
+        }
 
         return Promise.reject({
             status: error.response?.status,
