@@ -9,9 +9,11 @@ import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
 import TelemetryService from './services/TelemetryService'
+import { initAuditActionQueue } from './services/auditActionQueue'
 import { initPlatformDetection, isNativePlatform } from './utils/platformUtils'
 
 TelemetryService.init();
+initAuditActionQueue();
 initPlatformDetection();
 
 async function setupNativeChrome() {

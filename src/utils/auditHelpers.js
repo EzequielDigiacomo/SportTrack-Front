@@ -107,12 +107,23 @@ const formatOperationalDetail = (detalle) => {
     return fixAuditEncoding(parts.filter(Boolean).join(' · '));
 };
 
+/** Fecha/hora real del evento (prioriza occurredAt guardado offline). */
+export const getAuditLogWhen = (log) => {
+    const parsed = parseAuditDetalleObject(log?.detalle);
+    return parsed?.occurredAt || log?.fecha || null;
+};
+
 /** Texto amigable para la columna de detalle */
 export const formatAuditDetail = (log) => {
     if (!log?.detalle) return '';
 
     if (isOperationalAuditAction(log.accion)) {
         return formatOperationalDetail(log.detalle);
+    }
+
+    const parsed = parseAuditDetalleObject(log.detalle);
+    if (parsed?.text && typeof parsed.text === 'string') {
+        return fixAuditEncoding(parsed.text);
     }
 
     if (log.accion === 'ERROR_FATAL') {

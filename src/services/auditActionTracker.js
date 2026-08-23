@@ -1,23 +1,80 @@
 import AuditoriaService from './AuditoriaService';
 import { getUserFacingError } from '../utils/userFacingError';
+import { isOperationalAuditAction } from '../utils/auditHelpers';
+import {
+    enqueuePendingAuditAction,
+    flushPendingAuditActions,
+    removePendingAuditAction,
+} from './auditActionQueue';
 
-/** Registra acciones de UI (módulo abierto, botón apretado) sin bloquear la pantalla. */
-export const trackAuditAction = ({
+const newQueueId = () => (
+    typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+);
+
+const buildDetalle = (detalle, capturedAt) => {
+    if (typeof detalle === 'string') {
+        try {
+            const parsed = JSON.parse(detalle);
+            return { ...parsed, occurredAt: parsed.occurredAt || capturedAt };
+        } catch {
+            return { text: detalle, occurredAt: capturedAt };
+        }
+    }
+    return { ...(detalle || {}), occurredAt: detalle?.occurredAt || capturedAt };
+};
+
+const dispatchAuditAction = ({
     accion,
     detalle,
     modulo = 'Frontend',
     eventoId,
     eventoPruebaId,
 }) => {
-    AuditoriaService.trackClientAction({
+    const capturedAt = new Date().toISOString();
+    const enrichedDetalle = buildDetalle(detalle, capturedAt);
+    const operational = isOperationalAuditAction(accion);
+
+    const payload = {
         accion,
-        detalle,
+        detalle: enrichedDetalle,
         modulo,
         eventoId,
         eventoPruebaId,
-    }).catch((err) => {
+        capturedAt,
+    };
+
+    let queueId = null;
+    if (operational) {
+        queueId = enqueuePendingAuditAction(payload);
+        payload.id = queueId;
+    }
+
+    const send = async () => {
+        await AuditoriaService.trackClientAction({
+            accion: payload.accion,
+            detalle: payload.detalle,
+            modulo: payload.modulo,
+            eventoId: payload.eventoId,
+            eventoPruebaId: payload.eventoPruebaId,
+        });
+        if (queueId) removePendingAuditAction(queueId);
+    };
+
+    send().catch((err) => {
+        if (operational) {
+            console.warn('[Audit] acción operativa en cola local hasta reconectar:', accion);
+            return;
+        }
+        enqueuePendingAuditAction({ ...payload, id: newQueueId() });
         console.warn('[Audit] no se pudo registrar acción cliente:', err?.message || err);
     });
+};
+
+/** Registra acciones de UI (módulo abierto, botón apretado) sin bloquear la pantalla. */
+export const trackAuditAction = (params) => {
+    dispatchAuditAction(params);
 };
 
 export const trackJudgeModuleOpen = ({ modulo, eventoId, eventoNombre, faseId, faseNombre }) => {
@@ -98,3 +155,5 @@ export const trackOperationalRecovery = ({
         eventoPruebaId,
     });
 };
+
+export { flushPendingAuditActions };

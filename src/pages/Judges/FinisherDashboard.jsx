@@ -34,7 +34,7 @@ import {
     getMergedPendingTimingBackups,
     getPendingTimingEntry,
 } from '../../services/timingSubmitQueue';
-import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError, trackOperationalRecovery } from '../../services/auditActionTracker';
+import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError, trackOperationalRecovery, flushPendingAuditActions } from '../../services/auditActionTracker';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -623,6 +623,7 @@ const FinisherDashboard = () => {
                         source: 'flush',
                     },
                 });
+                flushPendingAuditActions().catch(() => {});
             }
             await refreshPendingBackups();
             return delivered;
@@ -677,6 +678,7 @@ const FinisherDashboard = () => {
                         source: 'retry',
                     },
                 });
+                flushPendingAuditActions().catch(() => {});
             }
         } catch (err) {
             console.error('[Finisher] reintento envío:', err);

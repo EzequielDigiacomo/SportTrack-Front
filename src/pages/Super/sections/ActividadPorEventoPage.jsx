@@ -12,7 +12,7 @@ import {
     User,
 } from 'lucide-react';
 import AuditoriaService from '../../../services/AuditoriaService';
-import { formatAuditAction, formatAuditDetail, isOperationalIssueAction } from '../../../utils/auditHelpers';
+import { formatAuditAction, formatAuditDetail, getAuditLogWhen, isOperationalIssueAction } from '../../../utils/auditHelpers';
 import './ActividadPorEventoPage.css';
 
 const formatWhen = (iso, withSeconds = false) => {
@@ -286,7 +286,7 @@ const ActividadPorEventoPage = () => {
                                             return (
                                                 <React.Fragment key={log.id}>
                                                     <tr className={`${isOpen ? 'is-expanded' : ''} ${isIssue ? 'is-error' : ''}`}>
-                                                        <td>{formatWhen(log.fecha, true)}</td>
+                                                        <td>{formatWhen(getAuditLogWhen(log), true)}</td>
                                                         <td><span className="mod-pill">{log.modulo}</span></td>
                                                         <td>
                                                             <strong>{formatAuditAction(log.accion)}</strong>
