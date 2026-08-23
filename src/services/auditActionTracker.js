@@ -25,26 +25,46 @@ const buildDetalle = (detalle, capturedAt) => {
     return { ...(detalle || {}), occurredAt: detalle?.occurredAt || capturedAt };
 };
 
+/** Envía al API; si ambos endpoints fallan, lanza error (para mantener cola local). */
+const postClientActionStrict = async (payload) => {
+    try {
+        await AuditoriaService.trackClientAction(payload);
+    } catch (err) {
+        throw err;
+    }
+};
+
 const dispatchAuditAction = ({
     accion,
     detalle,
     modulo = 'Frontend',
     eventoId,
     eventoPruebaId,
+    queueId: forcedQueueId,
 }) => {
     const capturedAt = new Date().toISOString();
     const enrichedDetalle = buildDetalle(detalle, capturedAt);
     const operational = isOperationalAuditAction(accion);
 
+    // Incluye fase en texto plano para el resolver legacy `(ID: N)`
+    if (enrichedDetalle.faseId != null && !String(enrichedDetalle.message || '').includes('(ID:')) {
+        const label = enrichedDetalle.faseNombre || `fase ${enrichedDetalle.faseId}`;
+        enrichedDetalle.message = enrichedDetalle.message
+            ? `${enrichedDetalle.message} (${label}, ID: ${enrichedDetalle.faseId})`
+            : `Fallo en ${label} (ID: ${enrichedDetalle.faseId})`;
+    }
+
     const payload = {
+        id: forcedQueueId || null,
         accion,
         detalle: enrichedDetalle,
         modulo,
-        eventoId,
-        eventoPruebaId,
-        capturedAt,
+        eventoId: eventoId != null ? Number(eventoId) : null,
+        eventoPruebaId: eventoPruebaId != null ? Number(eventoPruebaId) : null,
+        capturedAt: enrichedDetalle.occurredAt || capturedAt,
     };
 
+    // Write-ahead: siempre encolar operativos antes de intentar red
     let queueId = null;
     if (operational) {
         queueId = enqueuePendingAuditAction(payload);
@@ -52,7 +72,7 @@ const dispatchAuditAction = ({
     }
 
     const send = async () => {
-        await AuditoriaService.trackClientAction({
+        await postClientActionStrict({
             accion: payload.accion,
             detalle: payload.detalle,
             modulo: payload.modulo,
@@ -64,7 +84,7 @@ const dispatchAuditAction = ({
 
     send().catch((err) => {
         if (operational) {
-            console.warn('[Audit] acción operativa en cola local hasta reconectar:', accion);
+            console.warn('[Audit] operativa en cola local hasta reconectar:', accion, err?.message || err);
             return;
         }
         enqueuePendingAuditAction({ ...payload, id: newQueueId() });
@@ -110,11 +130,14 @@ export const trackOperationalError = ({
     message,
     err,
     context = {},
+    occurredAt,
+    queueId,
 }) => {
     const detalle = {
         message: message || getUserFacingError(err, 'Operación fallida'),
         online: typeof navigator !== 'undefined' ? navigator.onLine : null,
         path: typeof window !== 'undefined' ? window.location.pathname : null,
+        occurredAt: occurredAt || new Date().toISOString(),
         ...context,
     };
 
@@ -132,6 +155,7 @@ export const trackOperationalError = ({
         modulo,
         eventoId,
         eventoPruebaId,
+        queueId,
     });
 };
 
@@ -154,6 +178,59 @@ export const trackOperationalRecovery = ({
         eventoId,
         eventoPruebaId,
     });
+};
+
+/**
+ * Cuando se recupera un envío de tiempos que había fallado offline,
+ * asegura el fallo en cola (id estable) + recuperación, y fuerza flush.
+ */
+export const syncTimingFailureAuditFromBackup = (entry) => {
+    if (!entry?.submitFailure) {
+        flushPendingAuditActions().catch(() => {});
+        return;
+    }
+
+    const fail = entry.submitFailure;
+    const occurredAt = fail.occurredAt || entry.capturedAt || new Date().toISOString();
+    const stableId = `timing-fail-${entry.faseId}-${occurredAt}`;
+
+    trackOperationalError({
+        accion: fail.accion || 'TIMING_SUBMIT_FAILED',
+        modulo: fail.modulo || 'Cronometrista',
+        eventoId: entry.eventoId ?? fail.eventoId,
+        message: fail.message || 'Envío de tiempos falló (sin conexión)',
+        occurredAt,
+        queueId: stableId,
+        context: {
+            faseId: entry.faseId,
+            faseNombre: entry.faseNombre || fail.faseNombre,
+            eventoNombre: entry.eventoNombre || fail.eventoNombre,
+            filas: fail.filas ?? entry.resultados?.length,
+            queuedLocally: true,
+            recoveredLater: true,
+            ...(fail.context || {}),
+        },
+    });
+
+    trackOperationalRecovery({
+        accion: 'TIMING_RECOVERED',
+        modulo: 'Cronometrista',
+        eventoId: entry.eventoId ?? fail.eventoId,
+        message: 'Tiempos enviados tras reconexión',
+        context: {
+            faseId: entry.faseId,
+            faseNombre: entry.faseNombre,
+            eventoNombre: entry.eventoNombre,
+            filas: entry.resultados?.length,
+            auto: true,
+            source: 'timing-backup',
+        },
+    });
+
+    // Pequeño delay para que los write-ahead terminen de encolar
+    setTimeout(() => {
+        flushPendingAuditActions().catch(() => {});
+    }, 100);
 };
 
 export { flushPendingAuditActions };

@@ -71,8 +71,6 @@ export const removePendingAuditAction = (id) => {
 };
 
 export const flushPendingAuditActions = async () => {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) return { sent: 0, pending: readQueue().length };
-
     const queue = readQueue();
     if (!queue.length) return { sent: 0, pending: 0 };
 
@@ -119,6 +117,9 @@ export const initAuditActionQueue = () => {
     };
 
     window.addEventListener('online', tryFlush);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') tryFlush();
+    });
     tryFlush();
     setInterval(tryFlush, FLUSH_INTERVAL_MS);
 };

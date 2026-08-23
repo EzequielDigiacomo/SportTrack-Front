@@ -160,11 +160,26 @@ const AuditoriaService = {
             eventoPruebaId: eventoPruebaId ?? null,
         };
         // Jueces y operadores usan /Auditoria; /support queda como fallback legacy.
+        // Si AMBOS fallan, se relanza el error para que la cola local conserve el registro.
         try {
             await api.post(ENDPOINTS.AUDITORIA.CLIENT_ACTION, payload, { silent: true });
-        } catch {
-            await api.post('/support/client-action', payload, { silent: true });
+        } catch (firstErr) {
+            try {
+                await api.post('/support/client-action', payload, { silent: true });
+            } catch {
+                throw firstErr;
+            }
         }
+    },
+
+    deleteRegistro: async (id) => {
+        const response = await api.delete(ENDPOINTS.AUDITORIA.BY_ID(id));
+        return response.data;
+    },
+
+    deleteSinProblemas: async (eventoId) => {
+        const response = await api.delete(ENDPOINTS.AUDITORIA.SIN_PROBLEMAS(eventoId));
+        return response.data;
     },
 };
 

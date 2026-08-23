@@ -9,9 +9,12 @@ import {
     History,
     RefreshCcw,
     Search,
+    Trash2,
     User,
 } from 'lucide-react';
 import AuditoriaService from '../../../services/AuditoriaService';
+import ConfirmDialog from '../../../components/Common/ConfirmDialog';
+import { useToast } from '../../../context/ToastContext';
 import { formatAuditAction, formatAuditDetail, getAuditLogWhen, isOperationalIssueAction } from '../../../utils/auditHelpers';
 import './ActividadPorEventoPage.css';
 
@@ -40,6 +43,7 @@ const parseDetalleJson = (detalle) => {
 
 const ActividadPorEventoPage = () => {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [searchParams, setSearchParams] = useSearchParams();
     const [cards, setCards] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -49,6 +53,8 @@ const ActividadPorEventoPage = () => {
     const [moduloFilter, setModuloFilter] = useState('');
     const [soloProblemas, setSoloProblemas] = useState(false);
     const [expandedLogId, setExpandedLogId] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, log: null, bulk: false });
 
     const selectedEventoId = Number(searchParams.get('evento')) || null;
 
@@ -127,6 +133,45 @@ const ActividadPorEventoPage = () => {
         setLogSearch('');
         setExpandedLogId(null);
     };
+
+    const removeLogFromState = (logId) => {
+        setCards(prev => prev.map(card => {
+            if (Number(card.eventoId) !== Number(selectedEventoId)) return card;
+            const logs = (card.logs || []).filter(l => l.id !== logId);
+            return {
+                ...card,
+                logs,
+                totalRegistros: Math.max(0, (card.totalRegistros || 0) - 1),
+            };
+        }));
+        if (expandedLogId === logId) setExpandedLogId(null);
+    };
+
+    const handleConfirmDelete = async () => {
+        setDeleting(true);
+        try {
+            if (confirmDelete.bulk) {
+                const result = await AuditoriaService.deleteSinProblemas(selectedEventoId);
+                addToast(result?.message || 'Registros OK eliminados.', 'success');
+                await load();
+            } else if (confirmDelete.log?.id) {
+                await AuditoriaService.deleteRegistro(confirmDelete.log.id);
+                removeLogFromState(confirmDelete.log.id);
+                addToast('Registro eliminado.', 'success');
+            }
+        } catch (err) {
+            console.error('[ActividadPorEvento] delete:', err);
+            addToast(err?.message || 'No se pudo eliminar el registro.', 'error');
+        } finally {
+            setDeleting(false);
+            setConfirmDelete({ isOpen: false, log: null, bulk: false });
+        }
+    };
+
+    const okLogsInView = useMemo(
+        () => (selectedCard?.logs || []).filter(l => !isOperationalIssueAction(l.accion)).length,
+        [selectedCard],
+    );
 
     return (
         <div className="actividad-evento-page fade-in">
@@ -228,6 +273,17 @@ const ActividadPorEventoPage = () => {
                                         <span>{selectedCard.totalRegistros} registros en total</span>
                                     </div>
                                 </div>
+                                {okLogsInView > 0 && (
+                                    <button
+                                        type="button"
+                                        className="btn-admin-secondary btn-sm actividad-evento-page__bulk-delete"
+                                        onClick={() => setConfirmDelete({ isOpen: true, log: null, bulk: true })}
+                                        disabled={deleting}
+                                    >
+                                        <Trash2 size={14} />
+                                        Eliminar registros OK ({okLogsInView} visibles)
+                                    </button>
+                                )}
                             </div>
 
                             <div className="actividad-evento-page__filters">
@@ -275,7 +331,7 @@ const ActividadPorEventoPage = () => {
                                             <th>Acción</th>
                                             <th>Usuario</th>
                                             <th>Detalle</th>
-                                            <th aria-label="Expandir" />
+                                            <th aria-label="Acciones" />
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -298,7 +354,7 @@ const ActividadPorEventoPage = () => {
                                                             </span>
                                                         </td>
                                                         <td className="detalle-cell">{formatAuditDetail(log)}</td>
-                                                        <td>
+                                                        <td className="actividad-evento-page__actions-cell">
                                                             <button
                                                                 type="button"
                                                                 className="btn-expand"
@@ -307,11 +363,21 @@ const ActividadPorEventoPage = () => {
                                                             >
                                                                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                             </button>
+                                                            <button
+                                                                type="button"
+                                                                className="btn-delete-log"
+                                                                onClick={() => setConfirmDelete({ isOpen: true, log, bulk: false })}
+                                                                disabled={deleting}
+                                                                aria-label="Eliminar registro"
+                                                                title="Eliminar registro"
+                                                            >
+                                                                <Trash2 size={15} />
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                     {isOpen && (
                                                         <tr className="actividad-evento-page__expand-row">
-                                                            <td colSpan={6}>
+                                                            <td colSpan={7}>
                                                                 <div className="expand-panel">
                                                                     <div><strong>Acción técnica:</strong> {log.accion}</div>
                                                                     {log.ip && <div><strong>IP:</strong> {log.ip}</div>}
@@ -337,6 +403,22 @@ const ActividadPorEventoPage = () => {
                     )}
                 </section>
             </div>
+
+            <ConfirmDialog
+                isOpen={confirmDelete.isOpen}
+                onClose={() => !deleting && setConfirmDelete({ isOpen: false, log: null, bulk: false })}
+                onConfirm={handleConfirmDelete}
+                title={confirmDelete.bulk ? 'Eliminar registros OK' : 'Eliminar registro'}
+                message={
+                    confirmDelete.bulk
+                        ? `¿Eliminar todos los registros sin problemas del evento "${selectedCard?.eventoNombre}"? Se conservan fallos de conexión, envíos fallidos y errores del sistema.`
+                        : `¿Eliminar este registro (${formatAuditAction(confirmDelete.log?.accion)})? Esta acción no se puede deshacer.`
+                }
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                type="danger"
+                loading={deleting}
+            />
         </div>
     );
 };

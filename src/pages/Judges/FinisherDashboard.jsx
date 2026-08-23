@@ -34,7 +34,7 @@ import {
     getMergedPendingTimingBackups,
     getPendingTimingEntry,
 } from '../../services/timingSubmitQueue';
-import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError, trackOperationalRecovery, flushPendingAuditActions } from '../../services/auditActionTracker';
+import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError, trackOperationalRecovery, flushPendingAuditActions, syncTimingFailureAuditFromBackup } from '../../services/auditActionTracker';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -577,7 +577,13 @@ const FinisherDashboard = () => {
             if (!silent) addToast('Resultados enviados y fase enviada a revisión', 'success');
         }
 
+        const pendingBackup = getPendingTimingEntry(fase.id);
         await clearTimingSubmitQueue(fase.id);
+        if (pendingBackup?.submitFailure) {
+            syncTimingFailureAuditFromBackup(pendingBackup);
+        } else {
+            flushPendingAuditActions().catch(() => {});
+        }
         await refreshPendingBackups();
         return true;
     }, [addToast, buildTimingSavePayload, refreshPendingBackups, resultados, soloMode]);
@@ -604,26 +610,18 @@ const FinisherDashboard = () => {
                     if (auto && String(entry.faseId) !== String(targetFase.id)) return false;
                     return submitDirect(entry);
                 },
-                onSuccess: () => refreshPendingBackups(),
+                onSuccess: (entry) => {
+                    if (entry?.submitFailure) syncTimingFailureAuditFromBackup(entry);
+                    else flushPendingAuditActions().catch(() => {});
+                    refreshPendingBackups();
+                },
             });
 
             const relevant = results.filter(r => String(r.faseId) === String(targetFase.id));
             const delivered = relevant.some(r => r.delivered) || results.some(r => r.delivered);
             if (delivered && auto) {
                 addToast('Conexión restablecida: tiempos enviados.', 'success');
-                trackOperationalRecovery({
-                    accion: 'TIMING_RECOVERED',
-                    modulo: 'Cronometrista',
-                    eventoId: selectedEvento?.id,
-                    context: {
-                        faseId: targetFase.id,
-                        faseNombre: targetFase.nombreFase,
-                        eventoNombre: selectedEvento?.nombre,
-                        auto: true,
-                        source: 'flush',
-                    },
-                });
-                flushPendingAuditActions().catch(() => {});
+                // La recuperación auditada la publica syncTimingFailureAuditFromBackup si hubo fallo previo
             }
             await refreshPendingBackups();
             return delivered;
@@ -665,20 +663,6 @@ const FinisherDashboard = () => {
             const ok = await submitTimingResults(selectedFase, { rows, silent: auto });
             if (ok && auto) {
                 addToast('Conexión restablecida: tiempos enviados.', 'success');
-                trackOperationalRecovery({
-                    accion: 'TIMING_RECOVERED',
-                    modulo: 'Cronometrista',
-                    eventoId: selectedEvento?.id,
-                    context: {
-                        faseId: selectedFase.id,
-                        faseNombre: selectedFase.nombreFase,
-                        eventoNombre: selectedEvento?.nombre,
-                        filas: rows?.length,
-                        auto: true,
-                        source: 'retry',
-                    },
-                });
-                flushPendingAuditActions().catch(() => {});
             }
         } catch (err) {
             console.error('[Finisher] reintento envío:', err);
@@ -1029,21 +1013,39 @@ const FinisherDashboard = () => {
         } catch (err) {
             console.error('Error al finalizar carga:', err);
             const rowsToSave = getTimingRowsForSave();
+            const msg = getUserFacingError(err, 'Error al guardar resultados');
+            const occurredAt = new Date().toISOString();
+            const submitFailure = {
+                accion: 'TIMING_SUBMIT_FAILED',
+                modulo: 'Cronometrista',
+                message: msg,
+                occurredAt,
+                eventoId: selectedEvento?.id,
+                faseNombre: selectedFase.nombreFase,
+                eventoNombre: selectedEvento?.nombre,
+                filas: rowsToSave.length,
+                context: {
+                    online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+                    httpStatus: err?.status ?? err?.response?.status ?? null,
+                },
+            };
             await enqueueFailedTimingSubmit(selectedFase.id, {
                 eventoId: selectedEvento?.id,
                 eventoNombre: selectedEvento?.nombre,
                 faseNombre: selectedFase.nombreFase,
                 resultados: rowsToSave,
                 soloMode,
+                submitFailure,
             });
             await refreshPendingBackups();
-            const msg = getUserFacingError(err, 'Error al guardar resultados');
             trackOperationalError({
                 accion: 'TIMING_SUBMIT_FAILED',
                 modulo: 'Cronometrista',
                 eventoId: selectedEvento?.id,
                 message: msg,
                 err,
+                occurredAt,
+                queueId: `timing-fail-${selectedFase.id}-${occurredAt}`,
                 context: {
                     faseId: selectedFase.id,
                     faseNombre: selectedFase.nombreFase,

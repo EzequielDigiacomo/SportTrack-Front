@@ -34,8 +34,16 @@ const writeAll = (data) => {
 };
 
 /** Guarda snapshot local por si falla red al Enviar. */
-export const savePendingTimingBackup = (faseId, { eventoId, eventoNombre, faseNombre, resultados, soloMode }) => {
+export const savePendingTimingBackup = (faseId, {
+    eventoId,
+    eventoNombre,
+    faseNombre,
+    resultados,
+    soloMode,
+    submitFailure = null,
+}) => {
     const all = readAll();
+    const prev = all[String(faseId)] || {};
     all[String(faseId)] = {
         faseId,
         eventoId,
@@ -51,6 +59,8 @@ export const savePendingTimingBackup = (faseId, { eventoId, eventoNombre, faseNo
             msLlegada: r.msLlegada ?? null,
             estadoCanto: r.estadoCanto || 'Pendiente',
         })),
+        // Queda anclado al respaldo: se sincroniza a auditoría al recuperar el envío
+        submitFailure: submitFailure || prev.submitFailure || null,
     };
     writeAll(all);
 };

@@ -97,6 +97,8 @@ export const ENDPOINTS = {
         BASE: '/Auditoria',
         POR_EVENTOS: '/Auditoria/por-eventos',
         CLIENT_ACTION: '/Auditoria/client-action',
+        BY_ID: (id) => `/Auditoria/${id}`,
+        SIN_PROBLEMAS: (eventoId) => `/Auditoria/por-evento/${eventoId}/sin-problemas`,
     },
 }
 
