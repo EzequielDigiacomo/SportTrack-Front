@@ -26,7 +26,9 @@ import {
     Globe as GlobeIcon,
     Cpu,
     Info,
-    Database
+    Database,
+    Send,
+    WifiOff
 } from 'lucide-react';
 import { parseUserAgent } from '../../../utils/deviceUtils';
 import EventAuditCards from '../../../components/Common/EventAuditCards';
@@ -44,6 +46,53 @@ const SoporteSection = () => {
     const [filter, setFilter] = useState('');
     const { addToast } = useToast();
     const [isBackingUp, setIsBackingUp] = useState(false);
+    const [timingOutbox, setTimingOutbox] = useState([]);
+    const [outboxLoading, setOutboxLoading] = useState(false);
+    const [outboxActionId, setOutboxActionId] = useState(null);
+    const [confirmDiscard, setConfirmDiscard] = useState(null);
+
+    const loadTimingOutbox = async () => {
+        setOutboxLoading(true);
+        try {
+            const data = await SupportService.getTimingOutbox();
+            setTimingOutbox(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error al cargar cola temporal de tiempos', err);
+            addToast('No se pudo cargar la cola temporal de tiempos.', 'error');
+        } finally {
+            setOutboxLoading(false);
+        }
+    };
+
+    const handleCommitOutbox = async (entry) => {
+        setOutboxActionId(entry.id);
+        try {
+            await SupportService.commitTimingOutbox(entry.faseId, entry.username);
+            addToast(`Tiempos confirmados para fase ${entry.faseId} (${entry.username}).`, 'success');
+            await loadTimingOutbox();
+        } catch (err) {
+            console.error(err);
+            addToast(err?.message || 'No se pudo confirmar la cola temporal.', 'error');
+        } finally {
+            setOutboxActionId(null);
+        }
+    };
+
+    const handleDiscardOutbox = async () => {
+        if (!confirmDiscard) return;
+        setOutboxActionId(confirmDiscard.id);
+        try {
+            await SupportService.discardTimingOutbox(confirmDiscard.id);
+            addToast('Cola temporal descartada.', 'success');
+            setConfirmDiscard(null);
+            await loadTimingOutbox();
+        } catch (err) {
+            console.error(err);
+            addToast('No se pudo descartar la cola.', 'error');
+        } finally {
+            setOutboxActionId(null);
+        }
+    };
 
     const handleDownloadBackup = async () => {
         setIsBackingUp(true);
@@ -72,6 +121,7 @@ const SoporteSection = () => {
             setUsuarios(usersRes || []);
             setClubes(clubesRes.data || []);
             setFederaciones(federacionesData || []);
+            await loadTimingOutbox();
         } catch (err) {
             console.error("Error al cargar logs", err);
         } finally {
@@ -173,6 +223,93 @@ const SoporteSection = () => {
 
                     <EventAuditCards eventosLimit={8} logsPerEvento={5} compact />
 
+                    <div className="timing-outbox-panel glass-effect">
+                        <div className="timing-outbox-header">
+                            <div>
+                                <h3><WifiOff size={20} /> Colas temporales de tiempos (cronometrista)</h3>
+                                <p className="section-desc">
+                                    Envíos que fallaron por red y quedaron pendientes en el servidor. Podés confirmarlos manualmente en la DB principal.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-admin-secondary"
+                                onClick={loadTimingOutbox}
+                                disabled={outboxLoading}
+                            >
+                                <RefreshCcw size={16} className={outboxLoading ? 'spin' : ''} /> Actualizar colas
+                            </button>
+                        </div>
+
+                        {outboxLoading ? (
+                            <div className="loader-row"><div className="loader"></div></div>
+                        ) : timingOutbox.length === 0 ? (
+                            <div className="timing-outbox-empty">
+                                <Send size={28} />
+                                <span>No hay envíos pendientes en cola temporal.</span>
+                            </div>
+                        ) : (
+                            <div className="timing-outbox-table-wrap">
+                                <table className="timing-outbox-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Evento / Fase</th>
+                                            <th>Cronometrista</th>
+                                            <th>Tiempos</th>
+                                            <th>Capturado</th>
+                                            <th>Expira</th>
+                                            <th>Intentos</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {timingOutbox.map(entry => (
+                                            <tr key={entry.id} className={entry.isExpired ? 'is-expired' : ''}>
+                                                <td>
+                                                    <strong>{entry.eventoNombre || `Evento #${entry.eventoId || '?'}`}</strong>
+                                                    <div className="timing-outbox-sub">
+                                                        Fase {entry.faseId} · {entry.faseNombre || 'Sin nombre'}
+                                                        {entry.soloMode ? ' · Modo solo' : ''}
+                                                    </div>
+                                                </td>
+                                                <td>{entry.username}</td>
+                                                <td>{entry.tiempoCount ?? entry.resultados?.length ?? 0}</td>
+                                                <td>{new Date(entry.createdAtUtc).toLocaleString('es-AR')}</td>
+                                                <td>{new Date(entry.expiresAtUtc).toLocaleString('es-AR')}</td>
+                                                <td>{entry.attemptCount ?? 0}</td>
+                                                <td className="timing-outbox-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="btn-admin-primary btn-outbox-commit"
+                                                        disabled={outboxActionId === entry.id || entry.isExpired}
+                                                        onClick={() => handleCommitOutbox(entry)}
+                                                        title="Confirmar en DB principal y vaciar cola"
+                                                    >
+                                                        {outboxActionId === entry.id ? (
+                                                            <RefreshCcw size={14} className="spin" />
+                                                        ) : (
+                                                            <Send size={14} />
+                                                        )}
+                                                        Confirmar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-admin-danger btn-outbox-discard"
+                                                        disabled={outboxActionId === entry.id}
+                                                        onClick={() => setConfirmDiscard(entry)}
+                                                        title="Descartar sin confirmar (solo si ya se cargó por otro medio)"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="logs-container">
                         {loading ? (
                             <div className="loader-row"><div className="loader"></div></div>
@@ -264,6 +401,16 @@ const SoporteSection = () => {
                 message="¿Estás seguro de que deseas eliminar todos los registros de ERROR_FATAL? Esta acción no se puede deshacer."
                 type="danger"
                 confirmText="Sí, Limpiar"
+            />
+
+            <ConfirmDialog
+                isOpen={!!confirmDiscard}
+                onClose={() => setConfirmDiscard(null)}
+                onConfirm={handleDiscardOutbox}
+                title="Descartar cola temporal"
+                message={`¿Descartar el envío pendiente de ${confirmDiscard?.username || 'usuario'} para fase ${confirmDiscard?.faseId}? Solo hacelo si los tiempos ya están en la DB por otro medio.`}
+                type="danger"
+                confirmText="Descartar"
             />
         </div>
     );

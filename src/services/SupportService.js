@@ -9,7 +9,21 @@ const SupportService = {
     clearErrorLogs: async () => {
         const response = await api.delete('/support/logs/clear');
         return response.data;
-    }
+    },
+
+    getTimingOutbox: async () => {
+        const response = await api.get('/support/timing-outbox');
+        return response.data;
+    },
+
+    commitTimingOutbox: async (faseId, username) => {
+        const response = await api.post(`/support/timing-outbox/${faseId}/commit`, { username });
+        return response.data;
+    },
+
+    discardTimingOutbox: async (id) => {
+        await api.delete(`/support/timing-outbox/${id}`);
+    },
 };
 
 export default SupportService;
