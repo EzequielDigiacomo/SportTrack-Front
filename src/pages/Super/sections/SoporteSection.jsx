@@ -29,6 +29,7 @@ import {
     Database
 } from 'lucide-react';
 import { parseUserAgent } from '../../../utils/deviceUtils';
+import EventAuditCards from '../../../components/Common/EventAuditCards';
 import './SoporteSection.css';
 
 const SoporteSection = () => {
@@ -169,6 +170,8 @@ const SoporteSection = () => {
                             onChange={(e) => setFilter(e.target.value)}
                         />
                     </div>
+
+                    <EventAuditCards eventosLimit={8} logsPerEvento={5} compact />
 
                     <div className="logs-container">
                         {loading ? (

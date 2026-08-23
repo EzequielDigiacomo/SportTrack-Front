@@ -18,6 +18,7 @@ import {
     isFreshControlTecnicoHandoff,
 } from '../../utils/controlTecnico';
 import { useToast } from '../../context/ToastContext';
+import { trackJudgeButton, trackJudgeModuleOpen } from '../../services/auditActionTracker';
 import ConfirmDialog from '../../components/Common/ConfirmDialog';
 import './Judges.css';
 
@@ -142,6 +143,13 @@ const StarterDashboard = () => {
         if (selectedEvento) {
             loadFases();
             localStorage.setItem('starter_event_id', selectedEvento.id);
+            trackJudgeModuleOpen({
+                modulo: 'Largador',
+                eventoId: selectedEvento.id,
+                eventoNombre: selectedEvento.nombre,
+                faseId: selectedFase?.id,
+                faseNombre: selectedFase?.nombreFase,
+            });
         } else {
             localStorage.removeItem('starter_event_id');
             localStorage.removeItem('starter_fase_id');
@@ -333,6 +341,16 @@ const StarterDashboard = () => {
 
     const handleStartRace = async () => {
         if (!selectedFase || !canStartFase(selectedFase)) return;
+
+        trackJudgeButton({
+            accion: 'CLICK_START_RACE',
+            modulo: 'Largador',
+            eventoId: selectedEvento?.id,
+            detalle: {
+                faseId: selectedFase.id,
+                faseNombre: selectedFase.nombreFase,
+            },
+        });
 
         // t0 sagrado: captura al click, antes de cualquier red.
         const startStamp = timingSignalRService.getSyncedNow();

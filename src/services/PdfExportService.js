@@ -726,6 +726,50 @@ const PdfExportService = {
 
         doc.save(`${eventoInfo.nombre}_Regatta_Schedule.pdf`.replace(/\s+/g, '_'));
     },
+
+    /** Respaldo de tiempos capturados en cronometrista (sin depender del servidor). */
+    async exportCronometristaRespaldo({ eventoNombre, faseNombre, faseId, resultados, capturedAt }) {
+        const logo = await getPdfLogo();
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const eventoInfo = normalizeEventoInfo(eventoNombre || 'Evento');
+        const subtitle = [faseNombre || `Fase ${faseId || ''}`, 'Respaldo cronometrista'].filter(Boolean).join(' · ');
+        const stamp = capturedAt
+            ? new Date(capturedAt).toLocaleString('es-AR')
+            : new Date().toLocaleString('es-AR');
+
+        drawBand(doc, eventoInfo, subtitle, 1, 1, logo);
+
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        doc.text(`Generado: ${stamp}`, MARGIN, BAND_H + 8);
+        doc.text('Documento de respaldo local. No reemplaza el envío oficial al servidor.', MARGIN, BAND_H + 14);
+
+        const rows = (resultados || [])
+            .filter(r => r.tiempoOficial)
+            .sort((a, b) => (a.carril || 0) - (b.carril || 0))
+            .map(r => [
+                r.carril ?? '—',
+                r.participanteNombre || '—',
+                formatRaceTime(r.tiempoOficial) || r.tiempoOficial,
+            ]);
+
+        autoTable(doc, {
+            startY: BAND_H + 20,
+            head: [['Carril / Nº', 'Participante', 'Tiempo']],
+            body: rows.length ? rows : [['—', 'Sin tiempos registrados en pantalla', '—']],
+            ...tableStyles(false),
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 28 },
+                1: { cellWidth: 100 },
+                2: { halign: 'center', cellWidth: 40, fontStyle: 'bold' },
+            },
+            ...tableLayout(),
+        });
+
+        drawFooter(doc, eventoInfo);
+        const safeName = sanitizePdfFilePart(`${eventoInfo.nombre}_${faseNombre || 'fase'}_respaldo`);
+        doc.save(`${safeName}.pdf`);
+    },
 };
 
 export default PdfExportService;

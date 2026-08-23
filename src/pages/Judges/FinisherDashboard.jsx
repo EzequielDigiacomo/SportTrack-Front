@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { formatTime } from '../../utils/dateUtils';
 import { 
     Timer, CheckCircle, Clock, Users, XCircle, RefreshCw, Save, 
-    Play, Activity, Search, LogOut, ArrowLeft, ArrowRight, Layout, Grid, Link2
+    Play, Activity, Search, LogOut, ArrowLeft, ArrowRight, Layout, Grid, Link2,
+    FileDown, WifiOff
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,17 @@ import {
 } from '../../utils/controlTecnico';
 import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
+import { mapEstadoCantoToBackend } from '../../utils/resultadosHelpers';
+import { getUserFacingError } from '../../utils/userFacingError';
+import { retryWithBackoff, TIMING_SUBMIT_RETRY_DELAYS_MS } from '../../utils/retryWithBackoff';
+import PdfExportService from '../../services/PdfExportService';
+import {
+    clearPendingTimingBackup,
+    getPendingTimingBackup,
+    listPendingTimingBackups,
+    savePendingTimingBackup,
+} from '../../services/timingBackupService';
+import { trackJudgeButton, trackJudgeModuleOpen } from '../../services/auditActionTracker';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -69,7 +81,18 @@ const FinisherDashboard = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth <= 1000);
     const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [hasPendingBackup, setHasPendingBackup] = useState(false);
+    const [pendingBackupsAll, setPendingBackupsAll] = useState([]);
     const { addToast } = useToast();
+
+    const refreshPendingBackups = useCallback(() => {
+        setPendingBackupsAll(listPendingTimingBackups());
+        if (selectedFase?.id) {
+            setHasPendingBackup(!!getPendingTimingBackup(selectedFase.id));
+        } else {
+            setHasPendingBackup(false);
+        }
+    }, [selectedFase?.id]);
     const [connectionState, setConnectionState] = useState(timingSignalRService.getConnectionState());
     const [activeJudges, setActiveJudges] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -151,6 +174,13 @@ const FinisherDashboard = () => {
         if (selectedEvento) {
             loadFases();
             localStorage.setItem('finisher_event_id', selectedEvento.id);
+            trackJudgeModuleOpen({
+                modulo: 'Cronometrista',
+                eventoId: selectedEvento.id,
+                eventoNombre: selectedEvento.nombre,
+                faseId: selectedFase?.id,
+                faseNombre: selectedFase?.nombreFase,
+            });
         } else {
             localStorage.removeItem('finisher_event_id');
             localStorage.removeItem('finisher_fase_id');
@@ -485,6 +515,92 @@ const FinisherDashboard = () => {
         return null;
     };
 
+    useEffect(() => {
+        refreshPendingBackups();
+    }, [refreshPendingBackups]);
+
+    const getTimingRowsForSave = useCallback((rows = resultados) =>
+        rows.filter(r => r.tiempoOficial || (r.estadoCanto && r.estadoCanto !== 'Pendiente')),
+    [resultados]);
+
+    const buildTimingSavePayload = useCallback((rows = resultados) =>
+        getTimingRowsForSave(rows).map(r => ({
+            id: r.id,
+            tiempoOficial: parseTimeToTimeSpan(r.tiempoOficial),
+            estado: mapEstadoCantoToBackend(r.estadoCanto || 'Pendiente'),
+        })),
+    [resultados, getTimingRowsForSave]);
+
+    const submitTimingResults = useCallback(async (fase, { rows = resultados, silent = false } = {}) => {
+        if (!fase) return false;
+        const dataToSave = buildTimingSavePayload(rows);
+        if (dataToSave.length === 0) {
+            if (!silent) addToast('No hay tiempos para enviar.', 'warning');
+            return false;
+        }
+
+        const notifyRetry = ({ nextAttempt, maxAttempts }) => {
+            if (silent) return;
+            addToast(`Señal débil: reintentando envío (${nextAttempt}/${maxAttempts})…`, 'warning');
+        };
+
+        const runWithRetry = (label, fn) => retryWithBackoff(fn, {
+            delaysMs: TIMING_SUBMIT_RETRY_DELAYS_MS,
+            onRetry: (ctx) => {
+                console.warn(`[Finisher] ${label} intento ${ctx.attempt} falló, próximo en ${ctx.delay}ms`);
+                notifyRetry(ctx);
+            },
+        });
+
+        await runWithRetry('BatchUpdate', () => ResultadoService.batchUpdate(dataToSave));
+
+        if (soloMode) {
+            await runWithRetry('Finalizar', () => FaseService.finalizar(fase.id));
+            setFases(prev => prev.map(f =>
+                f.id === fase.id ? { ...f, estado: 'Finalizada' } : f
+            ));
+            setSelectedFase(prev => (prev?.id === fase.id ? { ...prev, estado: 'Finalizada' } : prev));
+            if (!silent) addToast('Resultados guardados. La prueba quedó finalizada.', 'success');
+        } else {
+            await runWithRetry('EnviarARevision', () => FaseService.enviarARevision(fase.id));
+            setFases(prev => prev.map(f =>
+                f.id === fase.id ? { ...f, estado: 'Pendiente de Validación' } : f
+            ));
+            setSelectedFase(prev => (prev?.id === fase.id ? { ...prev, estado: 'Pendiente de Validación' } : prev));
+            if (!silent) addToast('Resultados enviados y fase enviada a revisión', 'success');
+        }
+
+        clearPendingTimingBackup(fase.id);
+        refreshPendingBackups();
+        return true;
+    }, [addToast, buildTimingSavePayload, refreshPendingBackups, resultados, soloMode]);
+
+    const handleRetryPending = useCallback(async ({ auto = false } = {}) => {
+        if (!selectedFase || loading) return;
+        const backup = getPendingTimingBackup(selectedFase.id);
+        const rows = backup?.resultados?.length ? backup.resultados : resultados;
+
+        setLoading(true);
+        try {
+            const ok = await submitTimingResults(selectedFase, { rows, silent: auto });
+            if (ok && auto) addToast('Conexión restablecida: tiempos enviados.', 'success');
+        } catch (err) {
+            console.error('[Finisher] reintento envío:', err);
+            if (!auto) {
+                addToast(getUserFacingError(err, 'No se pudo reenviar. Usá el PDF de respaldo si persiste.'), 'error');
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [addToast, loading, resultados, selectedFase, submitTimingResults]);
+
+    useEffect(() => {
+        if (!selectedFase?.id || !hasPendingBackup) return undefined;
+        const onOnline = () => { handleRetryPending({ auto: true }); };
+        window.addEventListener('online', onOnline);
+        return () => window.removeEventListener('online', onOnline);
+    }, [selectedFase?.id, hasPendingBackup, handleRetryPending]);
+
     const parseTimeToMs = (timeStr) => {
         if (!timeStr) return 0;
         const [hms, msPart] = timeStr.split('.');
@@ -743,38 +859,56 @@ const FinisherDashboard = () => {
         }
     };
 
+    const handleExportBackupPdf = async () => {
+        if (!selectedFase) return;
+        const backup = getPendingTimingBackup(selectedFase.id);
+        const rows = getTimingRowsForSave(backup?.resultados?.length ? backup.resultados : resultados);
+        if (!rows.length) {
+            addToast('No hay tiempos para respaldar.', 'warning');
+            return;
+        }
+        try {
+            await PdfExportService.exportCronometristaRespaldo({
+                eventoNombre: selectedEvento?.nombre || backup?.eventoNombre,
+                faseNombre: selectedFase.nombreFase || backup?.faseNombre,
+                faseId: selectedFase.id,
+                resultados: rows,
+                capturedAt: backup?.capturedAt || new Date().toISOString(),
+            });
+            addToast('PDF de respaldo descargado.', 'success');
+        } catch (err) {
+            console.error('[Finisher] export backup PDF:', err);
+            addToast('No se pudo generar el PDF de respaldo.', 'error');
+        }
+    };
+
     const handleSaveResults = async () => {
         if (!selectedFase) return;
+        trackJudgeButton({
+            accion: 'CLICK_SEND_TIMES',
+            modulo: 'Cronometrista',
+            eventoId: selectedEvento?.id,
+            detalle: {
+                faseId: selectedFase.id,
+                faseNombre: selectedFase.nombreFase,
+                filas: getTimingRowsForSave().length,
+            },
+        });
         setLoading(true);
         try {
-            const dataToSave = resultados
-                .filter(r => r.tiempoOficial || (r.estadoCanto && r.estadoCanto !== 'Pendiente'))
-                .map(r => ({
-                    id: r.id,
-                    tiempoOficial: parseTimeToTimeSpan(r.tiempoOficial),
-                    estadoCanto: r.estadoCanto || 'Pendiente'
-                }));
-
-            await ResultadoService.batchUpdate(dataToSave);
-
-            if (soloMode) {
-                await FaseService.finalizar(selectedFase.id);
-                setFases(prev => prev.map(f =>
-                    f.id === selectedFase.id ? { ...f, estado: 'Finalizada' } : f
-                ));
-                setSelectedFase(prev => prev ? { ...prev, estado: 'Finalizada' } : prev);
-                addToast('Resultados guardados. La prueba quedó finalizada.', 'success');
-            } else {
-                await FaseService.enviarARevision(selectedFase.id);
-                setFases(prev => prev.map(f =>
-                    f.id === selectedFase.id ? { ...f, estado: 'Pendiente de Validación' } : f
-                ));
-                setSelectedFase(prev => prev ? { ...prev, estado: 'Pendiente de Validación' } : prev);
-                addToast('Resultados enviados y fase enviada a revisión', 'success');
-            }
+            await submitTimingResults(selectedFase);
         } catch (err) {
-            console.error("Error al finalizar carga:", err);
-            addToast("Error al guardar resultados", "error");
+            console.error('Error al finalizar carga:', err);
+            savePendingTimingBackup(selectedFase.id, {
+                eventoId: selectedEvento?.id,
+                eventoNombre: selectedEvento?.nombre,
+                faseNombre: selectedFase.nombreFase,
+                resultados: getTimingRowsForSave(),
+                soloMode,
+            });
+            refreshPendingBackups();
+            const msg = getUserFacingError(err, 'Error al guardar resultados');
+            addToast(`${msg} Los tiempos quedaron guardados en este dispositivo. Usá Reintentar o descargá el PDF.`, 'error');
         } finally {
             setLoading(false);
         }
@@ -1061,13 +1195,18 @@ const FinisherDashboard = () => {
                         </div>
 
                         <div className={`pruebas-list ${isCompact ? 'compact-grid' : ''}`}>
-                            {fases.map((f, index) => (
+                            {fases.map((f, index) => {
+                                const faseTieneBackupPendiente = pendingBackupsAll.some(b => String(b.faseId) === String(f.id));
+                                return (
                                 <div 
                                     key={f.id} 
-                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''}`} 
+                                    className={`prueba-item-mini ${selectedFase?.id === f.id ? 'active' : ''} ${['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) ? 'finished' : ''} ${faseTieneBackupPendiente ? 'pending-send' : ''}`} 
                                     onClick={() => { setSelectedFase(f); if (window.innerWidth <= 1000) setIsSidebarCollapsed(true); }}
                                 >
-                                    {['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
+                                    {faseTieneBackupPendiente && (
+                                        <span className="status-dot pending-send" title="Tiempos sin enviar al servidor" />
+                                    )}
+                                    {!faseTieneBackupPendiente && ['Finalizada', 'Finalizado', 'Pendiente de Validación', 'PendienteValidacion'].includes(f.estado) && <span className="status-dot finished"></span>}
                                     <span className="race-num">#{f.nroPrueba || (index + 1)}</span>
                                     {!isCompact && (() => {
                                         const p = f.prueba?.prueba || f.etapa?.eventoPrueba?.prueba || f.eventoPrueba?.prueba;
@@ -1080,8 +1219,43 @@ const FinisherDashboard = () => {
                                         );
                                     })()}
                                 </div>
-                            ))}
+                            );})}
                         </div>
+
+                        {pendingBackupsAll.length > 0 && (
+                            <div
+                                className="finisher-pending-list"
+                                style={{
+                                    marginTop: '1rem',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255, 152, 0, 0.1)',
+                                    border: '1px solid rgba(255, 152, 0, 0.35)',
+                                    fontSize: '0.82rem',
+                                }}
+                            >
+                                <strong style={{ display: 'block', marginBottom: 6 }}>
+                                    Sin enviar ({pendingBackupsAll.length})
+                                </strong>
+                                <p style={{ margin: '0 0 8px', opacity: 0.85, lineHeight: 1.4 }}>
+                                    Guardado en este dispositivo. Volvé a la serie y usá Reintentar envío.
+                                </p>
+                                {pendingBackupsAll.map(b => (
+                                    <button
+                                        key={b.faseId}
+                                        type="button"
+                                        className="btn-reset"
+                                        style={{ display: 'block', width: '100%', marginBottom: 4, textAlign: 'left', fontSize: '0.8rem' }}
+                                        onClick={() => {
+                                            const fase = fases.find(x => String(x.id) === String(b.faseId));
+                                            if (fase) setSelectedFase(fase);
+                                        }}
+                                    >
+                                        {b.faseNombre || `Fase ${b.faseId}`}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </aside>
@@ -1169,6 +1343,24 @@ const FinisherDashboard = () => {
                         </div>
                     )}
 
+                    {hasPendingBackup && selectedFase && (
+                        <div
+                            className="finisher-pending-backup-banner"
+                            style={{
+                                margin: '0 1rem 0.5rem',
+                                padding: '10px 14px',
+                                borderRadius: '8px',
+                                background: 'rgba(255, 152, 0, 0.12)',
+                                border: '1px solid rgba(255, 152, 0, 0.4)',
+                                fontSize: '0.88rem',
+                                lineHeight: 1.45,
+                            }}
+                        >
+                            <WifiOff size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                            Hay tiempos sin enviar al servidor. Usá <strong>Reintentar envío</strong> o entregá el <strong>PDF de respaldo</strong> a mesa de control.
+                        </div>
+                    )}
+
                     <footer className="finisher-actions finisher-sticky-actions">
                         <button type="button" className="btn-reset" onClick={() => {
                             setConfirmDialog({
@@ -1187,6 +1379,26 @@ const FinisherDashboard = () => {
                         }} disabled={!selectedFase}>
                             <RefreshCw size={18} /> Reiniciar
                         </button>
+                        <button
+                            type="button"
+                            className="btn-reset"
+                            onClick={handleExportBackupPdf}
+                            disabled={!selectedFase || !getTimingRowsForSave().length}
+                            title="Descargar PDF con los tiempos de esta pantalla (funciona sin internet)"
+                        >
+                            <FileDown size={18} /> PDF respaldo
+                        </button>
+                        {hasPendingBackup && (
+                            <button
+                                type="button"
+                                className="btn-reset"
+                                onClick={() => handleRetryPending()}
+                                disabled={!selectedFase || loading}
+                                title="Reenviar tiempos guardados en este dispositivo"
+                            >
+                                <RefreshCw size={18} /> Reintentar envío
+                            </button>
+                        )}
                         <button type="button" className="btn-save-official" onClick={handleSaveResults} disabled={!selectedFase || loading || ['Finalizada', 'Finalizado'].includes(normalizeFaseEstado(selectedFase?.estado)) || arribosOrdenados.some(a => a.type === 'duda')}>
                             <Save size={18} /> Enviar
                         </button>

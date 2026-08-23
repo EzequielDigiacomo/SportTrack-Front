@@ -23,6 +23,11 @@ import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
 import { isControlTecnicoRole, isJudgeAdmin } from '../../utils/controlTecnico';
+import {
+    canJuezControlGuardarFase,
+    getJuezControlGuardMessage,
+    isJuezControlOnly,
+} from '../../utils/faseGuardHelpers';
 import MaratonStartListPanel from './maraton/MaratonStartListPanel';
 import MaratonResultadosGrids from './maraton/MaratonResultadosGrids';
 import { loadMaratonLargadaInscriptos, enrichTransferOptionsForMaraton, filterMaratonResultadosByClasificacion, resolveMaratonClasificacionTitleForResultado } from './maraton/maratonStartListUtils';
@@ -180,6 +185,12 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
     const faseSeleccionada = (filtroVisualFase === 'Todas' || filtroVisualFase === 'Cronograma')
         ? null
         : ((fases || []).find(f => f.nombreFase === filtroVisualFase) || null);
+
+    const juezControlSolo = isJuezControlOnly(user);
+    const juezControlPuedeGuardar = !juezControlSolo || canJuezControlGuardarFase(faseSeleccionada, tiemposLocales);
+    const juezControlGuardMsg = juezControlSolo && faseSeleccionada
+        ? getJuezControlGuardMessage(faseSeleccionada, tiemposLocales)
+        : null;
 
     const faseSeleccionadaParaSync = faseSeleccionada
         || ((fases || []).find(f => f.estado === 'En Carrera') || null);
@@ -1302,6 +1313,24 @@ const connectedStarter = activeJudges.find(j => {
                                                 {isMaratonEvent ? 'Reiniciar Largada' : 'Reiniciar Fase'}
                                             </button>
                                         </div>
+                                        {juezControlSolo && faseSeleccionada && !juezControlPuedeGuardar && (
+                                            <div
+                                                className="juez-control-guard-banner"
+                                                style={{
+                                                    flex: '1 1 100%',
+                                                    marginTop: '0.75rem',
+                                                    padding: '10px 14px',
+                                                    borderRadius: '8px',
+                                                    background: 'rgba(255, 193, 7, 0.12)',
+                                                    border: '1px solid rgba(255, 193, 7, 0.35)',
+                                                    color: 'var(--color-text-primary)',
+                                                    fontSize: '0.88rem',
+                                                    lineHeight: 1.45,
+                                                }}
+                                            >
+                                                ⛔ {juezControlGuardMsg}
+                                            </div>
+                                        )}
                                         <button
                                             className="btn-admin-primary"
                                             onClick={() => {
@@ -1309,7 +1338,8 @@ const connectedStarter = activeJudges.find(j => {
                                                     || faseSeleccionada.estado === 'PendienteValidacion';
                                                 handleSaveTiempos(faseSeleccionada.id, pendingValidation);
                                             }}
-                                            disabled={saving}
+                                            disabled={saving || (juezControlSolo && !juezControlPuedeGuardar)}
+                                            title={juezControlSolo && !juezControlPuedeGuardar ? juezControlGuardMsg : undefined}
                                             style={
                                                 (faseSeleccionada.estado === 'Pendiente de Validación' || faseSeleccionada.estado === 'PendienteValidacion')
                                                     ? { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }

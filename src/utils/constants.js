@@ -84,6 +84,12 @@ export const ENDPOINTS = {
         LEER: (id) => `/mensajes/hilos/${id}/leer`,
         NO_LEIDOS: '/mensajes/no-leidos/count',
     },
+
+    AUDITORIA: {
+        BASE: '/Auditoria',
+        POR_EVENTOS: '/Auditoria/por-eventos',
+        CLIENT_ACTION: '/Auditoria/client-action',
+    },
 }
 
 // Application Constants

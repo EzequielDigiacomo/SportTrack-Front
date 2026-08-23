@@ -39,6 +39,7 @@ import {
 import { formatAuditAction, formatAuditDetail } from '../../utils/auditHelpers';
 import { isSuperAdminUser } from '../../utils/authHelpers';
 import AudienceSaturationBar from './AudienceSaturationBar';
+import EventAuditCards from '../../components/Common/EventAuditCards';
 import {
     getEventStartDate,
     formatLocalDateShort,
@@ -928,6 +929,8 @@ const AdminHome = () => {
                         </div>
                     </div>
                 </div>
+
+                <EventAuditCards eventosLimit={10} logsPerEvento={6} />
 
                 <div className="recent-activity-container glass-effect">
                     <div className="activity-header">

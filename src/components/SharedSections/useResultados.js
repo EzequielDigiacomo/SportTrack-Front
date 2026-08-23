@@ -10,6 +10,14 @@ import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
 import { getUserFacingError } from '../../utils/userFacingError';
+import { isJudgeAdmin } from '../../utils/controlTecnico';
+import {
+    canJuezControlGuardarFase,
+    getJuezControlGuardMessage,
+    isJuezControlOnly,
+} from '../../utils/faseGuardHelpers';
+import { trackAuditAction, trackJudgeButton } from '../../services/auditActionTracker';
+import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 
 export const useResultados = (preselectedEventoId, defaultTab) => {
     const { user } = useAuth();
@@ -111,6 +119,13 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             localStorage.setItem('results_selected_evento', selectedEvento);
             loadPruebas(selectedEvento);
             loadCronograma(selectedEvento);
+            const ev = eventos.find(e => String(e.id) === String(selectedEvento));
+            trackAuditAction({
+                accion: 'OPEN_RESULTS_MODULE',
+                modulo: 'Resultados',
+                eventoId: Number(selectedEvento) || selectedEvento,
+                detalle: { eventoNombre: ev?.nombre || null },
+            });
             // No reseteamos selectedPrueba automáticamente si acaba de cargar de localStorage
             setInscriptos([]);
             setFases([]);
@@ -506,6 +521,23 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             setMessage('⚠️ La fase seleccionada no tiene resultados.');
             return;
         }
+
+        if (isJuezControlOnly(user) && !canJuezControlGuardarFase(fase, tiemposLocales)) {
+            setMessage(`⛔ ${getJuezControlGuardMessage(fase, tiemposLocales)}`);
+            return;
+        }
+
+        trackJudgeButton({
+            accion: 'CLICK_SAVE_OFFICIAL',
+            modulo: isJuezControlOnly(user) ? 'JuezControl' : 'Resultados',
+            eventoId: Number(selectedEvento) || null,
+            eventoPruebaId: fase?.etapa?.eventoPruebaId || fase?.eventoPruebaId || null,
+            detalle: {
+                faseId,
+                faseNombre: fase.nombreFase,
+                finalize,
+            },
+        });
 
         setSaving(true);
         setMessage(finalize ? '⏳ Guardando y oficializando...' : '⏳ Iniciando guardado...');
