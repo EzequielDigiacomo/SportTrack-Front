@@ -5,7 +5,21 @@ import api from './api';
 import { ENDPOINTS } from '../utils/constants';
 
 const FASE_ID_RE = /\(ID:\s*(\d+)\)/i;
-const EVENTO_ID_RE = /\(ID:\s*(\d+)\)/i;
+
+const tryEventoIdFromDetalle = (detalle) => {
+    if (!detalle || typeof detalle !== 'string') return null;
+    const trimmed = detalle.trim();
+    if (trimmed.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (parsed?.eventoId != null) return Number(parsed.eventoId);
+            if (parsed?.text) return tryEventoIdFromDetalle(parsed.text);
+        } catch {
+            /* ignore */
+        }
+    }
+    return null;
+};
 
 const EVENT_MODULES = new Set([
     'Competencia', 'Inscripciones', 'Eventos', 'Frontend',
@@ -66,14 +80,16 @@ export async function buildEventCardsFromSupportLogs({ eventosLimit = 12, logsPe
         const log = normalizeLog(raw);
         let eventoId = log.idEvento ? Number(log.idEvento) : null;
 
+        if (!eventoId) eventoId = tryEventoIdFromDetalle(log.detalle);
+
         if (!eventoId) {
             const detalle = log.detalle || '';
             const faseMatch = FASE_ID_RE.exec(detalle);
             if (faseMatch) {
                 eventoId = faseToEvento.get(Number(faseMatch[1])) ?? null;
             }
-            if (!eventoId && (log.modulo === 'Eventos')) {
-                const evMatch = EVENTO_ID_RE.exec(detalle);
+            if (!eventoId && log.modulo === 'Eventos') {
+                const evMatch = FASE_ID_RE.exec(detalle);
                 if (evMatch) eventoId = Number(evMatch[1]);
             }
         }
