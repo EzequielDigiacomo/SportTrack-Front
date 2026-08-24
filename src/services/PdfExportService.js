@@ -348,29 +348,28 @@ const buildResultRows = (fase, { isMaraton = false } = {}) => {
 
 /** Altura del bloque de título (2 líneas + regla) antes de la tabla. */
 const GRID_TITLE_H = 11;
+/** Estimaciones conservadoras (mm): mejor dejar hueco al pie que partir una grilla. */
+const GRID_HEAD_H = 11;
+const GRID_ROW_H = 11;
+const GRID_BLOCK_PAD = 8;
 
 /**
  * Estima la altura del bloque completo (título + tabla).
- * Es deliberadamente conservadora: si queda justo, preferimos pasar la grilla
- * entera a la hoja siguiente antes que cortarla.
+ * Usar siempre el N° de filas reales (rows.length) cuando esté disponible.
  */
-const estimateGridH = (fase, isResults) => {
-    const nRows  = Math.max(fase.resultados?.length || 1, 1);
-    const headH  = 8;    // header autoTable (font + padding)
-    // Filas reales ~6 mm; usamos más margen por redondeos de autoTable
-    const rowH   = isResults ? 7.2 : 6.8;
-    const pad    = 3;    // holgura extra al pie del bloque
-    return GRID_TITLE_H + headH + nRows * rowH + pad;
+const estimateGridH = (nRows) => {
+    const rows = Math.max(Number(nRows) || 1, 1);
+    return GRID_TITLE_H + GRID_HEAD_H + rows * GRID_ROW_H + GRID_BLOCK_PAD;
 };
 
 /**
  * Renders fases stacked vertically, flowing across as many pages as needed.
  * Una grilla que cabe en una hoja no se parte: si no entra en el espacio
- * restante, se mueve entera a la página siguiente.
+ * restante, se mueve entera a la página siguiente (decisión nuestra, no de autoTable).
  * mode: 'startList' | 'results'
  */
 const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode = 'startList', logo, options = {}) => {
-    const GRID_GAP   = 6;    // vertical gap between grids
+    const GRID_GAP    = 6;
     const CONTENT_TOP = BAND_H + MARGIN;
     const BOTTOM_LIMIT = PH - FOOTER_H - 4;
     const PAGE_CONTENT_H = BOTTOM_LIMIT - CONTENT_TOP;
@@ -378,10 +377,16 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
     const isMaraton  = !!options.isMaraton;
     const bandLabel  = `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`;
 
-    // ── First pass: count total pages (dry run, no drawing) ──────────────────
-    let dryPage = 1, dryY = CONTENT_TOP;
+    const rowCountOf = (fase) => {
+        const n = fase?.resultados?.length;
+        return Math.max(n || 1, 1);
+    };
+
+    // ── First pass: count total pages (dry run) ───────────────────────────────
+    let dryPage = 1;
+    let dryY = CONTENT_TOP;
     fases.forEach((fase) => {
-        const h = estimateGridH(fase, isResults);
+        const h = estimateGridH(rowCountOf(fase));
         if (dryY + h > BOTTOM_LIMIT && dryY > CONTENT_TOP) {
             dryPage++;
             dryY = CONTENT_TOP;
@@ -390,17 +395,17 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
     });
     const totalPages = dryPage;
 
-    // ── Second pass: actually render ──────────────────────────────────────────
+    // ── Second pass: render ───────────────────────────────────────────────────
     let currentPage = 1;
-    let currentY    = CONTENT_TOP;
-    let globalIdx   = 0;    // sequential grid number across all pages
+    let currentY = CONTENT_TOP;
+    let globalIdx = 0;
     let firstOnPage = true;
 
     const startNewPage = () => {
         drawFooter(doc, eventoInfo);
         doc.addPage();
         currentPage++;
-        currentY   = CONTENT_TOP;
+        currentY = CONTENT_TOP;
         firstOnPage = true;
         drawBand(doc, eventoInfo, bandLabel, currentPage, totalPages, logo);
     };
@@ -409,17 +414,22 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
 
     fases.forEach((fase) => {
         globalIdx++;
-        const blockH = estimateGridH(fase, isResults);
-        // Si la grilla cabe en una hoja completa, no permitir que autoTable la parta
-        const fitsOnOnePage = blockH <= PAGE_CONTENT_H;
 
-        // Escaneo previo: si no entra en el resto de la hoja → nueva página
-        if (!firstOnPage && currentY + blockH > BOTTOM_LIMIT) {
+        const rows = isResults ? buildResultRows(fase, { isMaraton }) : buildStartRows(fase);
+        const head = isResults
+            ? [['Pos.', 'Carril', 'Atleta / Tripulación', 'Club', 'Tiempo']]
+            : [['#', 'Atleta / Tripulación', 'Club']];
+
+        const blockH = estimateGridH(rows.length);
+        const fitsOnOnePage = blockH <= PAGE_CONTENT_H;
+        const remaining = BOTTOM_LIMIT - currentY;
+
+        // Decisión ANTES de dibujar: la grilla entera entra o no
+        if (!firstOnPage && fitsOnOnePage && remaining < blockH) {
             startNewPage();
         }
-        // Tablas muy altas: si queda poco espacio, empezar en hoja nueva
-        // (evita 1–2 filas al final y el resto en la siguiente)
-        if (!fitsOnOnePage && !firstOnPage && (BOTTOM_LIMIT - currentY) < PAGE_CONTENT_H * 0.4) {
+        // Tablas más altas que una hoja: no dejar un pedazo mínimo al final
+        if (!firstOnPage && !fitsOnOnePage && remaining < PAGE_CONTENT_H * 0.45) {
             startNewPage();
         }
 
@@ -428,25 +438,19 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
         }
         firstOnPage = false;
 
-        const timeStr    = getTimeStr(fase);
+        const timeStr = getTimeStr(fase);
         const pruebaInfo = fase._pdfSubtitleOverride != null
             ? fase._pdfSubtitleOverride
             : getPruebaInfo(fase);
-        const line1      = `#${globalIdx}  ${timeStr} hs  —  ${fase.nombreFase}`;
+        const line1 = `#${globalIdx}  ${timeStr} hs  —  ${fase.nombreFase}`;
 
-        const rows = isResults ? buildResultRows(fase, { isMaraton }) : buildStartRows(fase);
-        const head = isResults
-            ? [['Pos.', 'Carril', 'Atleta / Tripulación', 'Club', 'Tiempo']]
-            : [['#', 'Atleta / Tripulación', 'Club']];
-
-        // Reserva espacio de título en el margen superior para que, si autoTable
-        // mueve la tabla a otra hoja (pageBreak: avoid), el título viaje con ella.
+        const pageBefore = doc.internal.getNumberOfPages();
+        // Si avoid mueve la tabla, deja hueco arriba para el título
         const tableMarginTop = fitsOnOnePage
             ? CONTENT_TOP + GRID_TITLE_H
             : CONTENT_TOP;
 
         let titleDrawn = false;
-        const pageBefore = doc.internal.getNumberOfPages();
 
         autoTable(doc, {
             startY: currentY + GRID_TITLE_H,
@@ -460,18 +464,17 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
                 bottom: FOOTER_H + 4,
             },
             pageBreak: fitsOnOnePage ? 'avoid' : 'auto',
-            rowPageBreak: 'avoid',
-            showHead: 'everyPage',
-            didDrawPage: (data) => {
+            showHead: fitsOnOnePage ? 'firstPage' : 'everyPage',
+            // Título en la misma página donde empieza la tabla (viaja si avoid salta)
+            willDrawPage: (data) => {
                 if (titleDrawn) return;
-                const tableStartY = data.settings.startY ?? tableMarginTop;
-                const titleY = Math.max(CONTENT_TOP, tableStartY - GRID_TITLE_H);
-                drawGridTitle(doc, line1, pruebaInfo, titleY);
+                const tableStartY = data.cursor?.y ?? currentY + GRID_TITLE_H;
+                drawGridTitle(doc, line1, pruebaInfo, Math.max(CONTENT_TOP, tableStartY - GRID_TITLE_H));
                 titleDrawn = true;
             },
         });
 
-        // Páginas nuevas creadas por autoTable (avoid o tabla muy alta)
+        // Si autoTable agregó páginas (tabla enorme o avoid), sincronizar banda/pie
         const pagesNow = doc.internal.getNumberOfPages();
         if (pagesNow > pageBefore) {
             doc.setPage(pageBefore);
