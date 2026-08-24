@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatRaceTime, isMeaningfulRaceTime } from '../utils/raceTimeUtils';
+import { isExcludedFromRanking, normalizeEstadoCantoFromBackend } from '../utils/resultadosHelpers';
 import { getPdfLogo, fitLogoDimensions } from '../utils/pdfLogoLoader';
 import { expandFasesMaratonByClasificacion } from '../components/SharedSections/maraton/maratonStartListUtils';
 
@@ -278,6 +279,21 @@ const tableStyles = (isResults = false) => ({
 
 const sortByCarril = (a, b) => (Number(a.carril) || 99) - (Number(b.carril) || 99);
 
+/** Etiqueta de estado para PDF (alineada con Live Results). */
+const getResultStatusLabel = (r) => {
+    const raw = r?.estado || r?.Estado || r?.estadoCanto || r?.EstadoCanto || '';
+    const normalized = normalizeEstadoCantoFromBackend(raw);
+    if (!normalized || ['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(normalized)) {
+        return null;
+    }
+    const upper = String(normalized).trim().toUpperCase();
+    if (upper === 'DESCALIFICADO' || upper === 'DSQ') return 'DSQ';
+    if (upper === 'DNS') return 'DNS';
+    if (upper === 'DNF') return 'DNF';
+    if (isExcludedFromRanking(normalized)) return upper;
+    return null;
+};
+
 const sortResultadosForExport = (resultados) => {
     const list = resultados || [];
     const hasMeaningfulTimes = list.some(r => isMeaningfulRaceTime(r.tiempoOficial));
@@ -287,6 +303,11 @@ const sortResultadosForExport = (resultados) => {
     }
 
     return [...list].sort((a, b) => {
+        const statusA = getResultStatusLabel(a);
+        const statusB = getResultStatusLabel(b);
+        if (statusA && !statusB) return 1;
+        if (!statusA && statusB) return -1;
+
         const pA = a.posicion || 99;
         const pB = b.posicion || 99;
         if (pA !== pB) return pA - pB;
@@ -302,42 +323,60 @@ const buildStartRows = (fase) => {
 };
 
 /** Result rows: [pos, carril, atleta, club, tiempo] — por carril pre-largada, por posición post-carrera */
-const buildResultRows = (fase) => {
+const buildResultRows = (fase, { isMaraton = false } = {}) => {
     if (!fase.resultados?.length) return [['-', '-', 'Sin resultados', '-', '-']];
-    const hasMeaningfulTimes = fase.resultados.some(r => isMeaningfulRaceTime(r.tiempoOficial));
+    const hasMeaningfulTimes = fase.resultados.some(
+        r => isMeaningfulRaceTime(r.tiempoOficial) || getResultStatusLabel(r)
+    );
     return sortResultadosForExport(fase.resultados)
-        .map(r => [
-            hasMeaningfulTimes && r.posicion ? r.posicion : '-',
-            r.carril   || '-',
-            getCrew(r, fase),
-            r.clubNombre || r.clubSigla || '-',
-            formatRaceTime(r.tiempoOficial) || '-',
-        ]);
+        .map(r => {
+            const statusLabel = getResultStatusLabel(r);
+            const timeLabel = statusLabel
+                || formatRaceTime(r.tiempoOficial, { marathon: isMaraton })
+                || '-';
+            return [
+                hasMeaningfulTimes && r.posicion && !statusLabel ? r.posicion : '-',
+                r.carril || '-',
+                getCrew(r, fase),
+                r.clubNombre || r.clubSigla || '-',
+                timeLabel,
+            ];
+        });
 };
 
 // ─── Dynamic flow renderer ────────────────────────────────────────────────────
+
+/** Altura del bloque de título (2 líneas + regla) antes de la tabla. */
+const GRID_TITLE_H = 11;
+
 /**
- * Estimates the height a grid will occupy (title + thead + rows).
- * Used to decide if a grid fits before rendering it.
+ * Estima la altura del bloque completo (título + tabla).
+ * Es deliberadamente conservadora: si queda justo, preferimos pasar la grilla
+ * entera a la hoja siguiente antes que cortarla.
  */
 const estimateGridH = (fase, isResults) => {
     const nRows  = Math.max(fase.resultados?.length || 1, 1);
-    const titleH = 12;   // 2 title lines + rule
-    const headH  = 6;    // table header row
-    const rowH   = 5;    // each data row (fontSize 8 + padding 2mm)
-    return titleH + headH + nRows * rowH;
+    const headH  = 8;    // header autoTable (font + padding)
+    // Filas reales ~6 mm; usamos más margen por redondeos de autoTable
+    const rowH   = isResults ? 7.2 : 6.8;
+    const pad    = 3;    // holgura extra al pie del bloque
+    return GRID_TITLE_H + headH + nRows * rowH + pad;
 };
 
 /**
  * Renders fases stacked vertically, flowing across as many pages as needed.
- * A grid is NEVER split — if it doesn't fit on the remaining space, a new page
- * is started.  mode: 'startList' | 'results'
+ * Una grilla que cabe en una hoja no se parte: si no entra en el espacio
+ * restante, se mueve entera a la página siguiente.
+ * mode: 'startList' | 'results'
  */
-const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode = 'startList', logo) => {
+const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode = 'startList', logo, options = {}) => {
     const GRID_GAP   = 6;    // vertical gap between grids
     const CONTENT_TOP = BAND_H + MARGIN;
     const BOTTOM_LIMIT = PH - FOOTER_H - 4;
+    const PAGE_CONTENT_H = BOTTOM_LIMIT - CONTENT_TOP;
     const isResults  = mode === 'results';
+    const isMaraton  = !!options.isMaraton;
+    const bandLabel  = `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`;
 
     // ── First pass: count total pages (dry run, no drawing) ──────────────────
     let dryPage = 1, dryY = CONTENT_TOP;
@@ -363,48 +402,89 @@ const renderStackedPages = (doc, fases, eventoInfo, docTitle, docSubtitle, mode 
         currentPage++;
         currentY   = CONTENT_TOP;
         firstOnPage = true;
-        drawBand(doc, eventoInfo, `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`, currentPage, totalPages, logo);
+        drawBand(doc, eventoInfo, bandLabel, currentPage, totalPages, logo);
     };
 
-    drawBand(doc, eventoInfo, `${docTitle}${docSubtitle ? ' · ' + docSubtitle : ''}`, 1, totalPages, logo);
+    drawBand(doc, eventoInfo, bandLabel, 1, totalPages, logo);
 
     fases.forEach((fase) => {
         globalIdx++;
-        const h = estimateGridH(fase, isResults);
+        const blockH = estimateGridH(fase, isResults);
+        // Si la grilla cabe en una hoja completa, no permitir que autoTable la parta
+        const fitsOnOnePage = blockH <= PAGE_CONTENT_H;
 
-        // If this grid doesn't fit, move to a new page
-        if (!firstOnPage && currentY + h > BOTTOM_LIMIT) {
+        // Escaneo previo: si no entra en el resto de la hoja → nueva página
+        if (!firstOnPage && currentY + blockH > BOTTOM_LIMIT) {
+            startNewPage();
+        }
+        // Tablas muy altas: si queda poco espacio, empezar en hoja nueva
+        // (evita 1–2 filas al final y el resto en la siguiente)
+        if (!fitsOnOnePage && !firstOnPage && (BOTTOM_LIMIT - currentY) < PAGE_CONTENT_H * 0.4) {
             startNewPage();
         }
 
-        // Dashed separator between grids on the same page
         if (!firstOnPage) {
             drawSeparator(doc, currentY - GRID_GAP / 2);
         }
         firstOnPage = false;
 
-        // Title block
         const timeStr    = getTimeStr(fase);
         const pruebaInfo = fase._pdfSubtitleOverride != null
             ? fase._pdfSubtitleOverride
             : getPruebaInfo(fase);
         const line1      = `#${globalIdx}  ${timeStr} hs  —  ${fase.nombreFase}`;
-        drawGridTitle(doc, line1, pruebaInfo, currentY);
 
-        // Table
-        const rows = isResults ? buildResultRows(fase) : buildStartRows(fase);
+        const rows = isResults ? buildResultRows(fase, { isMaraton }) : buildStartRows(fase);
         const head = isResults
             ? [['Pos.', 'Carril', 'Atleta / Tripulación', 'Club', 'Tiempo']]
             : [['#', 'Atleta / Tripulación', 'Club']];
 
+        // Reserva espacio de título en el margen superior para que, si autoTable
+        // mueve la tabla a otra hoja (pageBreak: avoid), el título viaje con ella.
+        const tableMarginTop = fitsOnOnePage
+            ? CONTENT_TOP + GRID_TITLE_H
+            : CONTENT_TOP;
+
+        let titleDrawn = false;
+        const pageBefore = doc.internal.getNumberOfPages();
+
         autoTable(doc, {
-            startY: currentY + 11,
+            startY: currentY + GRID_TITLE_H,
             head,
             body: rows,
             ...tableStyles(isResults),
+            margin: {
+                left: TABLE_MARGIN,
+                right: TABLE_MARGIN,
+                top: tableMarginTop,
+                bottom: FOOTER_H + 4,
+            },
+            pageBreak: fitsOnOnePage ? 'avoid' : 'auto',
+            rowPageBreak: 'avoid',
+            showHead: 'everyPage',
+            didDrawPage: (data) => {
+                if (titleDrawn) return;
+                const tableStartY = data.settings.startY ?? tableMarginTop;
+                const titleY = Math.max(CONTENT_TOP, tableStartY - GRID_TITLE_H);
+                drawGridTitle(doc, line1, pruebaInfo, titleY);
+                titleDrawn = true;
+            },
         });
 
-        // Advance Y by the real table bottom (not the estimate)
+        // Páginas nuevas creadas por autoTable (avoid o tabla muy alta)
+        const pagesNow = doc.internal.getNumberOfPages();
+        if (pagesNow > pageBefore) {
+            doc.setPage(pageBefore);
+            drawFooter(doc, eventoInfo);
+            for (let p = pageBefore + 1; p <= pagesNow; p++) {
+                doc.setPage(p);
+                drawBand(doc, eventoInfo, bandLabel, p, Math.max(totalPages, pagesNow), logo);
+                if (p < pagesNow) drawFooter(doc, eventoInfo);
+            }
+            currentPage = pagesNow;
+            doc.setPage(pagesNow);
+        }
+
         currentY = doc.lastAutoTable.finalY + GRID_GAP;
     });
 
@@ -438,7 +518,7 @@ const PdfExportService = {
         const subtitle = options.isMaraton && fases.length > 1
             ? 'Clasificaciones'
             : (fase.nombreFase || fases[0]?.nombreFase);
-        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, subtitle, 'results', logo);
+        renderStackedPages(doc, fases, eventoInfo, pruebaNombre, subtitle, 'results', logo, options);
         doc.save(`${eventoInfo.nombre}_${fase.nombreFase}_Resultados.pdf`.replace(/\s+/g, '_'));
     },
 
@@ -449,7 +529,7 @@ const PdfExportService = {
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const fasesExport = resolveFasesForResultsExport(fases, options);
-        renderStackedPages(doc, fasesExport, eventoInfo, pruebaNombre, grupoLabel, 'results', logo);
+        renderStackedPages(doc, fasesExport, eventoInfo, pruebaNombre, grupoLabel, 'results', logo, options);
         doc.save(`${eventoInfo.nombre}_${grupoLabel}_Resultados.pdf`.replace(/\s+/g, '_'));
     },
 
@@ -460,7 +540,7 @@ const PdfExportService = {
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const fasesExport = resolveFasesForResultsExport(fases, options);
-        renderStackedPages(doc, fasesExport, eventoInfo, pruebaNombre, 'Resultados Completos', 'results', logo);
+        renderStackedPages(doc, fasesExport, eventoInfo, pruebaNombre, 'Resultados Completos', 'results', logo, options);
         doc.save(`${eventoInfo.nombre}_${pruebaNombre}_Completo.pdf`.replace(/\s+/g, '_'));
     },
 
