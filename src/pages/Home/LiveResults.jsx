@@ -682,7 +682,7 @@ const LiveResults = () => {
                                         }
 
                                         const rawTime = r.tiempoOficial || r.TiempoOficial;
-                                        return rawTime ? formatRaceTime(rawTime) : '--:--.---';
+                                        return rawTime ? formatRaceTime(rawTime, { marathon: isMaratonEvent }) : '--:--.---';
                                     })()}
                                 </td>
                                 <td className="diff-cell">

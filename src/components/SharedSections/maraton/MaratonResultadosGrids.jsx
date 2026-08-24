@@ -17,6 +17,8 @@ const MaratonResultadosGrids = ({
     isLocked,
     isSuccess,
     isAdmin = true,
+    allowManualPositions = false,
+    isMaraton = true,
     /** Mapa opcional InscripcionId → EventoPruebaId (fallback si la API aún no envía eventoPruebaId). */
     inscripcionEpMap = null,
 }) => {
@@ -50,6 +52,8 @@ const MaratonResultadosGrids = ({
                 isLocked={isLocked}
                 isSuccess={isSuccess}
                 isAdmin={isAdmin}
+                allowManualPositions={allowManualPositions}
+                isMaraton={isMaraton}
             />
         );
     }
@@ -92,6 +96,8 @@ const MaratonResultadosGrids = ({
                         isLocked={isLocked}
                         isSuccess={isSuccess}
                         isAdmin={isAdmin}
+                        allowManualPositions={allowManualPositions}
+                        isMaraton={isMaraton}
                     />
                 </div>
             ))}

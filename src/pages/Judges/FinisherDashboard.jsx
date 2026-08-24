@@ -21,12 +21,13 @@ import {
     readControlTecnicoHandoff,
     isFreshControlTecnicoHandoff,
 } from '../../utils/controlTecnico';
-import { formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
+import { formatRaceTimeFromMs, formatClockWithHoursFromMs, timeToMs, parseTimeToTimeSpan } from '../../utils/raceTimeUtils';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 import { mapEstadoCantoToBackend } from '../../utils/resultadosHelpers';
 import { getUserFacingError } from '../../utils/userFacingError';
 import { retryWithBackoff, TIMING_SUBMIT_RETRY_DELAYS_MS } from '../../utils/retryWithBackoff';
 import PdfExportService from '../../services/PdfExportService';
+import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
 import {
     clearTimingSubmitQueue,
     enqueueFailedTimingSubmit,
@@ -67,6 +68,7 @@ const FinisherDashboard = () => {
     const [fases, setFases] = useState([]);
     const [selectedFase, setSelectedFase] = useState(null);
     const soloMode = isSoloControlTecnicoMode(user, selectedEvento);
+    const isMaratonEvent = resolveIsMaratonEvent(selectedEvento);
     const [resultados, setResultados] = useState([]);
     const [rawTimes, setRawTimes] = useState([]);
     const [isRaceRunning, setIsRaceRunning] = useState(false);
@@ -503,24 +505,7 @@ const FinisherDashboard = () => {
         }
     }, [resultados, rawTimes, isRaceRunning]);
 
-    const parseTimeToTimeSpan = (timeStr) => {
-        if (!timeStr || timeStr.trim() === '') return null;
-        try {
-            const parts = timeStr.trim().split(':');
-            if (parts.length === 2) {
-                const [min, secStr] = parts;
-                const [sec, ms] = (secStr || '0').split('.');
-                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
-                return `00:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
-            } else if (parts.length === 3) {
-                const [hr, min, secStr] = parts;
-                const [sec, ms] = (secStr || '0').split('.');
-                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
-                return `${String(parseInt(hr)).padStart(2,'0')}:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
-            }
-        } catch (e) {}
-        return null;
-    };
+    // parseTimeToTimeSpan importado de raceTimeUtils (soporta H:MM:SS y maratón)
 
     useEffect(() => {
         refreshPendingBackups();
@@ -714,15 +699,13 @@ const FinisherDashboard = () => {
         return undefined;
     }, [hasPendingBackup]);
 
-    const parseTimeToMs = (timeStr) => {
-        if (!timeStr) return 0;
-        const [hms, msPart] = timeStr.split('.');
-        const [h, m, s] = hms.split(':').map(Number);
-        const ms = Number((msPart || '0').padEnd(3, '0'));
-        return (h * 3600000) + (m * 60000) + (s * 1000) + ms;
-    };
+    const parseTimeToMs = (timeStr) => timeToMs(timeStr) ?? 0;
 
-    const formatTimer = (ms) => formatRaceTimeFromMs(ms);
+    const formatTimer = useCallback((ms) => (
+        isMaratonEvent || (ms != null && ms >= 3600000)
+            ? formatClockWithHoursFromMs(ms)
+            : formatRaceTimeFromMs(ms)
+    ), [isMaratonEvent]);
 
     const flushPendingAbs = (t0Ms) => {
         const pending = pendingAbsRef.current;
@@ -737,7 +720,7 @@ const FinisherDashboard = () => {
                 const hit = laneItems.find(p => String(p.resultadoId) === String(r.id));
                 if (!hit) return r;
                 const diff = elapsedMs(t0Ms, hit.finishAbs);
-                const formatted = formatRaceTimeFromMs(diff);
+                const formatted = formatTimer(diff);
                 timingSignalRService.sendTime(selectedFase?.id, r.id, formatted, diff).catch(() => {});
                 return { ...r, tiempoOficial: formatted, msLlegada: diff, status: 'finished' };
             }));
@@ -747,7 +730,7 @@ const FinisherDashboard = () => {
                 ...prev,
                 ...doubtItems.map(d => {
                     const diff = elapsedMs(t0Ms, d.finishAbs);
-                    return { id: d.finishAbs, time: formatRaceTimeFromMs(diff), ms: diff, type: 'duda' };
+                    return { id: d.finishAbs, time: formatTimer(diff), ms: diff, type: 'duda' };
                 })
             ]);
         }

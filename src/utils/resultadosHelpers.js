@@ -52,7 +52,7 @@ export const computePositionsForPhase = (resultados, tiemposLocales = {}) => {
     return positionMap;
 };
 
-export const applyPositionsToTiemposLocales = (resultados, tiemposLocales) => {
+export const applyPositionsToTiemposLocales = (resultados, tiemposLocales, { preserveManualPositions = false } = {}) => {
     const positions = computePositionsForPhase(resultados, tiemposLocales);
     const updated = { ...tiemposLocales };
 
@@ -62,6 +62,9 @@ export const applyPositionsToTiemposLocales = (resultados, tiemposLocales) => {
 
         if (isExcludedFromRanking(estado)) {
             updated[r.id] = { ...local, posicion: '' };
+        } else if (preserveManualPositions && local.posicion !== undefined && local.posicion !== null && local.posicion !== '') {
+            // Conserva POS cargada a mano
+            updated[r.id] = { ...local };
         } else if (positions[r.id]) {
             updated[r.id] = { ...local, posicion: positions[r.id] };
         } else if (!local.tiempoOficial && !r.tiempoOficial) {

@@ -18,7 +18,7 @@ import timingSignalRService from '../../services/TimingSignalRService';
 import './GestionResultados.css';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
 import { applyPositionsToTiemposLocales, getTransferablePositions, transferAthleteToPosition } from '../../utils/resultadosHelpers';
-import { formatRaceTime, formatRaceTimeFromMs } from '../../utils/raceTimeUtils';
+import { formatRaceTime, formatRaceTimeFromMs, formatClockWithHoursFromMs } from '../../utils/raceTimeUtils';
 import { normalizeFaseEstado } from '../../utils/judgeDashboardHelpers';
 import { parseStartMs, elapsedMs } from '../../utils/timingMath';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
@@ -425,7 +425,11 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
 
     // Funciones movidas arriba
 
-const formatTimer = (ms) => formatRaceTimeFromMs(ms);
+const formatTimer = (ms) => (
+    isMaratonEvent
+        ? formatClockWithHoursFromMs(ms)
+        : formatRaceTimeFromMs(ms)
+);
 
 
 const handleSimulateResults = () => {
@@ -509,8 +513,13 @@ const handleResultChange = (id, field, val) => {
             ...prev,
             [id]: { ...prev[id], [field]: val }
         };
+        // Al editar POS a mano no recalcular (carga manual / maratón)
+        if (field === 'posicion') return next;
         if (faseSeleccionada?.resultados) {
-            return applyPositionsToTiemposLocales(faseSeleccionada.resultados, next);
+            const allowManual = isManualTiming || isMaratonEvent;
+            return applyPositionsToTiemposLocales(faseSeleccionada.resultados, next, {
+                preserveManualPositions: allowManual,
+            });
         }
         return next;
     });
@@ -1268,6 +1277,8 @@ const connectedStarter = activeJudges.find(j => {
                                         isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados' || canEditResults) ? false : isLocked}
                                         isSuccess={saveSuccess}
                                         isAdmin={canEditResults}
+                                        allowManualPositions={isManualTiming || isMaratonEvent}
+                                        isMaraton
                                         inscripcionEpMap={maratonInscripcionEpMap}
                                     />
                                 ) : (
@@ -1280,6 +1291,8 @@ const connectedStarter = activeJudges.find(j => {
                                         isLocked={(isAdmin || viewMode === 'tiempos' || viewMode === 'resultados' || canEditResults) ? false : isLocked}
                                         isSuccess={saveSuccess}
                                         isAdmin={canEditResults}
+                                        allowManualPositions={isManualTiming}
+                                        isMaraton={false}
                                     />
                                 )}
                                 
@@ -1510,7 +1523,7 @@ const connectedStarter = activeJudges.find(j => {
                                 className="admin-input-small"
                                 value={transferModal.editSourceTime}
                                 onChange={(e) => setTransferModal(prev => prev && ({ ...prev, editSourceTime: e.target.value }))}
-                                placeholder="00:00.000"
+                                placeholder={isMaratonEvent ? '1:15:45 o 1hs, 15m 45s' : '00:00.000'}
                             />
                         </label>
                         <label className="transfer-field">
@@ -1520,7 +1533,7 @@ const connectedStarter = activeJudges.find(j => {
                                 className="admin-input-small"
                                 value={transferModal.editTargetTime}
                                 onChange={(e) => setTransferModal(prev => prev && ({ ...prev, editTargetTime: e.target.value }))}
-                                placeholder="00:00.000"
+                                placeholder={isMaratonEvent ? '1:15:45 o 1hs, 15m 45s' : '00:00.000'}
                             />
                         </label>
                     </div>

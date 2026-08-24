@@ -8,6 +8,7 @@ import FaseService from '../../services/FaseService';
 import SchedulerService from '../../services/SchedulerService';
 import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
+import { parseTimeToTimeSpan } from '../../utils/raceTimeUtils';
 import { getPromotionStatus } from '../../utils/promotionHelpers';
 import { getUserFacingError } from '../../utils/userFacingError';
 import { isJudgeAdmin } from '../../utils/controlTecnico';
@@ -469,26 +470,6 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         });
     };
 
-    const parseTimeToTimeSpan = (timeStr) => {
-        if (!timeStr || timeStr.trim() === '') return null;
-        try {
-            const parts = timeStr.trim().split(':');
-            if (parts.length === 2) {
-                const [min, secStr] = parts;
-                const [sec, ms] = (secStr || '0').split('.');
-                // ms can be 1, 2, 3 digits... pad to 7
-                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
-                return `00:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
-            } else if (parts.length === 3) {
-                const [hr, min, secStr] = parts;
-                const [sec, ms] = (secStr || '0').split('.');
-                const msFormatted = (ms || '0').substring(0, 3).padEnd(7, '0');
-                return `${String(parseInt(hr)).padStart(2,'0')}:${String(parseInt(min)).padStart(2,'0')}:${String(parseInt(sec)).padStart(2,'0')}.${msFormatted}`;
-            }
-        } catch (e) {}
-        return null;
-    };
-
     const handleSaveTiempos = async (faseId, finalize = false) => {
         if (!faseId) {
             setMessage('⚠️ Seleccioná una fase para guardar.');
@@ -567,7 +548,11 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 resultsToSave.push({
                     id: parseInt(id),
                     tiempoOficial: excluded ? null : t,
-                    posicion: excluded ? null : (positionMap[parseInt(id)] || null),
+                    posicion: excluded
+                        ? null
+                        : (item.posicion !== undefined && item.posicion !== null && item.posicion !== ''
+                            ? parseInt(item.posicion, 10)
+                            : (positionMap[parseInt(id)] || null)),
                     carril: c,
                     participanteNombre: n,
                     clubSigla: s,

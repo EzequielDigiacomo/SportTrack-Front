@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trophy, ArrowRightLeft } from 'lucide-react';
 import { computePositionsForPhase, isExcludedFromRanking, timeToMs } from '../../utils/resultadosHelpers';
-import { formatRaceTime, isMeaningfulRaceTime } from '../../utils/raceTimeUtils';
+import { formatRaceTime, isMeaningfulRaceTime, normalizeRaceTimeInput } from '../../utils/raceTimeUtils';
 import { formatTime } from '../../utils/dateUtils';
 
 const formatDiff = (diffMs) => {
@@ -43,13 +43,18 @@ const ResultadosTable = ({
     onTransferRequest,
     isLocked,
     isSuccess,
-    isAdmin = true
+    isAdmin = true,
+    /** Permite editar POS a mano (carga manual / maratón). */
+    allowManualPositions = false,
+    /** Formato de tiempos largos: 1hs, 15m 45s */
+    isMaraton = false,
 }) => {
     if (!fase) return null;
 
     const horaCompetencia = formatTime(fase.fechaHoraProgramada || fase.FechaHoraProgramada);
     const horaLabel = horaCompetencia !== '--:--' ? `${horaCompetencia} hs` : null;
     const showVerifyActions = !!(onStatusChange || onTransferRequest);
+    const timePlaceholder = isMaraton ? '1:13:05.830 (H:MM:SS)' : '00:00.000';
 
     const computedPositions = computePositionsForPhase(fase.resultados, tiemposLocales);
 
@@ -67,7 +72,16 @@ const ResultadosTable = ({
         const local = getLocal(res.id);
         const estado = local.estadoCanto || res.estado;
         if (isExcludedFromRanking(estado)) return '';
-        return computedPositions[res.id] || computedPositions[String(res.id)] || '';
+        if (allowManualPositions && local.posicion !== undefined && local.posicion !== null && local.posicion !== '') {
+            return local.posicion;
+        }
+        if (allowManualPositions && local.posicion === '') return '';
+        return computedPositions[res.id] || computedPositions[String(res.id)] || local.posicion || '';
+    };
+
+    const getRawTime = (res) => {
+        const local = getLocal(res.id);
+        return local.tiempoOficial !== undefined ? local.tiempoOficial : (res.tiempoOficial || '');
     };
 
     // Si no es admin, mostramos el formato "Live Results" (vista de consulta premium y simple)
@@ -110,7 +124,7 @@ const ResultadosTable = ({
                             const local = getLocal(res.id);
                             const pos = getDisplayPosition(res);
                             const timeStr = local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial;
-                            const displayTime = formatRaceTime(timeStr);
+                            const displayTime = formatRaceTime(timeStr, { marathon: isMaraton });
                             const status = local.estadoCanto || res.estado;
                             const isSpecialStatus = status && !['Pendiente', 'Preliminar', 'Oficial', 'Revisado'].includes(status);
 
@@ -226,7 +240,7 @@ const ResultadosTable = ({
                 <tbody>
                     {sortedResultados.map(res => {
                         const local = getLocal(res.id);
-                        const displayTime = formatRaceTime(local.tiempoOficial !== undefined ? local.tiempoOficial : res.tiempoOficial);
+                        const rawTime = getRawTime(res);
                         const displayPos = getDisplayPosition(res);
                         const displayCarril = local.carril !== undefined ? local.carril : (res.carril || '');
                         const displayNombre = local.participanteNombre !== undefined ? local.participanteNombre : (res.participanteNombre || '');
@@ -247,10 +261,22 @@ const ResultadosTable = ({
                                             type="number"
                                             className="admin-input-small"
                                             value={displayPos}
-                                            readOnly
+                                            readOnly={!allowManualPositions}
+                                            onChange={allowManualPositions
+                                                ? (e) => onResultChange(res.id, 'posicion', e.target.value)
+                                                : undefined}
                                             disabled={isLocked}
-                                            title="La posición se calcula según el tiempo. Usá «Mover» para traspasar puestos."
-                                            style={{ textAlign: 'center', width: '50px', background: 'rgba(255,255,255,0.05)' }}
+                                            min={1}
+                                            title={allowManualPositions
+                                                ? 'Posición editable (carga manual / maratón)'
+                                                : 'La posición se calcula según el tiempo. Usá «Mover» para traspasar puestos.'}
+                                            style={{
+                                                textAlign: 'center',
+                                                width: '50px',
+                                                background: allowManualPositions
+                                                    ? undefined
+                                                    : 'rgba(255,255,255,0.05)',
+                                            }}
                                         />
                                     )}
                                 </td>
@@ -296,12 +322,24 @@ const ResultadosTable = ({
                                         ) : (
                                             <input 
                                                 type="text"
-                                                placeholder="00:00.000"
+                                                placeholder={timePlaceholder}
                                                 className="admin-input-small"
-                                                value={displayTime}
+                                                value={rawTime ?? ''}
                                                 onChange={(e) => onResultChange(res.id, 'tiempoOficial', e.target.value)}
+                                                onBlur={(e) => {
+                                                    const normalized = normalizeRaceTimeInput(e.target.value, { marathon: isMaraton });
+                                                    if (normalized !== e.target.value) {
+                                                        onResultChange(res.id, 'tiempoOficial', normalized);
+                                                    }
+                                                }}
                                                 disabled={isLocked}
+                                                inputMode="text"
+                                                autoComplete="off"
+                                                spellCheck={false}
                                                 style={{ fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', width: '100%' }}
+                                                title={isMaraton
+                                                    ? 'Formato: H:MM:SS.mmm — ej. 1:13:05.830'
+                                                    : 'Ej: 01:23.456'}
                                             />
                                         )}
                                         {onStatusChange && (
