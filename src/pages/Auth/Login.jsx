@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AuthService from '../../services/AuthService';
 import { getDashboardPathForRole, getUserRole } from '../../utils/authHelpers';
-import { getUserFacingError } from '../../utils/userFacingError';
+import { getUserFacingError, isTechnicalErrorMessage } from '../../utils/userFacingError';
 import './Login.css';
 
 const Login = () => {
@@ -43,7 +43,20 @@ const Login = () => {
             
         } catch (err) {
             const status = err?.status ?? err?.response?.status;
-            if (status === 401) {
+            // El backend responde 401 con el motivo real (contraseña incorrecta, cuenta
+            // deshabilitada por intentos, federación suspendida/vencida, etc.).
+            // Mostrarlo evita que todo se lea como "contraseña incorrecta".
+            const rawBackendMessage = err?.data?.message ?? err?.response?.data?.message;
+            const backendMessage = typeof rawBackendMessage === 'string'
+                && !isTechnicalErrorMessage(rawBackendMessage)
+                ? rawBackendMessage.trim()
+                : '';
+
+            if (status === 429) {
+                setError('Demasiados intentos seguidos. Esperá un minuto e intentá de nuevo.');
+            } else if (backendMessage) {
+                setError(backendMessage);
+            } else if (status === 401) {
                 setError('Usuario o contraseña incorrectos');
             } else if (status === 403) {
                 setError('Acceso denegado o cuenta suspendida');
