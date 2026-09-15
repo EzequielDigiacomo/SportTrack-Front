@@ -38,8 +38,9 @@ const ClubDashboard = () => {
             try {
                 // 1. Obtener eventos próximos primero
                 const allProximos = await EventoService.getProximos();
-                const proximos = user.rol === 'SuperAdmin' ? allProximos : allProximos.filter(e => !e.nombre.toLowerCase().includes('control'));
-                const controles = allProximos.filter(e => e.nombre.toLowerCase().includes('control'));
+                // Controles y eventos oficiales juntos en el dashboard.
+                const proximos = allProximos || [];
+                const controles = (allProximos || []).filter(e => e.nombre?.toLowerCase().includes('control'));
                 
                 let activityItems = [];
                 let athleteActivity = [];

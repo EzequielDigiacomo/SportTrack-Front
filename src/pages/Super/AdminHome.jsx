@@ -166,7 +166,6 @@ const AdminHome = () => {
                     : clubesData;
 
                 const myEvents = eventosRaw.filter(e => {
-                    if (!isSuper && e.nombre?.toLowerCase().includes('control')) return false;
                     if (e.estado === 'Finalizado') return false;
                     return eventBelongsToFederation(e, clubesData, targetFedId, {
                         trustApiScope: !isSuper,

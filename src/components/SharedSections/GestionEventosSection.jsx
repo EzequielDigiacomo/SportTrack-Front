@@ -152,9 +152,8 @@ const GestionEventosSection = () => {
                 ? await EventoService.getAll(scopeFedId, { asFederation: true })
                 : await EventoService.getAll();
 
-            let filtered = isSuperAdmin
-                ? (data || [])
-                : (data || []).filter(e => !e.nombre?.toLowerCase().includes('control'));
+            // Controles y eventos oficiales en el mismo listado: la federación gestiona ambos.
+            let filtered = data || [];
 
             if (scopeFedId != null) {
                 filtered = filtered.filter(e =>
