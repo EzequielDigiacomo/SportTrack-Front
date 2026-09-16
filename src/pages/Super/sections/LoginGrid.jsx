@@ -9,7 +9,7 @@ const ROL_LABEL = {
     'Admin':         { label: 'Admin',          color: '#ef4444' },
     'Club':          { label: 'Club',            color: '#22c55e' },
     'Largador':      { label: 'Largador',        color: '#f59e0b' },
-    'Cronometrista': { label: 'Cronometrista',   color: '#3b82f6' },
+    'Cronometrista': { label: 'Finalizador',   color: '#3b82f6' },
     'JuezControl':   { label: 'Juez de Control', color: '#8b5cf6' },
     'ControlTecnico': { label: 'Control técnico', color: '#14b8a6' },
 };

@@ -31,13 +31,23 @@ export const isControlesTecnicosCreationBlocked = (federacionId) => {
 
 export const filterEventosForJudgeRole = (eventos, user) => {
     const list = eventos || [];
-    if (isControlTecnicoRole(user) && !isJudgeAdmin(user)) {
+    const roles = roleList(user);
+
+    if (isJudgeAdmin(user)) return list;
+
+    // Operador solo Control Técnico: únicamente eventos de control
+    if (isControlTecnicoRole(user)) {
         return list.filter(isControlTecnicoEvent);
     }
-    if (isControlTecnicoRole(user) && isJudgeAdmin(user)) {
-        return list;
-    }
-    if (isJudgeAdmin(user)) return list;
+
+    // Largador / Cronometrista (finalizador) / Juez de Control:
+    // pueden llevar eventos oficiales y CONTROLES de la federación.
+    const isLiveJudge = roles.some((r) =>
+        ['largador', 'cronometrista', 'finalizador', 'juezcontrol', 'juezdecontrol'].includes(r)
+    );
+    if (isLiveJudge) return list;
+
+    // Club y resto: sin controles técnicos en listados generales
     return list.filter((e) => !isControlTecnicoEvent(e));
 };
 

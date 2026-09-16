@@ -16,7 +16,8 @@ export function isLargadorRole(role) {
 }
 
 export function isCronometristaRole(role) {
-    return normalizeJudgeRole(role) === 'cronometrista';
+    const r = normalizeJudgeRole(role);
+    return r === 'cronometrista' || r === 'finalizador';
 }
 
 export function isControlJudgeRole(role) {

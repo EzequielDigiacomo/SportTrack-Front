@@ -13,7 +13,7 @@ const JudgesDashboard = () => {
     const isAdmin = roles.includes('admin') || roles.includes('superadmin');
     const isControlTecnico = roles.includes('controltecnico');
     const isStarter = roles.includes('largador') || isAdmin || isControlTecnico;
-    const isFinisher = roles.includes('cronometrista') || isAdmin || isControlTecnico;
+    const isFinisher = roles.includes('cronometrista') || roles.includes('finalizador') || isAdmin || isControlTecnico;
     const isControl = roles.includes('juezcontrol') || isAdmin;
 
     return (
@@ -29,7 +29,7 @@ const JudgesDashboard = () => {
                     </button>
                 )}
                 <h1>Módulo de Jueces Oficiales</h1>
-                <p>Seleccione su rol para la competencia actual</p>
+                <p>Seleccioná tu rol. Podés operar eventos oficiales y controles técnicos de la federación.</p>
             </header>
 
             <div className="judges-grid">
@@ -60,7 +60,7 @@ const JudgesDashboard = () => {
                             <Play size={48} />
                         </div>
                         <h2>Largador</h2>
-                        <p>Control de salida, check-in de atletas y disparo oficial.</p>
+                        <p>Salida, check-in y disparo oficial en eventos y controles.</p>
                         <button className="btn-judge">Entrar como Largador</button>
                     </div>
                 )}
@@ -70,9 +70,9 @@ const JudgesDashboard = () => {
                         <div className="card-icon">
                             <Flag size={48} />
                         </div>
-                        <h2>Cronometrista</h2>
-                        <p>Toma de tiempos, orden de llegada y cierre de serie.</p>
-                        <button className="btn-judge">Entrar como Cronometrista</button>
+                        <h2>Finalizador</h2>
+                        <p>Toma de tiempos y cierre de serie (cronometrista) en eventos y controles.</p>
+                        <button className="btn-judge">Entrar como Finalizador</button>
                     </div>
                 )}
 
@@ -82,7 +82,7 @@ const JudgesDashboard = () => {
                             <Users size={48} />
                         </div>
                         <h2>Juez de Control</h2>
-                        <p>Gestión de series, progresión de atletas y oficialización de resultados.</p>
+                        <p>Series, grilla y resultados oficiales en eventos y controles.</p>
                         <button className="btn-judge">Panel de Control</button>
                     </div>
                 )}

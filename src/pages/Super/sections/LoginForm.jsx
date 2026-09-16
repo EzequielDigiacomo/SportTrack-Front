@@ -137,7 +137,7 @@ const LoginForm = ({
                                                 disabled: !clubRoleEnabled,
                                             },
                                             { value: 'Largador', label: `Juez: Largador ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
-                                            { value: 'Cronometrista', label: `Juez: Cronometrista ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
+                                            { value: 'Cronometrista', label: `Juez: Finalizador ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                             { value: 'JuezControl', label: `Juez de Control ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                             { value: 'ControlTecnico', label: `Control técnico (entrenador / operador) ${!judgeRolesEnabled ? judgeDisabledLabel : ''}`.trim(), disabled: !judgeRolesEnabled },
                                         ]}
