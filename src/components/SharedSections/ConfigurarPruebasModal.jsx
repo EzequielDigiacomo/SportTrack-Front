@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../services/ConfigService';
-import SchedulerService from '../../services/SchedulerService';
+import SchedulerService, { isHorarioManualLibre } from '../../services/SchedulerService';
 import PdfExportService from '../../services/PdfExportService';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import { resolveIsMaratonEvent } from '../../utils/pruebaLabelUtils';
@@ -148,6 +148,8 @@ const ConfigurarPruebasModal = (props) => {
 
 const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
     const isMaraton = false;
+    const horarioManual = isHorarioManualLibre(evento);
+
 
     const [categorias, setCategorias] = useState([]);
     const [botes, setBotes] = useState([]);
@@ -238,7 +240,9 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
     }, [evento]);
 
     useEffect(() => {
-        // Pista: sugerir siguiente hora según gap. Maratón no pasa por este modal.
+        // En modo automático, sugerir siguiente hora según gap.
+        // En Todo Manual no auto-rellenar: el usuario carga la hora exacta.
+        if (horarioManual) return;
         if (!editingId && !editingGrupoId && pruebasParaCronograma.length > 0) {
             const sortedPruebas = [...pruebasParaCronograma].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
             const lastPrueba = sortedPruebas[sortedPruebas.length - 1];
@@ -248,7 +252,7 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
         } else if (!editingId && !editingGrupoId) {
             setSelectedTime('');
         }
-    }, [gapEntrePruebas, pruebasParaCronograma, editingId, editingGrupoId]);
+    }, [gapEntrePruebas, pruebasParaCronograma, editingId, editingGrupoId, horarioManual]);
 
     const resetForm = () => {
         setSelectedCat(''); setSelectedBote(''); setSelectedDist('');
@@ -258,6 +262,10 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
         setEditingGrupoId(null);
 
         if (pruebasParaCronograma.length > 0) {
+            if (horarioManual) {
+                setSelectedTime('');
+                return;
+            }
             const sortedPruebas = [...pruebasParaCronograma].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
             const lastPrueba = sortedPruebas[sortedPruebas.length - 1];
             const lastTime = new Date(lastPrueba.fechaHora);
@@ -281,6 +289,9 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                 return `${String(originalDate.getHours()).padStart(2, '0')}:${String(originalDate.getMinutes()).padStart(2, '0')}`;
             }
         }
+
+        // Todo Manual: no inventar hora por gap; el usuario debe indicar la hora.
+        if (horarioManual) return null;
 
         if (pruebasParaCronograma.length > 0) {
             const sortedPruebas = [...pruebasParaCronograma].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
@@ -572,7 +583,15 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                 </div>
                                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="form-group"><label>Día</label><input type="date" className="admin-input" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} /></div>
-                                    <div className="form-group"><label>Hora</label><input type="time" className="admin-input" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} /></div>
+                                    <div className="form-group">
+                                        <label>Hora {horarioManual ? '*' : ''}</label>
+                                        <input type="time" className="admin-input" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} required={horarioManual} />
+                                        {horarioManual && (
+                                            <small style={{ display: 'block', marginTop: 4, color: '#fbbf24', fontSize: '0.72rem' }}>
+                                                Todo Manual: esta hora se guarda tal cual, sin reubicación.
+                                            </small>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="form-actions mt-md">
                                     {(editingId || editingGrupoId) && <button className="btn-admin-secondary" onClick={resetForm}>Cancelar</button>}
@@ -582,7 +601,7 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                 </div>
                             </div>
 
-                            {!isMaraton && (
+                            {!isMaraton && !horarioManual && (
                                 <>
                                     <hr className="admin-divider" style={{ margin: '1.5rem 0', borderColor: 'rgba(255,255,255,0.08)' }} />
                                     <h4 className="section-title">Ajustes del Cronograma</h4>
@@ -619,7 +638,11 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                         <div className="list-column">
                             <div className="flex-between mb-md">
                                 <h4 className="section-title" style={{ margin: 0 }}>
-                                    {isMaraton ? 'Programa provisorio (Largadas)' : 'Cronograma Unificado (Pateo en Vivo)'}
+                                    {isMaraton
+                                        ? 'Programa provisorio (Largadas)'
+                                        : horarioManual
+                                            ? 'Cronograma Manual (hora exacta)'
+                                            : 'Cronograma Unificado (Pateo en Vivo)'}
                                 </h4>
                                 <select className="admin-select-sm" value={filtroDia} onChange={e => setFiltroDia(e.target.value)}>
                                     {diasUnicos.map(d => <option key={d} value={d}>{d}</option>)}
@@ -663,10 +686,12 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                     const itemsProyectados = SchedulerService.recalcularTiempos(rawItems, {
                                         gapEntrePruebas: isMaraton ? 15 : gapEntrePruebas,
                                         gapRecuperacionMs: isMaraton ? 0 : gapRecuperacion * 60 * 1000,
-                                        horaInicioFinales: (!isMaraton && usarBloqueFinales) ? horaInicioFinales : null,
+                                        horaInicioFinales: (!isMaraton && !horarioManual && usarBloqueFinales) ? horaInicioFinales : null,
                                         horaInicioEvento: evento.horaInicioEvento || '08:00',
                                         horaFinEvento: '18:00',
-                                        usarGapVariable: isMaraton ? false : usarGapVariable
+                                        usarGapVariable: isMaraton || horarioManual ? false : usarGapVariable,
+                                        horarioManual,
+                                        perfilTiempo: evento?.perfilTiempo,
                                     });
 
                                     const itemsFinales = itemsProyectados.filter(item =>

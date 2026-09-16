@@ -5,7 +5,7 @@ import { PruebaService } from '../../services/ConfigService';
 import InscripcionService from '../../services/InscripcionService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
-import SchedulerService from '../../services/SchedulerService';
+import SchedulerService, { isHorarioManualLibre } from '../../services/SchedulerService';
 import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
 import { parseTimeToTimeSpan } from '../../utils/raceTimeUtils';
@@ -304,8 +304,11 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             // 1. Generar los Heats en el backend
             await FaseService.generar(selectedPrueba);
             
-            // 2. AUTO-REPROGRAMAR: Aplicar el algoritmo de entreverado inteligente a todo el evento
-            await handleRecalcularCronograma();
+            // 2. AUTO-REPROGRAMAR solo si el evento no es "Todo Manual"
+            const eventoCfg = eventos.find(e => String(e.id) === String(selectedEvento));
+            if (!isHorarioManualLibre(eventoCfg)) {
+                await handleRecalcularCronograma();
+            }
 
             // LIMPIAR BLOQUEOS
             const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
@@ -313,7 +316,9 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
             setIsLocked(false);
 
-            setMessage("✅ Heats generados y sincronizados con el horario original.");
+            setMessage(isHorarioManualLibre(eventoCfg)
+                ? '✅ Heats generados. Horarios manuales sin reubicación.'
+                : '✅ Heats generados y sincronizados con el horario original.');
             await loadDatosPrueba(selectedPrueba);
             await loadCronograma();
         } catch (error) {
@@ -338,19 +343,24 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         setSaving(true);
         try {
             await FaseService.generarManual(selectedPrueba, placements);
-            await handleRecalcularCronograma();
+            const eventoCfg = eventos.find(e => String(e.id) === String(selectedEvento));
+            if (!isHorarioManualLibre(eventoCfg)) {
+                await handleRecalcularCronograma();
+            }
             
             const locked = JSON.parse(localStorage.getItem('locked_pruebas') || '[]');
             const newLocked = locked.filter(id => id !== selectedPrueba);
             localStorage.setItem('locked_pruebas', JSON.stringify(newLocked));
             setIsLocked(false);
 
-            setMessage("✅ Heats generados con organización manual.");
+            setMessage(isHorarioManualLibre(eventoCfg)
+                ? '✅ Generación manual lista. Horarios sin reubicación.'
+                : '✅ Generación manual aplicada y cronograma sincronizado.');
             await loadDatosPrueba(selectedPrueba);
             await loadCronograma();
         } catch (error) {
             console.error("Error al generar manual:", error);
-            setMessage("❌ Error al generar organización manual.");
+            setMessage("❌ Error en generación manual.");
         } finally {
             setSaving(false);
         }
@@ -377,8 +387,13 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 setSaving(true);
                 try {
                     await FaseService.promover(selectedPrueba);
-                    await handleRecalcularCronograma();
-                    setMessage("✅ Etapa promocionada exitosamente. Cronograma actualizado.");
+                    const eventoCfg = eventos.find(e => String(e.id) === String(selectedEvento));
+                    if (!isHorarioManualLibre(eventoCfg)) {
+                        await handleRecalcularCronograma();
+                        setMessage('✅ Etapa promocionada exitosamente. Cronograma actualizado.');
+                    } else {
+                        setMessage('✅ Etapa promocionada. Horarios manuales sin reubicación.');
+                    }
                     await loadDatosPrueba(selectedPrueba);
                     await loadCronograma();
                 } catch (error) {
@@ -673,11 +688,15 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
     async function handleRecalcularCronograma() {
         if (!selectedEvento) return;
+        const eventoConfig = eventos.find(e => String(e.id) === String(selectedEvento));
+        if (isHorarioManualLibre(eventoConfig)) {
+            setMessage('ℹ️ Este evento está en Todo Manual: no se reubican horarios. Editá la hora de cada prueba si necesitás cambiarla.');
+            return;
+        }
         setSaving(true);
         setMessage("⏳ Analizando cronograma y calculando gaps...");
         try {
             const todasLasFases = await FaseService.getByEvento(selectedEvento);
-            const eventoConfig = eventos.find(e => String(e.id) === String(selectedEvento));
 
             if (!todasLasFases || todasLasFases.length === 0) {
                 setMessage("⚠️ No hay fases generadas para este evento.");
@@ -697,6 +716,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
                 horaFinReceso: eventoConfig?.horaFinReceso || "14:00",
                 gapRecuperacionMinutos: eventoConfig?.gapRecuperacionMinutos ?? 40,
                 usarGapVariable: eventoConfig?.usarGapVariable || false,
+                perfilTiempo: eventoConfig?.perfilTiempo,
             };
             const fasesReprogramadas = SchedulerService.recalcularTiempos(fasesConGaps, config);
             

@@ -341,12 +341,50 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                             onClick={() => onChange('perfilTiempo', 'Personalizado')}
                                             style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--color-border)', cursor: 'pointer', textAlign: 'left', background: initialData.perfilTiempo === 'Personalizado' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)', color: 'white' }}
                                         >
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 4: Manual</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tú eliges gaps y recesos libremente.</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>Caso 4: Gaps a medida</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Elegís gaps y recesos; el sistema sigue reubicando.</div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`btn-scenario glass-effect ${initialData.perfilTiempo === 'ManualLibre' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                onChange('perfilTiempo', 'ManualLibre');
+                                                onChange('usarGapVariable', false);
+                                            }}
+                                            style={{
+                                                padding: '0.8rem',
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--color-border)',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                background: initialData.perfilTiempo === 'ManualLibre' ? 'rgba(245, 158, 11, 0.22)' : 'rgba(255,255,255,0.03)',
+                                                color: 'white',
+                                                gridColumn: '1 / -1',
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#fbbf24' }}>Caso 5: Todo Manual</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                Vos fijás la hora de cada prueba. El sistema no reubica ni aplasta horarios.
+                                            </div>
                                         </button>
                                     </div>
+                                    {initialData.perfilTiempo === 'ManualLibre' && (
+                                        <div style={{
+                                            marginTop: '0.75rem',
+                                            padding: '0.75rem 0.9rem',
+                                            borderRadius: '10px',
+                                            border: '1px solid rgba(245, 158, 11, 0.35)',
+                                            background: 'rgba(245, 158, 11, 0.08)',
+                                            color: '#fcd34d',
+                                            fontSize: '0.8rem',
+                                            lineHeight: 1.4,
+                                        }}>
+                                            En Configurar Pruebas cargá la hora exacta de cada prueba. Al sortear heats o ver el programa, se respeta ese horario (sin pateo automático).
+                                        </div>
+                                    )}
                                 </div>
 
+                                {initialData.perfilTiempo !== 'ManualLibre' && (
                                 <div className="form-row" style={{ alignItems: 'flex-end' }}>
                                     <div className="form-group">
                                         <label>Pausa entre Largadas (Minutos)</label>
@@ -392,9 +430,9 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                             }}
                                             title={
                                                 initialData.perfilTiempo === 'Caso3'
-                                                    ? 'Caso 3 incluye receso de almuerzo. Usá Caso 4 (Manual) para eliminarlo.'
+                                                    ? 'Caso 3 incluye receso de almuerzo. Usá Caso 4 para eliminarlo.'
                                                     : initialData.perfilTiempo === 'Caso1' || initialData.perfilTiempo === 'Caso2'
-                                                        ? 'Este caso ya elimina el receso. Usá Caso 4 (Manual) para cambiarlo.'
+                                                        ? 'Este caso ya elimina el receso. Usá Caso 4 para cambiarlo.'
                                                         : undefined
                                             }
                                         >
@@ -416,8 +454,9 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                         </label>
                                     </div>
                                 </div>
+                                )}
 
-                                {!initialData.sinReceso && (
+                                {initialData.perfilTiempo !== 'ManualLibre' && !initialData.sinReceso && (
                                     <div className="form-row fade-in">
                                         <div className="form-group">
                                             <label>Inicio Receso</label>

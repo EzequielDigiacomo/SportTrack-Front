@@ -7,9 +7,45 @@
  * Adicionalmente, retiene las Finales para que comiencen a partir de una hora preferencial (ej. 10:30 AM).
  */
 
+/** Perfil "Todo Manual": el usuario fija cada hora; no se reubica nada. */
+export const isHorarioManualLibre = (perfilTiempoOrEvento) => {
+    const perfil = typeof perfilTiempoOrEvento === 'string'
+        ? perfilTiempoOrEvento
+        : (perfilTiempoOrEvento?.perfilTiempo || perfilTiempoOrEvento?.PerfilTiempo || '');
+    return String(perfil).toLowerCase() === 'manuallibre';
+};
+
+const formatHoraFromValue = (val) => {
+    if (!val) return '—';
+    const date = new Date(val);
+    if (!isNaN(date.getTime())) {
+        return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    }
+    const match = String(val).match(/(\d{2}):(\d{2})/);
+    return match ? `${match[1]}:${match[2]}` : '—';
+};
+
 const SchedulerService = {
     recalcularTiempos: (items, config = {}) => {
         if (!items || items.length === 0) return [];
+
+        // Modo todo manual: devolver horarios exactos sin pateo ni gaps.
+        if (config.horarioManual || isHorarioManualLibre(config.perfilTiempo)) {
+            return items.map((item) => {
+                const original = item.fechaHoraProgramada || item.time || item.fechaHoraOriginal
+                    || item.prueba?.fechaHora || item.raw?.fechaHora || item.raw?.fechaHoraProgramada;
+                return {
+                    ...item,
+                    timeCalculated: original,
+                    nuevaHora: formatHoraFromValue(original),
+                    diaOffset: 0,
+                };
+            }).sort((a, b) => {
+                const ta = new Date(a.timeCalculated || 0).getTime();
+                const tb = new Date(b.timeCalculated || 0).getTime();
+                return ta - tb;
+            });
+        }
 
         const gapRecuperacionMin = Math.max(
             1,
@@ -385,3 +421,5 @@ const SchedulerService = {
 };
 
 export default SchedulerService;
+export { isHorarioManualLibre as isCronogramaManualLibre };
+
