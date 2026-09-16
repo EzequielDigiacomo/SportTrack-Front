@@ -209,6 +209,19 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                                 <strong>Límite Botes A/B por Club</strong>
                                             </div>
                                         </label>
+                                        <label className="checkbox-label rule-card">
+                                            <input
+                                                type="checkbox"
+                                                checked={initialData.permitirMezclarCategorias}
+                                                onChange={(e) => onChange('permitirMezclarCategorias', e.target.checked)}
+                                            />
+                                            <div className="rule-info">
+                                                <strong>Mezclar categorías (Todas)</strong>
+                                                <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.75, marginTop: 2 }}>
+                                                    En pruebas podés elegir “Todas las categorías”: solo filtra por sexo y bote.
+                                                </span>
+                                            </div>
+                                        </label>
                                     </>
                                 )}
                                 <label className="checkbox-label rule-card">

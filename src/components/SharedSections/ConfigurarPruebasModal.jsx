@@ -41,8 +41,11 @@ const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)',
     4: 'Cadete (15-16 años)', 5: 'Junior (17-18 años)', 6: 'Sub-23 (19-23 años)',
     7: 'Senior (24-39 años)', 8: 'Master A (40-49 años)', 9: 'Master B (50-59 años)',
-    10: 'Master C (60+ años)', 11: 'Control (Todas las edades)'
+    10: 'Master C (60+ años)', 11: 'Todas las categorías'
 };
+
+/** Categoría abierta: mezcla edades; solo sexo + bote. */
+export const CATEGORIA_TODAS_ID = 11;
 
 const SEXO_NAMES = { 1: 'Masculino', 2: 'Femenino', 3: 'Mixto' };
 
@@ -203,7 +206,19 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                     console.warn('[ConfigPruebas] No se pudieron cargar pruebas del evento:', actualsRes.reason);
                 }
 
-                setCategorias(filterByEnabledIds(cats, evento.categoriasHabilitadas));
+                setCategorias((() => {
+                    const filtered = filterByEnabledIds(cats, evento.categoriasHabilitadas);
+                    // Regla "Mezclar categorías": ofrecer "Todas las categorías" (id 11)
+                    if (evento?.permitirMezclarCategorias) {
+                        const hasTodas = filtered.some(c => Number(pick(c, 'id', 'Id')) === CATEGORIA_TODAS_ID);
+                        if (!hasTodas) {
+                            const todas = (cats || []).find(c => Number(pick(c, 'id', 'Id')) === CATEGORIA_TODAS_ID)
+                                || { id: CATEGORIA_TODAS_ID, nombre: 'Todas las categorías', edadMin: 0, edadMax: 99 };
+                            return [...filtered, todas];
+                        }
+                    }
+                    return filtered;
+                })());
                 setBotes(filterByEnabledIds(bts, evento.botesHabilitados));
                 setDistancias(filterByEnabledIds(dists, evento.distanciasHabilitadas));
                 setPruebasActuales(Array.isArray(actuals) ? actuals : []);
@@ -520,8 +535,19 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                         <div className="form-group"><label>Categoría</label>
                                             <select className="admin-select" value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
                                                 <option value="">Seleccionar...</option>
-                                                {categorias.map(c => <option key={c.id} value={c.id}>{CATEGORIA_NAMES[c.id] || c.nombre}</option>)}
+                                                {categorias.map(c => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {Number(c.id) === CATEGORIA_TODAS_ID
+                                                            ? 'Todas las categorías'
+                                                            : (CATEGORIA_NAMES[c.id] || c.nombre)}
+                                                    </option>
+                                                ))}
                                             </select>
+                                            {evento?.permitirMezclarCategorias && (
+                                                <small style={{ display: 'block', marginTop: 6, color: '#94a3b8', fontSize: '0.75rem' }}>
+                                                    “Todas las categorías” mezcla edades; la prueba sigue diferenciando por sexo y bote.
+                                                </small>
+                                            )}
                                         </div>
                                         <div className="form-group"><label>Bote</label>
                                             <select className="admin-select" value={selectedBote} onChange={e => setSelectedBote(e.target.value)}>

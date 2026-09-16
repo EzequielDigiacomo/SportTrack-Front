@@ -1,6 +1,8 @@
 /** IDs de categoría (catálogo SIGDEF). */
 export const SUB23_CATEGORIA_ID = 6;
 export const SENIOR_CATEGORIA_ID = 7;
+/** Categoría abierta: mezcla edades (sexo + bote). */
+export const TODAS_CATEGORIAS_ID = 11;
 
 /** Rangos alineados con SportTrackDbContext seed. */
 export const SUB23_EDAD_MIN = 19;
@@ -21,19 +23,23 @@ export function isPruebaSenior(catPrueba) {
     return Number(catPrueba?.id ?? catPrueba?.Id) === SENIOR_CATEGORIA_ID;
 }
 
+export function isPruebaTodasCategorias(catPrueba) {
+    const id = Number(catPrueba?.id ?? catPrueba?.Id);
+    const nombre = String(catPrueba?.nombre ?? catPrueba?.Nombre ?? '').toLowerCase();
+    return id === TODAS_CATEGORIAS_ID
+        || nombre === 'control'
+        || nombre.includes('todas las categor');
+}
+
 /**
  * Evalúa si un atleta puede inscribirse en la prueba según reglas del evento.
  * Retorna { esElegible, razonNoElegible }.
  */
 export function evaluarElegibilidadAtleta({ evento, catPrueba, atleta }) {
     const edadAtleta = atleta.edad;
-    const isControlPrueba = (
-        catPrueba?.id === 11
-        || String(catPrueba?.id) === '11'
-        || catPrueba?.nombre === 'Control'
-    );
 
-    if (isControlPrueba) {
+    // Prueba abierta (Control / Todas las categorías): solo sexo y bote
+    if (isPruebaTodasCategorias(catPrueba)) {
         return { esElegible: true, razonNoElegible: '' };
     }
 

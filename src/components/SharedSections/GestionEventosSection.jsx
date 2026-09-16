@@ -76,6 +76,7 @@ const GestionEventosSection = () => {
         permitirMasterBajarASenior: false,
         permitirCompletarK4: false,
         limitacionBotesAB: false,
+        permitirMezclarCategorias: false,
         clubId: '',
         horaInicioEvento: '08:00',
         carrilesDisponibles: 9,
@@ -258,6 +259,7 @@ const GestionEventosSection = () => {
                 next.restringirSoloCategoriaPropia = false;
                 next.permitirMasterBajarASenior = false;
                 next.limitacionBotesAB = false;
+                next.permitirMezclarCategorias = false;
                 next.usarGapVariable = false;
                 next.permitirCombinadas = false;
             } else {
@@ -337,6 +339,7 @@ const GestionEventosSection = () => {
             permitirMasterBajarASenior: evento.permitirMasterBajarASenior || false,
             permitirCompletarK4: evento.permitirCompletarK4 || false,
             limitacionBotesAB: evento.limitacionBotesAB || false,
+            permitirMezclarCategorias: evento.permitirMezclarCategorias || false,
             clubId: evento.clubId || '',
             horaInicioEvento: evento.horaInicioEvento || '08:00',
             carrilesDisponibles: evento.carrilesDisponibles || 9,
@@ -421,6 +424,7 @@ const GestionEventosSection = () => {
                                     permitirMasterBajarASenior: false,
                                     permitirCompletarK4: false,
                                     limitacionBotesAB: false,
+                                    permitirMezclarCategorias: false,
                                     clubId: '',
                                     horaInicioEvento: '08:00',
                                     carrilesDisponibles: 9,
@@ -643,6 +647,7 @@ const GestionEventosSection = () => {
                                     {selectedEvento.permitirMasterBajarASenior && <span className="chip chip-ecu-red">Master en Senior</span>}
                                     {selectedEvento.permitirCompletarK4 && <span className="chip chip-ecu-yellow">Refuerzo K4</span>}
                                     {selectedEvento.limitacionBotesAB && <span className="chip chip-ecu-red">Máx Botes A/B</span>}
+                                    {selectedEvento.permitirMezclarCategorias && <span className="chip chip-ecu-blue">Mezclar categorías</span>}
                                 </div>
                             </div>
 
