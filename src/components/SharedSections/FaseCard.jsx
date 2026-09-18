@@ -1,6 +1,6 @@
-import React from 'react';
-import { Trash2, Clock } from 'lucide-react';
-import { formatTime } from '../../utils/dateUtils';
+import React, { useEffect, useState } from 'react';
+import { Trash2, Clock, Check, X, Pencil } from 'lucide-react';
+import { formatTime, getISODatePart } from '../../utils/dateUtils';
 
 const getSoloApellido = (nombreCompleto) => {
     if (!nombreCompleto) return "-";
@@ -29,13 +29,58 @@ const isBoteK4 = (fase) => {
     return boteName.toUpperCase().includes('4');
 };
 
-const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName = false, pruebaNro = null }) => {
+const toLocalTimeValue = (iso) => {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+const FaseCard = ({
+    fase,
+    onDelete,
+    filtroVisualFase = 'Todas',
+    showPruebaName = false,
+    pruebaNro = null,
+    canEditHorario = false,
+    onUpdateHorario,
+    savingHorario = false,
+}) => {
+    const [editingHorario, setEditingHorario] = useState(false);
+    const [editDate, setEditDate] = useState('');
+    const [editTime, setEditTime] = useState('');
+
+    useEffect(() => {
+        if (!editingHorario) {
+            setEditDate(getISODatePart(fase.fechaHoraProgramada));
+            setEditTime(toLocalTimeValue(fase.fechaHoraProgramada));
+        }
+    }, [fase.fechaHoraProgramada, editingHorario]);
+
     if (filtroVisualFase !== 'Todas' && filtroVisualFase !== 'Cronograma' && fase.nombreFase !== filtroVisualFase) return null;
 
     const p = fase.prueba?.prueba;
-    const pruebaLabel = p ? `${CATEGORIA_NAMES[p.categoria?.id] || p.categoria?.nombre} ${BOTE_NAMES[p.bote?.id] || p.bote?.nombre} ${DISTANCIA_NAMES[p.distancia?.id] || p.distancia?.metros + 'm'} ${SEXO_NAMES[p.sexoId] || p.sexoNombre}` : '';
-
     const sortedResultados = [...fase.resultados].sort((a, b) => (a.carril || 99) - (b.carril || 99));
+
+    const openEditor = (e) => {
+        e?.stopPropagation?.();
+        if (!canEditHorario || !onUpdateHorario) return;
+        setEditDate(getISODatePart(fase.fechaHoraProgramada) || '');
+        setEditTime(toLocalTimeValue(fase.fechaHoraProgramada) || '');
+        setEditingHorario(true);
+    };
+
+    const cancelEditor = (e) => {
+        e?.stopPropagation?.();
+        setEditingHorario(false);
+    };
+
+    const saveEditor = async (e) => {
+        e?.stopPropagation?.();
+        if (!editDate || !editTime || !onUpdateHorario) return;
+        await onUpdateHorario(fase, { date: editDate, time: editTime });
+        setEditingHorario(false);
+    };
 
     return (
         <div className="fase-card glass-effect fade-in" style={{ padding: '15px', position: 'relative' }}>
@@ -63,9 +108,60 @@ const FaseCard = ({ fase, onDelete, filtroVisualFase = 'Todas', showPruebaName =
                         </div>
                     )}
                     <h4 style={{ margin: 0, color: 'var(--color-text-primary)' }}>{fase.nombreFase}</h4>
-                    <span className="badge-time">
-                        <Clock size={12} /> {formatTime(fase.fechaHoraProgramada)} hs
-                    </span>
+                    {editingHorario ? (
+                        <div
+                            className="badge-time-editor"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <input
+                                type="date"
+                                className="admin-input compact"
+                                value={editDate}
+                                onChange={(e) => setEditDate(e.target.value)}
+                                disabled={savingHorario}
+                            />
+                            <input
+                                type="time"
+                                className="admin-input compact"
+                                value={editTime}
+                                onChange={(e) => setEditTime(e.target.value)}
+                                disabled={savingHorario}
+                            />
+                            <button
+                                type="button"
+                                className="btn-icon-admin primary"
+                                onClick={saveEditor}
+                                disabled={savingHorario || !editDate || !editTime}
+                                title="Guardar horario"
+                            >
+                                <Check size={14} />
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-icon-admin"
+                                onClick={cancelEditor}
+                                disabled={savingHorario}
+                                title="Cancelar"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ) : canEditHorario && onUpdateHorario ? (
+                        <button
+                            type="button"
+                            className="badge-time badge-time-editable"
+                            onClick={openEditor}
+                            title="Editar horario de esta serie"
+                        >
+                            <Clock size={12} /> {formatTime(fase.fechaHoraProgramada)} hs
+                            <Pencil size={11} className="badge-time-edit-icon" />
+                        </button>
+                    ) : (
+                        <span className="badge-time">
+                            <Clock size={12} /> {formatTime(fase.fechaHoraProgramada)} hs
+                        </span>
+                    )}
                 </div>
                 {onDelete && (
                     <button 

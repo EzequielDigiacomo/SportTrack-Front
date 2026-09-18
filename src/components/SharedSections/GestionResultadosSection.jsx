@@ -87,6 +87,7 @@ const GestionResultadosSection = ({ preselectedEventoId, defaultTab, isEmbedded,
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
+        handleUpdateFaseHorario,
         openReiniciarDialog, closeReiniciarDialog, confirmReiniciarFase, reiniciarDialog,
         handleGenerarManual,
         handleRecalcularCronograma, handleSelectRegata,
@@ -1126,6 +1127,9 @@ const connectedStarter = activeJudges.find(j => {
                                                     <FaseCard
                                                         key={f.id}
                                                         fase={f}
+                                                        canEditHorario={canManageStartList}
+                                                        onUpdateHorario={handleUpdateFaseHorario}
+                                                        savingHorario={saving}
                                                     />
                                                 ))}
                                             </div>
@@ -1422,6 +1426,9 @@ const connectedStarter = activeJudges.find(j => {
                                 showPruebaName={true} 
                                 filtroVisualFase="Cronograma"
                                 pruebaNro={idx + 1}
+                                canEditHorario={canManageStartList}
+                                onUpdateHorario={handleUpdateFaseHorario}
+                                savingHorario={saving}
                             />
                         </div>
                     ))}

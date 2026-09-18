@@ -159,7 +159,7 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 value={initialData.estado} 
                                 onChange={(e) => onChange('estado', e.target.value)}
                             >
-                                <option value="Programado">Programado</option>
+                                <option value="Programada">Programada</option>
                                 <option value="EnCurso">En Curso</option>
                                 <option value="Finalizado">Finalizado</option>
                                 <option value="Cancelado">Cancelado</option>

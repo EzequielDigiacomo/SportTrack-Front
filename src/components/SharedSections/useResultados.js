@@ -424,6 +424,35 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         });
     };
 
+    const handleUpdateFaseHorario = async (fase, { date, time }) => {
+        if (!fase?.id || !date || !time) return;
+        setSaving(true);
+        try {
+            const fechaHoraProgramada = new Date(`${date}T${time}:00`).toISOString();
+            await FaseService.batchUpdate([{
+                id: fase.id,
+                fechaHoraProgramada,
+            }]);
+
+            setFases((prev) => prev.map((f) => (
+                f.id === fase.id ? { ...f, fechaHoraProgramada } : f
+            )));
+            setCronograma((prev) => prev.map((f) => (
+                f.id === fase.id ? { ...f, fechaHoraProgramada } : f
+            )));
+
+            setMessage("✅ Horario de la serie actualizado (también en Armar Schedule).");
+            if (selectedPrueba) await loadDatosPrueba(selectedPrueba);
+            if (selectedEvento) await loadCronograma(selectedEvento);
+        } catch (error) {
+            console.error("Error al actualizar horario de fase:", error);
+            setMessage(`❌ ${getUserFacingError(error, 'No se pudo actualizar el horario de la serie.')}`);
+            throw error;
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const openReiniciarDialog = useCallback((fase, isMaraton = false) => {
         if (!fase?.id) return;
         setReiniciarDialog({
@@ -690,7 +719,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         if (!selectedEvento) return;
         const eventoConfig = eventos.find(e => String(e.id) === String(selectedEvento));
         if (isHorarioManualLibre(eventoConfig)) {
-            setMessage('ℹ️ Este evento está en Todo Manual: no se reubican horarios. Editá la hora de cada prueba si necesitás cambiarla.');
+            setMessage('ℹ️ Este evento está en Todo Manual: no se reubican horarios. Editá la hora en el badge de cada serie del Start List.');
             return;
         }
         setSaving(true);
@@ -879,6 +908,7 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         tiemposLocales, setTiemposLocales,
         saveSuccess,
         handleSortearCarriles, handleSaveTiempos, handleToggleSeeding, handlePromoverEtapa, handleDeleteFase,
+        handleUpdateFaseHorario,
         openReiniciarDialog, closeReiniciarDialog, confirmReiniciarFase, reiniciarDialog,
         handleFinalizarFase,
         handleGenerarManual,

@@ -331,7 +331,7 @@ const GestionEventosSection = () => {
             fechaFinInscripciones: evento.fechaFinInscripciones ? evento.fechaFinInscripciones.substring(0, 10) : '',
             ubicacion: evento.ubicacion || '',
             descripcion: evento.descripcion || '',
-            estado: evento.estado || 'Programado',
+            estado: evento.estado === 'Programado' ? 'Programada' : (evento.estado || 'Programada'),
             modalidad: evento.modalidad || MODALIDAD_VELOCIDAD,
             inscripcionesHabilitadas: evento.inscripcionesHabilitadas ?? true,
             restringirSoloCategoriaPropia: evento.restringirSoloCategoriaPropia || false,

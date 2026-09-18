@@ -22,6 +22,62 @@
 .gap-md { gap: 1rem; }
 .gap-lg { gap: 1.5rem; }
 
+.badge-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-primary-light, #93c5fd);
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    line-height: 1.2;
+}
+
+button.badge-time {
+    cursor: pointer;
+    font: inherit;
+}
+
+.badge-time-editable:hover {
+    background: rgba(59, 130, 246, 0.22);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.badge-time-edit-icon {
+    opacity: 0.75;
+    flex-shrink: 0;
+}
+
+.badge-time-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px 6px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.badge-time-editor .admin-input.compact {
+    width: auto;
+    min-width: 0;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    height: 30px;
+}
+
+.badge-time-editor input[type="date"].admin-input.compact {
+    max-width: 140px;
+}
+
+.badge-time-editor input[type="time"].admin-input.compact {
+    max-width: 100px;
+}
+
 .mb-xl { margin-bottom: 1.5rem; }
 .mb-2xl { margin-bottom: 2.5rem; }
 .mt-xl { margin-top: 1.5rem; }
