@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { formatRaceTime, isMeaningfulRaceTime } from '../utils/raceTimeUtils';
 import { isExcludedFromRanking, normalizeEstadoCantoFromBackend } from '../utils/resultadosHelpers';
 import { getPdfLogo, fitLogoDimensions } from '../utils/pdfLogoLoader';
+import { sortByFechaHoraProgramada } from '../utils/dateUtils';
 import { expandFasesMaratonByClasificacion } from '../components/SharedSections/maraton/maratonStartListUtils';
 
 // ─── Lookup tables ────────────────────────────────────────────────────────────
@@ -763,8 +764,7 @@ const PdfExportService = {
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         
-        const rows = [...cronograma]
-            .sort((a, b) => new Date(a.fechaHoraProgramada) - new Date(b.fechaHoraProgramada))
+        const rows = sortByFechaHoraProgramada(cronograma)
             .map((fase, idx) => {
                 const p = fase.prueba?.prueba || fase.prueba || fase;
                 const catId  = p?.categoriaId || p?.categoria?.id;

@@ -1,3 +1,5 @@
+import { sortByFechaHoraProgramada } from './dateUtils';
+
 export const normalizeFaseEstado = (estado) => {
     if (!estado) return 'Programada';
     const raw = String(estado).trim();
@@ -21,11 +23,7 @@ export const mapFasesFromApi = (data) => {
         }))
     }));
 
-    return mapped.sort((a, b) => {
-        const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
-        const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
-        return dateA.localeCompare(dateB);
-    });
+    return sortByFechaHoraProgramada(mapped);
 };
 
 /** Puede largarse solo si sigue programada y aún no hay tiempos cargados. */

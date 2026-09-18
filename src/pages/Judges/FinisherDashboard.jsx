@@ -36,6 +36,7 @@ import {
     getPendingTimingEntry,
 } from '../../services/timingSubmitQueue';
 import { trackJudgeButton, trackJudgeModuleOpen, trackOperationalError, trackOperationalRecovery, flushPendingAuditActions, syncTimingFailureAuditFromBackup } from '../../services/auditActionTracker';
+import { playRaceStartBell, unlockRaceStartBell, isFreshRaceStart } from '../../utils/raceStartBell';
 
 const CATEGORIA_NAMES = {
     1: 'Pre-infantil (8-10 años)', 2: 'Infantil (11-12 años)', 3: 'Menor (13-14 años)', 4: 'Cadete (15-16 años)', 
@@ -306,7 +307,7 @@ const FinisherDashboard = () => {
                             if (updated) setSelectedFase(updated);
                             if (!startTimeRef.current) {
                                 const parsed = parseStartMs(serverTime);
-                                if (!isNaN(parsed)) startLocalTimer(parsed);
+                                if (!isNaN(parsed)) startLocalTimer(parsed, { alert: true });
                             }
                         }
                         return newFases;
@@ -314,6 +315,7 @@ const FinisherDashboard = () => {
 
                     // Mostrar alerta si es otra carrera o si no tenemos ninguna seleccionada
                     if (!selectedFase || String(faseId) !== String(selectedFase.id)) {
+                        playRaceStartBell();
                         setGlobalAlert({ faseId, serverTime });
                         setTimeout(() => setGlobalAlert(null), 15000);
                     }
@@ -382,7 +384,7 @@ const FinisherDashboard = () => {
                         if (String(id) === String(selectedFase.id)) {
                             if (!startTimeRef.current) {
                                 const parsed = parseStartMs(sTime);
-                                if (!isNaN(parsed)) startLocalTimer(parsed);
+                                if (!isNaN(parsed)) startLocalTimer(parsed, { alert: true });
                             }
                         }
                     });
@@ -457,7 +459,10 @@ const FinisherDashboard = () => {
                 if (fresh && normalizeFaseEstado(fresh.estado) === 'En Carrera' && fresh.fechaHoraInicioReal) {
                     setSelectedFase(fresh);
                     const parsed = parseStartMs(fresh.fechaHoraInicioReal);
-                    if (!isNaN(parsed)) startLocalTimer(parsed);
+                    if (!isNaN(parsed)) {
+                        const syncedNow = timingSignalRService.getSyncedNow().getTime();
+                        startLocalTimer(parsed, { alert: isFreshRaceStart(parsed, syncedNow) });
+                    }
                 }
             } catch {
                 // red mala: siguiente tick
@@ -736,10 +741,11 @@ const FinisherDashboard = () => {
         }
     };
 
-    const startLocalTimer = (sTime) => {
+    const startLocalTimer = (sTime, { alert = false } = {}) => {
         const t0 = typeof sTime === 'number' ? sTime : parseStartMs(sTime);
         if (Number.isNaN(t0)) return;
 
+        const wasAlreadyRunning = startTimeRef.current != null;
         const now = timingSignalRService.getSyncedNow().getTime();
         const lagSec = Math.round(elapsedMs(t0, now) / 1000);
         if (lagSec >= 1) {
@@ -759,6 +765,11 @@ const FinisherDashboard = () => {
         }, 37);
 
         flushPendingAbs(t0);
+
+        // Campana solo en largada en vivo (no al reabrir una carrera ya en curso).
+        if (alert && !wasAlreadyRunning) {
+            playRaceStartBell();
+        }
     };
 
     const stopLocalTimer = () => {
@@ -1148,7 +1159,11 @@ const FinisherDashboard = () => {
                 </button>
             </div>
         )}
-        <div className={`finisher-dashboard finisher-mobile-ready ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div
+            className={`finisher-dashboard finisher-mobile-ready ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+            onPointerDown={unlockRaceStartBell}
+            onKeyDown={unlockRaceStartBell}
+        >
             {globalAlert && (
                 <div className="global-race-alert-overlay">
                     <div className="global-race-alert">
@@ -1188,6 +1203,17 @@ const FinisherDashboard = () => {
                 <div className="header-info">
                     <div className="race-header-toolbar">
                         <div className="badge-live blue">CRONOMETRISTA</div>
+                        <button
+                            type="button"
+                            className="btn-refresh-sync"
+                            onClick={() => {
+                                unlockRaceStartBell();
+                                playRaceStartBell({ force: true });
+                            }}
+                            title="Probar sonido de largada"
+                        >
+                            <span className="btn-refresh-label">🔔 Campana</span>
+                        </button>
                         <button
                             type="button"
                             className="btn-refresh-sync"

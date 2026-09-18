@@ -6,6 +6,7 @@ import InscripcionService from '../../services/InscripcionService';
 import ResultadoService from '../../services/ResultadoService';
 import FaseService from '../../services/FaseService';
 import SchedulerService, { isHorarioManualLibre } from '../../services/SchedulerService';
+import { sortByFechaHoraProgramada } from '../../utils/dateUtils';
 import { fetchEventosForUser } from '../../utils/eventoScopeHelpers';
 import { applyPositionsToTiemposLocales, computePositionsForPhase, isExcludedFromRanking, mapEstadoCantoToBackend, normalizeEstadoCantoFromBackend } from '../../utils/resultadosHelpers';
 import { parseTimeToTimeSpan } from '../../utils/raceTimeUtils';
@@ -215,13 +216,8 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
         
         try {
             const data = await FaseService.getByEvento(id);
-            // Ordenar por fecha programada (evitando desvíos de zona horaria al comparar strings)
-            const sorted = (data || []).sort((a, b) => {
-                const dateA = a.fechaHoraProgramada || '2000-01-01T00:00:00';
-                const dateB = b.fechaHoraProgramada || '2000-01-01T00:00:00';
-                return dateA.localeCompare(dateB);
-            });
-            setCronograma(sorted);
+            // Ordenar por instante real (Date), no por string ISO (falla al mezclar local vs UTC)
+            setCronograma(sortByFechaHoraProgramada(data));
         } catch (error) {
             // Error silently handled
         }
@@ -437,9 +433,9 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
             setFases((prev) => prev.map((f) => (
                 f.id === fase.id ? { ...f, fechaHoraProgramada } : f
             )));
-            setCronograma((prev) => prev.map((f) => (
-                f.id === fase.id ? { ...f, fechaHoraProgramada } : f
-            )));
+            setCronograma((prev) => sortByFechaHoraProgramada(
+                prev.map((f) => (f.id === fase.id ? { ...f, fechaHoraProgramada } : f))
+            ));
 
             setMessage("✅ Horario de la serie actualizado (también en Armar Schedule).");
             if (selectedPrueba) await loadDatosPrueba(selectedPrueba);

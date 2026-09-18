@@ -102,3 +102,19 @@ export const isSameDayOfMonth = (value, day) => {
     if (!parts) return false;
     return parts.day === day;
 };
+
+/**
+ * Compara horarios programados por instante real (Date), no por string ISO.
+ * Evita el desorden al mezclar fechas locales sin Z con UTC de toISOString().
+ */
+export const compareFechaHoraProgramada = (a, b) => {
+    const ta = new Date(a || 0).getTime();
+    const tb = new Date(b || 0).getTime();
+    const safeA = Number.isNaN(ta) ? 0 : ta;
+    const safeB = Number.isNaN(tb) ? 0 : tb;
+    return safeA - safeB;
+};
+
+/** Ordena fases/items por fechaHoraProgramada ascendente. */
+export const sortByFechaHoraProgramada = (items, getFecha = (x) => x?.fechaHoraProgramada) =>
+    [...(items || [])].sort((a, b) => compareFechaHoraProgramada(getFecha(a), getFecha(b)));
