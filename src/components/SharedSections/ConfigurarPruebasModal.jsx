@@ -723,7 +723,7 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {[...itemsFinales].reverse().map((it, idx) => {
+                                                    {itemsFinales.map((it, idx) => {
                                                         const isF = it.tipo === 'fase';
                                                         const raw = it.raw;
                                                         const isGrupo = !isF && raw?._isGrupoLargada;
@@ -754,7 +754,7 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                                     ? 'rgba(14, 165, 233, 0.06)'
                                                                     : (isF ? 'rgba(59, 130, 246, 0.03)' : 'transparent')
                                                             }}>
-                                                                <td>{itemsFinales.length - idx}</td>
+                                                                <td>{idx + 1}</td>
                                                                 <td>
                                                                     <span className="badge-outline" style={{ borderColor: CATEGORIA_COLORS[catId]?.text || '#7dd3fc', color: CATEGORIA_COLORS[catId]?.text || '#7dd3fc', whiteSpace: 'normal', textAlign: 'left' }}>
                                                                         {catLabel}

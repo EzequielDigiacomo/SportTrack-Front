@@ -163,26 +163,26 @@ export const useResultados = (preselectedEventoId, defaultTab) => {
 
     useEffect(() => {
         if (cronograma.length > 0 && pruebas.length > 0) {
-            const mapping = {};
-            cronograma.forEach((f, idx) => {
+            // Ordenar pruebas por la hora más temprana de sus series (no por # fijo de creación)
+            const earliestByPrueba = {};
+            cronograma.forEach((f) => {
                 const pid = f.eventoPruebaId || f.EventoPruebaId;
-                if (!mapping[pid]) mapping[pid] = [];
-                mapping[pid].push(idx + 1);
+                if (pid == null) return;
+                const t = new Date(f.fechaHoraProgramada || 0).getTime();
+                const safe = Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+                if (earliestByPrueba[pid] == null || safe < earliestByPrueba[pid]) {
+                    earliestByPrueba[pid] = safe;
+                }
             });
 
             const sorted = [...pruebas].sort((a, b) => {
-                const aNums = mapping[a.id] || [];
-                const bNums = mapping[b.id] || [];
-                const minA = aNums.length > 0 ? Math.min(...aNums) : Infinity;
-                const minB = bNums.length > 0 ? Math.min(...bNums) : Infinity;
-
-                if (minA !== minB) {
-                    return minA - minB;
-                }
-
-                const timeA = new Date(a.fechaHora || a.FechaHora || 0).getTime();
-                const timeB = new Date(b.fechaHora || b.FechaHora || 0).getTime();
-                return timeA - timeB;
+                const ta = earliestByPrueba[a.id]
+                    ?? new Date(a.fechaHora || a.FechaHora || 0).getTime();
+                const tb = earliestByPrueba[b.id]
+                    ?? new Date(b.fechaHora || b.FechaHora || 0).getTime();
+                const safeA = Number.isNaN(ta) ? Number.POSITIVE_INFINITY : ta;
+                const safeB = Number.isNaN(tb) ? Number.POSITIVE_INFINITY : tb;
+                return safeA - safeB;
             });
 
             const orderChanged = sorted.some((p, i) => p.id !== pruebas[i]?.id);

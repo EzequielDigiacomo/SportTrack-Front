@@ -43,7 +43,9 @@ const SchedulerService = {
             }).sort((a, b) => {
                 const ta = new Date(a.timeCalculated || 0).getTime();
                 const tb = new Date(b.timeCalculated || 0).getTime();
-                return ta - tb;
+                const safeA = Number.isNaN(ta) ? Number.POSITIVE_INFINITY : ta;
+                const safeB = Number.isNaN(tb) ? Number.POSITIVE_INFINITY : tb;
+                return safeA - safeB;
             });
         }
 
