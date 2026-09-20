@@ -97,6 +97,34 @@ const isBoteK4 = (fase) => {
     return name.toUpperCase().includes('4');
 };
 
+/** Filtra fases por modo PDF a nivel evento (no solo la prueba seleccionada). */
+const matchFaseByExportMode = (fase, mode) => {
+    const etapa = (fase?.etapaNombre || fase?.EtapaNombre || '').toLowerCase();
+    const nombre = (fase?.nombreFase || fase?.NombreFase || '').toLowerCase();
+    if (mode === 'series') {
+        if (etapa.includes('eliminator') || etapa.includes('serie')) return true;
+        if (nombre.includes('semi') || nombre.includes('final')) return false;
+        return nombre.includes('serie') || nombre.includes('heat') || nombre.includes('eliminator');
+    }
+    if (mode === 'semis') {
+        if (etapa.includes('semi')) return true;
+        return nombre.includes('semi');
+    }
+    if (mode === 'finals') {
+        if (etapa === 'finales' || (etapa.includes('final') && !etapa.includes('semi'))) return true;
+        if (nombre.includes('semi')) return false;
+        return nombre.includes('final');
+    }
+    return true;
+};
+
+const EVENT_WIDE_PDF_MODES = new Set(['series', 'semis', 'finals']);
+const PDF_MODE_LABELS = {
+    series: 'Todas las Series',
+    semis: 'Todas las Semis',
+    finals: 'Todas las Finales',
+};
+
 const LiveResults = () => {
     const { id } = useParams();
     const { addToast } = useToast();
@@ -380,71 +408,94 @@ const LiveResults = () => {
     }, [selectedPrueba, refreshResultsCounter, liveRealtimeEnabled]);
 
     const handleDownloadPDF = async (mode = 'current', clasificacionKey = null) => {
-        if (!selectedPrueba || !fases.length) return;
+        const isEventWide = EVENT_WIDE_PDF_MODES.has(mode);
+        if (!isEventWide && (!selectedPrueba || !fases.length)) return;
 
         try {
             const eventoExport = evento || 'Evento';
-            const distLabel = selectedPrueba.prueba?.distancia?.descripcion
-                || (selectedPrueba.prueba?.distancia?.metros ? `${selectedPrueba.prueba.distancia.metros}m` : '');
+            const distLabel = selectedPrueba?.prueba?.distancia?.descripcion
+                || (selectedPrueba?.prueba?.distancia?.metros ? `${selectedPrueba.prueba.distancia.metros}m` : '');
             const grupoSeleccionado = clasificacionKey
                 ? maratonLiveGroups.find(g => g.key === clasificacionKey)
                 : null;
-            const pruebaNombre = isMaratonEvent
-                ? [
-                    selectedFase?.nombreFase || selectedFase?.NombreFase || 'Largada',
-                    distLabel,
-                    grupoSeleccionado?.title,
-                ].filter(Boolean).join(' - ')
-                : [
-                    selectedPrueba.prueba?.categoria?.nombre,
-                    selectedPrueba.prueba?.bote?.tipo || selectedPrueba.prueba?.bote?.nombre,
-                    distLabel,
-                    getSexName(selectedPrueba),
-                ].filter(Boolean).join(' - ');
+            const pruebaNombre = isEventWide
+                ? 'Resultados'
+                : isMaratonEvent
+                    ? [
+                        selectedFase?.nombreFase || selectedFase?.NombreFase || 'Largada',
+                        distLabel,
+                        grupoSeleccionado?.title,
+                    ].filter(Boolean).join(' - ')
+                    : [
+                        selectedPrueba?.prueba?.categoria?.nombre,
+                        selectedPrueba?.prueba?.bote?.tipo || selectedPrueba?.prueba?.bote?.nombre,
+                        distLabel,
+                        getSexName(selectedPrueba),
+                    ].filter(Boolean).join(' - ');
 
-            // Enrich each fase with the resultados from local state (real-time)
-            const enrichFase = (fase) => ({
-                ...fase,
-                nombreFase: fase.nombreFase || fase.NombreFase || `Fase ${fase.numeroFase}`,
-                fechaHoraProgramada: fase.fechaHoraProgramada || fase.FechaHoraProgramada,
-                resultados: resultados
-                    .filter(r => (r.faseId || r.FaseId) === fase.id)
-                    .map(r => ({
-                        id: r.id || r.Id,
-                        posicion: r.posicion || r.Posicion,
-                        carril: r.carril || r.Carril,
-                        participanteNombre: r.participanteNombre || r.ParticipanteNombre,
-                        clubNombre: r.clubNombre || r.ClubNombre,
-                        clubSigla: r.clubSigla || r.ClubSigla,
-                        tiempoOficial: r.tiempoOficial || r.TiempoOficial,
-                        tripulantes: r.tripulantes || [],
-                        estado: r.estado || r.Estado,
-                        eventoPruebaId: r.eventoPruebaId || r.EventoPruebaId,
-                        inscripcionId: r.inscripcionId || r.InscripcionId,
-                    })),
+            const normalizeResultado = (r) => ({
+                id: r.id || r.Id,
+                posicion: r.posicion || r.Posicion,
+                carril: r.carril || r.Carril,
+                participanteNombre: r.participanteNombre || r.ParticipanteNombre,
+                clubNombre: r.clubNombre || r.ClubNombre,
+                clubSigla: r.clubSigla || r.ClubSigla,
+                tiempoOficial: r.tiempoOficial || r.TiempoOficial,
+                tripulantes: r.tripulantes || [],
+                estado: r.estado || r.Estado,
+                eventoPruebaId: r.eventoPruebaId || r.EventoPruebaId,
+                inscripcionId: r.inscripcionId || r.InscripcionId,
             });
 
-            // Filter fases by mode
+            // Enrich: prioriza tiempos live locales; si no hay (otras pruebas), usa resultados de la fase
+            const enrichFase = (fase) => {
+                const faseId = fase.id || fase.Id;
+                const fromLocal = resultados
+                    .filter(r => (r.faseId || r.FaseId) === faseId)
+                    .map(normalizeResultado);
+                const fromFase = (fase.resultados || fase.Resultados || []).map(normalizeResultado);
+                return {
+                    ...fase,
+                    nombreFase: fase.nombreFase || fase.NombreFase || `Fase ${fase.numeroFase}`,
+                    fechaHoraProgramada: fase.fechaHoraProgramada || fase.FechaHoraProgramada,
+                    resultados: fromLocal.length > 0 ? fromLocal : fromFase,
+                };
+            };
+
+            // Series / Semis / Finales: todo el evento. Resto: prueba seleccionada.
             let raw = [...fases];
+            if (isEventWide) {
+                try {
+                    const fresh = await FaseService.getByEvento(id);
+                    raw = fresh?.length ? fresh : [...allFases];
+                } catch {
+                    raw = allFases.length ? [...allFases] : [...fases];
+                }
+            }
+
             let fasesToExport = [];
             if (isMaratonEvent && (mode === 'maraton-full' || mode === 'maraton-group')) {
                 fasesToExport = selectedFase ? [selectedFase] : [];
             } else if (mode === 'current') {
                 fasesToExport = selectedFase ? [selectedFase] : [];
-            } else if (mode === 'series') {
-                fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('serie'));
-            } else if (mode === 'semis') {
-                fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('semi'));
-            } else if (mode === 'finals') {
-                fasesToExport = raw.filter(f => (f.nombreFase || f.NombreFase || '').toLowerCase().includes('final'));
+            } else if (isEventWide) {
+                fasesToExport = raw.filter(f => matchFaseByExportMode(f, mode));
             } else {
                 fasesToExport = raw;
             }
 
-            fasesToExport.sort((a, b) =>
-                (a.etapaOrden ?? a.EtapaOrden ?? 0) - (b.etapaOrden ?? b.EtapaOrden ?? 0) ||
-                (a.numeroFase ?? a.NumeroFase ?? 0) - (b.numeroFase ?? b.NumeroFase ?? 0)
-            );
+            fasesToExport.sort((a, b) => {
+                if (isEventWide) {
+                    const ta = new Date(a.fechaHoraProgramada || a.FechaHoraProgramada || 0).getTime();
+                    const tb = new Date(b.fechaHoraProgramada || b.FechaHoraProgramada || 0).getTime();
+                    const safeA = Number.isNaN(ta) ? Number.POSITIVE_INFINITY : ta;
+                    const safeB = Number.isNaN(tb) ? Number.POSITIVE_INFINITY : tb;
+                    return safeA - safeB
+                        || (a.numeroFase ?? a.NumeroFase ?? 0) - (b.numeroFase ?? b.NumeroFase ?? 0);
+                }
+                return (a.etapaOrden ?? a.EtapaOrden ?? 0) - (b.etapaOrden ?? b.EtapaOrden ?? 0)
+                    || (a.numeroFase ?? a.NumeroFase ?? 0) - (b.numeroFase ?? b.NumeroFase ?? 0);
+            });
 
             if (!fasesToExport.length) { addToast('warning', 'No hay fases para el filtro seleccionado'); return; }
 
@@ -471,7 +522,7 @@ const LiveResults = () => {
                     ? 'Prueba Completa'
                     : mode === 'current'
                         ? enriched[0]?.nombreFase
-                        : mode;
+                        : (PDF_MODE_LABELS[mode] || mode);
 
             await PdfExportService.exportGrupo(
                 enriched,

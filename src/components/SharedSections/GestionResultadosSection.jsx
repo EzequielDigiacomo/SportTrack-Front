@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { formatTime } from '../../utils/dateUtils';
+import { formatTime, sortByFechaHoraProgramada } from '../../utils/dateUtils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Star, FileDown, ChevronDown, Trash2, RotateCcw, RefreshCw, List, Trophy, Minus, Plus, Calendar, Link2 } from 'lucide-react';
@@ -13,6 +13,7 @@ import Modal from '../Common/Modal';
 import { useAlert } from '../../hooks/useAlert';
 import PdfExportService from '../../services/PdfExportService';
 import CsvExportService from '../../services/CsvExportService';
+import FaseService from '../../services/FaseService';
 import timingSignalRService from '../../services/TimingSignalRService';
 // import FaseDetailsForm from './FaseDetailsForm';
 import './GestionResultados.css';
@@ -631,7 +632,15 @@ const applyTransfer = () => {
 
 const eventoNombre = eventoActual?.nombre || 'Evento';
 const pruebaNombre = pruebas.find(p => String(p.id) === String(selectedPrueba))?.nombre || 'Prueba';
-const etiquetasEtapas = Object.keys(agrupadoPorEtapa);
+const etiquetasEtapas = (() => {
+    const fromEvento = [...new Set(
+        (cronograma || [])
+            .map(f => f.etapaNombre || f.EtapaNombre)
+            .filter(Boolean)
+    )];
+    if (fromEvento.length) return fromEvento;
+    return Object.keys(agrupadoPorEtapa);
+})();
 
 const handleExportFase = async () => {
     if (!faseSeleccionada) return;
@@ -642,12 +651,61 @@ const handleExportFase = async () => {
     setShowPdfMenu(false);
 };
 
-const handleExportGrupo = async (etapa) => {
+const handleExportGrupoPrueba = async (etapa) => {
     const fasesDelGrupo = agrupadoPorEtapa[etapa] || [];
+    if (!fasesDelGrupo.length) {
+        setMessage(`⚠️ No hay fases de ${etapa} en la prueba seleccionada.`);
+        setShowPdfMenu(false);
+        return;
+    }
     const maratonOpts = isMaratonEvent
         ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
         : {};
-    await PdfExportService.exportGrupo(fasesDelGrupo, eventoActual || eventoNombre, pruebaNombre, etapa, maratonOpts);
+    await PdfExportService.exportGrupo(
+        fasesDelGrupo,
+        eventoActual || eventoNombre,
+        pruebaNombre,
+        etapa,
+        maratonOpts
+    );
+    setShowPdfMenu(false);
+};
+
+const handleExportGrupo = async (etapa) => {
+    // "Todas las {etapa}" = todas las fases de esa etapa en el evento completo
+    // (no solo la prueba seleccionada).
+    let source = cronograma || [];
+    try {
+        if (selectedEvento) {
+            const fresh = await FaseService.getByEvento(selectedEvento);
+            if (fresh?.length) source = sortByFechaHoraProgramada(fresh);
+        }
+    } catch {
+        // Usar cronograma en memoria
+    }
+
+    let fasesDelGrupo = source.filter(f =>
+        (f.etapaNombre || f.EtapaNombre || 'Competencia') === etapa
+    );
+    if (!fasesDelGrupo.length) {
+        fasesDelGrupo = agrupadoPorEtapa[etapa] || [];
+    }
+    if (!fasesDelGrupo.length) {
+        setMessage(`⚠️ No hay fases de ${etapa} para exportar.`);
+        setShowPdfMenu(false);
+        return;
+    }
+
+    const maratonOpts = isMaratonEvent
+        ? { isMaraton: true, pruebas, inscripcionEpMap: maratonInscripcionEpMap }
+        : {};
+    await PdfExportService.exportGrupo(
+        fasesDelGrupo,
+        eventoActual || eventoNombre,
+        'Resultados',
+        `Todas las ${etapa}`,
+        maratonOpts
+    );
     setShowPdfMenu(false);
 };
 
@@ -912,7 +970,7 @@ const connectedStarter = activeJudges.find(j => {
                                                 <button onClick={handleExportStartListCompleto}>👥 Start List Completo</button>
                                                 <button onClick={handleExportPrueba}>🏆 Prueba Seleccionada</button>
                                                 {etiquetasEtapas.map(etapa => (
-                                                    <button key={etapa} onClick={() => handleExportGrupo(etapa)}>📋 Solo {etapa}</button>
+                                                    <button key={etapa} onClick={() => handleExportGrupoPrueba(etapa)}>📋 Solo {etapa}</button>
                                                 ))}
                                             </div>
                                         )}
