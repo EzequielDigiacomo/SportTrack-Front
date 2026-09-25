@@ -23,9 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
-.env.local
-.env.*.local
+# Environment variables (mantener solo .env.example en el repo)
+.env
+.env.*
+!.env.example
 
 # Scratch development scripts
 scratch/

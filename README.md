@@ -69,11 +69,21 @@ npm install
 ```
 
 ### 3. Variables de Entorno
-Crea un archivo `.env` en la raíz del proyecto (basado en el archivo `.env.example` si existe) con la URL de tu backend local:
+Copiá el ejemplo y ajustá URLs según tu backend local:
+
+```bash
+cp .env.example .env.development
+```
+
+Claves (ver `.env.example`):
+
 ```env
 VITE_API_URL=http://localhost:5029/api
-VITE_SIGNALR_URL=http://localhost:5029/timingHub
+VITE_SIGNALR_HUB_URL=http://localhost:5029/hubs/timing
+VITE_PUBLIC_APP_URL=http://localhost:5173
 ```
+
+Los archivos `.env*` **no** se versionan. En Vercel, cargá las mismas claves en **Settings → Environment Variables** antes del deploy de producción.
 
 ### 4. Ejecutar el servidor de desarrollo
 ```bash
