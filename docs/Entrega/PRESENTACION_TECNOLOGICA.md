@@ -10,13 +10,13 @@ Para dar soporte a competencias deportivas de alto rendimiento con alta concurre
 
 ```mermaid
 graph TD
-    A[React SPA Client - Espectadores y Jueces] <-->|SignalR WebSockets / REST API| B[ASP.NET Core Web API - .NET 8]
+    A[React SPA Client - Espectadores y Jueces] <-->|SignalR WebSockets / REST API| B[ASP.NET Core Web API - .NET 10]
     B <-->|Entity Framework Core| C[PostgreSQL 14+ Database]
     B -->|Event-Driven| D[SignalR Hubs]
 ```
 
 - **Frontend**: React (SPA con Vanilla CSS, Lucide Icons y Tailwind opcional).
-- **Backend**: C# / .NET 8 (ASP.NET Core Web API) estructurado con Arquitectura de Cebolla.
+- **Backend**: C# / .NET 10 (ASP.NET Core Web API) estructurado con Arquitectura de Cebolla.
 - **Base de Datos**: PostgreSQL 14+.
 - **Comunicación en Tiempo Real**: ASP.NET Core SignalR (WebSockets con fallback automático).
 
@@ -24,8 +24,8 @@ graph TD
 
 ## 2. Justificación Técnica: ¿Por qué elegimos este Stack?
 
-### 🚀 C# y .NET 8: Potencia y Arquitectura Empresarial
-* **Rendimiento de Compilación y JIT**: .NET 8 ofrece una de las velocidades de ejecución más rápidas del mercado (según los benchmarks de TechEmpower). La recolección de basura optimizada y la compilación a código de máquina nativo garantizan respuestas de baja latencia ante las solicitudes de cronometraje.
+### 🚀 C# y .NET 10: Potencia y Arquitectura Empresarial
+* **Rendimiento de Compilación y JIT**: .NET 10 ofrece una de las velocidades de ejecución más rápidas del mercado (según los benchmarks de TechEmpower). La recolección de basura optimizada y la compilación a código de máquina nativo garantizan respuestas de baja latencia ante las solicitudes de cronometraje.
 * **Tipado Estricto y Seguridad en Compilación**: A diferencia de lenguajes interpretados dinámicamente (como Node.js/Python), C# previene errores de tipos o referencias nulas en tiempo de compilación. Esto es crítico en un sistema de tiempo real donde el fallo de un segundo puede arruinar la clasificación de una regata.
 * **Onion Architecture (Arquitectura de Cebolla)**: La solución se estructura en capas desacopladas (`Entidades`, `AccesoDatos`, `Controladores`, `Api`). Esto permite aislar las reglas de negocio del canotaje de los detalles de infraestructura, garantizando que el sistema sea fácil de probar mediante Unit Tests y sencillo de mantener a largo plazo.
 
@@ -63,6 +63,6 @@ Las plataformas tradicionales de cronometraje y gestión de regatas (como sistem
 
 ## 4. Conclusión: El Retorno de Inversión Tecnológico
 
-La combinación de **.NET 8**, **PostgreSQL**, **React** y **SignalR** no es casualidad. Representa un balance perfecto entre la **solidez empresarial en el almacenamiento y procesamiento de datos** y la **agilidad extrema y moderna en la interacción del usuario**.
+La combinación de **.NET 10**, **PostgreSQL**, **React** y **SignalR** no es casualidad. Representa un balance perfecto entre la **solidez empresarial en el almacenamiento y procesamiento de datos** y la **agilidad extrema y moderna en la interacción del usuario**.
 
 **SportTrack-v1** no es solo un registrador de tiempos; es una plataforma de eventos en vivo que convierte una competencia deportiva en una experiencia interactiva digital de clase mundial, elevando el valor comercial del evento y la satisfacción de atletas, clubes y patrocinadores.

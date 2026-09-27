@@ -90,13 +90,14 @@ Los archivos `.env*` **no** se versionan. En Vercel, cargá las mismas claves en
 npm run dev
 ```
 
-La aplicación estará disponible típicamente en `http://localhost:5173`.
+La aplicación estará disponible en `http://localhost:5174` (puerto configurado con `strictPort: true` en `vite.config.js`).
 
 ---
 
 ## 🤝 Flujo de Autenticación
-La aplicación utiliza un sistema de **autenticación JWT seguro mediante Cookies HttpOnly**.
-1. El usuario inicia sesión (`/login`).
-2. El servidor responde validando credenciales y setea una cookie inaccesible por JavaScript (para prevenir XSS).
-3. `AuthContext.jsx` mantiene el estado de la sesión en React basándose en validaciones al endpoint `/auth/me`.
-4. El cierre de sesión (`/auth/logout`) limpia la cookie de forma segura en el servidor.
+La aplicación utiliza un sistema de **autenticación JWT híbrido**: el token se envía como `Authorization: Bearer` (persistido en `localStorage`) y, además, el backend setea la cookie `X-Access-Token` (HttpOnly). El **Bearer es la fuente de verdad**, porque en el despliegue cross-origin (Vercel → Render) las cookies de terceros suelen bloquearse; en la app Android (Capacitor) se usa **solo Bearer**.
+1. El usuario inicia sesión (`/login`); el servidor valida credenciales y devuelve el token, los datos del usuario y su plan, y setea la cookie.
+2. `AuthContext.jsx` normaliza y persiste la sesión y mantiene el estado en React validando contra el endpoint `/auth/me`.
+3. Cada request inyecta `Authorization: Bearer <token>` y el header `X-Client-App: sporttrack` (ver `services/api.js`).
+4. Ante un `401`, el interceptor limpia el almacenamiento local y la sesión se considera expirada.
+5. El cierre de sesión (`/auth/logout`) invalida la sesión en el servidor y limpia el estado local.

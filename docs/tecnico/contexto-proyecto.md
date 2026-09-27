@@ -10,7 +10,7 @@
 
 | Repo | Ruta local | Deploy | Rol |
 |------|------------|--------|-----|
-| **SportTrack-Sigdef** | `c:\Users\EZEQU\source\repos\SportTrack-Sigdef` | Render: `https://sporttrack-sigdef.onrender.com` | Backend unificado (.NET 8): regatas + SIGDEF + SaaS |
+| **SportTrack-Sigdef** | `c:\Users\EZEQU\source\repos\SportTrack-Sigdef` | Render: `https://sporttrack-sigdef.onrender.com` | Backend unificado (.NET 10): regatas + SIGDEF + SaaS |
 | **SportTrack-Front** | `c:\Users\EZEQU\source\reposFront\SportTrack-Front` | Vercel: `https://sporttrack-fec.vercel.app` | Frontend **competencias**: eventos, jueces, cronometraje, panel SuperAdmin SportTrack |
 | **FrontSigdef** | `c:\Users\EZEQU\source\reposFront\FrontSigdef` | Vercel (SIGDEF) | Frontend **administración federación**: atletas, clubes, delegados, SuperAdmin SaaS |
 

@@ -13,7 +13,7 @@ El backend utiliza una **Arquitectura de Cebolla (Onion Architecture)**, lo que 
 4.  **SportTrack-v1.Api (Presentación):** Es el punto de entrada (ASP.NET Core Web API). Configura la inyección de dependencias, middleware, SignalR y controladores.
 
 ## 3. Stack Tecnológico
--   **Lenguaje:** C# / .NET 8
+-   **Lenguaje:** C# / .NET 10
 -   **Base de Datos:** PostgreSQL
 -   **ORM:** Entity Framework Core (EF Core)
 -   **Comunicación TR:** SignalR (WebSockets)

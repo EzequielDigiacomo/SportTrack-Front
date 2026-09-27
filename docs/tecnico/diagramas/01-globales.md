@@ -44,7 +44,7 @@ flowchart TB
 ```mermaid
 flowchart LR
     FE[SportTrack-Front<br/>Vite + React]
-    API[API .NET 8]
+    API[API .NET 10]
     HUB[TimingHub]
     DB[(PostgreSQL)]
 

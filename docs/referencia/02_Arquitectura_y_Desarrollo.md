@@ -10,7 +10,7 @@ SportTrack está dividido en un ecosistema clásico cliente-servidor:
 1.  **Frontend (SPA):** Construido en Vite + React. 
     *   **Estilos:** CSS puro, altamente modular, basado en variables nativas en `:root` (glassmorphism/paletas oscuras).
     *   **Conectividad:** `axios` administrado vía instancias centralizadas en `src/services/api.js`.
-2.  **Backend (API Restful):** .NET 8 Web API.
+2.  **Backend (API Restful):** .NET 10 Web API.
     *   **ORM:** Entity Framework Core (PostgreSQL).
     *   **Mapeo:** AutoMapper (con fuertes salvedades de diseño detalladas debajo).
     *   **Autenticación:** Microsoft.AspNetCore.Authentication.JwtBearer.

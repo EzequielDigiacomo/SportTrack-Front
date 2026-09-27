@@ -21,7 +21,7 @@ graph LR
 
     %% Datos
     subgraph Persistencia
-        DB[(Base de Datos SQL Server)]
+        DB[(Base de Datos PostgreSQL)]
     end
 
     %% Relaciones

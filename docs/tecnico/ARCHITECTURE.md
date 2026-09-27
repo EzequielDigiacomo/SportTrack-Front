@@ -1,6 +1,6 @@
 # Arquitectura de SportTrack-v1 Backend
 
-Este documento detalla la estructura y el diseño técnico del sistema backend de SportTrack. El sistema está construido utilizando .NET 8, siguiendo una arquitectura cebolla (Onion Architecture) simplificada pero robusta, dividida en cuatro proyectos principales.
+Este documento detalla la estructura y el diseño técnico del sistema backend de SportTrack. El sistema está construido utilizando .NET 10, siguiendo una arquitectura cebolla (Onion Architecture) simplificada pero robusta, dividida en cuatro proyectos principales.
 
 ## Estructura de Proyectos
 

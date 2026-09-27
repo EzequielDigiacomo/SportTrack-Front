@@ -3,7 +3,7 @@
 Este documento detalla los pasos necesarios para desplegar el backend de SportTrack-v1 en un entorno local o de producción.
 
 ## 1. Requisitos Previos
--   [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+-   [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 -   [PostgreSQL](https://www.postgresql.org/download/) (v14 o superior)
 -   Herramienta de base de datos (pgAdmin o DBeaver recomendado)
 

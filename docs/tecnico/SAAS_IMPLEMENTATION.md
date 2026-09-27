@@ -29,7 +29,7 @@ La migración fue generada y aplicada con éxito (`AddSaaSPlans`).
 
 ---
 
-## 2. Lógica de Backend (C# / .NET 8)
+## 2. Lógica de Backend (C# / .NET 10)
 
 ### DTOs
 Ubicación: `SportTrack-v1.Controladores\SaaS\Dtos\PlanSaaSDto.cs`

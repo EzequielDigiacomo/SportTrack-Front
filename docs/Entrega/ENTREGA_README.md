@@ -23,7 +23,7 @@ Visualización gráfica de la base de datos, flujos de procesos y arquitectura.
 ## Resumen del Proyecto
 SportTrack-v1 es una solución de alto rendimiento para el cronometraje y gestión de competencias de canotaje. Su principal ventaja competitiva es la capacidad de ofrecer resultados en vivo mediante WebSockets (SignalR), lo que permite una experiencia de usuario dinámica y moderna, apta para eventos de gran escala.
 
--   **Proyecto Backend:** .NET 8
+-   **Proyecto Backend:** .NET 10
 -   **Base de Datos Compatible:** PostgreSQL 14+
 -   **Sistema de Notificaciones:** WebSockets / SignalR
 -   **Seguridad:** Estándar Industrial JWT
