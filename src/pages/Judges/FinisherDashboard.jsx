@@ -77,7 +77,10 @@ const FinisherDashboard = () => {
     const [startTime, setStartTime] = useState(null);
     const timerRef = useRef(null);
     const startTimeRef = useRef(null);
+    const selectedFaseRef = useRef(null);
+    const timingFaseIdRef = useRef(null);
     const pendingAbsRef = useRef([]); // { kind: 'lane'|'doubt', resultadoId?, finishAbs }
+    selectedFaseRef.current = selectedFase;
     const handoffRef = useRef(readControlTecnicoHandoff());
     const [startReceiveLagSec, setStartReceiveLagSec] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -221,11 +224,17 @@ const FinisherDashboard = () => {
             if (f) {
                 const t0Iso = handoff?.t0Iso;
                 const lanes = handoff?.lanes;
-                setSelectedFase({
-                    ...f,
-                    estado: t0Iso ? 'En Carrera' : f.estado,
-                    fechaHoraInicioReal: t0Iso || f.fechaHoraInicioReal,
-                    resultados: (lanes?.length ? lanes : f.resultados),
+                setSelectedFase(prev => {
+                    const sameLiveRace = prev
+                        && String(prev.id) === String(f.id)
+                        && (normalizeFaseEstado(prev.estado) === 'En Carrera' || startTimeRef.current);
+                    if (sameLiveRace && !t0Iso) return prev;
+                    return {
+                        ...f,
+                        estado: t0Iso ? 'En Carrera' : (sameLiveRace ? prev.estado : f.estado),
+                        fechaHoraInicioReal: t0Iso || (sameLiveRace ? prev.fechaHoraInicioReal : f.fechaHoraInicioReal),
+                        resultados: (lanes?.length ? lanes : f.resultados),
+                    };
                 });
             }
         }
@@ -260,10 +269,12 @@ const FinisherDashboard = () => {
 
         if (raceOn && t0Iso) {
             const parsed = parseStartMs(t0Iso);
-            if (!Number.isNaN(parsed) && startTimeRef.current !== parsed) {
+            const intervalDied = !timerRef.current;
+            if (!Number.isNaN(parsed) && (startTimeRef.current !== parsed || intervalDied)) {
                 setIsRaceRunning(true);
                 setStartTime(parsed);
                 startTimeRef.current = parsed;
+                timingFaseIdRef.current = selectedFase.id;
                 setElapsedTime(elapsedMs(parsed, timingSignalRService.getSyncedNow().getTime()));
                 if (timerRef.current) clearInterval(timerRef.current);
                 timerRef.current = setInterval(() => {
@@ -271,12 +282,19 @@ const FinisherDashboard = () => {
                 }, 37);
             }
         } else if (!handoffForThisFase) {
-            setElapsedTime(0);
-            setIsRaceRunning(false);
-            setStartTime(null);
-            startTimeRef.current = null;
+            const keepLiveClock = selectedFase
+                && startTimeRef.current
+                && String(timingFaseIdRef.current) === String(selectedFase.id);
+            if (!keepLiveClock) {
+                setElapsedTime(0);
+                setIsRaceRunning(false);
+                setStartTime(null);
+                startTimeRef.current = null;
+                timingFaseIdRef.current = null;
+            }
         }
         
+        let cancelled = false;
         const setupSignalR = async () => {
             try {
                 // Escuchar jueces conectados en este EVENTO ANTES de conectar para no perder el primer evento
@@ -291,9 +309,12 @@ const FinisherDashboard = () => {
                     user?.nombreCompleto || user?.nombre || user?.username || finisherSignalRole,
                     finisherSignalRole
                 );
+                if (cancelled) return;
 
                 // 2. LISTENERS GLOBALES (Siempre activos mientras estemos en el dashboard)
                 timingSignalRService.onGlobalRaceStarted(({ faseId, serverTime }) => {
+                    const currentFase = selectedFaseRef.current;
+                    const alreadyOnThisRace = currentFase && String(currentFase.id) === String(faseId);
                     // Actualizar la lista de fases local para que el "estado" cambie visualmente en el cronograma
                     setFases(prev => {
                         const newFases = prev.map(f => 
@@ -301,20 +322,19 @@ const FinisherDashboard = () => {
                                 ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: serverTime } 
                                 : f
                         );
-                        // Si la fase que largó es la que tenemos seleccionada, actualizarla también
-                        if (selectedFase && String(selectedFase.id) === String(faseId)) {
+                        if (alreadyOnThisRace) {
                             const updated = newFases.find(x => String(x.id) === String(faseId));
                             if (updated) setSelectedFase(updated);
                             if (!startTimeRef.current) {
                                 const parsed = parseStartMs(serverTime);
-                                if (!isNaN(parsed)) startLocalTimer(parsed, { alert: true });
+                                if (!isNaN(parsed)) startLocalTimer(parsed, { alert: true, faseId });
                             }
                         }
                         return newFases;
                     });
 
-                    // Mostrar alerta si es otra carrera o si no tenemos ninguna seleccionada
-                    if (!selectedFase || String(faseId) !== String(selectedFase.id)) {
+                    // Modal solo si el cronometrista no está parado en esa prueba.
+                    if (!alreadyOnThisRace) {
                         playRaceStartBell();
                         setGlobalAlert({ faseId, serverTime });
                         setTimeout(() => setGlobalAlert(null), 15000);
@@ -370,21 +390,22 @@ const FinisherDashboard = () => {
                     await loadFaseContext();
 
                     timingSignalRService.onRaceStarted((id, sTime) => {
+                        const currentFase = selectedFaseRef.current;
                         setFases(prev => {
                             const newFases = prev.map(f => 
                                 String(f.id) === String(id) ? { ...f, estado: 'En Carrera', fechaHoraInicioReal: sTime } : f
                             );
-                            if (selectedFase && String(selectedFase.id) === String(id)) {
+                            if (currentFase && String(currentFase.id) === String(id)) {
                                 const updated = newFases.find(x => String(x.id) === String(id));
                                 if (updated) setSelectedFase(updated);
                             }
                             return newFases;
                         });
 
-                        if (String(id) === String(selectedFase.id)) {
+                        if (currentFase && String(id) === String(currentFase.id)) {
                             if (!startTimeRef.current) {
                                 const parsed = parseStartMs(sTime);
-                                if (!isNaN(parsed)) startLocalTimer(parsed, { alert: true });
+                                if (!isNaN(parsed)) startLocalTimer(parsed, { alert: true, faseId: id });
                             }
                         }
                     });
@@ -438,6 +459,7 @@ const FinisherDashboard = () => {
         setupSignalR();
 
         return () => {
+            cancelled = true;
             if (handoffForThisFase) return;
             stopLocalTimer();
             timingSignalRService.disconnect();
@@ -741,9 +763,13 @@ const FinisherDashboard = () => {
         }
     };
 
-    const startLocalTimer = (sTime, { alert = false } = {}) => {
+    const startLocalTimer = (sTime, { alert = false, faseId } = {}) => {
         const t0 = typeof sTime === 'number' ? sTime : parseStartMs(sTime);
         if (Number.isNaN(t0)) return;
+        if (faseId != null) timingFaseIdRef.current = faseId;
+        else if (selectedFaseRef.current?.id != null) timingFaseIdRef.current = selectedFaseRef.current.id;
+
+        if (startTimeRef.current === t0 && timerRef.current) return;
 
         const wasAlreadyRunning = startTimeRef.current != null;
         const now = timingSignalRService.getSyncedNow().getTime();
@@ -1175,18 +1201,27 @@ const FinisherDashboard = () => {
                             <p>Una prueba acaba de comenzar en el agua.</p>
                             <div className="alert-actions-vertical">
                                 <button className="btn-jump-big" onClick={() => {
-                                    const target = fases.find(f => f.id === globalAlert.faseId);
+                                    const alertFaseId = globalAlert.faseId;
+                                    const alertServerTime = globalAlert.serverTime;
+                                    const current = selectedFaseRef.current;
+                                    const alreadyThere = current && String(current.id) === String(alertFaseId);
+                                    const parsed = parseStartMs(alertServerTime);
+                                    setGlobalAlert(null);
+                                    if (alreadyThere) {
+                                        if (!startTimeRef.current && !Number.isNaN(parsed)) {
+                                            startLocalTimer(parsed, { faseId: alertFaseId });
+                                        }
+                                        return;
+                                    }
+                                    const target = fases.find(f => String(f.id) === String(alertFaseId));
                                     if (target) {
-                                        const updatedTarget = {
+                                        setSelectedFase({
                                             ...target,
                                             estado: 'En Carrera',
-                                            fechaHoraInicioReal: globalAlert.serverTime
-                                        };
-                                        setSelectedFase(updatedTarget);
-                                        const parsed = parseStartMs(globalAlert.serverTime);
-                                        if (!isNaN(parsed)) startLocalTimer(parsed);
+                                            fechaHoraInicioReal: alertServerTime
+                                        });
                                     }
-                                    setGlobalAlert(null);
+                                    if (!Number.isNaN(parsed)) startLocalTimer(parsed, { faseId: alertFaseId });
                                 }}>
                                     <Timer size={20} /> IR A LA PRUEBA Y CRONOMETRAR
                                 </button>
