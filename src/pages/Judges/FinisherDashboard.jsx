@@ -86,7 +86,6 @@ const FinisherDashboard = () => {
     const [loading, setLoading] = useState(false);
     const [isCompact, setIsCompact] = useState(window.innerWidth <= 768);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth <= 1000);
-    const [globalAlert, setGlobalAlert] = useState(null); // { faseId, nroPrueba }
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [hasPendingBackup, setHasPendingBackup] = useState(false);
     const [pendingBackupsAll, setPendingBackupsAll] = useState([]);
@@ -333,12 +332,7 @@ const FinisherDashboard = () => {
                         return newFases;
                     });
 
-                    // Modal solo si el cronometrista no está parado en esa prueba.
-                    if (!alreadyOnThisRace) {
-                        playRaceStartBell();
-                        setGlobalAlert({ faseId, serverTime });
-                        setTimeout(() => setGlobalAlert(null), 15000);
-                    }
+                    if (!alreadyOnThisRace) playRaceStartBell();
                 });
 
                 // 3. LÓGICA ESPECÍFICA DE LA FASE SELECCIONADA
@@ -1190,50 +1184,6 @@ const FinisherDashboard = () => {
             onPointerDown={unlockRaceStartBell}
             onKeyDown={unlockRaceStartBell}
         >
-            {globalAlert && (
-                <div className="global-race-alert-overlay">
-                    <div className="global-race-alert">
-                        <div className="alert-card-content">
-                            <div className="alert-icon-wrapper">
-                                <Activity className="pulse-red" size={48} />
-                            </div>
-                            <h3>¡NUEVA LARGADA!</h3>
-                            <p>Una prueba acaba de comenzar en el agua.</p>
-                            <div className="alert-actions-vertical">
-                                <button className="btn-jump-big" onClick={() => {
-                                    const alertFaseId = globalAlert.faseId;
-                                    const alertServerTime = globalAlert.serverTime;
-                                    const current = selectedFaseRef.current;
-                                    const alreadyThere = current && String(current.id) === String(alertFaseId);
-                                    const parsed = parseStartMs(alertServerTime);
-                                    setGlobalAlert(null);
-                                    if (alreadyThere) {
-                                        if (!startTimeRef.current && !Number.isNaN(parsed)) {
-                                            startLocalTimer(parsed, { faseId: alertFaseId });
-                                        }
-                                        return;
-                                    }
-                                    const target = fases.find(f => String(f.id) === String(alertFaseId));
-                                    if (target) {
-                                        setSelectedFase({
-                                            ...target,
-                                            estado: 'En Carrera',
-                                            fechaHoraInicioReal: alertServerTime
-                                        });
-                                    }
-                                    if (!Number.isNaN(parsed)) startLocalTimer(parsed, { faseId: alertFaseId });
-                                }}>
-                                    <Timer size={20} /> IR A LA PRUEBA Y CRONOMETRAR
-                                </button>
-                                <button className="btn-close-soft" onClick={() => setGlobalAlert(null)}>
-                                    Ignorar por ahora
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <header className="finisher-header glass-effect">
                 <div className="header-info">
                     <div className="race-header-toolbar">
