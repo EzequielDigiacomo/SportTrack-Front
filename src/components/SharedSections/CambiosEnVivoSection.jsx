@@ -3,6 +3,7 @@ import { Copy, Link2, Plus, Trash2, RefreshCw } from 'lucide-react';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import AtletaService from '../../services/AtletaService';
+import ClubService from '../../services/ClubService';
 import InscripcionService from '../../services/InscripcionService';
 import { PUBLIC_APP_URL } from '../../utils/constants';
 import { getUserFacingError } from '../../utils/userFacingError';
@@ -20,9 +21,13 @@ const getAtletaClubId = (a) => Number(a?.clubId || a?.ClubId || a?.idClub || 0) 
 const getAtletaCategoriaId = (a) =>
     Number(a?.categoriaId || a?.CategoriaId || a?.categoria?.id || a?.Categoria?.id || 0) || null;
 
-const getFaseCategoriaId = (faseObj) => {
+const getFasePruebaInner = (faseObj) => {
     const ep = faseObj?.prueba || faseObj?.Prueba;
-    const inner = ep?.prueba || ep?.Prueba || ep;
+    return ep?.prueba || ep?.Prueba || ep;
+};
+
+const getFaseCategoriaId = (faseObj) => {
+    const inner = getFasePruebaInner(faseObj);
     return Number(
         inner?.categoria?.id
         || inner?.categoriaId
@@ -30,6 +35,33 @@ const getFaseCategoriaId = (faseObj) => {
         || inner?.Categoria?.id
         || 0
     ) || null;
+};
+
+const getFaseSexoId = (faseObj) => {
+    const inner = getFasePruebaInner(faseObj);
+    return Number(
+        inner?.sexoId
+        || inner?.SexoId
+        || inner?.sexo?.id
+        || inner?.Sexo?.id
+        || 0
+    ) || null;
+};
+
+const getAtletaSexoId = (a) =>
+    Number(a?.sexoId || a?.SexoId || a?.sexo?.id || a?.Sexo?.id || 0) || null;
+
+const getMaxTripulantes = (boteNombre) => {
+    if (!boteNombre) return 1;
+    const n = String(boteNombre).toLowerCase();
+    if (n.includes('k2') || n.includes('c2') || n.includes('doble')) return 2;
+    if (n.includes('k4') || n.includes('c4') || n.includes('cuadruple') || n.includes('cuádruple')) return 4;
+    return 1;
+};
+
+const getFaseBoteTipo = (faseObj) => {
+    const inner = getFasePruebaInner(faseObj);
+    return inner?.bote?.tipo || inner?.bote?.nombre || inner?.Bote?.Tipo || '';
 };
 
 const sortAtletasByName = (list) =>
@@ -84,13 +116,15 @@ const toDateInput = (value) => {
     return s.length >= 10 ? s.substring(0, 10) : s;
 };
 
-/** Solo atletas del mismo club y de la misma categoría de la prueba. */
-const filterAtletasClubYCategoria = (list, { clubId, clubNombre, categoriaId }) => {
+/** Mismo club + misma categoría + mismo sexo (si la prueba no es Mixto). */
+const filterAtletasElegibles = (list, { clubId, clubNombre, categoriaId, sexoId }) => {
     const club = clubId ? Number(clubId) : null;
     const cat = categoriaId ? Number(categoriaId) : null;
+    const sex = sexoId ? Number(sexoId) : null;
     return (list || []).filter((a) => {
         const aClub = getAtletaClubId(a);
         const aCat = getAtletaCategoriaId(a);
+        const aSex = getAtletaSexoId(a);
         const sameClub = club
             ? aClub === club
             : clubNombre
@@ -98,6 +132,8 @@ const filterAtletasClubYCategoria = (list, { clubId, clubNombre, categoriaId }) 
                 : false;
         if (!sameClub) return false;
         if (cat && aCat !== cat) return false;
+        // 3 = Mixto → no filtrar por sexo
+        if (sex && sex !== 3 && aSex !== sex) return false;
         return true;
     });
 };
@@ -114,7 +150,9 @@ const CambiosEnVivoSection = () => {
     const [tokens, setTokens] = useState([]);
     const [atletas, setAtletas] = useState([]);
     const [confirmBaja, setConfirmBaja] = useState({ show: false, resultado: null, force: false });
-    const [addForm, setAddForm] = useState({ participanteId: '', numeroCompetidor: '', carril: '' });
+    const [addBoteOpen, setAddBoteOpen] = useState(false);
+    const [addForm, setAddForm] = useState({ clubId: '', seats: [''], carril: '' });
+    const [clubes, setClubes] = useState([]);
     const [editCrew, setEditCrew] = useState(null); // { resultado, seats[] }
     const [selectedSeatKey, setSelectedSeatKey] = useState(null); // `${resultadoId}:${participanteId}`
     const [editAthlete, setEditAthlete] = useState(null); // { id, form, loading, saving }
@@ -161,11 +199,13 @@ const CambiosEnVivoSection = () => {
         loadTokens(eventoId);
         setSelectedSeatKey(null);
         setEditAthlete(null);
+        setAddBoteOpen(false);
     }, [eventoId]);
 
     useEffect(() => {
         setSelectedSeatKey(null);
         setEditAthlete(null);
+        setAddBoteOpen(false);
     }, [faseId]);
 
     const fase = useMemo(
@@ -174,6 +214,8 @@ const CambiosEnVivoSection = () => {
     );
 
     const faseCategoriaId = useMemo(() => getFaseCategoriaId(fase), [fase]);
+    const faseSexoId = useMemo(() => getFaseSexoId(fase), [fase]);
+    const seatsNeeded = useMemo(() => getMaxTripulantes(getFaseBoteTipo(fase)), [fase]);
 
     const atletasById = useMemo(() => {
         const map = new Map();
@@ -184,15 +226,23 @@ const CambiosEnVivoSection = () => {
         return map;
     }, [atletas]);
 
-    const atletasMismaCategoria = useMemo(
-        () => sortAtletasByName(
-            (atletas || []).filter((a) => {
-                if (!faseCategoriaId) return true;
-                return getAtletaCategoriaId(a) === faseCategoriaId;
-            })
+    const clubesOrdenados = useMemo(
+        () => [...(clubes || [])].sort((a, b) =>
+            String(a.nombre || a.Nombre || '').localeCompare(String(b.nombre || b.Nombre || ''), 'es')
         ),
-        [atletas, faseCategoriaId]
+        [clubes]
     );
+
+    const atletasAddBote = useMemo(() => {
+        if (!addForm.clubId) return [];
+        return sortAtletasByName(
+            filterAtletasElegibles(atletas, {
+                clubId: addForm.clubId,
+                categoriaId: faseCategoriaId,
+                sexoId: faseSexoId,
+            })
+        );
+    }, [atletas, addForm.clubId, faseCategoriaId, faseSexoId]);
 
     const resultados = useMemo(() => {
         const list = fase?.resultados || fase?.Resultados || [];
@@ -353,6 +403,7 @@ const CambiosEnVivoSection = () => {
             const clubNombre = resultado.clubNombre || resultado.ClubNombre;
             const clubId = resultado.clubId || resultado.ClubId;
             const categoriaId = getFaseCategoriaId(fase);
+            const sexoId = getFaseSexoId(fase);
             let pool = atletas || [];
 
             if (clubId) {
@@ -369,7 +420,7 @@ const CambiosEnVivoSection = () => {
             }
 
             let clubAtletas = sortAtletasByName(
-                filterAtletasClubYCategoria(pool, { clubId, clubNombre, categoriaId })
+                filterAtletasElegibles(pool, { clubId, clubNombre, categoriaId, sexoId })
             );
 
             // Mantener en el listado a quienes ya están en el bote (aunque el filtro falle por datos incompletos).
@@ -389,6 +440,7 @@ const CambiosEnVivoSection = () => {
                 atletas: clubAtletas,
                 clubNombre,
                 categoriaId,
+                sexoId,
             });
         } catch (e) {
             flash('error', getUserFacingError(e));
@@ -412,9 +464,32 @@ const CambiosEnVivoSection = () => {
         }
     };
 
+    const openAddBote = () => {
+        if (!faseId) {
+            flash('error', 'Seleccioná una fase primero.');
+            return;
+        }
+        setAddForm({
+            clubId: '',
+            seats: Array.from({ length: seatsNeeded }, () => ''),
+            carril: '',
+        });
+        setAddBoteOpen(true);
+    };
+
     const agregarBote = async () => {
-        if (!fase || !addForm.participanteId) {
-            flash('error', 'Seleccioná atleta titular.');
+        if (!fase) return;
+        const ids = (addForm.seats || []).map(Number).filter((n) => n > 0);
+        if (!addForm.clubId) {
+            flash('error', 'Seleccioná un club.');
+            return;
+        }
+        if (ids.length < seatsNeeded) {
+            flash('error', `Esta prueba requiere ${seatsNeeded} atleta(s).`);
+            return;
+        }
+        if (new Set(ids).size !== ids.length) {
+            flash('error', 'Hay atletas duplicados en el bote.');
             return;
         }
         try {
@@ -422,27 +497,36 @@ const CambiosEnVivoSection = () => {
                 eventoPruebaId: fase.eventoPruebaId || fase.EventoPruebaId,
                 faseId: Number(faseId),
                 carril: addForm.carril ? Number(addForm.carril) : null,
-                numeroCompetidor: addForm.numeroCompetidor || String(addForm.participanteId),
-                participanteId: Number(addForm.participanteId),
-                tripulantes: [],
+                numeroCompetidor: String(ids[0]),
+                participanteId: ids[0],
+                tripulantes: ids.slice(1).map((pid, idx) => ({
+                    participanteId: pid,
+                    posicionEnBote: idx + 2,
+                })),
             });
             flash('ok', 'Bote agregado a la fase (sin rearmar cronograma).');
-            setAddForm({ participanteId: '', numeroCompetidor: '', carril: '' });
+            setAddBoteOpen(false);
+            setAddForm({ clubId: '', seats: [''], carril: '' });
             await refreshFase();
         } catch (e) {
             flash('error', getUserFacingError(e));
         }
     };
 
-    // Precargar atletas al cambiar evento (todos — admin)
+    // Precargar atletas y clubes al cambiar evento (admin)
     useEffect(() => {
         if (!eventoId) return;
         (async () => {
             try {
-                const all = await AtletaService.getAll();
+                const [all, clubs] = await Promise.all([
+                    AtletaService.getAll(),
+                    ClubService.getAll(),
+                ]);
                 setAtletas(all || []);
+                setClubes(clubs || []);
             } catch {
                 setAtletas([]);
+                setClubes([]);
             }
         })();
     }, [eventoId]);
@@ -540,11 +624,16 @@ const CambiosEnVivoSection = () => {
 
             {/* Grilla de carriles */}
             <div className="admin-table-container glass-effect">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <h3 style={{ margin: 0 }}>Start list / carriles</h3>
-                    <button className="btn-admin-primary" disabled={saving || !faseId} onClick={saveLanes}>
-                        Guardar carriles
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn-admin-secondary" disabled={!faseId} onClick={openAddBote} title="Agregar bote">
+                            <Plus size={16} /> Agregar bote
+                        </button>
+                        <button className="btn-admin-primary" disabled={saving || !faseId} onClick={saveLanes}>
+                            Guardar carriles
+                        </button>
+                    </div>
                 </div>
                 <table className="admin-table">
                     <thead>
@@ -615,43 +704,94 @@ const CambiosEnVivoSection = () => {
                             );
                         })}
                         {resultados.length === 0 && (
-                            <tr><td colSpan={3}>Sin botes en esta fase. Podés agregar abajo.</td></tr>
+                            <tr><td colSpan={3}>Sin botes en esta fase. Usá “Agregar bote”.</td></tr>
                         )}
                     </tbody>
                 </table>
             </div>
 
-            {/* Alta rápida */}
-            <div className="glass-effect" style={{ padding: '1rem', marginTop: '1.25rem' }}>
-                <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}><Plus size={18} /> Agregar bote a esta fase</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-                    <div className="form-group" style={{ minWidth: 260, flex: 1 }}>
-                        <label>Titular</label>
-                        <select
-                            value={addForm.participanteId}
-                            onChange={(e) => setAddForm((p) => ({ ...p, participanteId: e.target.value }))}
-                        >
-                            <option value="">Seleccionar…</option>
-                            {atletasMismaCategoria.map((a) => (
-                                <option key={a.id} value={a.id}>
-                                    {a.apellido} {a.nombre}{a.clubNombre ? ` (${a.clubNombre})` : ''}
-                                </option>
-                            ))}
-                        </select>
+            {/* Modal agregar bote */}
+            {addBoteOpen && (
+                <div className="modal-overlay" style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                }}>
+                    <div className="glass-effect" style={{ padding: '1.25rem', minWidth: 320, maxWidth: 480, width: '100%' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Plus size={18} /> Agregar bote
+                        </h3>
+                        <p style={{ opacity: 0.75, marginTop: 0 }}>
+                            Elegí el club; se listan atletas de la categoría
+                            {faseSexoId && faseSexoId !== 3 ? ' y sexo' : ''} de esta fase
+                            {seatsNeeded > 1 ? ` (${seatsNeeded} plazas)` : ''}.
+                        </p>
+                        <div className="form-group">
+                            <label>Club</label>
+                            <select
+                                value={addForm.clubId}
+                                onChange={(e) => setAddForm((p) => ({
+                                    ...p,
+                                    clubId: e.target.value,
+                                    seats: Array.from({ length: seatsNeeded }, () => ''),
+                                }))}
+                            >
+                                <option value="">Seleccionar club…</option>
+                                {clubesOrdenados.map((c) => (
+                                    <option key={c.id || c.Id} value={c.id || c.Id}>
+                                        {c.nombre || c.Nombre}
+                                        {(c.siglas || c.Siglas) ? ` (${c.siglas || c.Siglas})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {addForm.clubId ? (
+                            <>
+                                {(addForm.seats || []).map((val, idx) => (
+                                    <div className="form-group" key={idx}>
+                                        <label>Atleta {idx + 1}</label>
+                                        <select
+                                            value={val}
+                                            onChange={(e) => {
+                                                const next = [...addForm.seats];
+                                                next[idx] = e.target.value;
+                                                setAddForm((p) => ({ ...p, seats: next }));
+                                            }}
+                                        >
+                                            <option value="">—</option>
+                                            {atletasAddBote.map((a) => (
+                                                <option key={a.id} value={a.id}>
+                                                    {a.apellido} {a.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+                                {atletasAddBote.length === 0 && (
+                                    <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+                                        No hay atletas elegibles en este club para la categoría/sexo de la prueba.
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <p style={{ opacity: 0.65, fontSize: '0.9rem' }}>Seleccioná un club para cargar atletas.</p>
+                        )}
+                        <div className="form-group">
+                            <label>Carril (opcional)</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={addForm.carril}
+                                onChange={(e) => setAddForm((p) => ({ ...p, carril: e.target.value }))}
+                                style={{ width: 100 }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button className="btn-admin-primary" onClick={agregarBote}>Agregar</button>
+                            <button className="btn-admin-secondary" onClick={() => setAddBoteOpen(false)}>Cancelar</button>
+                        </div>
                     </div>
-                    <div className="form-group">
-                        <label>Carril</label>
-                        <input
-                            type="number"
-                            min={1}
-                            value={addForm.carril}
-                            onChange={(e) => setAddForm((p) => ({ ...p, carril: e.target.value }))}
-                            style={{ width: 80 }}
-                        />
-                    </div>
-                    <button className="btn-admin-primary" onClick={agregarBote}>Agregar</button>
                 </div>
-            </div>
+            )}
 
             {/* Modal tripulación simple */}
             {editCrew && (
@@ -664,7 +804,9 @@ const CambiosEnVivoSection = () => {
                         <p style={{ opacity: 0.75 }}>
                             Solo atletas del mismo club
                             {editCrew.clubNombre ? ` (${editCrew.clubNombre})` : ''}
-                            {editCrew.categoriaId ? ' y misma categoría de la prueba' : ''}.
+                            {editCrew.categoriaId ? ', misma categoría' : ''}
+                            {editCrew.sexoId && editCrew.sexoId !== 3 ? ' y mismo sexo' : ''}
+                            {' '}de la prueba.
                         </p>
                         {editCrew.seats.map((val, idx) => (
                             <div className="form-group" key={idx}>
@@ -686,7 +828,7 @@ const CambiosEnVivoSection = () => {
                         ))}
                         {(editCrew.atletas || []).length === 0 && (
                             <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
-                                No hay atletas elegibles (mismo club y categoría).
+                                No hay atletas elegibles (mismo club, categoría y sexo).
                             </p>
                         )}
                         <button
