@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AtletaService from '../../services/AtletaService';
 import InscripcionService from '../../services/InscripcionService';
 import { getUserFacingError } from '../../utils/userFacingError';
@@ -17,6 +17,38 @@ const seatsForBoat = (insc) => {
     // titular + extras; mínimo 1
     return Math.max(1, 1 + extras.length);
 };
+
+const getInscCategoriaId = (insc) =>
+    Number(insc?.categoriaId || insc?.CategoriaId || 0) || null;
+
+const getInscSexoId = (insc) =>
+    Number(insc?.sexoId || insc?.SexoId || 0) || null;
+
+const getAtletaCategoriaId = (a) =>
+    Number(a?.categoriaId || a?.CategoriaId || a?.categoria?.id || 0) || null;
+
+const getAtletaSexoId = (a) =>
+    Number(a?.sexoId || a?.SexoId || a?.sexo?.id || 0) || null;
+
+/** Solo atletas de la misma categoría y sexo que pide la prueba (Mixto = sin filtro de sexo). */
+const filterAtletasPorPrueba = (list, insc) => {
+    const cat = getInscCategoriaId(insc);
+    const sex = getInscSexoId(insc);
+    return (list || []).filter((a) => {
+        if (cat && getAtletaCategoriaId(a) !== cat) return false;
+        if (sex && sex !== 3 && getAtletaSexoId(a) !== sex) return false;
+        return true;
+    });
+};
+
+const mapAtletasOptions = (list) =>
+    (list || [])
+        .map((a) => ({
+            id: a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId,
+            label: `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim(),
+        }))
+        .filter((a) => a.id)
+        .sort((a, b) => a.label.localeCompare(b.label, 'es'));
 
 /**
  * Panel reutilizable: club autenticado o acceso por token.
@@ -86,14 +118,8 @@ const CorregirTripulacionesPanel = ({
     // con un endpoint AllowAnonymous scoped? Por ahora si no hay atletas, mostramos selects vacíos
     // y el admin link asume club login OR we add public athletes list to resumen.
 
-    const atletasOptions = useMemo(
-        () =>
-            (atletas || []).map((a) => ({
-                id: a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId,
-                label: `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim(),
-            })).sort((a, b) => a.label.localeCompare(b.label)),
-        [atletas]
-    );
+    const atletasOptionsFor = (insc) =>
+        mapAtletasOptions(filterAtletasPorPrueba(atletas, insc));
 
     const startEdit = (insc) => {
         const seats = seatsForBoat(insc);
@@ -189,6 +215,7 @@ const CorregirTripulacionesPanel = ({
                             {inscripciones.map((insc) => {
                                 const id = insc.id || insc.Id;
                                 const editing = editId === id;
+                                const opciones = editing ? atletasOptionsFor(insc) : [];
                                 return (
                                     <tr key={id}>
                                         <td>{insc.pruebaNombre || insc.PruebaNombre || `EP ${insc.eventoPruebaId}`}</td>
@@ -208,14 +235,14 @@ const CorregirTripulacionesPanel = ({
                                                             }}
                                                         >
                                                             <option value="">Posición {idx + 1}</option>
-                                                            {atletasOptions.map((a) => (
+                                                            {opciones.map((a) => (
                                                                 <option key={a.id} value={a.id}>{a.label}</option>
                                                             ))}
                                                         </select>
                                                     ))}
-                                                    {atletasOptions.length === 0 && (
+                                                    {opciones.length === 0 && (
                                                         <small style={{ color: '#fbbf24' }}>
-                                                            No se pudieron cargar atletas del club. Iniciá sesión como club o pedí el listado al admin.
+                                                            No hay atletas del club con la categoría y sexo de esta prueba.
                                                         </small>
                                                     )}
                                                 </div>

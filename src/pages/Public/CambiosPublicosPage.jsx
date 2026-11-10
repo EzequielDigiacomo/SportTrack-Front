@@ -59,10 +59,25 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
     const [draftSeats, setDraftSeats] = useState([]);
     const [savingId, setSavingId] = useState(null);
 
-    const atletas = (resumen.atletasClub || resumen.AtletasClub || []).map((a) => ({
-        id: a.id ?? a.Id,
-        label: `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim(),
-    })).sort((a, b) => a.label.localeCompare(b.label));
+    const atletasRaw = resumen.atletasClub || resumen.AtletasClub || [];
+
+    const atletasForInsc = (insc) => {
+        const cat = Number(insc.categoriaId || insc.CategoriaId || 0) || null;
+        const sex = Number(insc.sexoId || insc.SexoId || 0) || null;
+        return atletasRaw
+            .filter((a) => {
+                const aCat = Number(a.categoriaId || a.CategoriaId || 0) || null;
+                const aSex = Number(a.sexoId || a.SexoId || 0) || null;
+                if (cat && aCat !== cat) return false;
+                if (sex && sex !== 3 && aSex !== sex) return false;
+                return true;
+            })
+            .map((a) => ({
+                id: a.id ?? a.Id,
+                label: `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim(),
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+    };
 
     const cambiosAbiertos = resumen.cambiosAbiertos ?? resumen.CambiosAbiertos;
 
@@ -149,6 +164,7 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
                         {inscripciones.map((insc) => {
                             const id = insc.id || insc.Id;
                             const editing = editId === id;
+                            const opciones = editing ? atletasForInsc(insc) : [];
                             return (
                                 <tr key={id}>
                                     <td>{insc.pruebaNombre || `EP ${insc.eventoPruebaId}`}</td>
@@ -168,11 +184,16 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
                                                         }}
                                                     >
                                                         <option value="">Posición {idx + 1}</option>
-                                                        {atletas.map((a) => (
+                                                        {opciones.map((a) => (
                                                             <option key={a.id} value={a.id}>{a.label}</option>
                                                         ))}
                                                     </select>
                                                 ))}
+                                                {opciones.length === 0 && (
+                                                    <small style={{ color: '#fbbf24' }}>
+                                                        No hay atletas del club con la categoría y sexo de esta prueba.
+                                                    </small>
+                                                )}
                                             </div>
                                         ) : crewLabel(insc)}
                                     </td>
