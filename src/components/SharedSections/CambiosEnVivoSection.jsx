@@ -252,16 +252,30 @@ const CambiosEnVivoSection = () => {
 
     const resultados = useMemo(() => {
         const list = fase?.resultados || fase?.Resultados || [];
-        return [...list].sort((a, b) => (a.carril || 0) - (b.carril || 0));
+        return [...list].sort((a, b) => (a.carril || a.Carril || 0) - (b.carril || b.Carril || 0));
     }, [fase]);
 
+    const resultadoIdsKey = useMemo(
+        () => resultados.map((r) => r.id || r.Id).filter(Boolean).join(','),
+        [resultados]
+    );
+
+    // Reconstruir draft solo con resultados de la fase actual (evita IDs viejos de otra serie).
     useEffect(() => {
-        const draft = {};
-        resultados.forEach((r) => {
-            draft[r.id] = r.carril ?? '';
+        setLaneDraft((prev) => {
+            const draft = {};
+            resultados.forEach((r) => {
+                const id = r.id || r.Id;
+                if (id == null) return;
+                const key = String(id);
+                const prevVal = prev[id] ?? prev[key];
+                draft[id] = prevVal !== undefined && prevVal !== ''
+                    ? prevVal
+                    : (r.carril ?? r.Carril ?? '');
+            });
+            return draft;
         });
-        setLaneDraft(draft);
-    }, [faseId, resultados.length]);
+    }, [faseId, resultadoIdsKey]);
 
     const flash = (type, text) => setMsg({ type, text });
 
@@ -290,12 +304,19 @@ const CambiosEnVivoSection = () => {
         if (!faseId) return;
         setSaving(true);
         try {
+            const idsFase = new Set(
+                resultados.map((r) => Number(r.id || r.Id)).filter((n) => n > 0)
+            );
             const asignaciones = Object.entries(laneDraft)
-                .filter(([, c]) => Number(c) > 0)
+                .filter(([resultadoId, c]) => idsFase.has(Number(resultadoId)) && Number(c) > 0)
                 .map(([resultadoId, carril]) => ({
                     resultadoId: Number(resultadoId),
                     carril: Number(carril),
                 }));
+            if (!asignaciones.length) {
+                flash('error', 'No hay carriles para guardar en esta fase.');
+                return;
+            }
             await InscripcionService.liveReasignarCarriles(Number(faseId), asignaciones);
             flash('ok', 'Carriles actualizados (sin mover horarios).');
             await refreshFase();
