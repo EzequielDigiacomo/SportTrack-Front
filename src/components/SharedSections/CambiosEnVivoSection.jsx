@@ -172,13 +172,18 @@ const CambiosEnVivoSection = () => {
         })();
     }, []);
 
-    const loadFases = async (evId) => {
+    const loadFases = async (evId, { keepFaseId = false } = {}) => {
         if (!evId) return;
         try {
             const data = await FaseService.getByEvento(evId);
             const list = Array.isArray(data) ? data : [];
             setFases(list);
-            setFaseId(list[0] ? String(list[0].id) : '');
+            setFaseId((prev) => {
+                if (keepFaseId && prev && list.some((f) => String(f.id) === String(prev))) {
+                    return String(prev);
+                }
+                return list[0] ? String(list[0].id) : '';
+            });
         } catch (e) {
             setMsg({ type: 'error', text: getUserFacingError(e) });
         }
@@ -261,7 +266,24 @@ const CambiosEnVivoSection = () => {
     const flash = (type, text) => setMsg({ type, text });
 
     const refreshFase = async () => {
-        await loadFases(eventoId);
+        await loadFases(eventoId, { keepFaseId: true });
+    };
+
+    const removeResultadoLocal = (resultadoId) => {
+        const rid = Number(resultadoId);
+        if (!rid) return;
+        setFases((prev) => prev.map((f) => {
+            const res = f.resultados || f.Resultados || [];
+            if (!res.some((x) => Number(x.id || x.Id) === rid)) return f;
+            const next = res.filter((x) => Number(x.id || x.Id) !== rid);
+            return { ...f, resultados: next, Resultados: next };
+        }));
+        setLaneDraft((prev) => {
+            const copy = { ...prev };
+            delete copy[rid];
+            delete copy[String(rid)];
+            return copy;
+        });
     };
 
     const saveLanes = async () => {
@@ -357,14 +379,29 @@ const CambiosEnVivoSection = () => {
     const doBaja = async () => {
         const r = confirmBaja.resultado;
         if (!r) return;
-        const inscId = r.inscripcionId || r.InscripcionId;
+        const inscId = Number(r.inscripcionId || r.InscripcionId || 0);
+        const resultadoId = Number(r.id || r.Id || 0);
+        if (!inscId) {
+            flash('error', 'No se pudo identificar la inscripción a dar de baja.');
+            return;
+        }
+        const force = !!confirmBaja.force;
         try {
-            await InscripcionService.liveBaja(inscId, confirmBaja.force);
-            flash('ok', 'Bote dado de baja. Horarios de otras pruebas intactos.');
+            await InscripcionService.liveBaja(inscId, force);
+            // Sacar de la grilla al toque; después sincronizar con el servidor.
+            removeResultadoLocal(resultadoId);
             setConfirmBaja({ show: false, resultado: null, force: false });
+            flash('ok', 'Bote dado de baja. Horarios de otras pruebas intactos.');
             await refreshFase();
         } catch (e) {
-            flash('error', getUserFacingError(e));
+            const text = getUserFacingError(e);
+            // Si hay tiempos oficiales, pedir confirmación forzada (mismo diálogo).
+            if (!force && /tiempo oficial|force/i.test(text)) {
+                setConfirmBaja((prev) => ({ ...prev, force: true }));
+                flash('error', `${text} Confirmá de nuevo para forzar la baja.`);
+                return;
+            }
+            flash('error', text);
         }
     };
 
@@ -950,9 +987,11 @@ const CambiosEnVivoSection = () => {
 
             <ConfirmDialog
                 isOpen={confirmBaja.show}
-                title="Dar de baja bote"
-                message="Se elimina la inscripción y su lugar en la serie. No se mueven horarios de otras pruebas."
-                confirmText="Dar de baja"
+                title={confirmBaja.force ? 'Forzar baja de bote' : 'Dar de baja bote'}
+                message={confirmBaja.force
+                    ? 'Este bote tiene tiempo oficial. Se eliminará igual la inscripción y su lugar en la serie.'
+                    : 'Se elimina la inscripción y su lugar en la serie. No se mueven horarios de otras pruebas.'}
+                confirmText={confirmBaja.force ? 'Forzar baja' : 'Dar de baja'}
                 type="danger"
                 onConfirm={doBaja}
                 onClose={() => setConfirmBaja({ show: false, resultado: null, force: false })}

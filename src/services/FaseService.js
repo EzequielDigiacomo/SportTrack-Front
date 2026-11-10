@@ -54,7 +54,8 @@ const FaseService = {
     },
     getByEvento: async (eventoId) => {
         const url = ENDPOINTS.FASES.BY_EVENTO(eventoId);
-        const response = await api.get(url);
+        // Evitar caché del browser tras bajas / altas en vivo.
+        const response = await api.get(url, { params: { _ts: Date.now() } });
         return response.data;
     },
     batchUpdate: async (dto) => {
