@@ -7,6 +7,11 @@ const AtletaService = {
         return response.data;
     },
 
+    getById: async (id) => {
+        const response = await api.get(`${ENDPOINTS.PARTICIPANTES.BASE}/${id}`);
+        return response.data;
+    },
+
     getByClub: async (clubId) => {
         const response = await api.get(ENDPOINTS.PARTICIPANTES.BY_CLUB(clubId));
         return response.data;

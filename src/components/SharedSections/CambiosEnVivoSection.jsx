@@ -39,15 +39,49 @@ const sortAtletasByName = (list) =>
         return ap.localeCompare(bp, 'es');
     });
 
-/** Titular + remadores (K2/K4) para la grilla. */
-const crewLabelResultado = (r) => {
-    const titular = r.participanteNombre || r.ParticipanteNombre || '';
-    const extras = [...(r.tripulantes || r.Tripulantes || [])]
-        .sort((a, b) => (a.posicionEnBote || a.PosicionEnBote || 0) - (b.posicionEnBote || b.PosicionEnBote || 0))
-        .map((t) => t.participanteNombreCompleto || t.ParticipanteNombreCompleto)
-        .filter(Boolean);
-    const names = [titular, ...extras].filter(Boolean);
-    return names.length ? names.join(' / ') : '—';
+/** Formato club: Apellido Nombre */
+const formatClubAthleteName = (a, fallback = '—') => {
+    if (!a) return fallback;
+    const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim();
+    return label || fallback;
+};
+
+/** Asientos 1..N con id y etiqueta según inscripción del club. */
+const crewSeatsFromResultado = (r, atletasById) => {
+    const seats = [];
+    const titularId = Number(r.participanteId || r.ParticipanteId || 0) || null;
+    if (titularId) {
+        seats.push({
+            pos: 1,
+            id: titularId,
+            label: formatClubAthleteName(
+                atletasById.get(titularId),
+                r.participanteNombre || r.ParticipanteNombre || '—'
+            ),
+        });
+    }
+    const trip = [...(r.tripulantes || r.Tripulantes || [])].sort(
+        (a, b) => (a.posicionEnBote || a.PosicionEnBote || 0) - (b.posicionEnBote || b.PosicionEnBote || 0)
+    );
+    trip.forEach((t, idx) => {
+        const pid = Number(t.participanteId || t.ParticipanteId || 0) || null;
+        if (!pid) return;
+        seats.push({
+            pos: idx + 2,
+            id: pid,
+            label: formatClubAthleteName(
+                atletasById.get(pid),
+                t.participanteNombreCompleto || t.ParticipanteNombreCompleto || '—'
+            ),
+        });
+    });
+    return seats;
+};
+
+const toDateInput = (value) => {
+    if (!value) return '';
+    const s = String(value);
+    return s.length >= 10 ? s.substring(0, 10) : s;
 };
 
 /** Solo atletas del mismo club y de la misma categoría de la prueba. */
@@ -82,6 +116,8 @@ const CambiosEnVivoSection = () => {
     const [confirmBaja, setConfirmBaja] = useState({ show: false, resultado: null, force: false });
     const [addForm, setAddForm] = useState({ participanteId: '', numeroCompetidor: '', carril: '' });
     const [editCrew, setEditCrew] = useState(null); // { resultado, seats[] }
+    const [selectedSeatKey, setSelectedSeatKey] = useState(null); // `${resultadoId}:${participanteId}`
+    const [editAthlete, setEditAthlete] = useState(null); // { id, form, loading, saving }
 
     useEffect(() => {
         (async () => {
@@ -123,7 +159,14 @@ const CambiosEnVivoSection = () => {
         if (!eventoId) return;
         loadFases(eventoId);
         loadTokens(eventoId);
+        setSelectedSeatKey(null);
+        setEditAthlete(null);
     }, [eventoId]);
+
+    useEffect(() => {
+        setSelectedSeatKey(null);
+        setEditAthlete(null);
+    }, [faseId]);
 
     const fase = useMemo(
         () => fases.find((f) => String(f.id) === String(faseId)),
@@ -131,6 +174,15 @@ const CambiosEnVivoSection = () => {
     );
 
     const faseCategoriaId = useMemo(() => getFaseCategoriaId(fase), [fase]);
+
+    const atletasById = useMemo(() => {
+        const map = new Map();
+        (atletas || []).forEach((a) => {
+            const id = Number(a.id || a.Id || a.participanteId || a.ParticipanteId);
+            if (id) map.set(id, a);
+        });
+        return map;
+    }, [atletas]);
 
     const atletasMismaCategoria = useMemo(
         () => sortAtletasByName(
@@ -181,19 +233,73 @@ const CambiosEnVivoSection = () => {
         }
     };
 
-    const saveNombre = async (resultado) => {
-        const pid = resultado.participanteId || resultado.ParticipanteId;
-        if (!pid) return;
-        const nombre = window.prompt('Nombre', (resultado.participanteNombre || '').split(' ')[0] || '');
-        if (nombre == null) return;
-        const apellido = window.prompt('Apellido', (resultado.participanteNombre || '').split(' ').slice(1).join(' ') || '');
-        if (apellido == null) return;
+    const openAthleteQuickEdit = async (participanteId) => {
+        if (!participanteId) return;
+        setEditAthlete({ id: participanteId, form: null, loading: true, saving: false });
         try {
-            await InscripcionService.livePatchNombre(pid, { nombre, apellido });
-            flash('ok', 'Nombre actualizado.');
+            const data = await AtletaService.getById(participanteId);
+            setEditAthlete({
+                id: participanteId,
+                loading: false,
+                saving: false,
+                form: {
+                    nombre: data.nombre || data.Nombre || '',
+                    apellido: data.apellido || data.Apellido || '',
+                    dni: data.dni || data.Dni || data.documento || data.Documento || '',
+                    fechaNacimiento: toDateInput(data.fechaNacimiento || data.FechaNacimiento),
+                    sexoId: data.sexoId || data.SexoId || 1,
+                    clubId: data.clubId || data.ClubId || null,
+                    categoriaId: data.categoriaId || data.CategoriaId || null,
+                    email: data.email || data.Email || '',
+                    pais: data.pais || data.Pais || '',
+                    pagoAfiliacionAlDia: data.pagoAfiliacionAlDia ?? data.PagoAfiliacionAlDia ?? true,
+                },
+            });
+        } catch (e) {
+            setEditAthlete(null);
+            flash('error', getUserFacingError(e));
+        }
+    };
+
+    const handleAthleteSeatClick = (resultadoId, participanteId) => {
+        const key = `${resultadoId}:${participanteId}`;
+        if (selectedSeatKey === key) {
+            openAthleteQuickEdit(participanteId);
+            return;
+        }
+        setSelectedSeatKey(key);
+    };
+
+    const saveAthleteQuickEdit = async () => {
+        if (!editAthlete?.id || !editAthlete.form) return;
+        setEditAthlete((prev) => (prev ? { ...prev, saving: true } : prev));
+        try {
+            const f = editAthlete.form;
+            await AtletaService.update(editAthlete.id, {
+                nombre: f.nombre,
+                apellido: f.apellido,
+                dni: f.dni,
+                fechaNacimiento: f.fechaNacimiento,
+                sexoId: f.sexoId,
+                clubId: f.clubId,
+                categoriaId: f.categoriaId,
+                email: f.email,
+                pais: f.pais,
+                pagoAfiliacionAlDia: f.pagoAfiliacionAlDia,
+            });
+            flash('ok', 'Atleta actualizado.');
+            setEditAthlete(null);
+            // Refrescar caché local + fase para reflejar nombres
+            try {
+                const all = await AtletaService.getAll();
+                setAtletas(all || []);
+            } catch {
+                /* ignore */
+            }
             await refreshFase();
         } catch (e) {
             flash('error', getUserFacingError(e));
+            setEditAthlete((prev) => (prev ? { ...prev, saving: false } : prev));
         }
     };
 
@@ -449,36 +555,65 @@ const CambiosEnVivoSection = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {resultados.map((r) => (
-                            <tr key={r.id}>
-                                <td>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        style={{ width: 64 }}
-                                        value={laneDraft[r.id] ?? ''}
-                                        onChange={(e) => setLaneDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                                    />
-                                </td>
-                                <td>
-                                    {crewLabelResultado(r)}
-                                    {r.clubSigla || r.clubNombre ? (
-                                        <span style={{ opacity: 0.65 }}> · {r.clubSigla || r.clubNombre}</span>
-                                    ) : null}
-                                </td>
-                                <td style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                    <button className="btn-admin-secondary" onClick={() => saveNombre(r)}>Nombre</button>
-                                    <button className="btn-admin-secondary" onClick={() => openCrewEdit(r)}>Tripulación</button>
-                                    <button
-                                        className="btn-admin-secondary"
-                                        style={{ color: '#f87171' }}
-                                        onClick={() => setConfirmBaja({ show: true, resultado: r, force: false })}
-                                    >
-                                        <Trash2 size={14} /> Baja
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {resultados.map((r) => {
+                            const seats = crewSeatsFromResultado(r, atletasById);
+                            const clubLabel = r.clubSigla || r.ClubSigla || r.clubNombre || r.ClubNombre || '';
+                            return (
+                                <tr key={r.id}>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            style={{ width: 64 }}
+                                            value={laneDraft[r.id] ?? ''}
+                                            onChange={(e) => setLaneDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                                        />
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            {seats.length === 0 && <span>—</span>}
+                                            {seats.map((seat) => {
+                                                const key = `${r.id}:${seat.id}`;
+                                                const selected = selectedSeatKey === key;
+                                                return (
+                                                    <button
+                                                        key={key}
+                                                        type="button"
+                                                        onClick={() => handleAthleteSeatClick(r.id, seat.id)}
+                                                        title={selected ? 'Click de nuevo para editar' : 'Click para seleccionar'}
+                                                        style={{
+                                                            all: 'unset',
+                                                            cursor: 'pointer',
+                                                            padding: '2px 6px',
+                                                            borderRadius: 4,
+                                                            lineHeight: 1.35,
+                                                            background: selected ? 'rgba(59,130,246,0.28)' : 'transparent',
+                                                            outline: selected ? '1px solid rgba(96,165,250,0.7)' : 'none',
+                                                        }}
+                                                    >
+                                                        <span style={{ opacity: 0.7, marginRight: 6 }}>{seat.pos}-</span>
+                                                        {seat.label}
+                                                    </button>
+                                                );
+                                            })}
+                                            {clubLabel ? (
+                                                <span style={{ opacity: 0.65, fontSize: '0.9em', paddingLeft: 6 }}>{clubLabel}</span>
+                                            ) : null}
+                                        </div>
+                                    </td>
+                                    <td style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                        <button className="btn-admin-secondary" onClick={() => openCrewEdit(r)}>Tripulación</button>
+                                        <button
+                                            className="btn-admin-secondary"
+                                            style={{ color: '#f87171' }}
+                                            onClick={() => setConfirmBaja({ show: true, resultado: r, force: false })}
+                                        >
+                                            <Trash2 size={14} /> Baja
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {resultados.length === 0 && (
                             <tr><td colSpan={3}>Sin botes en esta fase. Podés agregar abajo.</td></tr>
                         )}
@@ -565,6 +700,81 @@ const CambiosEnVivoSection = () => {
                             <button className="btn-admin-primary" onClick={saveCrew}>Guardar</button>
                             <button className="btn-admin-secondary" onClick={() => setEditCrew(null)}>Cancelar</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal edición rápida de atleta */}
+            {editAthlete && (
+                <div className="modal-overlay" style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                }}>
+                    <div className="glass-effect" style={{ padding: '1.25rem', minWidth: 320, maxWidth: 440, width: '100%' }}>
+                        <h3 style={{ marginTop: 0 }}>Edición rápida</h3>
+                        {editAthlete.loading || !editAthlete.form ? (
+                            <p style={{ opacity: 0.75 }}>Cargando datos del atleta…</p>
+                        ) : (
+                            <>
+                                <div className="form-group">
+                                    <label>Apellido</label>
+                                    <input
+                                        value={editAthlete.form.apellido}
+                                        onChange={(e) => setEditAthlete((prev) => ({
+                                            ...prev,
+                                            form: { ...prev.form, apellido: e.target.value },
+                                        }))}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Nombre</label>
+                                    <input
+                                        value={editAthlete.form.nombre}
+                                        onChange={(e) => setEditAthlete((prev) => ({
+                                            ...prev,
+                                            form: { ...prev.form, nombre: e.target.value },
+                                        }))}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Nº documento</label>
+                                    <input
+                                        value={editAthlete.form.dni}
+                                        onChange={(e) => setEditAthlete((prev) => ({
+                                            ...prev,
+                                            form: { ...prev.form, dni: e.target.value },
+                                        }))}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Fecha de nacimiento</label>
+                                    <input
+                                        type="date"
+                                        value={editAthlete.form.fechaNacimiento}
+                                        onChange={(e) => setEditAthlete((prev) => ({
+                                            ...prev,
+                                            form: { ...prev.form, fechaNacimiento: e.target.value },
+                                        }))}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                    <button
+                                        className="btn-admin-primary"
+                                        disabled={editAthlete.saving}
+                                        onClick={saveAthleteQuickEdit}
+                                    >
+                                        {editAthlete.saving ? 'Guardando…' : 'Guardar'}
+                                    </button>
+                                    <button
+                                        className="btn-admin-secondary"
+                                        disabled={editAthlete.saving}
+                                        onClick={() => setEditAthlete(null)}
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
