@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { GripVertical } from 'lucide-react';
 import { CategoriaService, BoteService, DistanciaService, PruebaService } from '../../services/ConfigService';
 import SchedulerService, { isHorarioManualLibre } from '../../services/SchedulerService';
 import PdfExportService from '../../services/PdfExportService';
@@ -180,6 +181,9 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
     const [usarGapVariable, setUsarGapVariable] = useState(evento.usarGapVariable || false);
 
     const [modalConfig, setModalConfig] = useState({ show: false, type: 'warning', title: '', message: '' });
+    const [dragPruebaId, setDragPruebaId] = useState(null);
+    const [dragOverPruebaId, setDragOverPruebaId] = useState(null);
+    const [reordering, setReordering] = useState(false);
 
     const pruebasParaCronograma = useMemo(
         () => collapsePruebasByLargada(pruebasActuales),
@@ -409,6 +413,93 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
             const updated = await PruebaService.getByEvento(evento.id);
             setPruebasActuales(updated);
         } catch (err) { console.error(err); }
+    };
+
+    const buildPruebaUpdatePayload = (ep, fechaHora) => {
+        const ids = getPruebaIds(ep);
+        return {
+            eventoId: evento.id,
+            categoriaId: parseInt(ids.catId, 10),
+            boteId: parseInt(ids.botId, 10),
+            distanciaId: parseInt(ids.distId, 10),
+            sexoId: parseInt(ids.sexId, 10),
+            fechaHora,
+        };
+    };
+
+    /** Reordena pruebas arrastrando: reasigna las fechas/horas existentes en el nuevo orden. */
+    const handleReorderPruebas = async (itemsFinales, fromId, toId) => {
+        if (!fromId || !toId || fromId === toId || reordering) return;
+
+        const movables = (itemsFinales || []).filter((i) => i?.tipo === 'prueba');
+        const fromIdx = movables.findIndex((i) => i.id === fromId);
+        const toIdx = movables.findIndex((i) => i.id === toId);
+        if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+
+        const next = [...movables];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+
+        const sortedTimes = movables
+            .map((i) => i.fechaHoraOriginal || i.time || i.raw?.fechaHora)
+            .filter(Boolean)
+            .map((t) => new Date(t).getTime())
+            .filter((t) => !Number.isNaN(t))
+            .sort((a, b) => a - b);
+
+        if (sortedTimes.length !== next.length) {
+            setModalConfig({
+                show: true,
+                title: 'No se pudo reordenar',
+                message: 'Faltan horarios en algunas pruebas. Editá la hora y reintentá.',
+                type: 'warning',
+            });
+            return;
+        }
+
+        setReordering(true);
+        try {
+            const localById = new Map();
+            for (let i = 0; i < next.length; i++) {
+                const item = next[i];
+                const newIso = new Date(sortedTimes[i]).toISOString();
+                const members = item.raw?._grupoMembers?.length
+                    ? item.raw._grupoMembers
+                    : [item.raw];
+
+                for (const m of members) {
+                    if (!m?.id) continue;
+                    localById.set(m.id, newIso);
+                    const prevMs = new Date(m.fechaHora || item.fechaHoraOriginal || 0).getTime();
+                    if (prevMs === sortedTimes[i]) continue;
+                    await PruebaService.updateAssign(m.id, buildPruebaUpdatePayload(m, newIso));
+                }
+            }
+
+            setPruebasActuales((prev) => (prev || []).map((ep) => {
+                const nextFecha = localById.get(ep.id);
+                return nextFecha ? { ...ep, fechaHora: nextFecha } : ep;
+            }));
+
+            const refreshed = await PruebaService.getByEvento(evento.id);
+            setPruebasActuales(refreshed);
+        } catch (err) {
+            console.error(err);
+            setModalConfig({
+                show: true,
+                title: 'Error al reordenar',
+                message: getUserFacingError(err, 'No se pudo guardar el nuevo orden del cronograma.'),
+                type: 'warning',
+            });
+            try {
+                const refreshed = await PruebaService.getByEvento(evento.id);
+                setPruebasActuales(refreshed);
+            } catch (_) { /* ignore */ }
+        } finally {
+            setReordering(false);
+            setDragPruebaId(null);
+            setDragOverPruebaId(null);
+        }
     };
 
     const handleEditStart = (ep) => {
@@ -702,18 +793,33 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
 
                                     return (
                                         <>
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.8rem' }}>
-                                                <button
-                                                    className="btn-admin-secondary"
-                                                    onClick={() => PdfExportService.exportProgramaInicial(itemsFinales, evento || 'Evento')}
-                                                    style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                                                >
-                                                    📥 Exportar Programa PDF
-                                                </button>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.8rem', marginBottom: '0.8rem', flexWrap: 'wrap' }}>
+                                                <small style={{ color: '#94a3b8' }}>
+                                                    {reordering ? 'Guardando nuevo orden…' : 'Arrastrá una prueba para moverla entre otras.'}
+                                                </small>
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        className="btn-admin-secondary"
+                                                        onClick={() => PdfExportService.exportProgramaInicial(itemsFinales, evento || 'Evento', { audiencia: 'clubes' })}
+                                                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                                        title="Sin columna de inscriptos"
+                                                    >
+                                                        📥 PDF Clubes
+                                                    </button>
+                                                    <button
+                                                        className="btn-admin-secondary"
+                                                        onClick={() => PdfExportService.exportProgramaInicial(itemsFinales, evento || 'Evento', { audiencia: 'organizacion' })}
+                                                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                                                        title="Incluye columna de inscriptos"
+                                                    >
+                                                        📥 PDF Organización
+                                                    </button>
+                                                </div>
                                             </div>
                                             <table className="admin-table mini">
                                                 <thead>
                                                     <tr>
+                                                        <th className="drag-col" aria-label="Reordenar" />
                                                         <th>#</th>
                                                         <th>Categoría</th>
                                                         <th>Bote</th>
@@ -727,6 +833,7 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                 <tbody>
                                                     {itemsFinales.map((it, idx) => {
                                                         const isF = it.tipo === 'fase';
+                                                        const canDrag = !isF && !reordering;
                                                         const raw = it.raw;
                                                         const isGrupo = !isF && raw?._isGrupoLargada;
                                                         const members = isGrupo ? raw._grupoMembers : null;
@@ -760,14 +867,58 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                         const originalTime = it.fechaHoraOriginal || it.time;
                                                         const isPateada = it.timeCalculated !== originalTime;
                                                         const catId = p?.categoriaId || p?.categoria?.id;
+                                                        const rowClass = [
+                                                            isF ? 'row-fase' : '',
+                                                            dragPruebaId === it.id ? 'row-dragging' : '',
+                                                            dragOverPruebaId === it.id && dragPruebaId !== it.id ? 'row-drag-over' : '',
+                                                            canDrag ? 'row-draggable' : '',
+                                                        ].filter(Boolean).join(' ');
 
                                                         return (
-                                                            <tr key={it.id} className={isF ? 'row-fase' : ''} style={{
-                                                                opacity: isF ? 1 : 0.8,
-                                                                background: isGrupo
-                                                                    ? 'rgba(14, 165, 233, 0.06)'
-                                                                    : (isF ? 'rgba(59, 130, 246, 0.03)' : 'transparent')
-                                                            }}>
+                                                            <tr
+                                                                key={it.id}
+                                                                className={rowClass}
+                                                                draggable={canDrag}
+                                                                onDragStart={(e) => {
+                                                                    if (!canDrag) return;
+                                                                    if (e.target.closest('button, a, input, select, textarea')) {
+                                                                        e.preventDefault();
+                                                                        return;
+                                                                    }
+                                                                    e.dataTransfer.setData('text/plain', it.id);
+                                                                    e.dataTransfer.effectAllowed = 'move';
+                                                                    setDragPruebaId(it.id);
+                                                                }}
+                                                                onDragEnd={() => {
+                                                                    setDragPruebaId(null);
+                                                                    setDragOverPruebaId(null);
+                                                                }}
+                                                                onDragOver={(e) => {
+                                                                    if (!canDrag || !dragPruebaId) return;
+                                                                    e.preventDefault();
+                                                                    e.dataTransfer.dropEffect = 'move';
+                                                                    if (dragOverPruebaId !== it.id) setDragOverPruebaId(it.id);
+                                                                }}
+                                                                onDrop={(e) => {
+                                                                    if (!canDrag) return;
+                                                                    e.preventDefault();
+                                                                    const fromId = e.dataTransfer.getData('text/plain') || dragPruebaId;
+                                                                    handleReorderPruebas(itemsFinales, fromId, it.id);
+                                                                }}
+                                                                style={{
+                                                                    opacity: isF ? 1 : (dragPruebaId === it.id ? 0.45 : 0.9),
+                                                                    background: isGrupo
+                                                                        ? 'rgba(14, 165, 233, 0.06)'
+                                                                        : (isF ? 'rgba(59, 130, 246, 0.03)' : 'transparent')
+                                                                }}
+                                                            >
+                                                                <td className="drag-cell">
+                                                                    {canDrag ? (
+                                                                        <span className="drag-handle" title="Arrastrar para reordenar" aria-hidden>
+                                                                            <GripVertical size={16} />
+                                                                        </span>
+                                                                    ) : null}
+                                                                </td>
                                                                 <td>{idx + 1}</td>
                                                                 <td>
                                                                     <span className="badge-outline" style={{ borderColor: CATEGORIA_COLORS[catId]?.text || '#7dd3fc', color: CATEGORIA_COLORS[catId]?.text || '#7dd3fc', whiteSpace: 'normal', textAlign: 'left' }}>
@@ -807,8 +958,8 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                                 <td className="actions-cell">
                                                                     {!isF && (
                                                                         <>
-                                                                            <button className="btn-icon-admin edit" onClick={() => handleEditStart(it.raw)}>✏️</button>
-                                                                            <button className="btn-icon-delete" onClick={() => handleDeletePrueba(it.raw)}>🗑️</button>
+                                                                            <button type="button" className="btn-icon-admin edit" onMouseDown={(e) => e.stopPropagation()} onClick={() => handleEditStart(it.raw)}>✏️</button>
+                                                                            <button type="button" className="btn-icon-delete" onMouseDown={(e) => e.stopPropagation()} onClick={() => handleDeletePrueba(it.raw)}>🗑️</button>
                                                                         </>
                                                                     )}
                                                                 </td>

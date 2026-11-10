@@ -656,14 +656,25 @@ const PdfExportService = {
         doc.save(`${eventoInfo.nombre}_StartList.pdf`.replace(/\s+/g, '_'));
     },
 
-    /** Provisional program table (schedule overview — stays as a summary table) */
-    exportProgramaInicial: async (items, eventoOrName) => {
+    /**
+     * Programa provisorio (resumen del schedule).
+     * @param {object} [options]
+     * @param {boolean} [options.incluirInscriptos=true] — organización: con columna Ins.; clubes: sin ella
+     * @param {'clubes'|'organizacion'} [options.audiencia]
+     */
+    exportProgramaInicial: async (items, eventoOrName, options = {}) => {
         if (!items?.length) return;
+        const audiencia = options.audiencia
+            || (options.incluirInscriptos === false ? 'clubes' : 'organizacion');
+        const incluirInscriptos = options.incluirInscriptos ?? audiencia !== 'clubes';
+
         const logo = await getPdfLogo();
         const eventoInfo = normalizeEventoInfo(eventoOrName);
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const totalPages = 1;
-        drawBand(doc, eventoInfo, 'Programa Provisorio', 1, totalPages, logo);
+        const subtitle = incluirInscriptos
+            ? 'Programa Provisorio · Organización'
+            : 'Programa Provisorio · Clubes';
+        drawBand(doc, eventoInfo, subtitle, 1, 1, logo);
 
         const rows = items.map((it, idx) => {
             const isF = it.tipo === 'fase';
@@ -682,34 +693,42 @@ const PdfExportService = {
 
             const inscritos = isF
                 ? (raw.resultados?.length || 0)
-                : (raw.inscripciones?.length || raw.inscriptosCount || 0);
+                : (raw.cantidadInscritos ?? raw.inscripciones?.length ?? raw.inscriptosCount ?? raw.prueba?.cantidadInscritos ?? 0);
 
             let timeStr = it.nuevaHora || '--:--';
             if (it.diaOffset > 0) timeStr += ` (Día ${it.diaOffset + 1})`;
 
-            return [idx + 1, timeStr, catName, isF ? it.nombre : 'A Sortear', botName, distName, sexName, inscritos];
+            const base = [idx + 1, timeStr, catName, isF ? it.nombre : 'A Sortear', botName, distName, sexName];
+            return incluirInscriptos ? [...base, inscritos] : base;
         });
+
+        const head = incluirInscriptos
+            ? [['#', 'Hora', 'Categoría', 'Fase', 'Bote', 'Dist.', 'Sexo', 'Ins.']]
+            : [['#', 'Hora', 'Categoría', 'Fase', 'Bote', 'Dist.', 'Sexo']];
+
+        const columnStyles = {
+            0: { halign: 'center', cellWidth: 11 },
+            1: { halign: 'center', cellWidth: 24, fontStyle: 'bold' },
+            2: { cellWidth: incluirInscriptos ? 42 : 48 },
+            3: { cellWidth: incluirInscriptos ? 28 : 32 },
+            4: { halign: 'center', cellWidth: 16 },
+            5: { halign: 'center', cellWidth: 18 },
+            6: { halign: 'center', cellWidth: incluirInscriptos ? 22 : 28 },
+            ...(incluirInscriptos ? { 7: { halign: 'center', cellWidth: 25 } } : {}),
+        };
 
         autoTable(doc, {
             startY: BAND_H + MARGIN,
-            head: [['#', 'Hora', 'Categoría', 'Fase', 'Bote', 'Dist.', 'Sexo', 'Ins.']],
+            head,
             body: rows,
             ...tableStyles(false),
-            columnStyles: {
-                0: { halign: 'center', cellWidth: 11 },
-                1: { halign: 'center', cellWidth: 24, fontStyle: 'bold' },
-                2: { cellWidth: 42 },
-                3: { cellWidth: 28 },
-                4: { halign: 'center', cellWidth: 16 },
-                5: { halign: 'center', cellWidth: 18 },
-                6: { halign: 'center', cellWidth: 22 },
-                7: { halign: 'center', cellWidth: 25 },
-            },
+            columnStyles,
             ...tableLayout(),
         });
 
         drawFooter(doc, eventoInfo);
-        doc.save(`${eventoInfo.nombre}_Programa_Provisorio.pdf`.replace(/\s+/g, '_'));
+        const suffix = incluirInscriptos ? 'Organizacion' : 'Clubes';
+        doc.save(`${eventoInfo.nombre}_Programa_Provisorio_${suffix}.pdf`.replace(/\s+/g, '_'));
     },
 
     /**
