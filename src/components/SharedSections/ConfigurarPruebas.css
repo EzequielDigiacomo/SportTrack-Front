@@ -1,3 +1,66 @@
+/* Vista completa: Armar Schedule (ya no modal) */
+.configurar-pruebas-page {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: calc(100vh - 220px);
+}
+
+.configurar-pruebas-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+}
+
+.configurar-pruebas-hint {
+    margin: 0;
+    color: var(--color-text-dim, #94a3b8);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    flex: 1;
+    min-width: 220px;
+}
+
+.configurar-pruebas-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.configurar-pruebas-body {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.configurar-pruebas-page .admin-grid-layout {
+    flex: 1;
+    align-items: stretch;
+    min-height: 0;
+}
+
+.configurar-pruebas-page .form-column,
+.configurar-pruebas-page .list-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+}
+
+.configurar-pruebas-page .list-column .table-container-mini {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+}
+
 .admin-modal-overlay {
     position: fixed;
     inset: 0;
@@ -222,26 +285,32 @@
     }
 }
 
-.admin-modal--maraton .admin-grid-layout {
+.admin-modal--maraton .admin-grid-layout,
+.configurar-pruebas-page--maraton .admin-grid-layout {
     grid-template-columns: 320px minmax(0, 1fr);
 }
 
-.admin-modal--maraton .table-container-mini {
+.admin-modal--maraton .table-container-mini,
+.configurar-pruebas-page--maraton .table-container-mini {
     overflow-x: auto;
 }
 
-.admin-modal--maraton .admin-table.mini {
+.admin-modal--maraton .admin-table.mini,
+.configurar-pruebas-page--maraton .admin-table.mini {
     min-width: 920px;
     width: 100%;
 }
 
 .admin-modal--maraton .admin-table.mini th,
-.admin-modal--maraton .admin-table.mini td {
+.admin-modal--maraton .admin-table.mini td,
+.configurar-pruebas-page--maraton .admin-table.mini th,
+.configurar-pruebas-page--maraton .admin-table.mini td {
     white-space: nowrap;
     vertical-align: middle;
 }
 
-.admin-modal--maraton .badge-chips {
+.admin-modal--maraton .badge-chips,
+.configurar-pruebas-page--maraton .badge-chips {
     display: inline-flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -251,7 +320,11 @@
 .admin-modal--maraton .badge-outline,
 .admin-modal--maraton .badge-bote,
 .admin-modal--maraton .badge-sexo,
-.admin-modal--maraton .badge-distancia {
+.admin-modal--maraton .badge-distancia,
+.configurar-pruebas-page--maraton .badge-outline,
+.configurar-pruebas-page--maraton .badge-bote,
+.configurar-pruebas-page--maraton .badge-sexo,
+.configurar-pruebas-page--maraton .badge-distancia {
     white-space: nowrap;
 }
 
@@ -589,12 +662,13 @@
     margin-top: var(--spacing-sm);
 }
 
-/* GRID LAYOUT FOR CONFIGURAR PRUEBAS MODAL */
+/* GRID LAYOUT FOR CONFIGURAR PRUEBAS */
 .admin-grid-layout {
     display: grid;
     grid-template-columns: 350px 1fr;
     gap: var(--spacing-lg);
     align-items: start;
+    width: 100%;
 }
 
 .form-column {
@@ -609,6 +683,7 @@
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
+    min-width: 0;
 }
 
 @media (max-width: 1024px) {

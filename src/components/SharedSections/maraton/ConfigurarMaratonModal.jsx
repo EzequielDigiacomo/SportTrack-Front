@@ -187,62 +187,55 @@ const ConfigurarMaratonModal = ({ evento, onClose, onRefresh }) => {
     };
 
     return (
-        <div className="admin-modal-overlay">
-                <div className="admin-modal glass-effect fade-in admin-modal--maraton">
-                <div className="modal-header">
-                    <h3>
-                        Configurar Evento - {evento.nombre}
-                        <span style={{ marginLeft: '0.6rem', fontSize: '0.75rem', color: '#7dd3fc', fontWeight: 600 }}>
-                            · Maratón
-                        </span>
-                    </h3>
-                    <button className="btn-icon-close" onClick={onClose}>&times;</button>
-                </div>
-
-                <div className="modal-body overflow-y">
-                    <div className="admin-grid-layout">
-                        <MaratonLargadaForm
-                            categorias={categorias}
-                            botes={botes}
-                            distancias={distancias}
-                            selectedCats={selectedCats}
-                            selectedBotes={selectedBotes}
-                            selectedSexes={selectedSexes}
-                            selectedDist={selectedDist}
-                            selectedDate={selectedDate}
-                            selectedTime={selectedTime}
-                            setSelectedCats={setSelectedCats}
-                            setSelectedBotes={setSelectedBotes}
-                            setSelectedSexes={setSelectedSexes}
-                            setSelectedDist={setSelectedDist}
-                            setSelectedDate={setSelectedDate}
-                            setSelectedTime={setSelectedTime}
-                            editing={!!(editingGrupoId || editingId)}
-                            saving={saving}
-                            canSave={!!canSave}
-                            onCancel={resetForm}
-                            onSubmit={handleSubmit}
-                        />
-                        <MaratonProgramaList
-                            largadas={largadas}
-                            filtroDia={filtroDia}
-                            setFiltroDia={setFiltroDia}
-                            loading={loading}
-                            evento={evento}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                        />
-                    </div>
-                </div>
-
-                <div className="modal-footer">
-                    <button className="btn-admin-secondary" onClick={onClose}>Cerrar</button>
+        <div className="configurar-pruebas-page configurar-pruebas-page--maraton fade-in">
+            <div className="configurar-pruebas-toolbar glass-effect">
+                <p className="configurar-pruebas-hint">
+                    Marcá categorías, botes y ramas para armar largadas del programa maratón.
+                </p>
+                <div className="configurar-pruebas-actions">
+                    <button className="btn-admin-secondary" onClick={onClose}>Volver</button>
                     <button
                         className="btn-admin-primary"
                         onClick={async () => { onRefresh?.(); onClose(); }}
                     >
                         Finalizar y Actualizar
                     </button>
+                </div>
+            </div>
+
+            <div className="configurar-pruebas-body">
+                <div className="admin-grid-layout">
+                    <MaratonLargadaForm
+                        categorias={categorias}
+                        botes={botes}
+                        distancias={distancias}
+                        selectedCats={selectedCats}
+                        selectedBotes={selectedBotes}
+                        selectedSexes={selectedSexes}
+                        selectedDist={selectedDist}
+                        selectedDate={selectedDate}
+                        selectedTime={selectedTime}
+                        setSelectedCats={setSelectedCats}
+                        setSelectedBotes={setSelectedBotes}
+                        setSelectedSexes={setSelectedSexes}
+                        setSelectedDist={setSelectedDist}
+                        setSelectedDate={setSelectedDate}
+                        setSelectedTime={setSelectedTime}
+                        editing={!!(editingGrupoId || editingId)}
+                        saving={saving}
+                        canSave={!!canSave}
+                        onCancel={resetForm}
+                        onSubmit={handleSubmit}
+                    />
+                    <MaratonProgramaList
+                        largadas={largadas}
+                        filtroDia={filtroDia}
+                        setFiltroDia={setFiltroDia}
+                        loading={loading}
+                        evento={evento}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                    />
                 </div>
             </div>
 

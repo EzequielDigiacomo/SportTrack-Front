@@ -1,5 +1,6 @@
 /* ── ADMIN LAYOUT (sidebar + main) ── */
 .admin-layout {
+    position: relative;
     display: flex;
     min-height: 100vh;
     background: var(--color-bg-primary);
@@ -219,9 +220,9 @@
     margin-left: 0;
 }
 
-/* FAVICON TRIGGER */
+/* FAVICON TRIGGER — anclado arriba del layout (no persigue al scrollear) */
 .sidebar-trigger-favicon {
-    position: fixed;
+    position: absolute;
     top: 20px;
     left: 20px;
     z-index: 101;
@@ -258,9 +259,9 @@
     font-size: 1.6rem;
 }
 
-/* FLOATING ACTIONS TOP RIGHT — siempre visible, por encima del contenido */
+/* Acciones arriba a la derecha — ancladas al tope del layout */
 .top-right-actions {
-    position: fixed;
+    position: absolute;
     top: 20px;
     right: 20px;
     z-index: 5000;
@@ -416,6 +417,11 @@
     padding-right: max(var(--spacing-2xl), 5.5rem);
     min-height: 100vh;
     transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Menú colapsado: deja aire arriba para el botón hamburguesa / logout */
+.admin-layout:not(.sidebar-fixed) .admin-main {
+    padding-top: calc(20px + 48px + var(--spacing-md));
 }
 
 /* Sidebar fijado: sin botón flotante de logout → menos padding derecho */
@@ -614,7 +620,7 @@
     }
 
     .sidebar-trigger-favicon, .top-right-actions {
-        position: fixed !important;
+        position: absolute !important;
         top: max(12px, env(safe-area-inset-top));
         z-index: 5000;
     }

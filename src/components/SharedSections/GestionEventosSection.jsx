@@ -46,8 +46,7 @@ const GestionEventosSection = () => {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('lista'); // 'lista', 'crear', 'editar', 'dashboard'
     const [selectedEvento, setSelectedEvento] = useState(null);
-    const [activeSubView, setActiveSubView] = useState(null); // 'startlist', 'resultados'
-    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [activeSubView, setActiveSubView] = useState(null); // 'schedule', 'startlist', 'resultados'
     const [clubes, setClubes] = useState([]);
     const [federaciones, setFederaciones] = useState([]);
     const scopeFedId = useMemo(
@@ -113,30 +112,29 @@ const GestionEventosSection = () => {
         loadConfigData();
 
         const handlePopState = (e) => {
-            if (!e.state) { 
-                setView('lista'); 
-                setSelectedEvento(null); 
-                setActiveSubView(null); 
-                setShowConfigModal(false); 
+            if (!e.state) {
+                setView('lista');
+                setSelectedEvento(null);
+                setActiveSubView(null);
             }
             else {
                 if (e.state.evento) setSelectedEvento(e.state.evento);
-                
-                if (e.state.panel === 'dashboard') { 
-                    setView('dashboard'); 
-                    setActiveSubView(null); 
-                    setShowConfigModal(false); 
-                }
-                else if (e.state.panel === 'config') { 
-                    setShowConfigModal(true); 
-                }
-                else if (e.state.panel === 'startlist') { 
+
+                if (e.state.panel === 'dashboard') {
                     setView('dashboard');
-                    setActiveSubView('startlist'); 
+                    setActiveSubView(null);
                 }
-                else if (e.state.panel === 'resultados') { 
+                else if (e.state.panel === 'config' || e.state.panel === 'schedule') {
                     setView('dashboard');
-                    setActiveSubView('resultados'); 
+                    setActiveSubView('schedule');
+                }
+                else if (e.state.panel === 'startlist') {
+                    setView('dashboard');
+                    setActiveSubView('startlist');
+                }
+                else if (e.state.panel === 'resultados') {
+                    setView('dashboard');
+                    setActiveSubView('resultados');
                 }
             }
         };
@@ -229,20 +227,20 @@ const GestionEventosSection = () => {
     };
 
     const handleOpenConfig = async () => {
-        let eventoForModal = selectedEvento;
+        let eventoForView = selectedEvento;
         try {
             if (selectedEvento?.id) {
                 const fresh = await EventoService.getById(selectedEvento.id);
                 if (fresh) {
-                    eventoForModal = { ...selectedEvento, ...fresh };
-                    setSelectedEvento(eventoForModal);
+                    eventoForView = { ...selectedEvento, ...fresh };
+                    setSelectedEvento(eventoForView);
                 }
             }
         } catch (e) {
             console.warn('No se pudo refrescar el evento antes de configurar', e);
         }
-        window.history.pushState({ panel: 'config', evento: eventoForModal }, '');
-        setShowConfigModal(true);
+        window.history.pushState({ panel: 'schedule', evento: eventoForView }, '');
+        setActiveSubView('schedule');
     };
 
     const handleFieldChange = (name, value) => {
@@ -696,30 +694,31 @@ const GestionEventosSection = () => {
                                     <ArrowLeft size={20} />
                                 </button>
                                 <h3 style={{ margin: 0 }}>
+                                    {activeSubView === 'schedule' && `Armar Schedule — ${selectedEvento.nombre}`}
                                     {activeSubView === 'startlist' && 'Gestión de Start List y Sorteos'}
                                     {activeSubView === 'tiempos' && 'Carga de Tiempos Oficiales'}
                                     {activeSubView === 'resultados' && 'Resultados Finales y Reportes'}
                                 </h3>
                             </div>
-                            <GestionResultadosSection
-                                preselectedEventoId={selectedEvento.id}
-                                defaultTab={activeSubView === 'startlist' ? 'startList' : 'resultados'}
-                                isEmbedded={true}
-                                viewMode={activeSubView} // Pasamos la subvista para filtrar UI
-                            />
+                            {activeSubView === 'schedule' ? (
+                                <ConfigurarPruebasModal
+                                    evento={selectedEvento}
+                                    onClose={() => window.history.back()}
+                                    onRefresh={loadEventos}
+                                />
+                            ) : (
+                                <GestionResultadosSection
+                                    preselectedEventoId={selectedEvento.id}
+                                    defaultTab={activeSubView === 'startlist' ? 'startList' : 'resultados'}
+                                    isEmbedded={true}
+                                    viewMode={activeSubView}
+                                />
+                            )}
                         </div>
                     ) : (
                         <div className="loader-container"><div className="loader"></div></div>
                     )}
                 </div>
-            )}
-
-            {showConfigModal && (
-                <ConfigurarPruebasModal
-                    evento={selectedEvento}
-                    onClose={() => window.history.back()}
-                    onRefresh={loadEventos}
-                />
             )}
 
             <ConfirmDialog

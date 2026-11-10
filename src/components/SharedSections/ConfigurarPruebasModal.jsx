@@ -466,21 +466,23 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
     };
 
     return (
-        <div className="admin-modal-overlay">
-            <div className="admin-modal glass-effect fade-in">
-                <div className="modal-header">
-                    <h3>
-                        Configurar Evento - {evento.nombre}
-                        {isMaraton && (
-                            <span style={{ marginLeft: '0.6rem', fontSize: '0.75rem', color: '#7dd3fc', fontWeight: 600 }}>
-                                · Maratón
-                            </span>
-                        )}
-                    </h3>
-                    <button className="btn-icon-close" onClick={onClose}>&times;</button>
+        <div className="configurar-pruebas-page fade-in">
+            <div className="configurar-pruebas-toolbar glass-effect">
+                <p className="configurar-pruebas-hint">
+                    Creá pruebas y horarios para que los clubes puedan inscribir atletas.
+                </p>
+                <div className="configurar-pruebas-actions">
+                    <button className="btn-admin-secondary" onClick={onClose}>Volver</button>
+                    <button
+                        className="btn-admin-primary"
+                        onClick={async () => { onRefresh?.(); onClose(); }}
+                    >
+                        Finalizar y Actualizar
+                    </button>
                 </div>
+            </div>
 
-                <div className="modal-body overflow-y">
+            <div className="configurar-pruebas-body">
                     <div className="admin-grid-layout">
                         <div className="form-column">
                             <h4 className="section-title">
@@ -739,9 +741,21 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                         const distId = isGrupo
                                                             ? getPruebaIds(members[0]).distId
                                                             : (p?.distanciaId || p?.distancia?.id);
+                                                        const sexId = isGrupo
+                                                            ? getPruebaIds(members[0]).sexId
+                                                            : (p?.sexoId || p?.sexo?.id);
                                                         const sexLabel = isGrupo
                                                             ? joinUniqueLabels(members, ids => ids.sexId, SEXO_NAMES)
-                                                            : (SEXO_NAMES[p?.sexoId || p?.sexo?.id] || '—');
+                                                            : (SEXO_NAMES[sexId] || '—');
+                                                        const sexClassFor = (label, id) => {
+                                                            if (Number(id) === 1 || String(label || '').toLowerCase().startsWith('masc')) return 'masc';
+                                                            if (Number(id) === 2 || String(label || '').toLowerCase().startsWith('fem')) return 'fem';
+                                                            return 'mix';
+                                                        };
+                                                        const sexParts = String(sexLabel || '')
+                                                            .split(' · ')
+                                                            .map(s => s.trim())
+                                                            .filter(Boolean);
 
                                                         const originalTime = it.fechaHoraOriginal || it.time;
                                                         const isPateada = it.timeCalculated !== originalTime;
@@ -769,7 +783,16 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                                                                     <span className="badge-distancia">{DISTANCIA_NAMES[distId] || (p?.distancia?.metros + 'm')}</span>
                                                                 </td>
                                                                 <td>
-                                                                    <span className="badge-sexo mix" style={{ whiteSpace: 'normal' }}>{sexLabel}</span>
+                                                                    <span className="badge-chips" style={{ whiteSpace: 'normal' }}>
+                                                                        {(sexParts.length ? sexParts : ['—']).map((part) => (
+                                                                            <span
+                                                                                key={part}
+                                                                                className={`badge-sexo ${sexClassFor(part, sexParts.length === 1 ? sexId : undefined)}`}
+                                                                            >
+                                                                                {part}
+                                                                            </span>
+                                                                        ))}
+                                                                    </span>
                                                                 </td>
                                                                 <td style={{ fontWeight: 'bold', color: isPateada ? '#fbbf24' : '#3b82f6' }}>
                                                                     {it.nuevaHora}
@@ -800,13 +823,8 @@ const ConfigurarPruebasVelocidadModal = ({ evento, onClose, onRefresh }) => {
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div className="modal-footer">
-                    <button className="btn-admin-secondary" onClick={onClose}>Cerrar</button>
-                    <button className="btn-admin-primary" onClick={async () => { onRefresh(); onClose(); }}>Finalizar y Actualizar</button>
-                </div>
             </div>
+
             <ConfirmDialog isOpen={modalConfig.show} title={modalConfig.title} message={modalConfig.message} onConfirm={() => setModalConfig({ show: false })} onClose={() => setModalConfig({ show: false })} />
         </div>
     );
