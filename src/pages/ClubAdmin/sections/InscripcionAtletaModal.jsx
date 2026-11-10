@@ -202,7 +202,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
             for (const tripulacion of botes) {
                 const payload = {
                     eventoPruebaId: selectedPrueba.id,
-                    numeroCompetidor: `BOTE-${Math.floor(Math.random() * 10000)}`,
+                    numeroCompetidor: String(tripulacion[0].id),
                     participanteId: tripulacion[0].id
                 };
 
@@ -489,12 +489,6 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
                                     // Límite alcanzado dinámicamente si los seleccionados ya llenan el cupo disponible
                                     const limiteAlcanzado = botesDisponibles === 0 || (!yaSeleccionado && selectedAtletas.length >= maxAtletasPermitidos);
 
-                                    // Para mantener la lista limpia según lo solicitado, ocultamos a los no elegibles por completo 
-                                    // (excepto si ya estaban inscriptos por alguna razón y necesitamos visualizarlos).
-                                    if (!esElegible && !isAlreadyRegistered) {
-                                        return null;
-                                    }
-
                                     return (
                                         <div
                                             key={atleta.id}
@@ -504,6 +498,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
                                                 ${(!esElegible || inscripcionesCerradas || limiteAlcanzado) ? 'disabled' : ''}
                                                 ${esRefuerzoK4 ? 'refuerzo-k4-row' : ''}`}
                                             onClick={() => !inscripcionesCerradas && !isAlreadyRegistered && esElegible && !limiteAlcanzado && toggleAtleta(atleta)}
+                                            title={!esElegible ? razonNoElegible : undefined}
                                         >
                                             <div className="atleta-check">
                                                 {isAlreadyRegistered ? '🔒' : (!esElegible ? '🚫' : (yaSeleccionado ? '✅' : '☐'))}
@@ -524,6 +519,33 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
                                         </div>
                                     );
                                 })}
+                                {selectedPrueba && (() => {
+                                    const catPrueba = selectedPrueba.prueba?.categoria;
+                                    const sexoPruebaId = selectedPrueba.prueba?.sexoId || selectedPrueba.prueba?.sexo?.id;
+                                    const noElegibles = atletasClub.filter((atleta) => {
+                                        if (!matchesSearch(
+                                            athleteSearch,
+                                            atleta.nombre ?? atleta.Nombre,
+                                            atleta.apellido ?? atleta.Apellido,
+                                            atleta.dni ?? atleta.Dni,
+                                        )) return false;
+                                        let { esElegible } = evaluarElegibilidadAtleta({ evento, catPrueba, atleta });
+                                        if (sexoPruebaId && sexoPruebaId !== 3 && atleta.sexoId !== sexoPruebaId) {
+                                            esElegible = false;
+                                        }
+                                        const already = getInscripcionesPruebaActual().some(insc =>
+                                            (insc.participanteId === atleta.id) ||
+                                            (insc.tripulantes?.some(t => t.participanteId === atleta.id))
+                                        );
+                                        return !esElegible && !already;
+                                    }).length;
+                                    if (noElegibles <= 0) return null;
+                                    return (
+                                        <p className="hint-text" style={{ marginTop: '0.75rem' }}>
+                                            {noElegibles} atleta(s) del club no califican para esta prueba (edad/sexo). Quedan marcados y no se pueden seleccionar.
+                                        </p>
+                                    );
+                                })()}
                                 </>
                             )}
                         </div>
@@ -589,7 +611,7 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
                                                     const trip = atletas.slice(i, i + maxReq);
                                                     const payload = {
                                                         eventoPruebaId: parseInt(pId),
-                                                        numeroCompetidor: `BOTE-${Math.floor(Math.random() * 10000)}`,
+                                                        numeroCompetidor: String(trip[0].id),
                                                         participanteId: trip[0].id
                                                     };
                                                     if (maxReq > 1) {

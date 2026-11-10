@@ -6,8 +6,15 @@ import AtletaService from '../../services/AtletaService';
 import InscripcionService from '../../services/InscripcionService';
 import { PUBLIC_APP_URL } from '../../utils/constants';
 import { getUserFacingError } from '../../utils/userFacingError';
+import { formatPruebaName } from '../../utils/pruebaLabelUtils';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import './AdminSections.css';
+
+const labelFaseCambios = (f) => {
+    const pruebaLabel = formatPruebaName(f.prueba || f.Prueba, { forceBuild: true });
+    const faseNombre = f.nombreFase || f.NombreFase || f.nombre || f.Nombre || '';
+    return faseNombre ? `${pruebaLabel} — ${faseNombre}` : pruebaLabel;
+};
 
 const CambiosEnVivoSection = () => {
     const [eventos, setEventos] = useState([]);
@@ -250,7 +257,7 @@ const CambiosEnVivoSection = () => {
                 eventoPruebaId: fase.eventoPruebaId || fase.EventoPruebaId,
                 faseId: Number(faseId),
                 carril: addForm.carril ? Number(addForm.carril) : null,
-                numeroCompetidor: addForm.numeroCompetidor || '',
+                numeroCompetidor: addForm.numeroCompetidor || String(addForm.participanteId),
                 participanteId: Number(addForm.participanteId),
                 tripulantes: [],
             });
@@ -301,12 +308,15 @@ const CambiosEnVivoSection = () => {
                         {eventos.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
                     </select>
                 </div>
-                <div className="form-group" style={{ minWidth: 220 }}>
+                <div className="form-group" style={{ minWidth: 320, flex: 1 }}>
                     <label>Fase / serie</label>
                     <select value={faseId} onChange={(e) => setFaseId(e.target.value)}>
+                        {fases.length === 0 && (
+                            <option value="">Sin fases generadas en este evento</option>
+                        )}
                         {fases.map((f) => (
                             <option key={f.id} value={f.id}>
-                                {(f.prueba?.nombre || f.pruebaNombre || `EP ${f.eventoPruebaId}`)} — {f.nombreFase || f.nombre}
+                                {labelFaseCambios(f)}
                             </option>
                         ))}
                     </select>
