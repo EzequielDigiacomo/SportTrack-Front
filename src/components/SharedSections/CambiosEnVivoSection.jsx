@@ -16,6 +16,58 @@ const labelFaseCambios = (f) => {
     return faseNombre ? `${pruebaLabel} — ${faseNombre}` : pruebaLabel;
 };
 
+const getAtletaClubId = (a) => Number(a?.clubId || a?.ClubId || a?.idClub || 0) || null;
+const getAtletaCategoriaId = (a) =>
+    Number(a?.categoriaId || a?.CategoriaId || a?.categoria?.id || a?.Categoria?.id || 0) || null;
+
+const getFaseCategoriaId = (faseObj) => {
+    const ep = faseObj?.prueba || faseObj?.Prueba;
+    const inner = ep?.prueba || ep?.Prueba || ep;
+    return Number(
+        inner?.categoria?.id
+        || inner?.categoriaId
+        || inner?.CategoriaId
+        || inner?.Categoria?.id
+        || 0
+    ) || null;
+};
+
+const sortAtletasByName = (list) =>
+    [...(list || [])].sort((a, b) => {
+        const ap = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim();
+        const bp = `${b.apellido || b.Apellido || ''} ${b.nombre || b.Nombre || ''}`.trim();
+        return ap.localeCompare(bp, 'es');
+    });
+
+/** Titular + remadores (K2/K4) para la grilla. */
+const crewLabelResultado = (r) => {
+    const titular = r.participanteNombre || r.ParticipanteNombre || '';
+    const extras = [...(r.tripulantes || r.Tripulantes || [])]
+        .sort((a, b) => (a.posicionEnBote || a.PosicionEnBote || 0) - (b.posicionEnBote || b.PosicionEnBote || 0))
+        .map((t) => t.participanteNombreCompleto || t.ParticipanteNombreCompleto)
+        .filter(Boolean);
+    const names = [titular, ...extras].filter(Boolean);
+    return names.length ? names.join(' / ') : '—';
+};
+
+/** Solo atletas del mismo club y de la misma categoría de la prueba. */
+const filterAtletasClubYCategoria = (list, { clubId, clubNombre, categoriaId }) => {
+    const club = clubId ? Number(clubId) : null;
+    const cat = categoriaId ? Number(categoriaId) : null;
+    return (list || []).filter((a) => {
+        const aClub = getAtletaClubId(a);
+        const aCat = getAtletaCategoriaId(a);
+        const sameClub = club
+            ? aClub === club
+            : clubNombre
+                ? String(a.clubNombre || a.ClubNombre || '') === String(clubNombre)
+                : false;
+        if (!sameClub) return false;
+        if (cat && aCat !== cat) return false;
+        return true;
+    });
+};
+
 const CambiosEnVivoSection = () => {
     const [eventos, setEventos] = useState([]);
     const [eventoId, setEventoId] = useState('');
@@ -78,6 +130,18 @@ const CambiosEnVivoSection = () => {
         [fases, faseId]
     );
 
+    const faseCategoriaId = useMemo(() => getFaseCategoriaId(fase), [fase]);
+
+    const atletasMismaCategoria = useMemo(
+        () => sortAtletasByName(
+            (atletas || []).filter((a) => {
+                if (!faseCategoriaId) return true;
+                return getAtletaCategoriaId(a) === faseCategoriaId;
+            })
+        ),
+        [atletas, faseCategoriaId]
+    );
+
     const resultados = useMemo(() => {
         const list = fase?.resultados || fase?.Resultados || [];
         return [...list].sort((a, b) => (a.carril || 0) - (b.carril || 0));
@@ -114,19 +178,6 @@ const CambiosEnVivoSection = () => {
             flash('error', getUserFacingError(e));
         } finally {
             setSaving(false);
-        }
-    };
-
-    const saveNumero = async (resultado) => {
-        const inscId = resultado.inscripcionId || resultado.InscripcionId;
-        const nuevo = window.prompt('Nuevo Nº de bote', resultado.numeroCompetidor || '');
-        if (nuevo == null) return;
-        try {
-            await InscripcionService.liveUpdateNumero(inscId, nuevo);
-            flash('ok', 'Número actualizado.');
-            await refreshFase();
-        } catch (e) {
-            flash('error', getUserFacingError(e));
         }
     };
 
@@ -195,35 +246,43 @@ const CambiosEnVivoSection = () => {
         try {
             const clubNombre = resultado.clubNombre || resultado.ClubNombre;
             const clubId = resultado.clubId || resultado.ClubId;
-            let clubAtletas = atletas;
+            const categoriaId = getFaseCategoriaId(fase);
+            let pool = atletas || [];
+
             if (clubId) {
-                clubAtletas = (atletas || []).filter(
-                    (a) => Number(a.clubId || a.ClubId || a.idClub) === Number(clubId)
-                );
-                if (clubAtletas.length === 0) {
+                const byClub = pool.filter((a) => getAtletaClubId(a) === Number(clubId));
+                if (byClub.length === 0) {
                     try {
-                        clubAtletas = await AtletaService.getByClub(clubId);
+                        pool = await AtletaService.getByClub(clubId);
                     } catch {
-                        clubAtletas = atletas;
+                        pool = [];
                     }
+                } else {
+                    pool = byClub;
                 }
-            } else if (clubNombre) {
-                clubAtletas = (atletas || []).filter(
-                    (a) => (a.clubNombre || a.ClubNombre || '') === clubNombre
-                );
-                if (clubAtletas.length === 0) clubAtletas = atletas;
             }
+
+            let clubAtletas = sortAtletasByName(
+                filterAtletasClubYCategoria(pool, { clubId, clubNombre, categoriaId })
+            );
+
+            // Mantener en el listado a quienes ya están en el bote (aunque el filtro falle por datos incompletos).
             const seats = [resultado.participanteId || resultado.ParticipanteId || ''];
             const trip = [...(resultado.tripulantes || resultado.Tripulantes || [])].sort(
-                (a, b) => (a.posicionEnBote || 0) - (b.posicionEnBote || 0)
+                (a, b) => (a.posicionEnBote || a.PosicionEnBote || 0) - (b.posicionEnBote || b.PosicionEnBote || 0)
             );
             trip.forEach((t) => seats.push(t.participanteId || t.ParticipanteId));
+            const seatIds = new Set(seats.map(String).filter(Boolean));
+            const missing = (atletas || []).filter((a) => seatIds.has(String(a.id)) && !clubAtletas.some((x) => String(x.id) === String(a.id)));
+            if (missing.length) clubAtletas = sortAtletasByName([...clubAtletas, ...missing]);
+
             setEditCrew({
                 resultado,
                 inscId,
                 seats: seats.map(String),
-                atletas: clubAtletas || [],
+                atletas: clubAtletas,
                 clubNombre,
+                categoriaId,
             });
         } catch (e) {
             flash('error', getUserFacingError(e));
@@ -289,7 +348,7 @@ const CambiosEnVivoSection = () => {
             <div className="section-header">
                 <h2>Cambios en vivo</h2>
                 <p className="subtitle">
-                    Admin: carriles, tripulación, Nº, altas/bajas. No mueve horarios de otras pruebas.
+                    Admin: carriles, tripulación, altas/bajas. No mueve horarios de otras pruebas.
                 </p>
             </div>
 
@@ -385,8 +444,7 @@ const CambiosEnVivoSection = () => {
                     <thead>
                         <tr>
                             <th>Carril</th>
-                            <th>Nº</th>
-                            <th>Atleta / Club</th>
+                            <th>Atletas / Club</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -402,15 +460,13 @@ const CambiosEnVivoSection = () => {
                                         onChange={(e) => setLaneDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
                                     />
                                 </td>
-                                <td>{r.numeroCompetidor || '—'}</td>
                                 <td>
-                                    {r.participanteNombre || '—'}
+                                    {crewLabelResultado(r)}
                                     {r.clubSigla || r.clubNombre ? (
                                         <span style={{ opacity: 0.65 }}> · {r.clubSigla || r.clubNombre}</span>
                                     ) : null}
                                 </td>
                                 <td style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                    <button className="btn-admin-secondary" onClick={() => saveNumero(r)}>Nº</button>
                                     <button className="btn-admin-secondary" onClick={() => saveNombre(r)}>Nombre</button>
                                     <button className="btn-admin-secondary" onClick={() => openCrewEdit(r)}>Tripulación</button>
                                     <button
@@ -424,7 +480,7 @@ const CambiosEnVivoSection = () => {
                             </tr>
                         ))}
                         {resultados.length === 0 && (
-                            <tr><td colSpan={4}>Sin botes en esta fase. Podés agregar abajo.</td></tr>
+                            <tr><td colSpan={3}>Sin botes en esta fase. Podés agregar abajo.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -441,20 +497,12 @@ const CambiosEnVivoSection = () => {
                             onChange={(e) => setAddForm((p) => ({ ...p, participanteId: e.target.value }))}
                         >
                             <option value="">Seleccionar…</option>
-                            {atletas.map((a) => (
+                            {atletasMismaCategoria.map((a) => (
                                 <option key={a.id} value={a.id}>
                                     {a.apellido} {a.nombre}{a.clubNombre ? ` (${a.clubNombre})` : ''}
                                 </option>
                             ))}
                         </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Nº</label>
-                        <input
-                            value={addForm.numeroCompetidor}
-                            onChange={(e) => setAddForm((p) => ({ ...p, numeroCompetidor: e.target.value }))}
-                            style={{ width: 80 }}
-                        />
                     </div>
                     <div className="form-group">
                         <label>Carril</label>
@@ -478,7 +526,11 @@ const CambiosEnVivoSection = () => {
                 }}>
                     <div className="glass-effect" style={{ padding: '1.25rem', minWidth: 320, maxWidth: 480 }}>
                         <h3>Editar tripulación</h3>
-                        <p style={{ opacity: 0.75 }}>{editCrew.clubNombre || 'Mismo club'}</p>
+                        <p style={{ opacity: 0.75 }}>
+                            Solo atletas del mismo club
+                            {editCrew.clubNombre ? ` (${editCrew.clubNombre})` : ''}
+                            {editCrew.categoriaId ? ' y misma categoría de la prueba' : ''}.
+                        </p>
                         {editCrew.seats.map((val, idx) => (
                             <div className="form-group" key={idx}>
                                 <label>Posición {idx + 1}</label>
@@ -491,12 +543,17 @@ const CambiosEnVivoSection = () => {
                                     }}
                                 >
                                     <option value="">—</option>
-                                    {(editCrew.atletas || atletas).map((a) => (
+                                    {(editCrew.atletas || []).map((a) => (
                                         <option key={a.id} value={a.id}>{a.apellido} {a.nombre}</option>
                                     ))}
                                 </select>
                             </div>
                         ))}
+                        {(editCrew.atletas || []).length === 0 && (
+                            <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+                                No hay atletas elegibles (mismo club y categoría).
+                            </p>
+                        )}
                         <button
                             className="btn-admin-secondary"
                             style={{ marginBottom: 12 }}
