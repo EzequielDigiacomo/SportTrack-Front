@@ -79,7 +79,7 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
                 if (club && aClub && aClub !== club) return false;
                 if (cat && aCat !== cat) return false;
                 if (sex && sex !== 3 && aSex !== sex) return false;
-                const id = Number(a.id ?? a.Id || 0);
+                const id = Number(a.id ?? a.Id ?? 0);
                 const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim().toLowerCase();
                 if (id && byId.has(id)) return false;
                 if (label && byName.has(label)) return false;
@@ -198,7 +198,7 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
                                                             setDraftSeats(next);
                                                         }}
                                                     >
-                                                        <option value="">Posición {idx + 1}</option>
+                                                        <option value="">—</option>
                                                         {opciones.map((a) => (
                                                             <option key={a.id} value={a.id}>{a.label}</option>
                                                         ))}

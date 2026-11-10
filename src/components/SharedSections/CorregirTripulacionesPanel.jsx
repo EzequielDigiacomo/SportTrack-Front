@@ -57,7 +57,7 @@ const dedupeAtletas = (list) => {
     const byName = new Set();
     const out = [];
     for (const a of list || []) {
-        const id = Number(a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId || 0);
+        const id = Number(a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId ?? 0);
         const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim().toLowerCase();
         if (id) {
             if (byId.has(id)) continue;
@@ -265,7 +265,7 @@ const CorregirTripulacionesPanel = ({
                                                                 setDraftSeats(next);
                                                             }}
                                                         >
-                                                            <option value="">Posición {idx + 1}</option>
+                                                            <option value="">—</option>
                                                             {opciones.map((a) => (
                                                                 <option key={a.id} value={a.id}>{a.label}</option>
                                                             ))}

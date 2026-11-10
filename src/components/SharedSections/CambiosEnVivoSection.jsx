@@ -69,7 +69,7 @@ const dedupeAtletas = (list) => {
     const byName = new Set();
     const out = [];
     for (const a of list || []) {
-        const id = Number(a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId || 0);
+        const id = Number(a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId ?? 0);
         const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim().toLowerCase();
         if (id) {
             if (byId.has(id)) continue;
@@ -915,7 +915,6 @@ const CambiosEnVivoSection = () => {
                         </p>
                         {editCrew.seats.map((val, idx) => (
                             <div className="form-group" key={idx}>
-                                <label>Posición {idx + 1}</label>
                                 <select
                                     value={val}
                                     onChange={(e) => {
