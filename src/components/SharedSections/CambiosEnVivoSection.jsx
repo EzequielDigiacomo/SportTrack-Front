@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, Link2, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Copy, Link2, Plus, Trash2, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import EventoService from '../../services/EventoService';
 import FaseService from '../../services/FaseService';
 import AtletaService from '../../services/AtletaService';
@@ -7,7 +7,13 @@ import ClubService from '../../services/ClubService';
 import InscripcionService from '../../services/InscripcionService';
 import { PUBLIC_APP_URL } from '../../utils/constants';
 import { getUserFacingError } from '../../utils/userFacingError';
-import { formatPruebaName } from '../../utils/pruebaLabelUtils';
+import {
+    formatPruebaName,
+    CATEGORIA_NAMES,
+    BOTE_NAMES,
+    SEXO_NAMES,
+    getDistanciaLabel,
+} from '../../utils/pruebaLabelUtils';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import './AdminSections.css';
 
@@ -15,6 +21,24 @@ const labelFaseCambios = (f) => {
     const pruebaLabel = formatPruebaName(f.prueba || f.Prueba, { forceBuild: true });
     const faseNombre = f.nombreFase || f.NombreFase || f.nombre || f.Nombre || '';
     return faseNombre ? `${pruebaLabel} — ${faseNombre}` : pruebaLabel;
+};
+
+/** Título compacto: #3 K1 1000m Cadete Masculino — Serie 1 */
+const labelStartListFase = (f, raceNumber) => {
+    if (!f) return '';
+    const ep = f.prueba || f.Prueba;
+    const inner = ep?.prueba || ep?.Prueba || ep;
+    const catId = inner?.categoria?.id || inner?.categoriaId;
+    const botId = inner?.bote?.id || inner?.boteId;
+    const sexId = inner?.sexoId || inner?.sexo?.id || inner?.SexoId;
+    const catFull = CATEGORIA_NAMES[catId] || inner?.categoria?.nombre || 'Cat';
+    const catShort = String(catFull).replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const bot = BOTE_NAMES[botId] || inner?.bote?.tipo || inner?.bote?.nombre || 'Bote';
+    const dist = getDistanciaLabel(inner || {});
+    const sex = SEXO_NAMES[sexId] || inner?.sexoNombre || inner?.sexo?.nombre || '';
+    const serie = f.nombreFase || f.NombreFase || f.nombre || f.Nombre || '';
+    const head = [`#${raceNumber}`, bot, dist, catShort, sex].filter(Boolean).join(' ');
+    return serie ? `${head} — ${serie}` : head;
 };
 
 const getAtletaClubId = (a) => Number(a?.clubId || a?.ClubId || a?.idClub || 0) || null;
@@ -177,6 +201,7 @@ const CambiosEnVivoSection = () => {
     const [editCrew, setEditCrew] = useState(null); // { resultado, seats[] }
     const [selectedSeatKey, setSelectedSeatKey] = useState(null); // `${resultadoId}:${participanteId}`
     const [editAthlete, setEditAthlete] = useState(null); // { id, form, loading, saving }
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -192,10 +217,10 @@ const CambiosEnVivoSection = () => {
         })();
     }, []);
 
-    const loadFases = async (evId, { keepFaseId = false } = {}) => {
+    const loadFases = async (evId, { keepFaseId = false, refresh = false } = {}) => {
         if (!evId) return;
         try {
-            const data = await FaseService.getByEvento(evId);
+            const data = await FaseService.getByEvento(evId, { refresh });
             const list = Array.isArray(data) ? data : [];
             setFases(list);
             setFaseId((prev) => {
@@ -238,6 +263,26 @@ const CambiosEnVivoSection = () => {
         () => fases.find((f) => String(f.id) === String(faseId)),
         [fases, faseId]
     );
+
+    const faseIndex = useMemo(
+        () => fases.findIndex((f) => String(f.id) === String(faseId)),
+        [fases, faseId]
+    );
+
+    const startListHeading = useMemo(
+        () => labelStartListFase(fase, faseIndex >= 0 ? faseIndex + 1 : '?'),
+        [fase, faseIndex]
+    );
+
+    const goPrevFase = () => {
+        if (faseIndex > 0) setFaseId(String(fases[faseIndex - 1].id));
+    };
+
+    const goNextFase = () => {
+        if (faseIndex >= 0 && faseIndex < fases.length - 1) {
+            setFaseId(String(fases[faseIndex + 1].id));
+        }
+    };
 
     const faseCategoriaId = useMemo(() => getFaseCategoriaId(fase), [fase]);
     const faseSexoId = useMemo(() => getFaseSexoId(fase), [fase]);
@@ -299,8 +344,28 @@ const CambiosEnVivoSection = () => {
 
     const flash = (type, text) => setMsg({ type, text });
 
-    const refreshFase = async () => {
-        await loadFases(eventoId, { keepFaseId: true });
+    const refreshFase = async ({ silent = false } = {}) => {
+        if (!eventoId) return;
+        if (!silent) setRefreshing(true);
+        try {
+            await Promise.all([
+                loadFases(eventoId, { keepFaseId: true, refresh: true }),
+                loadTokens(eventoId),
+            ]);
+            try {
+                const [all, clubs] = await Promise.all([
+                    AtletaService.getAll(),
+                    ClubService.getAll(),
+                ]);
+                setAtletas(all || []);
+                setClubes(clubs || []);
+            } catch {
+                /* ignore */
+            }
+            if (!silent) flash('ok', 'Start list actualizada.');
+        } finally {
+            if (!silent) setRefreshing(false);
+        }
     };
 
     const removeResultadoLocal = (resultadoId) => {
@@ -339,7 +404,7 @@ const CambiosEnVivoSection = () => {
             }
             await InscripcionService.liveReasignarCarriles(Number(faseId), asignaciones);
             flash('ok', 'Carriles actualizados (sin mover horarios).');
-            await refreshFase();
+            await refreshFase({ silent: true });
         } catch (e) {
             flash('error', getUserFacingError(e));
         } finally {
@@ -410,7 +475,7 @@ const CambiosEnVivoSection = () => {
             } catch {
                 /* ignore */
             }
-            await refreshFase();
+            await refreshFase({ silent: true });
         } catch (e) {
             flash('error', getUserFacingError(e));
             setEditAthlete((prev) => (prev ? { ...prev, saving: false } : prev));
@@ -433,7 +498,7 @@ const CambiosEnVivoSection = () => {
             removeResultadoLocal(resultadoId);
             setConfirmBaja({ show: false, resultado: null, force: false });
             flash('ok', 'Bote dado de baja. Horarios de otras pruebas intactos.');
-            await refreshFase();
+            await refreshFase({ silent: true });
         } catch (e) {
             const text = getUserFacingError(e);
             // Si hay tiempos oficiales, pedir confirmación forzada (mismo diálogo).
@@ -537,7 +602,7 @@ const CambiosEnVivoSection = () => {
             });
             flash('ok', 'Tripulación actualizada.');
             setEditCrew(null);
-            await refreshFase();
+            await refreshFase({ silent: true });
         } catch (e) {
             flash('error', getUserFacingError(e));
         }
@@ -589,7 +654,7 @@ const CambiosEnVivoSection = () => {
             setAddBoteOpen(false);
             setAddBoteError(null);
             setAddForm({ clubId: '', seats: [''], carril: '' });
-            await refreshFase();
+            await refreshFase({ silent: true });
         } catch (e) {
             setAddBoteError(getUserFacingError(e));
         }
@@ -652,8 +717,18 @@ const CambiosEnVivoSection = () => {
                         ))}
                     </select>
                 </div>
-                <button className="btn-admin-secondary" style={{ alignSelf: 'flex-end' }} onClick={refreshFase}>
-                    <RefreshCw size={16} /> Refrescar
+                <button
+                    className="btn-admin-secondary"
+                    style={{ alignSelf: 'flex-end' }}
+                    onClick={() => refreshFase()}
+                    disabled={refreshing || !eventoId}
+                    title="Recargar start list desde el servidor (sin caché)"
+                >
+                    <RefreshCw
+                        size={16}
+                        style={refreshing ? { animation: 'spin 1s linear infinite' } : undefined}
+                    />
+                    {refreshing ? 'Actualizando…' : 'Refrescar'}
                 </button>
             </div>
 
@@ -704,92 +779,141 @@ const CambiosEnVivoSection = () => {
                 )}
             </div>
 
-            {/* Grilla de carriles */}
-            <div className="admin-table-container glass-effect">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0 }}>Start list / carriles</h3>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="btn-admin-secondary" disabled={!faseId} onClick={openAddBote} title="Agregar bote">
-                            <Plus size={16} /> Agregar bote
-                        </button>
-                        <button className="btn-admin-primary" disabled={saving || !faseId} onClick={saveLanes}>
-                            Guardar carriles
-                        </button>
+            {/* Grilla de carriles + navegación entre fases */}
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 10 }}>
+                <button
+                    type="button"
+                    className="btn-admin-secondary"
+                    onClick={goPrevFase}
+                    disabled={faseIndex <= 0}
+                    title="Prueba / serie anterior"
+                    style={{
+                        alignSelf: 'center',
+                        padding: '0.75rem 0.5rem',
+                        minWidth: 44,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <ChevronLeft size={28} />
+                </button>
+
+                <div className="admin-table-container glass-effect" style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem 0.35rem', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h3 style={{ margin: 0 }}>Start list / carriles</h3>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn-admin-secondary" disabled={!faseId} onClick={openAddBote} title="Agregar bote">
+                                <Plus size={16} /> Agregar bote
+                            </button>
+                            <button className="btn-admin-primary" disabled={saving || !faseId} onClick={saveLanes}>
+                                Guardar carriles
+                            </button>
+                        </div>
                     </div>
+                    {startListHeading ? (
+                        <p style={{
+                            margin: '0 1rem 0.75rem',
+                            fontSize: '0.95rem',
+                            fontWeight: 600,
+                            opacity: 0.9,
+                            letterSpacing: '0.01em',
+                        }}>
+                            {startListHeading}
+                        </p>
+                    ) : null}
+                    <table className="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Carril</th>
+                                <th>Atletas / Club</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {resultados.map((r) => {
+                                const seats = crewSeatsFromResultado(r, atletasById);
+                                const clubLabel = r.clubSigla || r.ClubSigla || r.clubNombre || r.ClubNombre || '';
+                                return (
+                                    <tr key={r.id}>
+                                        <td>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                style={{ width: 64 }}
+                                                value={laneDraft[r.id] ?? ''}
+                                                onChange={(e) => setLaneDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                                            />
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                {seats.length === 0 && <span>—</span>}
+                                                {seats.map((seat) => {
+                                                    const key = `${r.id}:${seat.id}`;
+                                                    const selected = selectedSeatKey === key;
+                                                    return (
+                                                        <button
+                                                            key={key}
+                                                            type="button"
+                                                            onClick={() => handleAthleteSeatClick(r.id, seat.id)}
+                                                            title={selected ? 'Click de nuevo para editar' : 'Click para seleccionar'}
+                                                            style={{
+                                                                all: 'unset',
+                                                                cursor: 'pointer',
+                                                                padding: '2px 6px',
+                                                                borderRadius: 4,
+                                                                lineHeight: 1.35,
+                                                                background: selected ? 'rgba(59,130,246,0.28)' : 'transparent',
+                                                                outline: selected ? '1px solid rgba(96,165,250,0.7)' : 'none',
+                                                            }}
+                                                        >
+                                                            <span style={{ opacity: 0.7, marginRight: 6 }}>{seat.pos}-</span>
+                                                            {seat.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                                {clubLabel ? (
+                                                    <span style={{ opacity: 0.65, fontSize: '0.9em', paddingLeft: 6 }}>{clubLabel}</span>
+                                                ) : null}
+                                            </div>
+                                        </td>
+                                        <td style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            <button className="btn-admin-secondary" onClick={() => openCrewEdit(r)}>Tripulación</button>
+                                            <button
+                                                className="btn-admin-secondary"
+                                                style={{ color: '#f87171' }}
+                                                onClick={() => setConfirmBaja({ show: true, resultado: r, force: false })}
+                                            >
+                                                <Trash2 size={14} /> Baja
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {resultados.length === 0 && (
+                                <tr><td colSpan={3}>Sin botes en esta fase. Usá “Agregar bote”.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Carril</th>
-                            <th>Atletas / Club</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {resultados.map((r) => {
-                            const seats = crewSeatsFromResultado(r, atletasById);
-                            const clubLabel = r.clubSigla || r.ClubSigla || r.clubNombre || r.ClubNombre || '';
-                            return (
-                                <tr key={r.id}>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            style={{ width: 64 }}
-                                            value={laneDraft[r.id] ?? ''}
-                                            onChange={(e) => setLaneDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                                        />
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                            {seats.length === 0 && <span>—</span>}
-                                            {seats.map((seat) => {
-                                                const key = `${r.id}:${seat.id}`;
-                                                const selected = selectedSeatKey === key;
-                                                return (
-                                                    <button
-                                                        key={key}
-                                                        type="button"
-                                                        onClick={() => handleAthleteSeatClick(r.id, seat.id)}
-                                                        title={selected ? 'Click de nuevo para editar' : 'Click para seleccionar'}
-                                                        style={{
-                                                            all: 'unset',
-                                                            cursor: 'pointer',
-                                                            padding: '2px 6px',
-                                                            borderRadius: 4,
-                                                            lineHeight: 1.35,
-                                                            background: selected ? 'rgba(59,130,246,0.28)' : 'transparent',
-                                                            outline: selected ? '1px solid rgba(96,165,250,0.7)' : 'none',
-                                                        }}
-                                                    >
-                                                        <span style={{ opacity: 0.7, marginRight: 6 }}>{seat.pos}-</span>
-                                                        {seat.label}
-                                                    </button>
-                                                );
-                                            })}
-                                            {clubLabel ? (
-                                                <span style={{ opacity: 0.65, fontSize: '0.9em', paddingLeft: 6 }}>{clubLabel}</span>
-                                            ) : null}
-                                        </div>
-                                    </td>
-                                    <td style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                        <button className="btn-admin-secondary" onClick={() => openCrewEdit(r)}>Tripulación</button>
-                                        <button
-                                            className="btn-admin-secondary"
-                                            style={{ color: '#f87171' }}
-                                            onClick={() => setConfirmBaja({ show: true, resultado: r, force: false })}
-                                        >
-                                            <Trash2 size={14} /> Baja
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        {resultados.length === 0 && (
-                            <tr><td colSpan={3}>Sin botes en esta fase. Usá “Agregar bote”.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+
+                <button
+                    type="button"
+                    className="btn-admin-secondary"
+                    onClick={goNextFase}
+                    disabled={faseIndex < 0 || faseIndex >= fases.length - 1}
+                    title="Siguiente prueba / serie"
+                    style={{
+                        alignSelf: 'center',
+                        padding: '0.75rem 0.5rem',
+                        minWidth: 44,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <ChevronRight size={28} />
+                </button>
             </div>
 
             {/* Modal agregar bote */}

@@ -7,6 +7,7 @@ import { matchesSearch } from '../../../utils/authHelpers';
 import ConfirmDialog from '../../../components/Common/ConfirmDialog';
 import { getUserFacingError } from '../../../utils/userFacingError';
 import { atletaCalificaBaseSenior, evaluarElegibilidadAtleta } from '../../../utils/inscripcionEligibilityUtils';
+import { areInscripcionesAbiertas } from '../../../utils/inscripcionUtils';
 import './InscripcionModal.css';
 
 const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, modoAdmin = false }) => {
@@ -51,10 +52,8 @@ const InscripcionAtletaModal = ({ evento, onClose, pagoAfiliacionAlDia = true, m
     // Derivamos los atletas seleccionados para la prueba actual del mapa
     const selectedAtletas = selectedPrueba ? (selectionsMap[selectedPrueba.id] || []) : [];
 
-    // Verificar si las inscripciones están abiertas
-    const ahora = new Date();
-    const fechaCierre = evento.fechaFinInscripciones ? new Date(evento.fechaFinInscripciones) : null;
-    const inscripcionesCerradas = fechaCierre && ahora > fechaCierre;
+    // Fecha/hora de cierre (ISO UTC) + flags del evento; mismo criterio que el backend
+    const inscripcionesCerradas = !areInscripcionesAbiertas(evento);
 
     const loadInscripcionesClub = async () => {
         try {

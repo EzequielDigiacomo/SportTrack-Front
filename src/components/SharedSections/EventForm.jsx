@@ -167,21 +167,24 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                         </div>
                         <div className="form-group">
                             <label>Fin de Inscripciones</label>
-                            <input 
-                                type="date" 
-                                value={initialData.fechaFinInscripciones} 
-                                onChange={(e) => onChange('fechaFinInscripciones', e.target.value)} 
+                            <input
+                                type="datetime-local"
+                                value={initialData.fechaFinInscripciones || ''}
+                                onChange={(e) => onChange('fechaFinInscripciones', e.target.value)}
                             />
+                            <small style={{ opacity: 0.7 }}>
+                                Pasada esta fecha y hora los clubes no pueden inscribir ni dar de baja.
+                            </small>
                         </div>
                         <div className="form-group">
                             <label>Límite cambios delegados</label>
                             <input
-                                type="date"
+                                type="datetime-local"
                                 value={initialData.fechaLimiteCambiosDelegados || ''}
                                 onChange={(e) => onChange('fechaLimiteCambiosDelegados', e.target.value)}
                             />
                             <small style={{ opacity: 0.7 }}>
-                                Hasta esta fecha el club / link mágico puede corregir tripulaciones. Si vacío, usa fin de inscripciones.
+                                Hasta esta fecha/hora el club / link mágico puede corregir tripulaciones. Si vacío, usa fin de inscripciones.
                             </small>
                         </div>
                         <div className="form-group">

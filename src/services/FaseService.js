@@ -52,10 +52,12 @@ const FaseService = {
         const response = await api.post(`${ENDPOINTS.FASES.BASE}/${id}/EnviarARevision`);
         return response.data;
     },
-    getByEvento: async (eventoId) => {
+    getByEvento: async (eventoId, { refresh = false } = {}) => {
         const url = ENDPOINTS.FASES.BY_EVENTO(eventoId);
-        // Evitar caché del browser tras bajas / altas en vivo.
-        const response = await api.get(url, { params: { _ts: Date.now() } });
+        // refresh=true invalida caché live del servidor; _ts evita caché del browser.
+        const response = await api.get(url, {
+            params: { _ts: Date.now(), ...(refresh ? { refresh: true } : {}) },
+        });
         return response.data;
     },
     batchUpdate: async (dto) => {

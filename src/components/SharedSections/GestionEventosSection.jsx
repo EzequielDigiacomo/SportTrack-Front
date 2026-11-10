@@ -31,6 +31,7 @@ import {
 } from '../../utils/pruebaLabelUtils';
 import { liveResultsUrl } from '../../utils/constants';
 import { getUserFacingError } from '../../utils/userFacingError';
+import { toDatetimeLocalValue, datetimeLocalToIso } from '../../utils/dateUtils';
 import './AdminSections.css';
 
 const GestionEventosSection = () => {
@@ -303,6 +304,8 @@ const GestionEventosSection = () => {
             clubId: form.clubId === "" ? null : parseInt(form.clubId),
             federacionId: scopeFedId != null ? Number(scopeFedId) : (form.federacionId || null),
             modalidad: isModalidadMaraton(form.modalidad) ? 'Maraton' : 'Velocidad',
+            fechaFinInscripciones: datetimeLocalToIso(form.fechaFinInscripciones),
+            fechaLimiteCambiosDelegados: datetimeLocalToIso(form.fechaLimiteCambiosDelegados),
         };
 
         try {
@@ -330,8 +333,8 @@ const GestionEventosSection = () => {
             nombre: evento.nombre || '',
             fecha: evento.fecha ? evento.fecha.substring(0, 10) : '',
             fechaFin: evento.fechaFin ? evento.fechaFin.substring(0, 10) : '',
-            fechaFinInscripciones: evento.fechaFinInscripciones ? evento.fechaFinInscripciones.substring(0, 10) : '',
-            fechaLimiteCambiosDelegados: evento.fechaLimiteCambiosDelegados ? evento.fechaLimiteCambiosDelegados.substring(0, 10) : '',
+            fechaFinInscripciones: toDatetimeLocalValue(evento.fechaFinInscripciones),
+            fechaLimiteCambiosDelegados: toDatetimeLocalValue(evento.fechaLimiteCambiosDelegados),
             cambiosDelegadosHabilitados: evento.cambiosDelegadosHabilitados ?? true,
             ubicacion: evento.ubicacion || '',
             descripcion: evento.descripcion || '',

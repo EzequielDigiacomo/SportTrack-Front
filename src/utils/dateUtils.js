@@ -118,3 +118,31 @@ export const compareFechaHoraProgramada = (a, b) => {
 /** Ordena fases/items por fechaHoraProgramada ascendente. */
 export const sortByFechaHoraProgramada = (items, getFecha = (x) => x?.fechaHoraProgramada) =>
     [...(items || [])].sort((a, b) => compareFechaHoraProgramada(getFecha(a), getFecha(b)));
+
+/**
+ * ISO / Date → valor para <input type="datetime-local"> en hora local.
+ * @param {string|Date|null|undefined} iso
+ * @returns {string} YYYY-MM-DDTHH:mm
+ */
+export const toDatetimeLocalValue = (iso) => {
+    if (!iso) return '';
+    const d = iso instanceof Date ? iso : new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+/**
+ * Valor de datetime-local (o solo fecha) → ISO UTC para la API.
+ * Si viene solo YYYY-MM-DD, usa 23:59 hora local (cierre a fin de día).
+ * @param {string|null|undefined} localValue
+ * @returns {string|null}
+ */
+export const datetimeLocalToIso = (localValue) => {
+    if (!localValue) return null;
+    const str = String(localValue).trim();
+    const normalized = /^\d{4}-\d{2}-\d{2}$/.test(str) ? `${str}T23:59` : str;
+    const d = new Date(normalized);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
+};
