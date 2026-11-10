@@ -152,6 +152,7 @@ const CambiosEnVivoSection = () => {
     const [confirmBaja, setConfirmBaja] = useState({ show: false, resultado: null, force: false });
     const [addBoteOpen, setAddBoteOpen] = useState(false);
     const [addForm, setAddForm] = useState({ clubId: '', seats: [''], carril: '' });
+    const [addBoteError, setAddBoteError] = useState(null);
     const [clubes, setClubes] = useState([]);
     const [editCrew, setEditCrew] = useState(null); // { resultado, seats[] }
     const [selectedSeatKey, setSelectedSeatKey] = useState(null); // `${resultadoId}:${participanteId}`
@@ -474,6 +475,7 @@ const CambiosEnVivoSection = () => {
             seats: Array.from({ length: seatsNeeded }, () => ''),
             carril: '',
         });
+        setAddBoteError(null);
         setAddBoteOpen(true);
     };
 
@@ -481,17 +483,18 @@ const CambiosEnVivoSection = () => {
         if (!fase) return;
         const ids = (addForm.seats || []).map(Number).filter((n) => n > 0);
         if (!addForm.clubId) {
-            flash('error', 'Seleccioná un club.');
+            setAddBoteError('Seleccioná un club.');
             return;
         }
         if (ids.length < seatsNeeded) {
-            flash('error', `Esta prueba requiere ${seatsNeeded} atleta(s).`);
+            setAddBoteError(`Esta prueba requiere ${seatsNeeded} atleta(s).`);
             return;
         }
         if (new Set(ids).size !== ids.length) {
-            flash('error', 'Hay atletas duplicados en el bote.');
+            setAddBoteError('Hay atletas duplicados en el bote.');
             return;
         }
+        setAddBoteError(null);
         try {
             await InscripcionService.liveAgregar({
                 eventoPruebaId: fase.eventoPruebaId || fase.EventoPruebaId,
@@ -506,10 +509,11 @@ const CambiosEnVivoSection = () => {
             });
             flash('ok', 'Bote agregado a la fase (sin rearmar cronograma).');
             setAddBoteOpen(false);
+            setAddBoteError(null);
             setAddForm({ clubId: '', seats: [''], carril: '' });
             await refreshFase();
         } catch (e) {
-            flash('error', getUserFacingError(e));
+            setAddBoteError(getUserFacingError(e));
         }
     };
 
@@ -725,15 +729,29 @@ const CambiosEnVivoSection = () => {
                             {faseSexoId && faseSexoId !== 3 ? ' y sexo' : ''} de esta fase
                             {seatsNeeded > 1 ? ` (${seatsNeeded} plazas)` : ''}.
                         </p>
+                        {addBoteError && (
+                            <div style={{
+                                marginBottom: '0.85rem',
+                                padding: '0.65rem 0.85rem',
+                                borderRadius: 8,
+                                background: 'rgba(239,68,68,0.15)',
+                                color: '#f87171',
+                            }}>
+                                {addBoteError}
+                            </div>
+                        )}
                         <div className="form-group">
                             <label>Club</label>
                             <select
                                 value={addForm.clubId}
-                                onChange={(e) => setAddForm((p) => ({
-                                    ...p,
-                                    clubId: e.target.value,
-                                    seats: Array.from({ length: seatsNeeded }, () => ''),
-                                }))}
+                                onChange={(e) => {
+                                    setAddBoteError(null);
+                                    setAddForm((p) => ({
+                                        ...p,
+                                        clubId: e.target.value,
+                                        seats: Array.from({ length: seatsNeeded }, () => ''),
+                                    }));
+                                }}
                             >
                                 <option value="">Seleccionar club…</option>
                                 {clubesOrdenados.map((c) => (
@@ -752,6 +770,7 @@ const CambiosEnVivoSection = () => {
                                         <select
                                             value={val}
                                             onChange={(e) => {
+                                                setAddBoteError(null);
                                                 const next = [...addForm.seats];
                                                 next[idx] = e.target.value;
                                                 setAddForm((p) => ({ ...p, seats: next }));
@@ -787,7 +806,15 @@ const CambiosEnVivoSection = () => {
                         </div>
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                             <button className="btn-admin-primary" onClick={agregarBote}>Agregar</button>
-                            <button className="btn-admin-secondary" onClick={() => setAddBoteOpen(false)}>Cancelar</button>
+                            <button
+                                className="btn-admin-secondary"
+                                onClick={() => {
+                                    setAddBoteOpen(false);
+                                    setAddBoteError(null);
+                                }}
+                            >
+                                Cancelar
+                            </button>
                         </div>
                     </div>
                 </div>
