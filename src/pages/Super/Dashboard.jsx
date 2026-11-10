@@ -9,6 +9,7 @@ import GestionClubesSection from './sections/GestionClubesSection';
 import GestionLoginsSection from './sections/GestionLoginsSection';
 import GestionAtletasSection from './sections/GestionAtletasSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
+import CambiosEnVivoSection from '../../components/SharedSections/CambiosEnVivoSection';
 import ConfiguracionSection from './sections/ConfiguracionSection';
 import SoporteSection from './sections/SoporteSection';
 import BackupsSection from './sections/BackupsSection';
@@ -184,6 +185,7 @@ const SuperDashboard = () => {
                         <Route path="logins" element={<GestionLoginsSection />} />
                         <Route path="atletas" element={<GestionAtletasSection />} />
                         <Route path="registro-inscripciones" element={<RegistroInscripcionesSection modo="admin" />} />
+                        <Route path="cambios-vivo" element={<CambiosEnVivoSection />} />
                         <Route path="pagos" element={<GestionPagosSection />} />
                         <Route path="resultados" element={<GestionResultadosSection />} />
                         <Route path="auditoria" element={<ProgressionAuditPage />} />

@@ -12,9 +12,10 @@ import ControlesSection from './sections/ControlesSection';
 import PerfilClubSection from './sections/PerfilClubSection';
 import PagosClubSection from './sections/PagosClubSection';
 import RegistroInscripcionesSection from './sections/RegistroInscripcionesSection';
+import CorregirTripulacionesSection from './sections/CorregirTripulacionesSection';
 import GestionEventosSection from '../../components/SharedSections/GestionEventosSection';
 import GestionResultadosSection from '../../components/SharedSections/GestionResultadosSection';
-import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer, DollarSign, ShieldAlert, Mail, ClipboardList } from 'lucide-react';
+import { Users, Calendar, LayoutTemplate, Trophy, ArrowLeft, Info, Activity, Timer, DollarSign, ShieldAlert, Mail, ClipboardList, Replace } from 'lucide-react';
 import MensajesSection from '../Shared/MensajesSection';
 import useUnreadMessages from '../../hooks/useUnreadMessages';
 import './Dashboard.css';
@@ -286,6 +287,7 @@ const ClubDashboard = () => {
                     <Route path="pagos" element={<PagosClubSection />} />
                     <Route path="mensajes" element={<MensajesSection modo="club" />} />
                     <Route path="registro-inscripciones" element={<RegistroInscripcionesSection modo="club" />} />
+                    <Route path="corregir-tripulaciones" element={<CorregirTripulacionesSection />} />
                     {/* <Route path="organizar/*" element={<GestionEventosSection />} /> */}
                     <Route path="resultados" element={<GestionResultadosSection />} />
                 </Routes>
@@ -313,6 +315,12 @@ const DashboardMenu = ({ navigate, stats, recentActivity, user, pagoAfiliacionAl
                 <div className="card-icon" style={{ color: '#0ea5e9' }}><ClipboardList size={40} /></div>
                 <h3>Registro Inscripciones</h3>
                 <p className="card-label">Consulta de atletas por prueba</p>
+            </div>
+
+            <div className="dashboard-card glass-effect clickable" onClick={() => navigate('corregir-tripulaciones')}>
+                <div className="card-icon" style={{ color: '#f59e0b' }}><Replace size={40} /></div>
+                <h3>Corregir tripulaciones</h3>
+                <p className="card-label">Cambios antes de delegados</p>
             </div>
  
             <div className="dashboard-card glass-effect clickable" onClick={() => navigate('pagos')} style={{ 

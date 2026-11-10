@@ -17,6 +17,7 @@ import {
     Database,
     Activity,
     History,
+    Replace,
 } from 'lucide-react';
 import { canAccessControlesLive, extractPlanFromUser } from '../utils/planHelpers';
 
@@ -29,6 +30,7 @@ export const ADMIN_NAV_ITEMS = [
     { id: 'clubes', path: 'clubes', icon: <Building2 size={20} />, label: 'Clubes' },
     { id: 'eventos', path: 'eventos', icon: <Calendar size={20} />, label: 'Eventos' },
     { id: 'registro-inscripciones', path: 'registro-inscripciones', icon: <ClipboardList size={20} />, label: 'Registro Inscripciones' },
+    { id: 'cambios-vivo', path: 'cambios-vivo', icon: <Replace size={20} />, label: 'Cambios en vivo' },
     { id: 'pagos', path: 'pagos', icon: <CreditCard size={20} />, label: 'Control de Pagos' },
     { id: 'controles', path: 'controles', icon: <Timer size={20} />, label: 'Controles Técnicos' },
     { id: 'logins', path: 'logins', icon: <Key size={20} />, label: 'Logins/Usuarios' },

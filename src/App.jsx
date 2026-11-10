@@ -20,6 +20,7 @@ import NotificationCenter from './components/Common/NotificationCenter'
 import AppFooter from './components/Layout/AppFooter'
 import { useAuth } from './context/AuthContext'
 import PlanDetails from './pages/Home/PlanDetails'
+import CambiosPublicosPage from './pages/Public/CambiosPublicosPage'
 import {
     canSeeEventNotifications,
     canSeeMessageNotifications,
@@ -63,6 +64,7 @@ function App() {
             <Route path="/" element={<MainLayout><Home /></MainLayout>} />
             <Route path="/planes/:id" element={<MainLayout><PlanDetails /></MainLayout>} />
             <Route path="/resultados/:id" element={<MainLayout><LiveResults /></MainLayout>} />
+            <Route path="/cambios/:token" element={<MainLayout><CambiosPublicosPage /></MainLayout>} />
 
             {/* Panel de Clubs (Protegido) */}
             <Route path="/club/*" element={

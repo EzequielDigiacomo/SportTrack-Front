@@ -173,6 +173,27 @@ const EventForm = ({ initialData, onCancel, onSubmit, onChange, saving, isEditin
                                 onChange={(e) => onChange('fechaFinInscripciones', e.target.value)} 
                             />
                         </div>
+                        <div className="form-group">
+                            <label>Límite cambios delegados</label>
+                            <input
+                                type="date"
+                                value={initialData.fechaLimiteCambiosDelegados || ''}
+                                onChange={(e) => onChange('fechaLimiteCambiosDelegados', e.target.value)}
+                            />
+                            <small style={{ opacity: 0.7 }}>
+                                Hasta esta fecha el club / link mágico puede corregir tripulaciones. Si vacío, usa fin de inscripciones.
+                            </small>
+                        </div>
+                        <div className="form-group">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={initialData.cambiosDelegadosHabilitados ?? true}
+                                    onChange={(e) => onChange('cambiosDelegadosHabilitados', e.target.checked)}
+                                />
+                                {' '}Cambios pre-delegados habilitados
+                            </label>
+                        </div>
                         
                         <div className="form-rules-container glass-effect mt-md">
                             <h4>{isMaraton ? 'Reglas de Inscripción (Maratón)' : 'Reglas Técnicas Federativas'}</h4>
