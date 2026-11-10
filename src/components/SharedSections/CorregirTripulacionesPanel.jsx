@@ -180,7 +180,7 @@ const CorregirTripulacionesPanel = ({
                         <thead>
                             <tr>
                                 <th>Prueba</th>
-                                <th>Nº</th>
+                                <th>dorsal/id</th>
                                 <th>Tripulación</th>
                                 <th></th>
                             </tr>
@@ -192,7 +192,7 @@ const CorregirTripulacionesPanel = ({
                                 return (
                                     <tr key={id}>
                                         <td>{insc.pruebaNombre || insc.PruebaNombre || `EP ${insc.eventoPruebaId}`}</td>
-                                        <td>{insc.numeroCompetidor || insc.NumeroCompetidor || '—'}</td>
+                                        <td>{insc.participanteId || insc.ParticipanteId || '—'}</td>
                                         <td>
                                             {editing ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
