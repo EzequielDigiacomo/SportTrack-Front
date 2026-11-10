@@ -61,15 +61,30 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
 
     const atletasRaw = resumen.atletasClub || resumen.AtletasClub || [];
 
+    const clubIdResumen = Number(resumen.clubId || resumen.ClubId || 0) || null;
+
     const atletasForInsc = (insc) => {
+        const club = clubIdResumen
+            || Number(insc.clubId || insc.ClubId || insc.participanteClubId || insc.ParticipanteClubId || 0)
+            || null;
         const cat = Number(insc.categoriaId || insc.CategoriaId || 0) || null;
         const sex = Number(insc.sexoId || insc.SexoId || 0) || null;
+        const byId = new Set();
+        const byName = new Set();
         return atletasRaw
             .filter((a) => {
+                const aClub = Number(a.clubId || a.ClubId || 0) || null;
                 const aCat = Number(a.categoriaId || a.CategoriaId || 0) || null;
                 const aSex = Number(a.sexoId || a.SexoId || 0) || null;
+                if (club && aClub && aClub !== club) return false;
                 if (cat && aCat !== cat) return false;
                 if (sex && sex !== 3 && aSex !== sex) return false;
+                const id = Number(a.id ?? a.Id || 0);
+                const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim().toLowerCase();
+                if (id && byId.has(id)) return false;
+                if (label && byName.has(label)) return false;
+                if (id) byId.add(id);
+                if (label) byName.add(label);
                 return true;
             })
             .map((a) => ({
@@ -191,7 +206,7 @@ const CorregirTripulacionesPanelToken = ({ token, resumen }) => {
                                                 ))}
                                                 {opciones.length === 0 && (
                                                     <small style={{ color: '#fbbf24' }}>
-                                                        No hay atletas del club con la categoría y sexo de esta prueba.
+                                                        No hay atletas del mismo club con la categoría y sexo de esta prueba.
                                                     </small>
                                                 )}
                                             </div>

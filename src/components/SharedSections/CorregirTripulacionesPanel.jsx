@@ -24,25 +24,56 @@ const getInscCategoriaId = (insc) =>
 const getInscSexoId = (insc) =>
     Number(insc?.sexoId || insc?.SexoId || 0) || null;
 
+const getInscClubId = (insc) =>
+    Number(insc?.clubId || insc?.ClubId || insc?.participanteClubId || insc?.ParticipanteClubId || 0) || null;
+
 const getAtletaCategoriaId = (a) =>
     Number(a?.categoriaId || a?.CategoriaId || a?.categoria?.id || 0) || null;
 
 const getAtletaSexoId = (a) =>
     Number(a?.sexoId || a?.SexoId || a?.sexo?.id || 0) || null;
 
-/** Solo atletas de la misma categoría y sexo que pide la prueba (Mixto = sin filtro de sexo). */
-const filterAtletasPorPrueba = (list, insc) => {
+const getAtletaClubId = (a) =>
+    Number(a?.clubId || a?.ClubId || a?.idClub || 0) || null;
+
+/** Mismo club + misma categoría + mismo sexo de la prueba (Mixto = sin filtro de sexo). */
+const filterAtletasPorPrueba = (list, insc, clubIdProp = null) => {
+    const club = clubIdProp ? Number(clubIdProp) : getInscClubId(insc);
     const cat = getInscCategoriaId(insc);
     const sex = getInscSexoId(insc);
     return (list || []).filter((a) => {
+        const aClub = getAtletaClubId(a);
+        // Si el atleta trae clubId, debe coincidir; si no trae, la lista ya viene scoped al club.
+        if (club && aClub && aClub !== club) return false;
         if (cat && getAtletaCategoriaId(a) !== cat) return false;
         if (sex && sex !== 3 && getAtletaSexoId(a) !== sex) return false;
         return true;
     });
 };
 
+/** Evita filas repetidas (mismo id o mismo apellido+nombre en el club). */
+const dedupeAtletas = (list) => {
+    const byId = new Set();
+    const byName = new Set();
+    const out = [];
+    for (const a of list || []) {
+        const id = Number(a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId || 0);
+        const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim().toLowerCase();
+        if (id) {
+            if (byId.has(id)) continue;
+            byId.add(id);
+        }
+        if (label) {
+            if (byName.has(label)) continue;
+            byName.add(label);
+        }
+        out.push(a);
+    }
+    return out;
+};
+
 const mapAtletasOptions = (list) =>
-    (list || [])
+    dedupeAtletas(list)
         .map((a) => ({
             id: a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId,
             label: `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim(),
@@ -119,7 +150,7 @@ const CorregirTripulacionesPanel = ({
     // y el admin link asume club login OR we add public athletes list to resumen.
 
     const atletasOptionsFor = (insc) =>
-        mapAtletasOptions(filterAtletasPorPrueba(atletas, insc));
+        mapAtletasOptions(filterAtletasPorPrueba(atletas, insc, clubId));
 
     const startEdit = (insc) => {
         const seats = seatsForBoat(insc);
@@ -242,7 +273,7 @@ const CorregirTripulacionesPanel = ({
                                                     ))}
                                                     {opciones.length === 0 && (
                                                         <small style={{ color: '#fbbf24' }}>
-                                                            No hay atletas del club con la categoría y sexo de esta prueba.
+                                                            No hay atletas del mismo club con la categoría y sexo de esta prueba.
                                                         </small>
                                                     )}
                                                 </div>

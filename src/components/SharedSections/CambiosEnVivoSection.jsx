@@ -64,8 +64,28 @@ const getFaseBoteTipo = (faseObj) => {
     return inner?.bote?.tipo || inner?.bote?.nombre || inner?.Bote?.Tipo || '';
 };
 
+const dedupeAtletas = (list) => {
+    const byId = new Set();
+    const byName = new Set();
+    const out = [];
+    for (const a of list || []) {
+        const id = Number(a.id ?? a.Id ?? a.participanteId ?? a.ParticipanteId || 0);
+        const label = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim().toLowerCase();
+        if (id) {
+            if (byId.has(id)) continue;
+            byId.add(id);
+        }
+        if (label) {
+            if (byName.has(label)) continue;
+            byName.add(label);
+        }
+        out.push(a);
+    }
+    return out;
+};
+
 const sortAtletasByName = (list) =>
-    [...(list || [])].sort((a, b) => {
+    dedupeAtletas(list).sort((a, b) => {
         const ap = `${a.apellido || a.Apellido || ''} ${a.nombre || a.Nombre || ''}`.trim();
         const bp = `${b.apellido || b.Apellido || ''} ${b.nombre || b.Nombre || ''}`.trim();
         return ap.localeCompare(bp, 'es');
